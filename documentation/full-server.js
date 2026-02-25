@@ -149,7 +149,9 @@ app.post('/cleanup', cleanupController.cleanup(tmpDirPath));
  * Example proxy endpoint using built-in fetch. Pass ?url=https://example.com to proxy an external resource.
  */
 const proxyController = require('./controllers/proxy');
-app.get('/proxy', proxyController.proxy(fetch));
+// Prefer native global fetch (Node 18+) so streaming responses expose a readable stream.
+const nativeFetch = (typeof globalThis !== 'undefined' && globalThis.fetch) ? globalThis.fetch : null;
+app.get('/proxy', proxyController.proxy(nativeFetch || fetch));
 
 // --- Server Startup ---
 /**
