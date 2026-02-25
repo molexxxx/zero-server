@@ -1,6 +1,6 @@
 {
   "name": "molex-http",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Zero-dependency, minimal Express-like HTTP server and tiny fetch replacement",
   "main": "index.js",
   "files": [
@@ -33,7 +33,7 @@
   "bugs": {
     "url": "https://github.com/tonywied17/molex-http-npm/issues"
   },
-  "homepage": "https://github.com/tonywied17/molex-http-npm#readme",
+  "homepage": "https://molex-http.molex.cloud",
   "engines": {
     "node": ">=14.0.0"
   },
