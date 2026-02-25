@@ -17,73 +17,153 @@
 - **Streaming multipart parser** — writes file parts to disk and exposes `req.body.files` and `req.body.fields`
 - **Tiny `fetch` replacement** — convenient server-side HTTP client with progress callbacks
 - **Static file serving** — correct Content-Type handling and small footprint
-
-## Installation
+ 
 
 ```bash
 npm install molex-http
 ```
 
-## Quick Start
-
-Run the demo server and visit http://localhost:3000:
-
-```bash
-node documentation/full-server.js
-# visit http://localhost:3000
-```
-
-## Core middlewares
-
-- `json()` — parse JSON request bodies
-- `urlencoded()` — parse application/x-www-form-urlencoded bodies
-- `text()` — parse raw text bodies
-- `raw()` — receive raw bytes as a Buffer
-- `multipart({ dir, maxFileSize })` — stream file parts to disk; exposes `req.body.files` and `req.body.fields`
-
-## Built-in fetch replacement
-
-Use the bundled `fetch` as a tiny alternative to third-party clients:
-
-```js
-const { fetch } = require('molex-http')
-const r = await fetch('https://example.com')
-const text = await r.text()
-```
-
-It returns an object with `status`, `headers`, and helpers: `text()`, `json()`, `arrayBuffer()` and supports optional `onUploadProgress` / `onDownloadProgress` callbacks.
-
-## API Overview
-
-- `createApp()` — returns an app instance with Express-like methods: `use`, `get`, `post`, `put`, `delete`, `listen`
-- `cors(opts)` — small CORS middleware used in the demo
-- `json(), urlencoded(), text(), raw(), multipart(opts)` — body parsers
-- `static(root)` — serve static files from a folder
-- `fetch(url, opts)` — small HTTP client replacement (see `lib/fetch.js`)
-
-## Example: Echo endpoint
+## Quick start
 
 ```js
 const { createApp, json } = require('molex-http')
 const app = createApp()
+
 app.use(json())
 app.post('/echo', (req, res) => res.json({ received: req.body }))
 app.listen(3000)
 ```
 
-## Uploads and Thumbnails (demo)
+Visit the demo UI: run `node documentation/full-server.js` and open `http://localhost:3000`.
 
-The demo server (`documentation/full-server.js`) includes endpoints and helpers for streaming multipart uploads to disk and generating small SVG thumbnails for image uploads. Uploaded files are stored in `documentation/uploads` and thumbnails in `documentation/uploads/.thumbs`.
+## API Reference
 
-Key controllers:
+All exports are available from the package root:
 
-- `controllers/upload.js` — receives multipart parts, stores files and writes thumbnails for recognized image types
-- `controllers/uploads.js` — move uploads to `.trash`, restore, and permanently delete; keeps thumbnails in sync
-- `controllers/uploadsList.js` — lists uploaded files and prefers thumbnail URLs when present
+```js
+const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static } = require('molex-http')
+```
 
-## Proxy helper
+- `createApp()` — returns an application instance with methods:
+	- `use(fn)` — register middleware (fn signature: `(req, res, next)`).
+	- `get(path, ...handlers)` / `post()` / `put()` / `delete()` — routing helpers.
+	- `listen(port = 3000, cb)` — start HTTP server.
 
-The demo includes a proxy endpoint (`/proxy`) implemented in `controllers/proxy.js` that proxies external URLs using the built-in `fetch` (useful for demoing CORS-free fetches).
+- Request object (`req`) wraps the raw Node request and exposes:
+	- `req.method`, `req.url`, `req.headers`, `req.query`, `req.params`, `req.body`.
+	- `req.parseBody()` — low-level helper that reads and parses body according to Content-Type.
+
+- Response object (`res`) helpers:
+	- `res.status(code)` — set status.
+	- `res.set(name, value)` — set header.
+	- `res.send(body)` — send response (Buffer/string/object → JSON).
+	- `res.json(obj)` — convenience JSON response.
+	- `res.text(str)` — convenience text response.
+
+### Body parsers
+
+The package exposes parser factory functions under `json`, `urlencoded`, `text`, `raw`, and `multipart`.
+
+json([opts])
+- Options:
+	- `limit` — max body size (bytes or string like `'1mb'`).
+	- `reviver` — function passed to `JSON.parse`.
+	- `strict` (default: `true`) — when true, prefers objects/arrays and rejects primitives.
+	- `type` — mime matcher (string or function), default `'application/json'`.
+
+urlencoded([opts])
+- Options:
+	- `extended` (default: `false`) — when `true` supports nested bracket syntax (a[b]=1, a[]=1).
+	- `limit` — max body size.
+	- `type` — mime matcher, default `'application/x-www-form-urlencoded'`.
+
+text([opts])
+- Options:
+	- `type` — mime matcher, default `text/*`.
+	- `limit` — max body size.
+	- `encoding` — default `'utf8'`.
+
+raw([opts])
+- Options:
+	- `type` — mime matcher, default `application/octet-stream`.
+	- `limit` — max body size.
+
+multipart(opts)
+- Streaming multipart parser. Options:
+	- `dir` — directory to store uploaded files (absolute or relative to process.cwd()). Defaults to `os.tmpdir()/molex-http-uploads`.
+	- `maxFileSize` — maximum allowed file size in bytes; exceeding this returns HTTP 413 and aborts the upload.
+
+Behavior: multipart writes file parts to disk with a generated name preserving the original extension when possible. On completion `req.body` will be an object `{ fields, files }` where `files` contains metadata: `originalFilename`, `storedName`, `path`, `contentType`, `size`.
+
+### static(rootPath, opts)
+
+Serve static files from `rootPath`.
+
+Options:
+- `index` (string|false) — default `'index.html'`.
+- `maxAge` (number|string) — Cache-Control max-age.
+- `dotfiles` — `'allow'|'deny'|'ignore'` (default `'ignore'`).
+- `extensions` — array of fallback extensions.
+- `setHeaders` — function `(res, filePath) => {}` to set custom headers per file.
+
+### cors([opts])
+
+Small CORS middleware. Typical options:
+- `origin` — string|boolean|array, default `'*'`.
+- `methods` — string, default `'GET,HEAD,PUT,POST,DELETE'`.
+- `allowedHeaders` — string.
+
+### fetch(url, opts)
+
+Small Node HTTP client returning an object with `status`, `headers` and helpers: `text()`, `json()`, `arrayBuffer()`.
+
+Options:
+- `method` — HTTP method (default: `'GET'`).
+- `headers` — object.
+- `body` — `Buffer|string|Stream|URLSearchParams|object` (plain objects are JSON-encoded).
+- `timeout` — timeout in ms.
+- `signal` — `AbortSignal` to cancel the request.
+- `onUploadProgress` / `onDownloadProgress` — callbacks called with `{ loaded, total }`.
+
+Example usage:
+
+```js
+const r = await fetch('https://jsonplaceholder.typicode.com/todos/1', { timeout: 5000 })
+const data = await r.json()
+```
+
+## Examples
+
+Small JSON API:
+
+```js
+const { createApp, json, cors } = require('molex-http')
+const app = createApp()
+
+app.use(cors({ origin: ['https://example.com'] }))
+app.use(json({ limit: '10kb' }))
+
+const items = []
+app.post('/items', (req, res) => {
+	items.push(req.body)
+	res.status(201)
+	res.json({ ok: true })
+})
+```
+
+Upload handler (writes files to disk by default):
+
+```js
+app.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) => {
+	res.json({ files: req.body.files })
+})
+```
+
+Static server example:
+
+```js
+app.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.html', maxAge: '1h' }))
+```
 
 ## File layout
 
@@ -93,12 +173,7 @@ The demo includes a proxy endpoint (`/proxy`) implemented in `controllers/proxy.
 
 ## Testing
 
-Run the demo and use the UI playground for manual testing. There are example/test scripts in `examples/` and `test/` where present.
-
-## Notes and extensions
-
-- The multipart parser writes to disk by design; adapt it to stream parts directly to S3 or another backend by modifying `lib/body/multipart.js` or the demo controller.
-- The built-in `fetch` is intentionally minimal — focused on convenience and progress callbacks rather than full feature parity with larger clients.
+Run the demo and use the UI playground for manual testing. There are example/test scripts in `examples/` and `test/`.
 
 ## License
 
