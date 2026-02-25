@@ -277,6 +277,7 @@ app.use(cors({
 													<tr><td><code>headers</code></td><td>object</td><td>Request headers</td></tr>
 													<tr><td><code>body</code></td><td>Buffer|string|Stream</td><td>Request body</td></tr>
 													<tr><td><code>timeout</code></td><td>number</td><td>Request timeout in ms</td></tr>
+													<tr><td><code>signal</code></td><td>AbortSignal</td><td>Optional AbortSignal to cancel the request (abort)</td></tr>
 													<tr><td><code>onUploadProgress</code></td><td>function</td><td>Callback for upload progress: <code>({loaded, total}) =&gt; {}</code></td></tr>
 													<tr><td><code>onDownloadProgress</code></td><td>function</td><td>Callback for download progress.</td></tr>
 												</tbody>
