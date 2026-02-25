@@ -65,65 +65,82 @@ const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static }
 The package exposes parser factory functions under `json`, `urlencoded`, `text`, `raw`, and `multipart`.
 
 json([opts])
-- Options:
-	- `limit` — max body size (bytes or string like `'1mb'`).
-	- `reviver` — function passed to `JSON.parse`.
-	- `strict` (default: `true`) — when true, prefers objects/arrays and rejects primitives.
-	- `type` — mime matcher (string or function), default `'application/json'`.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `limit` | number|string | none | Maximum body size (bytes or unit string like `'1mb'`). |
+| `reviver` | function | — | Function passed to `JSON.parse` for custom reviving. |
+| `strict` | boolean | `true` | When `true` only accepts objects/arrays (rejects primitives). |
+| `type` | string|function | `'application/json'` | MIME matcher for the parser. |
 
 urlencoded([opts])
-- Options:
-	- `extended` (default: `false`) — when `true` supports nested bracket syntax (a[b]=1, a[]=1).
-	- `limit` — max body size.
-	- `type` — mime matcher, default `'application/x-www-form-urlencoded'`.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `extended` | boolean | `false` | When `true` supports rich nested bracket syntax (a[b]=1, a[]=1). |
+| `limit` | number|string | none | Maximum body size. |
+| `type` | string|function | `'application/x-www-form-urlencoded'` | MIME matcher. |
 
 text([opts])
-- Options:
-	- `type` — mime matcher, default `text/*`.
-	- `limit` — max body size.
-	- `encoding` — default `'utf8'`.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `type` | string|function | `text/*` | MIME matcher for text bodies. |
+| `limit` | number|string | none | Maximum body size. |
+| `encoding` | string | `utf8` | Character encoding used to decode bytes. |
 
 raw([opts])
-- Options:
-	- `type` — mime matcher, default `application/octet-stream`.
-	- `limit` — max body size.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `type` | string|function | `application/octet-stream` | MIME matcher for raw parser. |
+| `limit` | number|string | none | Maximum body size. |
 
 multipart(opts)
-- Streaming multipart parser. Options:
-	- `dir` — directory to store uploaded files (absolute or relative to process.cwd()). Defaults to `os.tmpdir()/molex-http-uploads`.
-	- `maxFileSize` — maximum allowed file size in bytes; exceeding this returns HTTP 413 and aborts the upload.
 
-Behavior: multipart writes file parts to disk with a generated name preserving the original extension when possible. On completion `req.body` will be an object `{ fields, files }` where `files` contains metadata: `originalFilename`, `storedName`, `path`, `contentType`, `size`.
+Streaming multipart parser that writes file parts to disk and collects fields.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `dir` | string | `os.tmpdir()/molex-http-uploads` | Directory to store uploaded files (absolute or relative to `process.cwd()`). |
+| `maxFileSize` | number | none | Maximum allowed file size in bytes. Exceeding this returns HTTP 413 and aborts the upload. |
+
+Behavior: `multipart` writes file parts to disk with a generated name preserving the original extension when possible. On completion `req.body` will be `{ fields, files }` where `files` contains metadata: `originalFilename`, `storedName`, `path`, `contentType`, `size`.
 
 ### static(rootPath, opts)
 
 Serve static files from `rootPath`.
 
-Options:
-- `index` (string|false) — default `'index.html'`.
-- `maxAge` (number|string) — Cache-Control max-age.
-- `dotfiles` — `'allow'|'deny'|'ignore'` (default `'ignore'`).
-- `extensions` — array of fallback extensions.
-- `setHeaders` — function `(res, filePath) => {}` to set custom headers per file.
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `index` | string|false | `'index.html'` | File to serve for directory requests; set `false` to disable. |
+| `maxAge` | number|string | `0` | Cache-Control `max-age` (ms or unit string like `'1h'`). |
+| `dotfiles` | string | `'ignore'` | `'allow'|'deny'|'ignore'` — how to handle dotfiles. |
+| `extensions` | string[] | — | Fallback extensions to try when a request omits an extension. |
+| `setHeaders` | function | — | Hook `(res, filePath) => {}` to set custom headers per file. |
 
 ### cors([opts])
 
 Small CORS middleware. Typical options:
-- `origin` — string|boolean|array, default `'*'`.
-- `methods` — string, default `'GET,HEAD,PUT,POST,DELETE'`.
-- `allowedHeaders` — string.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `origin` | string|boolean|array | `'*'` | Allowed origin(s). Use `false` to disable CORS. |
+| `methods` | string | `'GET,HEAD,PUT,POST,DELETE'` | Allowed methods. |
+| `allowedHeaders` | string | — | Headers allowed in requests. |
 
 ### fetch(url, opts)
 
 Small Node HTTP client returning an object with `status`, `headers` and helpers: `text()`, `json()`, `arrayBuffer()`.
 
-Options:
-- `method` — HTTP method (default: `'GET'`).
-- `headers` — object.
-- `body` — `Buffer|string|Stream|URLSearchParams|object` (plain objects are JSON-encoded).
-- `timeout` — timeout in ms.
-- `signal` — `AbortSignal` to cancel the request.
-- `onUploadProgress` / `onDownloadProgress` — callbacks called with `{ loaded, total }`.
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `method` | string | `GET` | HTTP method. |
+| `headers` | object | — | Request headers. |
+| `body` | Buffer|string|Stream|URLSearchParams|object | — | Request body. Plain objects are JSON-encoded. |
+| `timeout` | number | — | Request timeout in milliseconds. |
+| `signal` | AbortSignal | — | Optional `AbortSignal` to cancel the request. |
+| `onUploadProgress` / `onDownloadProgress` | function | — | Callbacks receiving `{ loaded, total }` during transfer. |
 
 Example usage:
 
@@ -169,7 +186,7 @@ app.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.
 
 - `lib/` — core helpers and middleware (router, fetch, body parsers, static server)
 - `documentation/` — demo server, controllers and public UI used to showcase features
-- `examples/` — small usage examples
+- `test/` — tests for core functionality and edge cases
 
 ## Testing
 
