@@ -100,17 +100,17 @@ async function loadUploadsList()
             if (total === 0)
             {
                 uploadsList.textContent = 'No uploads yet';
-                pageInfo.textContent = 'Page 0 / 0';
+                pageInfo.textContent = '0 / 0';
             } else
             {
                 uploadsList.textContent = 'No uploads on this page';
-                pageInfo.textContent = `Page ${j.page || currentPage} / ${maxPages}`;
+                pageInfo.textContent = `${j.page || currentPage} / ${maxPages}`;
             }
             prevPageBtn.disabled = (currentPage <= 1);
             nextPageBtn.disabled = (currentPage >= maxPages);
             return;
         }
-        pageInfo.textContent = `Page ${j.page} / ${maxPages}`;
+        pageInfo.textContent = `${j.page} / ${maxPages}`;
         prevPageBtn.disabled = (j.page <= 1);
         nextPageBtn.disabled = (j.page >= maxPages);
         for (const f of j.files)
