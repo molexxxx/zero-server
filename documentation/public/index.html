@@ -112,8 +112,26 @@
 									<tr>
 										<td><strong>raw()</strong></td>
 										<td>function</td>
+										<td><code>application/octet-stream</code></td>
+										<td>Reads raw bytes into a Buffer on <code>req.body</code> (default <code>application/octet-stream</code>).</td>
+									</tr>
+									<tr>
+										<td><strong>cors([opts])</strong></td>
+										<td>function</td>
+										<td><code>'*'</code></td>
+										<td>Simple CORS middleware. Options: <code>origin</code>, <code>methods</code>, <code>allowedHeaders</code>, <code>credentials</code>.</td>
+									</tr>
+									<tr>
+										<td><strong>static(rootPath, opts)</strong></td>
+										<td>function</td>
+										<td><code>index.html</code></td>
+										<td>Serves static files. Options: <code>index</code>, <code>maxAge</code>, <code>dotfiles</code>, <code>extensions</code>, <code>setHeaders</code>.</td>
+									</tr>
+									<tr>
+										<td><strong>fetch(url, opts)</strong></td>
+										<td>function</td>
 										<td>—</td>
-										<td>Reads raw bytes into a Buffer on <code>req.body</code>.</td>
+										<td>Small Node HTTP client. Options include <code>agent</code>, <code>method</code>, <code>headers</code>, <code>body</code>, <code>timeout</code>, <code>signal</code>, and progress callbacks. Response exposes <code>ok</code>, <code>statusText</code>, <code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
 									</tr>
 									<tr>
 										<td><strong>multipart({ dir, maxFileSize })</strong></td>
@@ -449,10 +467,16 @@ app.use(static(path.join(__dirname, 'documentation', 'public'), {
 													CORS, or an array of origin strings/domains. The middleware will
 													match the request origin against the array internally.</td>
 											</tr>
+																		<tr>
+																			<td><code>credentials</code></td>
+																			<td>boolean</td>
+																			<td><code>false</code></td>
+																			<td>If true, sets <code>Access-Control-Allow-Credentials</code> when a specific origin matches.</td>
+																		</tr>
 											<tr>
 												<td><code>methods</code></td>
 												<td>string</td>
-												<td><code>'GET,HEAD,PUT,POST,DELETE'</code></td>
+																			<td><code>'GET,POST,PUT,DELETE,OPTIONS'</code></td>
 												<td>Allowed methods.</td>
 											</tr>
 											<tr>
@@ -491,6 +515,11 @@ app.use(cors({
 											</tr>
 										</thead>
 										<tbody>
+												<tr>
+													<td><code>agent</code></td>
+													<td>object</td>
+													<td>Optional http/https agent for connection pooling or proxies.</td>
+												</tr>
 											<tr>
 												<td><code>method</code></td>
 												<td>string</td>
@@ -504,7 +533,7 @@ app.use(cors({
 											<tr>
 												<td><code>body</code></td>
 												<td>Buffer|string|Stream</td>
-												<td>Request body</td>
+													<td>Request body. Plain objects are JSON-stringified and <code>Content-Type</code> is set to <code>application/json</code> if not provided. <code>URLSearchParams</code> become urlencoded.</td>
 											</tr>
 											<tr>
 												<td><code>timeout</code></td>
@@ -528,6 +557,11 @@ app.use(cors({
 												<td>function</td>
 												<td>Callback for download progress.</td>
 											</tr>
+												<tr>
+													<td><strong>Response helpers</strong></td>
+													<td></td>
+													<td>Returned object includes <code>ok</code>, <code>statusText</code>, and methods <code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
+												</tr>
 										</tbody>
 									</table>
 									<h6>Example</h6>

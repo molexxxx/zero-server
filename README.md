@@ -162,7 +162,8 @@ Small CORS middleware. Typical options:
 | Option | Type | Default | Description |
 |---|---:|---|---|
 | `origin` | string|boolean|array | `'*'` | Allowed origin(s). Use `false` to disable CORS. |
-| `methods` | string | `'GET,HEAD,PUT,POST,DELETE'` | Allowed methods. |
+| `methods` | string | `'GET,POST,PUT,DELETE,OPTIONS'` | Allowed methods. |
+| `credentials` | boolean | `false` | When true and a specific origin matches, sets `Access-Control-Allow-Credentials`.
 | `allowedHeaders` | string | — | Headers allowed in requests. |
 
 ### fetch(url, opts)
@@ -173,10 +174,13 @@ Small Node HTTP client returning an object with `status`, `headers` and helpers:
 |---|---:|---|---|
 | `method` | string | `GET` | HTTP method. |
 | `headers` | object | — | Request headers. |
-| `body` | Buffer|string|Stream|URLSearchParams|object | — | Request body. Plain objects are JSON-encoded. |
+| `agent` | object | — | Optional `http`/`https` agent for connection pooling or proxies. |
+| `body` | Buffer|string|Stream|URLSearchParams|object | — | Request body. Plain objects are JSON-encoded and `Content-Type` is set to `application/json` if not provided; `URLSearchParams` produce urlencoded bodies. |
 | `timeout` | number | — | Request timeout in milliseconds. |
 | `signal` | AbortSignal | — | Optional `AbortSignal` to cancel the request. |
 | `onUploadProgress` / `onDownloadProgress` | function | — | Callbacks receiving `{ loaded, total }` during transfer. |
+
+Response: resolved value includes `ok`, `statusText`, and helpers `arrayBuffer()`, `text()`, `json()`.
 
 Example usage:
 
