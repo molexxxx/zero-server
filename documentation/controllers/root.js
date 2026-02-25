@@ -1,0 +1,1 @@
+exports.getRoot = (req, res) => res.json({ ok: true, msg: 'molex-http full-server example' });

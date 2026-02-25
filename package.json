@@ -1,0 +1,10 @@
+{
+  "name": "molex-http",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node examples/full-server.js"
+  }
+  
+}

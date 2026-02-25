@@ -1,0 +1,456 @@
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>molex-http — demo & reference</title>
+		<link rel="stylesheet" href="/styles.css" />
+		<!-- Prism.js (local vendor) -->
+		<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
+	</head>
+	<body>
+		<div class="ui-shell">
+			<header class="ui-header">
+				<div class="brand">
+					<div class="logo">molex-http</div>
+					<div class="subtitle">Zero-dependency Express-like server — interactive demo & reference</div>
+				</div>
+			</header>
+
+			<main class="ui-main">
+				<!-- Built-in README / API Reference -->
+				<div class="card docs-card">
+						<div class="card-head">
+							<h3>Docs & API Reference</h3>
+							<div class="small muted">Reference for features, options, and API with runnable examples
+							</div>
+						</div>
+
+						<div class="acc-body">
+							<h4>Quickstart</h4>
+							<p>Run the demo server from the repo root and open <code>http://localhost:3000</code>.</p>
+							<pre class="language-bash"><code class="language-bash">node documentation/full-server.js
+# visit http://localhost:3000</code></pre>
+
+							<h4>Overview</h4>
+							<p class="muted">molex-http is a zero-dependency Express-like server with built-in body parsers, streaming multipart uploads, static serving, and a small fetch replacement for Node.</p>
+
+							<h4>API, Options & Examples</h4>
+
+							<div class="muted">Comprehensive reference for configuration options, runtime behavior, and API examples. Expand each section for details and runnable snippets.</div>
+
+                            
+
+							<details class="acc">
+								<summary>Features</summary>
+								<div class="acc-body">
+									<ul>
+										<li>Zero-dependency, Express-like API and middleware</li>
+										<li>Built-in parsers: <strong>json()</strong>, <strong>urlencoded()</strong>, <strong>text()</strong>, <strong>raw()</strong></li>
+										<li>Streaming multipart uploads with file streaming to disk</li>
+										<li>Static file serving with correct Content-Type handling</li>
+										<li>Small built-in fetch replacement for server-side requests</li>
+									</ul>
+								</div>
+							</details>
+
+
+							<details class="acc">
+								<summary>Options (middleware & parser settings)</summary>
+								<div class="acc-body">
+									<p class="muted">Common option shapes and defaults for parsers and upload middleware.</p>
+									<table>
+										<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+										<tbody>
+											<tr><td><strong>json()</strong></td><td>function</td><td>—</td><td>Parses JSON bodies into <code>req.body</code>.</td></tr>
+											<tr><td><strong>urlencoded()</strong></td><td>function</td><td>—</td><td>Parses application/x-www-form-urlencoded bodies.</td></tr>
+											<tr><td><strong>text()</strong></td><td>function</td><td>—</td><td>Reads raw text into <code>req.body</code>.</td></tr>
+											<tr><td><strong>raw()</strong></td><td>function</td><td>—</td><td>Reads raw bytes into a Buffer on <code>req.body</code>.</td></tr>
+											<tr><td><strong>multipart({ dir, maxFileSize })</strong></td><td>object</td><td><code>{ dir: uploadsDir }</code></td><td>Streams file parts to disk; exposes <code>req.body.files</code> and <code>req.body.fields</code>.</td></tr>
+										</tbody>
+									</table>
+
+									<h5>Type-casting / collapse options (parser-specific)</h5>
+									<table>
+										<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+										<tbody>
+											<tr><td><code>explicitArray</code></td><td>boolean</td><td><code>true</code></td><td>When <code>false</code>, single-element arrays are collapsed.</td></tr>
+											<tr><td><code>mergeAttrs</code></td><td>boolean</td><td><code>true</code></td><td>Place attributes under the <code>$</code> key.</td></tr>
+											<tr><td><code>typeCast</code></td><td>boolean|object</td><td><code>true</code></td><td>Enable basic casting of numbers/booleans/dates/JSON.</td></tr>
+											<tr><td><code>collapseTextNodes</code></td><td>boolean</td><td><code>false</code></td><td>Collapse single text/CDATA-only elements to strings.</td></tr>
+										</tbody>
+											</table>
+										</div>
+									</details>
+
+							<details class="acc">
+								<summary>Server behavior & request model</summary>
+								<div class="acc-body">
+									<ul>
+										<li>Routing and middleware run in registration order — install parsers before handlers that need parsed bodies.</li>
+										<li>Body parsers populate <code>req.body</code>; multipart uploads populate <code>req.body.files</code> and <code>req.body.fields</code>.</li>
+										<li>Handlers receive <code>req</code> and <code>res</code> objects; use <code>res.json()</code>, <code>res.send()</code> or set status and headers directly.</li>
+										<li>Static middleware serves files with Content-Type derived from extension; thumbnails live under the uploads <code>.thumbs</code> folder.</li>
+									</ul>
+								</div>
+							</details>
+
+							<details class="acc">
+								<summary>API Reference</summary>
+								<div class="acc-body">
+
+									<details class="acc nested">
+										<summary><strong>createApp()</strong></summary>
+										<div class="acc-body">
+											<p>Returns an application instance with Express-like methods: <code>use()</code>, <code>get()</code>, <code>post()</code>, <code>put()</code>, <code>delete()</code>, and <code>listen()</code>.</p>
+											<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">const { createApp, json, static } = require('molex-http')
+const app = createApp()
+
+app.use(json({ limit: '10kb' }))
+app.get('/', (req, res) =&gt; res.send('ok'))
+app.listen(3000)</code></pre>
+		</div>
+	</details>
+
+									<details class="acc nested">
+										<summary><strong>json([opts])</strong></summary>
+										<div class="acc-body">
+											<p>Parses JSON request bodies and populates <code>req.body</code>.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>limit</code></td><td>number|string</td><td>none</td><td>Maximum body size (bytes or unit string like <code>'1mb'</code>).</td></tr>
+													<tr><td><code>strict</code></td><td>boolean</td><td><code>true</code></td><td>If <code>true</code>, only accepts objects and arrays; otherwise accepts primitives.</td></tr>
+													<tr><td><code>reviver</code></td><td>function</td><td>—</td><td>Optional JSON reviver passed to <code>JSON.parse</code>.</td></tr>
+													<tr><td><code>type</code></td><td>string|function</td><td><code>application/json</code></td><td>Mime type matcher for the parser.</td></tr>
+												</tbody>
+											</table>
+																				<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// strict JSON parsing with reviver and type matcher
+app.use(json({
+	limit: '10kb',
+	strict: true,
+	reviver: (k, v) =&gt; {
+		// coerce ISO8601-like strings to Date objects
+		if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v)
+		return v
+	},
+	type: 'application/json'
+}))</code></pre>
+										</div>
+									</details>
+
+									<details class="acc nested">
+										<summary><strong>urlencoded([opts])</strong></summary>
+										<div class="acc-body">
+											<p>Parses <code>application/x-www-form-urlencoded</code> bodies.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>extended</code></td><td>boolean</td><td><code>false</code></td><td>When <code>true</code> allows rich objects; when <code>false</code> returns simple key/value pairs.</td></tr>
+													<tr><td><code>limit</code></td><td>number|string</td><td>none</td><td>Maximum body size.</td></tr>
+													<tr><td><code>type</code></td><td>string|function</td><td><code>application/x-www-form-urlencoded</code></td><td>Mime type matcher.</td></tr>
+												</tbody>
+											</table>
+                                            
+											<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// parse urlencoded with extended parsing and limit
+app.use(urlencoded({ extended: true, limit: '20kb' }))</code></pre>
+										</div>
+									</details>
+
+									<details class="acc nested">
+										<summary><strong>text([opts])</strong></summary>
+										<div class="acc-body">
+											<p>Reads plain text request bodies into <code>req.body</code>.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>type</code></td><td>string|function</td><td><code>text/*</code></td><td>Mime matcher for which requests are treated as text.</td></tr>
+													<tr><td><code>limit</code></td><td>number|string</td><td>none</td><td>Maximum body size.</td></tr>
+													<tr><td><code>encoding</code></td><td>string</td><td><code>utf8</code></td><td>Character encoding used to decode the incoming bytes.</td></tr>
+												</tbody>
+											</table>
+											<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// accept text/* bodies as UTF-8 with explicit encoding
+app.use(text({ type: 'text/*', limit: '50kb', encoding: 'utf8' }))</code></pre>
+										</div>
+									</details>
+
+									<details class="acc nested">
+										<summary><strong>raw([opts])</strong></summary>
+										<div class="acc-body">
+											<p>Receives raw bytes as a <code>Buffer</code> on <code>req.body</code>.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>type</code></td><td>string|function</td><td><code>application/octet-stream</code></td><td>Mime matcher for raw parser.</td></tr>
+													<tr><td><code>limit</code></td><td>number|string</td><td>none</td><td>Maximum body size.</td></tr>
+												</tbody>
+											</table>
+											<h6>Example</h6>
+	<pre class="language-javascript"><code class="language-javascript">// receive raw bytes for application/octet-stream
+	app.use(raw({ type: 'application/octet-stream', limit: '1mb' }))</code></pre>
+										</div>
+									</details>
+
+									<details class="acc nested">
+										<summary><strong>multipart({ dir, maxFileSize })</strong></summary>
+										<div class="acc-body">
+											<p>Streaming multipart parser that writes incoming file parts to disk and exposes <code>req.body.files</code> and <code>req.body.fields</code>.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>dir</code></td><td>string</td><td><code>os.tmpdir() + '/molex-http-uploads'</code></td><td>Directory to store uploaded files; can be absolute or relative to process.cwd().</td></tr>
+													<tr><td><code>maxFileSize</code></td><td>number</td><td>none</td><td>Maximum allowed file size in bytes; exceeding this returns 413 and aborts the upload.</td></tr>
+												</tbody>
+																						</table>
+																						<p class="muted">Files are stored with a generated name that preserves the original extension when possible; uploaded file metadata is provided in <code>req.body.files</code>.</p>
+																																												<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// stream uploads to disk, limit single file size and set custom dir
+app.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) =&gt; {
+	// req.body.files contains stored file metadata (originalName, size, path)
+	res.json({ files: req.body.files })
+})</code></pre>
+																				</div>
+																		</details>
+
+									<details class="acc nested">
+										<summary><strong>static(rootPath, opts)</strong></summary>
+										<div class="acc-body">
+											<p>Serves files from a filesystem folder with Content-Type detection and optional caching.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>index</code></td><td>string|false</td><td><code>'index.html'</code></td><td>File to serve for directory requests.</td></tr>
+													<tr><td><code>maxAge</code></td><td>number|string</td><td><code>0</code></td><td>Cache-Control max-age (ms or string like <code>'1h'</code>).</td></tr>
+													<tr><td><code>dotfiles</code></td><td>'allow'|'deny'|'ignore'</td><td><code>'ignore'</code></td><td>How to handle dotfiles (e.g., <code>.thumbs</code>).</td></tr>
+													<tr><td><code>extensions</code></td><td>string[]</td><td>—</td><td>Fallback extensions to try when a request omits an extension.</td></tr>
+													<tr><td><code>setHeaders</code></td><td>function</td><td>—</td><td>Hook to set custom headers per file: <code>(res, filePath) =&gt; {}</code>.</td></tr>
+												</tbody>
+																						</table>
+																																												<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// serve UI and hide internal dotfiles, with caching and header hook
+app.use(static(path.join(__dirname, 'documentation', 'public'), {
+	index: 'index.html',
+	dotfiles: 'ignore',
+	maxAge: '1h',
+	setHeaders: (res, filePath) =&gt; { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }
+}))</code></pre>
+																				</div>
+																		</details>
+
+									<details class="acc nested">
+										<summary><strong>cors([opts])</strong></summary>
+										<div class="acc-body">
+											<p>Small CORS middleware used in the demo. Typical options:</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>origin</code></td><td>string|boolean|array</td><td><code>'*'</code></td><td>Allowed origin(s). Can be a string, <code>false</code> to disable CORS, or an array of origin strings/domains. The middleware will match the request origin against the array internally.</td></tr>
+													<tr><td><code>methods</code></td><td>string</td><td><code>'GET,HEAD,PUT,POST,DELETE'</code></td><td>Allowed methods.</td></tr>
+													<tr><td><code>allowedHeaders</code></td><td>string</td><td>—</td><td>Headers allowed in requests.</td></tr>
+												</tbody>
+											</table>
+																						</table>
+
+																						<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// allow specific domains and credentials, restrict methods
+app.use(cors({ 
+	origin: ['https://example.com', 'https://acme.com'], 
+	credentials: true, 
+	methods: 'GET,POST' 
+}))</code></pre>
+																				</div>
+									</details>
+
+									<details class="acc nested">
+										<summary><strong>fetch(url, opts)</strong></summary>
+										<div class="acc-body">
+											<p>Small Node HTTP client returning an object with <code>status</code>, <code>headers</code> and helpers: <code>text()</code>, <code>json()</code>, <code>arrayBuffer()</code>. Supports progress callbacks.</p>
+											<table>
+												<thead><tr><th>Option</th><th>Type</th><th>Notes</th></tr></thead>
+												<tbody>
+													<tr><td><code>method</code></td><td>string</td><td>HTTP method (GET, POST, etc.)</td></tr>
+													<tr><td><code>headers</code></td><td>object</td><td>Request headers</td></tr>
+													<tr><td><code>body</code></td><td>Buffer|string|Stream</td><td>Request body</td></tr>
+													<tr><td><code>timeout</code></td><td>number</td><td>Request timeout in ms</td></tr>
+													<tr><td><code>onUploadProgress</code></td><td>function</td><td>Callback for upload progress: <code>({loaded, total}) =&gt; {}</code></td></tr>
+													<tr><td><code>onDownloadProgress</code></td><td>function</td><td>Callback for download progress.</td></tr>
+												</tbody>
+											</table>
+																				<h6>Example</h6>
+<pre class="language-javascript"><code class="language-javascript">// GET with timeout and download progress
+const r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {
+	timeout: 5000,
+	onDownloadProgress: ({ loaded, total }) =&gt; console.log('download', loaded, total)
+})
+const data = await r.json()
+console.log(data)</code></pre>
+										</div>
+									</details>
+
+								</div>
+							</details>
+								
+							<details class="acc">
+								<summary>Examples</summary>
+								<div class="acc-body">
+									<p class="muted">Concise real-world snippets showing how to compose middleware for common tasks.</p>
+
+									<h5>Small JSON API</h5>
+<pre class="language-javascript"><code class="language-javascript">const { createApp, json, cors } = require('molex-http')
+const app = createApp()
+
+app.use(cors({ origin: ['https://example.com'] }))
+app.use(json({ limit: '10kb' }))
+
+const items = []
+app.post('/items', (req, res) =&gt; {
+	items.push(req.body)
+  	res.statusCode = 201
+  	res.json({ ok: true })
+})</code></pre>
+
+<h5>Upload handler (disk or custom writer)</h5>
+<pre class="language-javascript"><code class="language-javascript">// default: stream file parts to disk
+app.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) =&gt; {
+	// req.body.files contains stored file metadata
+  	res.json({ files: req.body.files })
+})
+
+// To adapt to S3: replace file write stream in your handler or multipart writer
+// with an S3 upload stream and return the remote URL in response.</code></pre>
+
+<h5>Serve UI + Protect Internal Uploads</h5>
+<pre class="language-javascript"><code class="language-javascript">// serve UI
+app.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.html' }))
+
+// mount uploads but hide internal files like .thumbs
+app.use('/uploads', static(path.join(__dirname, 'documentation', 'uploads'), {
+	dotfiles: 'ignore',
+	setHeaders: (res, filePath) =&gt; { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }
+}))</code></pre>
+
+		</div>
+	</details>
+	<details class="acc">
+		<summary>Installation & tests</summary>
+		<div class="acc-body">
+<pre class="language-bash"><code class="language-bash">npm install
+# run demo server from repo root
+node documentation/full-server.js
+# run tests (project-specific)
+node test/test.js</code></pre>
+		</div>
+							</details>
+
+							<h4>Extending</h4>
+							<p>Use the provided middlewares and routing helpers to build controllers, add auth, or swap in different storage backends. The multipart parser exposes file streams and writes each part to disk so you can replace disk writes with S3 streams if desired.</p>
+
+						</div>
+					</div>
+					<!-- Upload section -->
+				<div class="card upload-card constrained">
+						<div class="card-head"><h3>Upload multipart data</h3><div class="small muted">Drag, drop or pick a file</div></div>
+						<form id="uploadForm" class="uploadForm" enctype="multipart/form-data">
+							<div class="fileDrop" id="fileDrop">
+								<input id="fileInput" name="file" type="file" class="fileInput" />
+								<div class="fileDrop-inner">Drop files here or <label for="fileInput" class="linkish">choose file</label></div>
+							</div>
+							<input name="desc" class="textInput" placeholder="Description (optional)" />
+							<div class="controls">
+								<div class="left-controls">
+									<button type="submit" class="btn primary">Upload</button>
+									<button id="delAllBtn" type="button" class="btn warn">Delete All</button>
+									<button id="delKeepBtn" type="button" class="btn">Delete (keep 1)</button>
+								</div>
+								<div class="right-controls">
+									<label class="selectWrap">Sort
+										<select id="sortSelect"><option value="mtime">Newest</option><option value="name">Name</option><option value="size">Size</option></select>
+										<select id="sortOrder" title="Sort order" aria-label="Sort order"><option value="desc">Desc</option><option value="asc">Asc</option></select>
+									</label>
+									<div class="pager"><button id="prevPage" type="button" class="btn small">◀</button><span id="pageInfo">Page 1</span><button id="nextPage" type="button" class="btn small">▶</button></div>
+								</div>
+							</div>
+							<progress id="uploadProgress" value="0" max="100" style="display:none"></progress>
+						</form>
+						<div id="uploadResult" class="result mono"></div>
+
+						<!-- Combined files area (uploads + trash) inside the same card -->
+						<div class="files-wrap combined-files" style="margin-top:18px">
+							<div class="files-column">
+								<div class="card files-card">
+									<div class="card-head"><h3>Uploaded Files</h3><div class="small muted">Thumbnails and metadata</div></div>
+									<div id="uploadsList" class="file-grid">(loading...)</div>
+								</div>
+							</div>
+
+							<div class="trash-column">
+								<div class="card trash-card">
+									<div class="card-head"><h3>Trash</h3></div>
+									<div id="trashList" class="file-grid muted">(loading...)</div>
+									<div style="margin-top:12px"><button id="emptyTrashBtn" type="button" class="btn">Empty Trash</button></div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="card play-card constrained">
+						<div class="card-head"><h3>Quick parser tests</h3></div>
+						<div class="card-body">
+							<div class="playgrid">
+								<form id="jsonPlay" class="play">
+									<label>JSON (raw)
+										<textarea name="json" class="textInput">{"foo":"bar"}</textarea>
+									</label>
+									<button class="btn">Send JSON</button>
+								</form>
+								<form id="urlPlay" class="play">
+									<label>URL-encoded (body)
+										<textarea name="url" class="textInput">foo=bar&amp;baz=qux</textarea>
+									</label>
+									<button class="btn">Send urlencoded</button>
+								</form>
+								<form id="textPlay" class="play">
+									<label>Text (raw)
+										<textarea name="txt" class="textInput">hello world</textarea>
+									</label>
+									<button class="btn">Send text</button>
+								</form>
+							</div>
+							<pre id="playResult" class="result mono" style="margin-top:12px"></pre>
+						</div>
+					</div>
+
+				<div class="card proxy-card constrained">
+						<div class="card-head"><h3>Proxy Test</h3></div>
+						<div class="card-body">
+								<form id="proxyForm" class="play">
+										<label>External URL to proxy
+												<input id="proxyUrl" name="proxyUrl" class="textInput" type="url" placeholder="https://jsonplaceholder.typicode.com/todos/1" required style="width:100%" />
+										</label>
+										<button class="btn">Proxy Fetch</button>
+								</form>
+								<pre id="proxyResult" class="result mono" style="margin-top:12px"></pre>
+						</div>
+				</div>
+
+				<div class="card footnote" style="max-width:1300px;margin:18px auto;">
+					<p class="muted">This demo doubles as a readable API reference and playground — try uploading files, inspect the returned JSON, and use the playground to test parsers.</p>
+				</div>
+			</main>
+
+			<footer class="ui-footer">molex-http demo • zero dependencies</footer>
+		</div>
+
+		<!-- Prism.js (local vendor files) -->
+		<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
+		<link rel="stylesheet" href="/prism-overrides.css" />
+		<script src="/vendor/prism.min.js"></script>
+		<script src="/vendor/prism-json.min.js"></script>
+		<script src="/vendor/prism-javascript.min.js"></script>
+		<script src="/app.js"></script>
+	</body>
+</html>
