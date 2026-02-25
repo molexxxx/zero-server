@@ -34,7 +34,14 @@ app.post('/echo', (req, res) => res.json({ received: req.body }))
 app.listen(3000)
 ```
 
-Visit the demo UI: run `node documentation/full-server.js` and open `http://localhost:3000`.
+Demo
+
+You can view the live documentation and playground at https://molex-http.molex.cloud, or run the demo locally:
+
+```bash
+node documentation/full-server.js
+# open http://localhost:3000
+```
 
 ## API Reference
 
@@ -44,21 +51,50 @@ All exports are available from the package root:
 const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static } = require('molex-http')
 ```
 
-- `createApp()` — returns an application instance with methods:
-	- `use(fn)` — register middleware (fn signature: `(req, res, next)`).
-	- `get(path, ...handlers)` / `post()` / `put()` / `delete()` — routing helpers.
-	- `listen(port = 3000, cb)` — start HTTP server.
+| Export | Type | Description |
+|---|---|---|
+| `createApp()` | function | Create a new application instance (router + middleware stack). |
+| `cors` | function | CORS middleware factory. |
+| `fetch` | function | Small Node HTTP client with progress callbacks. |
+| `json` | function | JSON body parser factory. |
+| `urlencoded` | function | urlencoded body parser factory. |
+| `text` | function | Text body parser factory. |
+| `raw` | function | Raw bytes parser factory. |
+| `multipart` | function | Streaming multipart parser factory. |
+| `static` | function | Static file serving middleware factory. |
 
-- Request object (`req`) wraps the raw Node request and exposes:
-	- `req.method`, `req.url`, `req.headers`, `req.query`, `req.params`, `req.body`.
-	- `req.parseBody()` — low-level helper that reads and parses body according to Content-Type.
+createApp() methods
 
-- Response object (`res`) helpers:
-	- `res.status(code)` — set status.
-	- `res.set(name, value)` — set header.
-	- `res.send(body)` — send response (Buffer/string/object → JSON).
-	- `res.json(obj)` — convenience JSON response.
-	- `res.text(str)` — convenience text response.
+| Method | Signature | Description |
+|---|---|---|
+| `use` | `use(fn)` | Register middleware; `fn(req, res, next)`. |
+| `get` | `get(path, ...handlers)` | Register GET route handlers. |
+| `post` | `post(path, ...handlers)` | Register POST route handlers. |
+| `put` | `put(path, ...handlers)` | Register PUT route handlers. |
+| `delete` | `delete(path, ...handlers)` | Register DELETE route handlers. |
+| `listen` | `listen(port = 3000, cb)` | Start the HTTP server. |
+
+Request (`req`) properties & helpers
+
+| Property / Method | Type | Description |
+|---|---|---|
+| `method` | string | HTTP method (GET, POST, etc.). |
+| `url` | string | Request URL (path + query). |
+| `headers` | object | Raw request headers. |
+| `query` | object | Parsed query string. |
+| `params` | object | Route parameters (populated by router). |
+| `body` | any | Parsed body (populated by body parsers). |
+| `parseBody()` | async function | Low-level helper to read & parse body by Content-Type. |
+
+Response (`res`) helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `status` | `status(code)` | Set HTTP status code and return `res`. |
+| `set` | `set(name, value)` | Set a response header. |
+| `send` | `send(body)` | Send a response; objects are JSON-serialized. |
+| `json` | `json(obj)` | Set JSON Content-Type and send object. |
+| `text` | `text(str)` | Set text/plain and send string. |
 
 ### Body parsers
 
