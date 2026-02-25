@@ -1,10 +1,43 @@
 {
   "name": "molex-http",
   "version": "0.1.0",
-  "private": true,
+  "description": "Zero-dependency, minimal Express-like HTTP server and tiny fetch replacement",
   "main": "index.js",
+  "files": [
+    "lib",
+    "documentation",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "start": "node examples/full-server.js"
+    "start": "node documentation/full-server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "http",
+    "server",
+    "router",
+    "middleware",
+    "fetch",
+    "multipart",
+    "static",
+    "molex"
+  ],
+  "author": "Anthony Wiedman",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tonywied17/molex-http-npm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tonywied17/molex-http-npm/issues"
+  },
+  "homepage": "https://github.com/tonywied17/molex-http-npm#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
-  
 }
