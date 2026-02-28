@@ -5,17 +5,25 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>molex-http — demo & reference</title>
+	<meta name="description"
+		content="molex-http is a zero-dependency, Express-like HTTP server for Node.js with built-in parsers, static serving, and upload handling." />
+	<meta name="keywords"
+		content="nodejs,http,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client" />
+	<meta name="author" content="Anthony Wiedman" />
 	<link rel="stylesheet" href="/styles.css" />
 	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
 </head>
 
 <body class="toc-hidden">
+	<a id="top"></a>
 	<div class="ui-shell">
 		<header class="ui-header">
 			<button class="toc-toggle" aria-label="Toggle table of contents" title="Toggle table of contents">
-				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+					<path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+				</svg>
 			</button>
-			
+
 			<div class="brand">
 				<div class="logo">molex-http</div>
 				<div class="subtitle">Zero-dependency Express-like server</div>
@@ -46,11 +54,13 @@
 		<aside class="toc-sidebar" aria-label="Table of contents">
 			<nav>
 				<ul>
+					<li><a href="#top">Back to top</a></li>
 					<li><a href="#features">Features</a></li>
 					<li><a href="#quickstart">Quickstart</a></li>
-					<li><a href="#upload-testing">Upload testing</a></li>
 					<li><a href="#options">Options</a></li>
 					<li><a href="#api-reference">API Reference</a></li>
+					<li><a href="#simple-examples">Simple Examples</a></li>
+					<li><a href="#upload-testing">Upload testing</a></li>
 					<li><a href="#parser-tests">Parser tests</a></li>
 					<li><a href="#proxy-test">Proxy test</a></li>
 				</ul>
@@ -134,7 +144,8 @@
 									<div class="step-body">
 										<h5>Body parsing</h5>
 										<p>Body parsers populate <code>req.body</code>; multipart uploads expose
-											<code>req.body.files</code> and <code>req.body.fields</code>.</p>
+											<code>req.body.files</code> and <code>req.body.fields</code>.
+										</p>
 									</div>
 								</div>
 								<div class="behavior-step">
@@ -142,7 +153,8 @@
 									<div class="step-body">
 										<h5>Handler model</h5>
 										<p>Handlers receive <code>req</code> and <code>res</code>. Use
-											<code>res.json()</code> or <code>res.send()</code> to respond.</p>
+											<code>res.json()</code> or <code>res.send()</code> to respond.
+										</p>
 									</div>
 								</div>
 								<div class="behavior-step">
@@ -157,86 +169,6 @@
 						</div>
 					</div>
 				</div>
-
-				<script>
-					(function ()
-					{
-						const tabs = document.querySelectorAll('.feature-tabs .tab');
-						tabs.forEach(t => t.addEventListener('click', (ev) =>
-						{
-							const target = t.dataset.target;
-							if (!target) return;
-							tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
-							document.querySelectorAll('.feature-tabs .tab-panel').forEach(p => p.classList.remove('active'));
-							t.classList.add('active'); t.setAttribute('aria-selected', 'true');
-							const panel = document.getElementById(target); if (panel) panel.classList.add('active');
-						}));
-					})();
-					(function(){
-						const btn = document.querySelector('.toc-toggle');
-						const sidebar = document.querySelector('.toc-sidebar');
-						if (!btn || !sidebar) return;
-						const mq = (q) => window.matchMedia(q).matches;
-						const setAria = () => {
-							const expanded = mq('(min-width:900px)') ? !document.body.classList.contains('toc-hidden') : document.body.classList.contains('toc-open');
-							btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-						};
-						setAria();
-						btn.addEventListener('click', (ev) => {
-							if (mq('(min-width:900px)')) {
-								document.body.classList.toggle('toc-hidden');
-								document.body.classList.remove('toc-open');
-							} else {
-								document.body.classList.toggle('toc-open');
-							}
-							setAria();
-						});
-						document.addEventListener('keydown', (e) => {
-							if (e.key === 'Escape') {
-								document.body.classList.remove('toc-open');
-								document.body.classList.remove('toc-hidden');
-								setAria();
-							}
-						});
-						document.addEventListener('click', (e) => {
-							if (!document.body.classList.contains('toc-open')) return;
-							if (e.target.closest('.toc-sidebar') || e.target.closest('.toc-toggle')) return;
-							document.body.classList.remove('toc-open');
-							setAria();
-						});
-						window.addEventListener('resize', () => setAria());
-					})();
-
-					(function(){
-						const nav = document.querySelector('.toc-sidebar nav');
-						if (!nav) return;
-						function openAncestors(el){
-							let d = el.closest('details.acc');
-							while(d){ d.open = true; d = d.parentElement ? d.parentElement.closest('details.acc') : null; }
-						}
-						nav.addEventListener('click', (e) => {
-							const a = e.target.closest('a[href^="#"]');
-							if (!a) return;
-							const hash = a.getAttribute('href');
-							if (!hash || hash.charAt(0) !== '#') return;
-							const id = hash.slice(1);
-							const target = document.getElementById(id);
-							if (!target) return;
-							openAncestors(target);
-							setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-							document.body.classList.remove('toc-open');
-							const btn = document.querySelector('.toc-toggle'); if (btn) btn.setAttribute('aria-expanded', 'false');
-						});
-						window.addEventListener('hashchange', () => {
-							const id = location.hash ? location.hash.slice(1) : '';
-							if (!id) return;
-							const target = document.getElementById(id);
-							if (!target) return;
-							openAncestors(target);
-							setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-						});
-					})();
-				</script>
 
 				<div class="acc-body">
 					<h4 id="quickstart">Quickstart</h4>
@@ -255,16 +187,16 @@ app.get('/ping', (req, res) =&gt; res.json({ pong: true }))
 
 app.listen(3000, () =&gt; {
 	console.log('Server listening on http://localhost:3000')
-})</code></pre>
-
-
+})
+</code></pre>
 
 					<p class="muted">To run this demo server from the repo root and open
-						<code>http://localhost:3000</code>.</p>
+						<code>http://localhost:3000</code>.
+					</p>
 					<pre class="language-bash"><code class="language-bash">npm install molex-http
 npm run docs
-# open http://localhost:3000</code></pre>
-
+# open http://localhost:3000
+</code></pre>
 
 					<h4>API, Options & Examples</h4>
 
@@ -275,562 +207,36 @@ npm run docs
 						<summary>Options (middleware & parser settings)</summary>
 						<div class="acc-body">
 							<p class="muted">Common option shapes and defaults for parsers and upload middleware.</p>
-							<table>
-								<thead>
-									<tr>
-										<th>Option</th>
-										<th>Type</th>
-										<th>Default</th>
-										<th>Description</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td><strong>json()</strong></td>
-										<td>function</td>
-										<td>—</td>
-										<td>Parses JSON bodies into <code>req.body</code>.</td>
-									</tr>
-									<tr>
-										<td><strong>urlencoded()</strong></td>
-										<td>function</td>
-										<td>—</td>
-										<td>Parses application/x-www-form-urlencoded bodies.</td>
-									</tr>
-									<tr>
-										<td><strong>text()</strong></td>
-										<td>function</td>
-										<td>—</td>
-										<td>Reads raw text into <code>req.body</code>.</td>
-									</tr>
-									<tr>
-										<td><strong>raw()</strong></td>
-										<td>function</td>
-										<td><code>application/octet-stream</code></td>
-										<td>Reads raw bytes into a Buffer on <code>req.body</code> (default
-											<code>application/octet-stream</code>).</td>
-									</tr>
-									<tr>
-										<td><strong>cors([opts])</strong></td>
-										<td>function</td>
-										<td><code>'*'</code></td>
-										<td>Simple CORS middleware. Options: <code>origin</code>, <code>methods</code>,
-											<code>allowedHeaders</code>, <code>credentials</code>.</td>
-									</tr>
-									<tr>
-										<td><strong>static(rootPath, opts)</strong></td>
-										<td>function</td>
-										<td><code>index.html</code></td>
-										<td>Serves static files. Options: <code>index</code>, <code>maxAge</code>,
-											<code>dotfiles</code>, <code>extensions</code>, <code>setHeaders</code>.
-										</td>
-									</tr>
-									<tr>
-										<td><strong>fetch(url, opts)</strong></td>
-										<td>function</td>
-										<td>—</td>
-										<td>Small Node HTTP client. Options include <code>agent</code>,
-											<code>method</code>, <code>headers</code>, <code>body</code>,
-											<code>timeout</code>, <code>signal</code>, and progress callbacks. Response
-											exposes <code>ok</code>, <code>statusText</code>,
-											<code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
-									</tr>
-									<tr>
-										<td><strong>multipart({ dir, maxFileSize })</strong></td>
-										<td>object</td>
-										<td><code>{ dir: uploadsDir }</code></td>
-										<td>Streams file parts to disk; exposes <code>req.body.files</code> and
-											<code>req.body.fields</code>.
-										</td>
-									</tr>
-								</tbody>
-							</table>
+							<div id="options-items">Loading options…</div>
 						</div>
 					</details>
 
 					<details class="acc" id="api-reference">
 						<summary>API Reference</summary>
 						<div class="acc-body">
-
-							<details class="acc nested">
-								<summary><strong>createApp()</strong></summary>
-								<div class="acc-body">
-									<p>Returns an application instance with Express-like methods: <code>use()</code>,
-										<code>get()</code>, <code>post()</code>, <code>put()</code>,
-										<code>delete()</code>, and <code>listen()</code>.
-									</p>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">const { createApp, json, static } = require('molex-http')
-const app = createApp()
-
-app.use(json({ limit: '10kb' }))
-app.get('/', (req, res) =&gt; res.send('ok'))
-app.listen(3000)</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>json([opts])</strong></summary>
-								<div class="acc-body">
-									<p>Parses JSON request bodies and populates <code>req.body</code>.</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>limit</code></td>
-												<td>number|string</td>
-												<td>none</td>
-												<td>Maximum body size (bytes or unit string like <code>'1mb'</code>).
-												</td>
-											</tr>
-											<tr>
-												<td><code>strict</code></td>
-												<td>boolean</td>
-												<td><code>true</code></td>
-												<td>If <code>true</code>, only accepts objects and arrays; otherwise
-													accepts primitives.</td>
-											</tr>
-											<tr>
-												<td><code>reviver</code></td>
-												<td>function</td>
-												<td>—</td>
-												<td>Optional JSON reviver passed to <code>JSON.parse</code>.</td>
-											</tr>
-											<tr>
-												<td><code>type</code></td>
-												<td>string|function</td>
-												<td><code>application/json</code></td>
-												<td>Mime type matcher for the parser.</td>
-											</tr>
-										</tbody>
-									</table>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// strict JSON parsing with reviver and type matcher
-app.use(json({
-	limit: '10kb',
-	strict: true,
-	reviver: (k, v) =&gt; {
-		// coerce ISO8601-like strings to Date objects
-		if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v)
-		return v
-	},
-	type: 'application/json'
-}))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>urlencoded([opts])</strong></summary>
-								<div class="acc-body">
-									<p>Parses <code>application/x-www-form-urlencoded</code> bodies.</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>extended</code></td>
-												<td>boolean</td>
-												<td><code>false</code></td>
-												<td>When <code>true</code> allows rich objects; when <code>false</code>
-													returns simple key/value pairs.</td>
-											</tr>
-											<tr>
-												<td><code>limit</code></td>
-												<td>number|string</td>
-												<td>none</td>
-												<td>Maximum body size.</td>
-											</tr>
-											<tr>
-												<td><code>type</code></td>
-												<td>string|function</td>
-												<td><code>application/x-www-form-urlencoded</code></td>
-												<td>Mime type matcher.</td>
-											</tr>
-										</tbody>
-									</table>
-
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// parse urlencoded with extended parsing and limit
-app.use(urlencoded({ extended: true, limit: '20kb' }))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>text([opts])</strong></summary>
-								<div class="acc-body">
-									<p>Reads plain text request bodies into <code>req.body</code>.</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>type</code></td>
-												<td>string|function</td>
-												<td><code>text/*</code></td>
-												<td>Mime matcher for which requests are treated as text.</td>
-											</tr>
-											<tr>
-												<td><code>limit</code></td>
-												<td>number|string</td>
-												<td>none</td>
-												<td>Maximum body size.</td>
-											</tr>
-											<tr>
-												<td><code>encoding</code></td>
-												<td>string</td>
-												<td><code>utf8</code></td>
-												<td>Character encoding used to decode the incoming bytes.</td>
-											</tr>
-										</tbody>
-									</table>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// accept text/* bodies as UTF-8 with explicit encoding
-app.use(text({ type: 'text/*', limit: '50kb', encoding: 'utf8' }))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>raw([opts])</strong></summary>
-								<div class="acc-body">
-									<p>Receives raw bytes as a <code>Buffer</code> on <code>req.body</code>.</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>type</code></td>
-												<td>string|function</td>
-												<td><code>application/octet-stream</code></td>
-												<td>Mime matcher for raw parser.</td>
-											</tr>
-											<tr>
-												<td><code>limit</code></td>
-												<td>number|string</td>
-												<td>none</td>
-												<td>Maximum body size.</td>
-											</tr>
-										</tbody>
-									</table>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// receive raw bytes for application/octet-stream
-	app.use(raw({ type: 'application/octet-stream', limit: '1mb' }))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>multipart({ dir, maxFileSize })</strong></summary>
-								<div class="acc-body">
-									<p>Streaming multipart parser that writes incoming file parts to disk and exposes
-										<code>req.body.files</code> and <code>req.body.fields</code>.
-									</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>dir</code></td>
-												<td>string</td>
-												<td><code>os.tmpdir() + '/molex-http-uploads'</code></td>
-												<td>Directory to store uploaded files; can be absolute or relative to
-													process.cwd().</td>
-											</tr>
-											<tr>
-												<td><code>maxFileSize</code></td>
-												<td>number</td>
-												<td>none</td>
-												<td>Maximum allowed file size in bytes; exceeding this returns 413 and
-													aborts the upload.</td>
-											</tr>
-										</tbody>
-									</table>
-									<p class="muted">Files are stored with a generated name that preserves the original
-										extension when possible; uploaded file metadata is provided in
-										<code>req.body.files</code>.
-									</p>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// stream uploads to disk, limit single file size and set custom dir
-app.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) =&gt; {
-	// req.body.files contains stored file metadata (originalName, size, path)
-	res.json({ files: req.body.files })
-})</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>static(rootPath, opts)</strong></summary>
-								<div class="acc-body">
-									<p>Serves files from a filesystem folder with Content-Type detection and optional
-										caching.</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>index</code></td>
-												<td>string|false</td>
-												<td><code>'index.html'</code></td>
-												<td>File to serve for directory requests.</td>
-											</tr>
-											<tr>
-												<td><code>maxAge</code></td>
-												<td>number|string</td>
-												<td><code>0</code></td>
-												<td>Cache-Control max-age (ms or string like <code>'1h'</code>).</td>
-											</tr>
-											<tr>
-												<td><code>dotfiles</code></td>
-												<td>'allow'|'deny'|'ignore'</td>
-												<td><code>'ignore'</code></td>
-												<td>How to handle dotfiles (e.g., <code>.thumbs</code>).</td>
-											</tr>
-											<tr>
-												<td><code>extensions</code></td>
-												<td>string[]</td>
-												<td>—</td>
-												<td>Fallback extensions to try when a request omits an extension.</td>
-											</tr>
-											<tr>
-												<td><code>setHeaders</code></td>
-												<td>function</td>
-												<td>—</td>
-												<td>Hook to set custom headers per file:
-													<code>(res, filePath) =&gt; {}</code>.
-												</td>
-											</tr>
-										</tbody>
-									</table>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// serve UI and hide internal dotfiles, with caching and header hook
-app.use(static(path.join(__dirname, 'documentation', 'public'), {
-	index: 'index.html',
-	dotfiles: 'ignore',
-	maxAge: '1h',
-	setHeaders: (res, filePath) =&gt; { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }
-}))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>cors([opts])</strong></summary>
-								<div class="acc-body">
-									<p>Small CORS middleware used in the demo. Typical options:</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Default</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>origin</code></td>
-												<td>string|boolean|array</td>
-												<td><code>'*'</code></td>
-												<td>Allowed origin(s). Can be a string, <code>false</code> to disable
-													CORS, or an array of origin strings/domains. The middleware will
-													match the request origin against the array internally.</td>
-											</tr>
-											<tr>
-												<td><code>credentials</code></td>
-												<td>boolean</td>
-												<td><code>false</code></td>
-												<td>If true, sets <code>Access-Control-Allow-Credentials</code> when a
-													specific origin matches.</td>
-											</tr>
-											<tr>
-												<td><code>methods</code></td>
-												<td>string</td>
-												<td><code>'GET,POST,PUT,DELETE,OPTIONS'</code></td>
-												<td>Allowed methods.</td>
-											</tr>
-											<tr>
-												<td><code>allowedHeaders</code></td>
-												<td>string</td>
-												<td>—</td>
-												<td>Headers allowed in requests.</td>
-											</tr>
-										</tbody>
-									</table>
-									</table>
-
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// allow specific domains and credentials, restrict methods
-app.use(cors({ 
-	origin: ['https://example.com', 'https://acme.com'], 
-	credentials: true, 
-	methods: 'GET,POST' 
-}))</code></pre>
-								</div>
-							</details>
-
-							<details class="acc nested">
-								<summary><strong>fetch(url, opts)</strong></summary>
-								<div class="acc-body">
-									<p>Small Node HTTP client returning an object with <code>status</code>,
-										<code>headers</code> and helpers: <code>text()</code>, <code>json()</code>,
-										<code>arrayBuffer()</code>. Supports progress callbacks.
-									</p>
-									<table>
-										<thead>
-											<tr>
-												<th>Option</th>
-												<th>Type</th>
-												<th>Notes</th>
-											</tr>
-										</thead>
-										<tbody>
-											<tr>
-												<td><code>agent</code></td>
-												<td>object</td>
-												<td>Optional http/https agent for connection pooling or proxies.</td>
-											</tr>
-											<tr>
-												<td><code>method</code></td>
-												<td>string</td>
-												<td>HTTP method (GET, POST, etc.)</td>
-											</tr>
-											<tr>
-												<td><code>headers</code></td>
-												<td>object</td>
-												<td>Request headers</td>
-											</tr>
-											<tr>
-												<td><code>body</code></td>
-												<td>Buffer|string|Stream</td>
-												<td>Request body. Plain objects are JSON-stringified and
-													<code>Content-Type</code> is set to <code>application/json</code> if
-													not provided. <code>URLSearchParams</code> become urlencoded.</td>
-											</tr>
-											<tr>
-												<td><code>timeout</code></td>
-												<td>number</td>
-												<td>Request timeout in ms</td>
-											</tr>
-											<tr>
-												<td><code>signal</code></td>
-												<td>AbortSignal</td>
-												<td>Optional AbortSignal to cancel the request (abort)</td>
-											</tr>
-											<tr>
-												<td><code>onUploadProgress</code></td>
-												<td>function</td>
-												<td>Callback for upload progress:
-													<code>({loaded, total}) =&gt; {}</code>
-												</td>
-											</tr>
-											<tr>
-												<td><code>onDownloadProgress</code></td>
-												<td>function</td>
-												<td>Callback for download progress.</td>
-											</tr>
-											<tr>
-												<td><strong>Response helpers</strong></td>
-												<td></td>
-												<td>Returned object includes <code>ok</code>, <code>statusText</code>,
-													and methods <code>arrayBuffer()</code>, <code>text()</code>,
-													<code>json()</code>.</td>
-											</tr>
-										</tbody>
-									</table>
-									<h6>Example</h6>
-									<pre class="language-javascript"><code class="language-javascript">// GET with timeout and download progress
-const r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {
-	timeout: 5000,
-	onDownloadProgress: ({ loaded, total }) =&gt; console.log('download', loaded, total)
-})
-const data = await r.json()
-console.log(data)</code></pre>
-								</div>
-							</details>
-
+							<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+								<input id="api-search" placeholder="Search API (name, description)"
+									style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:inherit" />
+								<button id="api-clear" class="btn small" type="button">Clear</button>
+							</div>
+							<div id="api-items">Loading API reference…</div>
 						</div>
 					</details>
 
-					<details class="acc">
+					<details class="acc" id="simple-examples">
 						<summary>Simple Examples</summary>
 						<div class="acc-body">
-							<p class="muted">Concise real-world snippets showing how to compose middleware for common
+							<p class="muted">Snippets showing how to compose middleware for common
 								tasks.</p>
-
-							<h5>Small JSON API</h5>
-							<pre class="language-javascript"><code class="language-javascript">const { createApp, json, cors } = require('molex-http')
-const app = createApp()
-
-app.use(cors({ origin: ['https://example.com'] }))
-app.use(json({ limit: '10kb' }))
-
-const items = []
-app.post('/items', (req, res) =&gt; {
-	items.push(req.body)
-  	res.statusCode = 201
-  	res.json({ ok: true })
-})</code></pre>
-
-							<h5>Upload handler (disk or custom writer)</h5>
-							<pre class="language-javascript"><code class="language-javascript">// default: stream file parts to disk
-app.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) =&gt; {
-	// req.body.files contains stored file metadata
-  	res.json({ files: req.body.files })
-})
-
-// To adapt to S3: replace file write stream in your handler or multipart writer
-// with an S3 upload stream and return the remote URL in response.</code></pre>
-
-							<h5>Serve UI + Protect Internal Uploads</h5>
-							<pre class="language-javascript"><code class="language-javascript">// serve UI
-app.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.html' }))
-
-// mount uploads but hide internal files like .thumbs
-app.use('/uploads', static(path.join(__dirname, 'documentation', 'uploads'), {
-	dotfiles: 'ignore',
-	setHeaders: (res, filePath) =&gt; { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }
-}))</code></pre>
-
+							<div id="examples-items">Loading examples…</div>
 						</div>
 					</details>
+
 					<details class="acc">
 						<summary>Installation & tests</summary>
 						<div class="acc-body">
-							<pre class="language-bash"><code class="language-bash">#clone and install dependencies
+
+							<pre class="language-bash"><code class="language-shell">#clone and install dependencies
 git clone https://github.com/tonywied17/molex-http-npm.git
 npm install
 
@@ -841,7 +247,9 @@ npm run docs
 node documentation/full-server.js
 
 # run tests (project-specific)
-node test/test.js</code></pre>
+node test/test.js
+</code></pre>
+
 						</div>
 					</details>
 
@@ -958,7 +366,7 @@ node test/test.js</code></pre>
 					<form id="proxyForm" class="play">
 						<label>External URL to proxy
 							<input id="proxyUrl" name="proxyUrl" class="textInput" type="url"
-								placeholder="https://jsonplaceholder.typicode.com/todos/1" required
+								placeholder="https://download.samplelib.com/mp4/sample-5s.mp4" required
 								style="width:100%" />
 						</label>
 						<button class="btn">Proxy Fetch</button>
@@ -976,11 +384,105 @@ node test/test.js</code></pre>
 	</div>
 
 	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
+	<link rel="stylesheet" href="/vendor/prism-toolbar.css" />
 	<link rel="stylesheet" href="/prism-overrides.css" />
 	<script src="/vendor/prism.min.js"></script>
 	<script src="/vendor/prism-json.min.js"></script>
 	<script src="/vendor/prism-javascript.min.js"></script>
+	<script src="/vendor/prism-copy-to-clipboard.min.js"></script>
+	<script src="/vendor/prism-toolbar.min.js"></script>
 	<script src="/app.js"></script>
+	<script>
+		(function ()
+		{
+			const tabs = document.querySelectorAll('.feature-tabs .tab');
+			tabs.forEach(t => t.addEventListener('click', (ev) =>
+			{
+				const target = t.dataset.target;
+				if (!target) return;
+				tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
+				document.querySelectorAll('.feature-tabs .tab-panel').forEach(p => p.classList.remove('active'));
+				t.classList.add('active'); t.setAttribute('aria-selected', 'true');
+				const panel = document.getElementById(target); if (panel) panel.classList.add('active');
+			}));
+		})();
+		(function ()
+		{
+			const btn = document.querySelector('.toc-toggle');
+			const sidebar = document.querySelector('.toc-sidebar');
+			if (!btn || !sidebar) return;
+			const mq = (q) => window.matchMedia(q).matches;
+			const setAria = () =>
+			{
+				const expanded = mq('(min-width:900px)') ? !document.body.classList.contains('toc-hidden') : document.body.classList.contains('toc-open');
+				btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+			};
+			setAria();
+			btn.addEventListener('click', (ev) =>
+			{
+				if (mq('(min-width:900px)'))
+				{
+					document.body.classList.toggle('toc-hidden');
+					document.body.classList.remove('toc-open');
+				} else
+				{
+					document.body.classList.toggle('toc-open');
+				}
+				setAria();
+			});
+			document.addEventListener('keydown', (e) =>
+			{
+				if (e.key === 'Escape')
+				{
+					document.body.classList.remove('toc-open');
+					document.body.classList.remove('toc-hidden');
+					setAria();
+				}
+			});
+			document.addEventListener('click', (e) =>
+			{
+				if (!document.body.classList.contains('toc-open')) return;
+				if (e.target.closest('.toc-sidebar') || e.target.closest('.toc-toggle')) return;
+				document.body.classList.remove('toc-open');
+				setAria();
+			});
+			window.addEventListener('resize', () => setAria());
+		})();
+
+		(function ()
+		{
+			const nav = document.querySelector('.toc-sidebar nav');
+			if (!nav) return;
+			function openAncestors(el)
+			{
+				let d = el.closest('details.acc');
+				while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details.acc') : null; }
+			}
+			nav.addEventListener('click', (e) =>
+			{
+				const a = e.target.closest('a[href^="#"]');
+				if (!a) return;
+				const hash = a.getAttribute('href');
+				if (!hash || hash.charAt(0) !== '#') return;
+				const id = hash.slice(1);
+				const target = document.getElementById(id);
+				if (!target) return;
+				openAncestors(target);
+				setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+				document.body.classList.remove('toc-open');
+				const btn = document.querySelector('.toc-toggle'); if (btn) btn.setAttribute('aria-expanded', 'false');
+			});
+			window.addEventListener('hashchange', () =>
+			{
+				const id = location.hash ? location.hash.slice(1) : '';
+				if (!id) return;
+				const target = document.getElementById(id);
+				if (!target) return;
+				openAncestors(target);
+				setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+			});
+		})();
+	</script>
 </body>
 
 </html>

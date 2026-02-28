@@ -44,7 +44,8 @@ uploadsController.ensureUploadsDir(uploadsDir);
  */
 app.use((req, res, next) =>
 {
-    if (!req.url || !req.url.startsWith('/uploads')) return next();
+    // Only handle requests for the uploads path itself (avoid matching paths like '/uploads-list')
+    if (!req.url || !(req.url === '/uploads' || req.url.startsWith('/uploads/'))) return next();
     const orig = req.url;
     req.url = req.url.slice('/uploads'.length) || '/';
     const mw = serveStatic(uploadsDir);
@@ -133,6 +134,9 @@ try { autoEmptyTrash(); setInterval(autoEmptyTrash, 24 * 60 * 60 * 1000); } catc
  * Lists uploaded files with pagination and sorting.
  */
 app.get('/uploads-list', uploadsController.listUploads(uploadsDir));
+
+// Combined uploads + trash list for UI convenience
+app.get('/uploads-all', uploadsController.listAll(uploadsDir));
 
 // --- Temp Uploads Cleanup ---
 /**

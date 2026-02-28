@@ -149,7 +149,8 @@ exports.listTrash = (uploadsDir) => (req, res) =>
     {
         const trash = path.join(uploadsDir, '.trash');
         let list = [];
-        if (fs.existsSync(trash)) {
+        if (fs.existsSync(trash))
+        {
             list = fs.readdirSync(trash)
                 .filter(fn => fn !== '.thumbs') // hide internal thumbs folder
                 .map(fn => ({ name: fn, url: '/uploads/.trash/' + encodeURIComponent(fn) }));
@@ -215,27 +216,33 @@ exports.emptyTrash = (uploadsDir) => (req, res) =>
 /**
  * List uploaded files with pagination and sorting
  */
-exports.listUploads = (uploadsDir) => (req, res) => {
-    try {
+exports.listUploads = (uploadsDir) => (req, res) =>
+{
+    try
+    {
         const page = Math.max(1, Number(req.query.page) || 1);
         const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize) || 20));
         const sort = req.query.sort || 'mtime';
         const order = (req.query.order || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
         const list = [];
-        if (fs.existsSync(uploadsDir)) {
-                for (const fn of fs.readdirSync(uploadsDir)) {
-                    if (fn === '.trash' || fn === '.thumbs') continue;
-                    try {
-                        const p = path.join(uploadsDir, fn);
-                        const st = fs.statSync(p);
-                        const isImage = [/\.png$/i, /\.jpe?g$/i, /\.jfif$/i, /\.gif$/i, /\.webp$/i, /\.svg$/i].some(re => re.test(fn));
-                        const thumbPath = path.join(uploadsDir, '.thumbs', fn + '-thumb.svg');
-                        const thumbExists = fs.existsSync(thumbPath);
-                        list.push({ name: fn, url: '/uploads/' + encodeURIComponent(fn), size: st.size, mtime: st.mtimeMs, isImage, thumb: thumbExists ? ('/uploads/.thumbs/' + encodeURIComponent(fn + '-thumb.svg')) : null });
-                    } catch (e) { }
-                }
+        if (fs.existsSync(uploadsDir))
+        {
+            for (const fn of fs.readdirSync(uploadsDir))
+            {
+                if (fn === '.trash' || fn === '.thumbs') continue;
+                try
+                {
+                    const p = path.join(uploadsDir, fn);
+                    const st = fs.statSync(p);
+                    const isImage = [/\.png$/i, /\.jpe?g$/i, /\.jfif$/i, /\.gif$/i, /\.webp$/i, /\.svg$/i].some(re => re.test(fn));
+                    const thumbPath = path.join(uploadsDir, '.thumbs', fn + '-thumb.svg');
+                    const thumbExists = fs.existsSync(thumbPath);
+                    list.push({ name: fn, url: '/uploads/' + encodeURIComponent(fn), size: st.size, mtime: st.mtimeMs, isImage, thumb: thumbExists ? ('/uploads/.thumbs/' + encodeURIComponent(fn + '-thumb.svg')) : null });
+                } catch (e) { }
             }
-        list.sort((a, b) => {
+        }
+        list.sort((a, b) =>
+        {
             let v = 0;
             if (sort === 'name') v = a.name.localeCompare(b.name);
             else if (sort === 'size') v = (a.size || 0) - (b.size || 0);
@@ -246,5 +253,50 @@ exports.listUploads = (uploadsDir) => (req, res) => {
         const start = (page - 1) * pageSize;
         const paged = list.slice(start, start + pageSize);
         res.json({ files: paged, total, page, pageSize });
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+};
+
+/**
+ * List all uploads and trash together (no pagination) for convenience in the demo UI
+ */
+exports.listAll = (uploadsDir) => (req, res) =>
+{
+    try
+    {
+        const uploads = [];
+        if (fs.existsSync(uploadsDir))
+        {
+            for (const fn of fs.readdirSync(uploadsDir))
+            {
+                if (fn === '.trash' || fn === '.thumbs') continue;
+                try
+                {
+                    const p = path.join(uploadsDir, fn);
+                    const st = fs.statSync(p);
+                    const isImage = [/\.png$/i, /\.jpe?g$/i, /\.jfif$/i, /\.gif$/i, /\.webp$/i, /\.svg$/i].some(re => re.test(fn));
+                    const thumbPath = path.join(uploadsDir, '.thumbs', fn + '-thumb.svg');
+                    const thumbExists = fs.existsSync(thumbPath);
+                    uploads.push({ name: fn, url: '/uploads/' + encodeURIComponent(fn), size: st.size, mtime: st.mtimeMs, isImage, thumb: thumbExists ? ('/uploads/.thumbs/' + encodeURIComponent(fn + '-thumb.svg')) : null });
+                } catch (e) { }
+            }
+        }
+
+        const trash = [];
+        const trashDir = path.join(uploadsDir, '.trash');
+        if (fs.existsSync(trashDir))
+        {
+            for (const fn of fs.readdirSync(trashDir))
+            {
+                if (fn === '.thumbs') continue;
+                try
+                {
+                    const p = path.join(trashDir, fn);
+                    const st = fs.statSync(p);
+                    trash.push({ name: fn, url: '/uploads/.trash/' + encodeURIComponent(fn), size: st.size, mtime: st.mtimeMs });
+                } catch (e) { }
+            }
+        }
+
+        res.json({ uploads, trash });
     } catch (e) { res.status(500).json({ error: String(e) }); }
 };

@@ -30,7 +30,7 @@ async function deleteAndShow(path, container)
     const r = await fetch(path, { method: 'DELETE' });
     let j;
     try { j = await r.json(); } catch (e) { container.textContent = 'Error parsing response'; return; }
-    showJsonResult(container, j);
+    try { await loadUploadsCombined(); } catch (e) { showJsonResult(container, j); }
 }
 
 
@@ -104,7 +104,7 @@ on($('#delAllBtn'), 'click', async () =>
     if (!confirm('Delete all uploads?')) return;
     const r = await fetch('/uploads', { method: 'DELETE' });
     const j = await r.json();
-    showJsonResult($('#uploadResult'), j);
+    try { await loadUploadsCombined(); } catch (e) { showJsonResult($('#uploadResult'), j); }
     loadUploadsList();
 });
 
@@ -113,7 +113,7 @@ on($('#delKeepBtn'), 'click', async () =>
     if (!confirm('Delete all uploads but keep the first?')) return;
     const r = await fetch('/uploads?keep=1', { method: 'DELETE' });
     const j = await r.json();
-    showJsonResult($('#uploadResult'), j);
+    try { await loadUploadsCombined(); } catch (e) { showJsonResult($('#uploadResult'), j); }
     loadUploadsList();
 });
 
@@ -136,13 +136,13 @@ async function loadTrashList()
         const trashList = $('#trashList');
         const uploadResult = $('#uploadResult');
         trashList && (trashList.innerHTML = '');
-        showJsonResult(uploadResult, j);
+        try { await loadUploadsCombined(); } catch (e) { showJsonResult(uploadResult, j); }
         for (const f of j.files)
         {
             const row = document.createElement('div'); row.className = 'fileRow trash';
             const name = document.createElement('div'); name.innerHTML = `<div>${f.name}</div>`;
             const restore = document.createElement('button'); restore.textContent = 'Restore'; restore.className = 'btn';
-            restore.addEventListener('click', async () => { await fetch('/uploads/' + encodeURIComponent(f.name) + '/restore', { method: 'POST' }); loadTrashList(); loadUploadsList(); });
+            restore.addEventListener('click', async () => { await fetch('/uploads/' + encodeURIComponent(f.name) + '/restore', { method: 'POST' }); try { await loadUploadsCombined(); } catch (err) { } loadUploadsList(); loadTrashList(); });
             const del = document.createElement('button'); del.textContent = 'Delete Permanently'; del.className = 'btn warn';
             del.addEventListener('click', async () => { if (!confirm('Permanently delete ' + f.name + '?')) return; await fetch('/uploads-trash/' + encodeURIComponent(f.name), { method: 'DELETE' }); loadTrashList(); });
             row.appendChild(name); row.appendChild(restore); row.appendChild(del); trashList.appendChild(row);
@@ -155,7 +155,7 @@ on($('#emptyTrashBtn'), 'click', async () =>
     if (!confirm('Empty trash? This will permanently delete items.')) return;
     const r = await fetch('/uploads-trash', { method: 'DELETE' });
     const j = await r.json();
-    showJsonResult($('#uploadResult'), j);
+    try { await loadUploadsCombined(); } catch (e) { showJsonResult($('#uploadResult'), j); }
     loadTrashList();
 });
 
@@ -172,7 +172,7 @@ function showUndo(name)
     box.appendChild(btn);
     try { const container = document.querySelector('.ui-shell') || document.querySelector('body'); container && container.prepend(box); } catch (e) { }
     const tid = setTimeout(() => box.remove(), 8000);
-    btn.addEventListener('click', async () => { clearTimeout(tid); await fetch('/uploads/' + encodeURIComponent(name) + '/restore', { method: 'POST' }); box.remove(); loadUploadsList(); loadTrashList(); });
+    btn.addEventListener('click', async () => { clearTimeout(tid); await fetch('/uploads/' + encodeURIComponent(name) + '/restore', { method: 'POST' }); box.remove(); try { await loadUploadsCombined(); } catch (e) { } loadUploadsList(); loadTrashList(); });
 }
 
 /**
@@ -192,6 +192,7 @@ function addTrashRow(name)
         {
             await fetch('/uploads/' + encodeURIComponent(name) + '/restore', { method: 'POST' });
             try { row.remove(); } catch (e) { }
+            try { await loadUploadsCombined(); } catch (e) { }
             loadUploadsList();
         });
         const del = document.createElement('button'); del.textContent = 'Delete Permanently'; del.className = 'btn warn';
@@ -370,8 +371,7 @@ function createUploadCard(f, uploadResult)
     {
         if (!confirm('Move ' + f.name + ' to trash?')) return;
         const resp = await fetch('/uploads/' + encodeURIComponent(f.name), { method: 'DELETE' });
-        const body = await resp.json();
-        showJsonResult($('#uploadResult'), body);
+        try { await loadUploadsCombined(); } catch (e) { try { const body = await resp.json(); showJsonResult($('#uploadResult'), body); } catch (err) { $('#uploadResult').textContent = 'Error'; } }
         showUndo(f.name);
         try { card.remove(); } catch (e) { }
         addTrashRow(f.name);
@@ -400,6 +400,8 @@ document.addEventListener('DOMContentLoaded', () =>
         if (sortOrderEl) currentOrder = sortOrderEl.value || currentOrder;
         if (sortSelectEl) currentSort = sortSelectEl.value || currentSort;
         loadUploadsList(); loadTrashList();
+        // load combined uploads+trash JSON into the upload result block as the default view
+        loadUploadsCombined().catch(() => {});
     } catch (e) { }
     try
     {
@@ -446,6 +448,19 @@ document.addEventListener('DOMContentLoaded', () =>
         }
     } catch (e) { }
 });
+
+/**
+ * loadUploadsCombined()
+ * Fetch combined uploads + trash and show in the uploadResult JSON block.
+ */
+async function loadUploadsCombined() {
+    try {
+        const r = await fetch('/uploads-all', { cache: 'no-store' });
+        const j = await r.json();
+        const uploadResult = $('#uploadResult');
+        showJsonResult(uploadResult, j);
+    } catch (e) { }
+}
 
 function highlightAllPre()
 {
@@ -498,3 +513,203 @@ function dedentAllPre()
         } catch (e) { }
     });
 }
+
+/**
+ * loadApiReference()
+ * Fetch API reference JSON and render into the API reference container.
+ */
+async function loadApiReference()
+{
+    try {
+        const res = await fetch('/data/api.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const items = await res.json();
+        const container = document.getElementById('api-items');
+        if (!container) return;
+        window._apiItems = items;
+        function slugify(name) {
+            return (name || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        }
+
+        function renderList(list) {
+            container.innerHTML = '';
+            if (!list || !list.length) { container.textContent = 'No API items'; return; }
+            for (const it of list) {
+                const d = document.createElement('details'); d.className = 'acc nested';
+                const id = 'api-' + slugify(it.name || '');
+                d.id = id;
+                const s = document.createElement('summary'); s.innerHTML = `<strong>${escapeHtml(it.name)}</strong>`;
+                d.appendChild(s);
+                const body = document.createElement('div'); body.className = 'acc-body';
+                if (it.description) { const p = document.createElement('p'); p.innerHTML = escapeHtml(it.description); body.appendChild(p); }
+                if (Array.isArray(it.options) && it.options.length) {
+                    const table = document.createElement('table');
+                    table.innerHTML = `<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>`;
+                    const tbody = document.createElement('tbody');
+                    for (const opt of it.options) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><code>${escapeHtml(opt.option)}</code></td><td>${escapeHtml(opt.type || '')}</td><td>${escapeHtml(opt.default || '')}</td><td>${escapeHtml(opt.notes || '')}</td>`;
+                        tbody.appendChild(tr);
+                    }
+                    table.appendChild(tbody);
+                    body.appendChild(table);
+                }
+                if (Array.isArray(it.methods) && it.methods.length) {
+                    const mtable = document.createElement('table');
+                    mtable.innerHTML = `<thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>`;
+                    const mb = document.createElement('tbody');
+                    for (const m of it.methods) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><code>${escapeHtml(m.method || '')}</code></td><td><code>${escapeHtml(m.signature || '')}</code></td><td>${escapeHtml(m.description || '')}</td>`;
+                        mb.appendChild(tr);
+                    }
+                    mtable.appendChild(mb);
+                    body.appendChild(mtable);
+                }
+                if (it.example) {
+                    const h6 = document.createElement('h6'); h6.textContent = 'Example';
+                    const pre = document.createElement('pre'); pre.className = 'language-javascript code';
+                    const code = document.createElement('code'); code.className = 'language-javascript';
+                    code.textContent = it.example;
+                    pre.appendChild(code);
+                    body.appendChild(h6);
+                    body.appendChild(pre);
+                }
+                d.appendChild(body);
+                container.appendChild(d);
+            }
+            try { highlightAllPre(); } catch (e) { }
+        }
+        renderList(items);
+        // also add indented TOC entries under the API Reference nav item
+        try { populateApiToc(items); } catch (e) { }
+        const search = document.getElementById('api-search');
+        const clearBtn = document.getElementById('api-clear');
+        function doFilter() {
+            const q = (search && search.value || '').trim().toLowerCase();
+            if (!q) return renderList(window._apiItems);
+            const filtered = window._apiItems.filter(it => (it.name || '').toLowerCase().includes(q) || (it.description || '').toLowerCase().includes(q) || (JSON.stringify(it.options || []) || '').toLowerCase().includes(q));
+            renderList(filtered);
+        }
+        if (search) { search.addEventListener('input', doFilter); }
+        if (clearBtn) { clearBtn.addEventListener('click', () => { if (search) search.value = ''; renderList(window._apiItems); }); }
+    } catch (e) { }
+}
+
+function populateApiToc(items) {
+    try {
+        const nav = document.querySelector('.toc-sidebar nav ul');
+        if (!nav || !items || !items.length) return;
+        // find the API Reference li
+        const apiLi = Array.from(nav.children).find(li => {
+            const a = li.querySelector && li.querySelector('a[href="#api-reference"]');
+            return !!a;
+        });
+        if (!apiLi) return;
+        // remove existing sublist if present
+        const existing = apiLi.querySelector('ul.toc-sub'); if (existing) existing.remove();
+        const sub = document.createElement('ul'); sub.className = 'toc-sub';
+        for (const it of items) {
+            const slug = 'api-' + (it.name || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const li = document.createElement('li'); li.className = 'toc-sub-item';
+            const a = document.createElement('a'); a.href = '#' + slug; a.textContent = it.name || ''; a.addEventListener('click', (ev) => {
+                // close toc on mobile if open (existing behavior uses click handler)
+                document.body.classList.remove('toc-open');
+            });
+            li.appendChild(a); sub.appendChild(li);
+        }
+        apiLi.appendChild(sub);
+    } catch (e) { console.error('populateApiToc', e); }
+}
+
+// load API reference after DOM ready
+document.addEventListener('DOMContentLoaded', () => { loadApiReference().catch(() => {}); });
+
+/**
+ * loadOptions()
+ * Fetch options JSON and render the options table into the options section.
+ */
+async function loadOptions() {
+    try {
+        const container = document.getElementById('options-items');
+        if (!container) return;
+        const res = await fetch('/data/options.json', { cache: 'no-store' });
+        if (!res.ok) {
+            container.textContent = 'Error loading options: ' + res.status + ' ' + res.statusText;
+            console.error('loadOptions: bad response', res.status, res.statusText);
+            return;
+        }
+        let items;
+        try { items = await res.json(); } catch (err) { container.textContent = 'Error parsing options JSON'; console.error('loadOptions parse', err); return; }
+        const table = document.createElement('table');
+        table.innerHTML = `<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>`;
+        const tb = document.createElement('tbody');
+        for (const it of items) {
+            const tr = document.createElement('tr');
+            const opt = it.option || '';
+            const type = it.type || '';
+            const def = it.default || it['default'] || '';
+            const notes = it.notes || it.description || '';
+            tr.innerHTML = `<td><strong>${escapeHtml(opt)}</strong></td><td>${escapeHtml(type)}</td><td>${escapeHtml(def)}</td><td>${escapeHtml(notes)}</td>`;
+            tb.appendChild(tr);
+        }
+        table.appendChild(tb);
+        container.innerHTML = '';
+        container.appendChild(table);
+    } catch (e) { console.error('loadOptions error', e); }
+}
+
+// loadExamples()
+// Fetch examples JSON and render simple examples into the examples section.
+async function loadExamples() {
+    try {
+        const container = document.getElementById('examples-items');
+        if (!container) return;
+        const res = await fetch('/data/examples.json', { cache: 'no-store' });
+        if (!res.ok) { container.textContent = 'Error loading examples: ' + res.status; return; }
+        const items = await res.json();
+        container.innerHTML = '';
+        for (const it of items) {
+            const slug = (it.title || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const id = 'example-' + slug;
+            const d = document.createElement('details'); d.className = 'acc nested'; d.id = id;
+            const s = document.createElement('summary'); s.innerHTML = `<strong>${escapeHtml(it.title || '')}</strong>`;
+            d.appendChild(s);
+            const body = document.createElement('div'); body.className = 'acc-body';
+            if (it.description) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = it.description; body.appendChild(p); }
+            const pre = document.createElement('pre'); pre.className = (it.language ? 'language-' + it.language + ' code' : 'code');
+            const code = document.createElement('code'); if (it.language) code.className = 'language-' + it.language;
+            code.textContent = it.code || '';
+            pre.appendChild(code);
+            body.appendChild(pre);
+            d.appendChild(body);
+            container.appendChild(d);
+        }
+        try { highlightAllPre(); } catch (e) { }
+        try { populateExamplesToc(items); } catch (e) { }
+    } catch (e) { console.error('loadExamples error', e); }
+}
+
+function populateExamplesToc(items) {
+    try {
+        const nav = document.querySelector('.toc-sidebar nav ul');
+        if (!nav || !items || !items.length) return;
+        const examplesLi = Array.from(nav.children).find(li => {
+            const a = li.querySelector && li.querySelector('a[href="#simple-examples"]');
+            return !!a;
+        });
+        if (!examplesLi) return;
+        const existing = examplesLi.querySelector('ul.toc-sub'); if (existing) existing.remove();
+        const sub = document.createElement('ul'); sub.className = 'toc-sub';
+        for (const it of items) {
+            const slug = 'example-' + (it.title || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const li = document.createElement('li'); li.className = 'toc-sub-item';
+            const a = document.createElement('a'); a.href = '#' + slug; a.textContent = it.title || ''; a.addEventListener('click', (ev) => { document.body.classList.remove('toc-open'); });
+            li.appendChild(a); sub.appendChild(li);
+        }
+        examplesLi.appendChild(sub);
+    } catch (e) { console.error('populateExamplesToc', e); }
+}
+
+// call loadOptions and loadExamples when DOM ready along with API reference
+document.addEventListener('DOMContentLoaded', () => { loadApiReference().catch(() => {}); loadOptions().catch(() => {}); loadExamples().catch(() => {}); });

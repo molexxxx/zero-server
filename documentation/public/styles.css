@@ -8,6 +8,8 @@
 	--success:#2ecc71;
 	--danger:#ff6b6b;
 	--surface-border:rgba(255,255,255,0.03);
+	--header-height:64px;
+	color-scheme: dark;
 }
 
 @media (min-width:641px) {
@@ -23,7 +25,7 @@
 html{font-size:18px}
 body{height:100%;margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.6;font-family:'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif}
 .ui-shell{max-width:1300px;margin:24px auto;padding:28px}
-.ui-header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.ui-header{display:flex;align-items:center;gap:16px;margin-bottom:14px;position:fixed;top:0;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:1300px;height:var(--header-height);z-index:140;background:linear-gradient(180deg, rgba(11,13,16,0.96), rgba(11,13,16,0.92));backdrop-filter:blur(6px);padding:10px 20px;border-radius:10px}
 .repo-buttons{margin-left:auto;display:flex;gap:12px;align-items:center}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:10px 12px;border-radius:12px;color:var(--text);background:transparent;border:1px solid rgba(255,255,255,0.03);cursor:pointer;text-decoration:none;font-weight:700;transition:transform .08s ease,box-shadow .12s ease,background .12s ease;min-width:44px;min-height:44px}
 .icon-btn svg, .icon-btn .icon-svg{display:block;width:28px;height:28px}
@@ -249,12 +251,20 @@ details.acc[open] summary:before{transform:rotate(90deg)}
 
 	.upload-button-wrap { display:flex;justify-content:flex-end;align-items:center;gap:10px; width:100%; margin:10px 0 }
 
-.toc-toggle{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:8px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.toc-toggle{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:8px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;z-index:150}
 .toc-sidebar{position:fixed;left:12px;top:20px;width:240px;max-height:calc(100vh - 40px);overflow:auto;background:var(--panel);border:1px solid var(--surface-border);border-radius:12px;padding:12px;box-shadow:0 12px 34px rgba(0,0,0,0.6);opacity:0;transform:translateX(-8px);transition:transform .18s ease,opacity .18s ease;pointer-events:none;z-index:120}
 .toc-sidebar nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .toc-sidebar nav a{display:block;padding:8px 10px;border-radius:8px;color:var(--muted);text-decoration:none}
 .toc-sidebar nav a:hover{background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);color:var(--text)}
 body.toc-open .toc-sidebar{opacity:1;transform:translateX(0);pointer-events:auto}
+
+/* Sub-TOC items (API reference entries) */
+.toc-sidebar nav ul.toc-sub{list-style:none;margin:6px 0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.toc-sidebar nav li.toc-sub-item{padding-left:6px}
+.toc-sidebar nav li.toc-sub-item a{font-size:13px;color:rgba(255,255,255,0.65);padding:6px 10px;border-radius:6px;display:block}
+.toc-sidebar nav li.toc-sub-item a:hover{color:var(--text);background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
+.toc-sidebar nav li.toc-sub-item a:visited{color:rgba(255,255,255,0.6)}
+
 
 @media(min-width:900px){
 	.toc-sidebar{opacity:1;transform:none;pointer-events:auto;left:28px}
@@ -265,3 +275,15 @@ body.toc-open .toc-sidebar{opacity:1;transform:translateX(0);pointer-events:auto
 	.toc-sidebar{left:10px;top:64px;width:86%;max-height:calc(100vh - 84px)}
 	.ui-main{margin-left:0}
 }
+
+/* Keep the hamburger always accessible on small screens */
+@media(max-width:640px){
+	:root{--header-height:56px}
+	.ui-header{width:calc(100% - 16px);padding:8px 12px;border-radius:0}
+	.brand .subtitle{display:none}
+	.brand .logo{font-size:18px}
+}
+
+/* Ensure page content is not hidden behind the fixed header */
+body{padding-top:calc(var(--header-height) + 12px)}
+.ui-shell{margin-top:0}

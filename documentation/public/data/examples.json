@@ -1,0 +1,20 @@
+[
+    {
+        "title": "Small JSON API",
+        "description": "Concise JSON API example using cors() and json() parsers.",
+        "language": "javascript",
+        "code": "const { createApp, json, cors } = require('molex-http')\nconst app = createApp()\n\napp.use(cors({ origin: ['https://example.com'] }))\napp.use(json({ limit: '10kb' }))\n\nconst items = []\napp.post('/items', (req, res) => {\n\titems.push(req.body)\n\tres.statusCode = 201\n\tres.json({ ok: true })\n})"
+    },
+    {
+        "title": "Upload handler (disk or custom writer)",
+        "description": "Default multipart writer streams files to disk; swap for S3 as needed.",
+        "language": "javascript",
+        "code": "// default: stream file parts to disk\napp.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) => {\n\t// req.body.files contains stored file metadata\n\tres.json({ files: req.body.files })\n})\n\n// To adapt to S3: replace file write stream in your handler or multipart writer\n// with an S3 upload stream and return the remote URL in response."
+    },
+    {
+        "title": "Serve UI + Protect Internal Uploads",
+        "description": "Serve the docs UI and mount uploads with protective options.",
+        "language": "javascript",
+        "code": "// serve UI\napp.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.html' }))\n\n// mount uploads but hide internal files like .thumbs\napp.use('/uploads', static(path.join(__dirname, 'documentation', 'uploads'), {\n\tdotfiles: 'ignore',\n\tsetHeaders: (res, filePath) => { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }\n}))"
+    }
+]

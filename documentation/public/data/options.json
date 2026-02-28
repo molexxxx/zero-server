@@ -1,0 +1,10 @@
+[
+  {"option":"json()","type":"function","default":"—","notes":"Parses JSON bodies into req.body."},
+  {"option":"urlencoded()","type":"function","default":"—","notes":"Parses application/x-www-form-urlencoded bodies."},
+  {"option":"text()","type":"function","default":"—","notes":"Reads raw text into req.body."},
+  {"option":"raw()","type":"function","default":"application/octet-stream","notes":"Reads raw bytes into a Buffer on req.body (default application/octet-stream)."},
+  {"option":"cors([opts])","type":"function","default":"'*'","notes":"Simple CORS middleware. Options: origin, methods, allowedHeaders, credentials."},
+  {"option":"static(rootPath, opts)","type":"function","default":"index.html","notes":"Serves static files. Options: index, maxAge, dotfiles, extensions, setHeaders."},
+  {"option":"fetch(url, opts)","type":"function","default":"—","notes":"Small Node HTTP client. Options include agent, method, headers, body, timeout, signal, and progress callbacks. Response exposes ok, statusText, arrayBuffer(), text(), json()."},
+  {"option":"multipart({ dir, maxFileSize })","type":"object","default":"{ dir: uploadsDir }","notes":"Streams file parts to disk; exposes req.body.files and req.body.fields."}
+]

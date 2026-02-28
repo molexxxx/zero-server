@@ -1,0 +1,100 @@
+[
+  {
+    "name": "createApp()",
+    "description": "Returns an application instance with Express-like methods: use(), get(), post(), put(), delete(), and listen().",
+    "example": "const { createApp, json, static } = require('molex-http')\nconst app = createApp()\n\napp.use(json({ limit: '10kb' }))\napp.get('/', (req, res) => res.send('ok'))\napp.listen(3000)",
+    "methods": [
+      { "method": "use", "signature": "use(fn)", "description": "Register middleware; fn(req, res, next)." },
+      { "method": "get", "signature": "get(path, ...handlers)", "description": "Register GET route handlers." },
+      { "method": "post", "signature": "post(path, ...handlers)", "description": "Register POST route handlers." },
+      { "method": "put", "signature": "put(path, ...handlers)", "description": "Register PUT route handlers." },
+      { "method": "delete", "signature": "delete(path, ...handlers)", "description": "Register DELETE route handlers." },
+      { "method": "listen", "signature": "listen(port = 3000, cb)", "description": "Start the HTTP server." }
+    ],
+    "options": []
+  },
+  {
+    "name": "json([opts])",
+    "description": "Parses JSON request bodies and populates req.body.",
+    "example": "app.use(json({\n\tlimit: '10kb',\n\tstrict: true,\n\treviver: (k, v) => { if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(v)) return new Date(v); return v },\n\ttype: 'application/json'\n}))",
+    "options": [
+      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size (bytes or unit string like '1mb')." },
+      { "option": "strict", "type": "boolean", "default": "true", "notes": "Only accepts objects and arrays when true." },
+      { "option": "reviver", "type": "function", "default": "—", "notes": "Optional JSON reviver passed to JSON.parse." },
+      { "option": "type", "type": "string|function", "default": "application/json", "notes": "Mime type matcher for the parser." }
+    ]
+  },
+  {
+    "name": "urlencoded([opts])",
+    "description": "Parses application/x-www-form-urlencoded bodies.",
+    "example": "app.use(urlencoded({ extended: true, limit: '20kb' }))",
+    "options": [
+      { "option": "extended", "type": "boolean", "default": "false", "notes": "When true allows rich objects; when false returns simple key/value pairs." },
+      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size." },
+      { "option": "type", "type": "string|function", "default": "application/x-www-form-urlencoded", "notes": "Mime type matcher." }
+    ]
+  },
+  {
+    "name": "text([opts])",
+    "description": "Reads plain text request bodies into req.body.",
+    "example": "app.use(text({ type: 'text/*', limit: '50kb', encoding: 'utf8' }))",
+    "options": [
+      { "option": "type", "type": "string|function", "default": "text/*", "notes": "Mime matcher for which requests are treated as text." },
+      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size." },
+      { "option": "encoding", "type": "string", "default": "utf8", "notes": "Character encoding used to decode the incoming bytes." }
+    ]
+  },
+  {
+    "name": "raw([opts])",
+    "description": "Receives raw bytes as a Buffer on req.body.",
+    "example": "app.post('/upload', raw(), (req, res) => { /* req.body is a Buffer */ })",
+    "options": [
+      { "option": "type", "type": "string|function", "default": "application/octet-stream", "notes": "Mime matcher for the raw parser." }
+    ]
+  }
+  ,
+  {
+    "name": "multipart({ dir, maxFileSize })",
+    "description": "Streaming multipart parser that writes incoming file parts to disk and exposes req.body.files and req.body.fields.",
+    "example": "// stream uploads to disk, limit single file size and set custom dir\napp.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) => {\n\t// req.body.files contains stored file metadata (originalName, size, path)\n\tres.json({ files: req.body.files })\n})",
+    "options": [
+      { "option": "dir", "type": "string", "default": "os.tmpdir()/molex-http-uploads", "notes": "Directory to stream uploaded parts to (absolute or relative)." },
+      { "option": "maxFileSize", "type": "number", "default": "5 * 1024 * 1024", "notes": "Maximum size in bytes for a single uploaded file." }
+    ]
+  },
+  {
+    "name": "static(rootPath, opts)",
+    "description": "Serves files from a filesystem folder with Content-Type detection and optional caching.",
+    "example": "// serve UI and hide internal dotfiles, with caching and header hook\napp.use(static(path.join(__dirname, 'documentation', 'public'), {\n\tindex: 'index.html',\n\tdotfiles: 'ignore',\n\tmaxAge: '1h',\n\tsetHeaders: (res, filePath) => { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }\n}))",
+    "options": [
+      { "option": "index", "type": "string|false", "default": "index.html", "notes": "Filename to serve for directory requests, or false to disable." },
+      { "option": "dotfiles", "type": "'allow'|'deny'|'ignore'", "default": "ignore", "notes": "How to treat dotfiles in served directories." },
+      { "option": "maxAge", "type": "number|string", "default": "0", "notes": "Cache-Control max-age value for served files (e.g., '1h')." },
+      { "option": "setHeaders", "type": "function", "default": "—", "notes": "Hook to set custom response headers per file (res, filePath) => void." }
+    ]
+  },
+  {
+    "name": "cors([opts])",
+    "description": "Small CORS middleware used in the demo. Typical options to control allowed origins, methods, and credentials.",
+    "example": "// allow specific domains and credentials, restrict methods\napp.use(cors({ \n\torigin: ['https://example.com', 'https://acme.com'], \n\tcredentials: true, \n\tmethods: 'GET,POST' \n}))",
+    "options": [
+      { "option": "origin", "type": "string|array|function", "default": "'*'", "notes": "Allowed origins. Can be '*' (any), an array of origins, or a function for dynamic checking." },
+      { "option": "methods", "type": "string|array", "default": "'GET,HEAD,PUT,PATCH,POST,DELETE'", "notes": "Allowed HTTP methods." },
+      { "option": "allowedHeaders", "type": "string|array", "default": "undefined", "notes": "Allowed request headers." },
+      { "option": "credentials", "type": "boolean", "default": "false", "notes": "Whether to allow credentials (cookies, Authorization header)." }
+    ]
+  },
+  {
+    "name": "fetch(url, opts)",
+    "description": "Small Node HTTP client returning an object with status, headers and helpers: text(), json(), arrayBuffer(). Supports timeout and progress callbacks.",
+    "example": "// GET with timeout and download progress\nconst r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {\n\ttimeout: 5000,\n\tonDownloadProgress: ({ loaded, total }) => console.log('download', loaded, total)\n})\nconst data = await r.json()\nconsole.log(data)",
+    "options": [
+      { "option": "method", "type": "string", "default": "GET", "notes": "HTTP method to use." },
+      { "option": "headers", "type": "object", "default": "{}", "notes": "Request headers." },
+      { "option": "body", "type": "string|Buffer|Stream", "default": "undefined", "notes": "Request body for non-GET methods." },
+      { "option": "timeout", "type": "number", "default": "undefined", "notes": "Request timeout in ms." },
+      { "option": "onDownloadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } during download." },
+      { "option": "onUploadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } during upload (when supported)." }
+    ]
+  }
+]
