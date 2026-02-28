@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "start": "node documentation/full-server.js",
+    "docs": "node documentation/full-server.js",
     "test": "node --test"
   },
   "keywords": [

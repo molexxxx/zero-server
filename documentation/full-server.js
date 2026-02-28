@@ -20,7 +20,6 @@ app.use(serveStatic(path.join(__dirname, 'public')));
 const rootController = require('./controllers/root');
 const headersController = require('./controllers/headers');
 const echoController = require('./controllers/echo');
-const uploadController = require('./controllers/upload');
 const uploadsController = require('./controllers/uploads');
 
 // --- Core Routes ---
@@ -55,7 +54,7 @@ app.use((req, res, next) =>
 /**
  * Handles multipart file uploads.
  */
-app.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024, dir: uploadsDir }), uploadController.upload(uploadsDir));
+app.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024, dir: uploadsDir }), uploadsController.upload(uploadsDir));
 
 /**
  * Deletes a single uploaded file (moves to trash).
@@ -133,8 +132,7 @@ try { autoEmptyTrash(); setInterval(autoEmptyTrash, 24 * 60 * 60 * 1000); } catc
 /**
  * Lists uploaded files with pagination and sorting.
  */
-const uploadsListController = require('./controllers/uploadsList');
-app.get('/uploads-list', uploadsListController.listUploads(uploadsDir));
+app.get('/uploads-list', uploadsController.listUploads(uploadsDir));
 
 // --- Temp Uploads Cleanup ---
 /**

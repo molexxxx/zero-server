@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Ensure uploads and trash directories exist
+ */
 exports.ensureUploadsDir = (uploadsDir) =>
 {
     try
@@ -11,6 +14,44 @@ exports.ensureUploadsDir = (uploadsDir) =>
     } catch (e) { }
 };
 
+/**
+ * Handle multipart upload (generate thumbnails for images)
+ */
+exports.upload = (uploadsDir) => (req, res) =>
+{
+    if (req._multipartErrorHandled) return;
+    const files = req.body.files || {};
+    const outFiles = {};
+    for (const key of Object.keys(files))
+    {
+        const f = files[key];
+        outFiles[key] = { originalFilename: f.originalFilename, storedName: f.storedName, size: f.size, url: '/uploads/' + encodeURIComponent(f.storedName) };
+    }
+    try
+    {
+        const thumbsDir = path.join(uploadsDir, '.thumbs');
+        if (!fs.existsSync(thumbsDir)) fs.mkdirSync(thumbsDir, { recursive: true });
+        const imgExt = /\.(png|jpe?g|gif|webp|svg|jfif)$/i;
+        for (const key of Object.keys(files))
+        {
+            const f = files[key];
+            if (imgExt.test(f.originalFilename || ''))
+            {
+                const thumbName = f.storedName + '-thumb.svg';
+                const thumbPath = path.join(thumbsDir, thumbName);
+                const safeName = (f.originalFilename || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+                const sizeText = typeof f.size === 'number' ? Math.round(f.size / 1024) + ' KB' : '';
+                const svg = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">\n  <rect width="100%" height="100%" fill="#eef2ff" rx="8" ry="8"/>\n  <text x="50%" y="50%" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111827" dominant-baseline="middle" text-anchor="middle">${safeName}</text>\n  <text x="50%" y="72%" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#6b7280" dominant-baseline="middle" text-anchor="middle">${sizeText}</text>\n</svg>`;
+                try { fs.writeFileSync(thumbPath, svg, 'utf8'); outFiles[key].thumbUrl = '/uploads/.thumbs/' + encodeURIComponent(thumbName); } catch (e) { }
+            }
+        }
+    } catch (e) { }
+    return res.json({ fields: req.body.fields || {}, files: outFiles });
+};
+
+/**
+ * Move a single upload to trash
+ */
 exports.deleteUpload = (uploadsDir) => (req, res) =>
 {
     const name = req.params.name;
@@ -38,6 +79,9 @@ exports.deleteUpload = (uploadsDir) => (req, res) =>
     } catch (e) { return res.status(500).json({ error: String(e) }); }
 };
 
+/**
+ * Delete all uploads (optionally keep first)
+ */
 exports.deleteAllUploads = (uploadsDir) => (req, res) =>
 {
     const keep = Number(req.query.keep) || 0;
@@ -66,6 +110,9 @@ exports.deleteAllUploads = (uploadsDir) => (req, res) =>
     } catch (e) { return res.status(500).json({ error: String(e) }); }
 };
 
+/**
+ * Restore a trashed file back to uploads
+ */
 exports.restoreUpload = (uploadsDir) => (req, res) =>
 {
     const name = req.params.name;
@@ -93,6 +140,9 @@ exports.restoreUpload = (uploadsDir) => (req, res) =>
     } catch (e) { return res.status(500).json({ error: String(e) }); }
 };
 
+/**
+ * List files currently in trash
+ */
 exports.listTrash = (uploadsDir) => (req, res) =>
 {
     try
@@ -108,6 +158,9 @@ exports.listTrash = (uploadsDir) => (req, res) =>
     } catch (e) { res.status(500).json({ error: String(e) }); }
 };
 
+/**
+ * Permanently delete a trash item
+ */
 exports.deleteTrashItem = (uploadsDir) => (req, res) =>
 {
     const name = req.params.name;
@@ -127,6 +180,9 @@ exports.deleteTrashItem = (uploadsDir) => (req, res) =>
     } catch (e) { return res.status(500).json({ error: String(e) }); }
 };
 
+/**
+ * Empty the trash folder
+ */
 exports.emptyTrash = (uploadsDir) => (req, res) =>
 {
     try
@@ -154,4 +210,41 @@ exports.emptyTrash = (uploadsDir) => (req, res) =>
         }
         return res.json({ removed });
     } catch (e) { return res.status(500).json({ error: String(e) }); }
+};
+
+/**
+ * List uploaded files with pagination and sorting
+ */
+exports.listUploads = (uploadsDir) => (req, res) => {
+    try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize) || 20));
+        const sort = req.query.sort || 'mtime';
+        const order = (req.query.order || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+        const list = [];
+        if (fs.existsSync(uploadsDir)) {
+                for (const fn of fs.readdirSync(uploadsDir)) {
+                    if (fn === '.trash' || fn === '.thumbs') continue;
+                    try {
+                        const p = path.join(uploadsDir, fn);
+                        const st = fs.statSync(p);
+                        const isImage = [/\.png$/i, /\.jpe?g$/i, /\.jfif$/i, /\.gif$/i, /\.webp$/i, /\.svg$/i].some(re => re.test(fn));
+                        const thumbPath = path.join(uploadsDir, '.thumbs', fn + '-thumb.svg');
+                        const thumbExists = fs.existsSync(thumbPath);
+                        list.push({ name: fn, url: '/uploads/' + encodeURIComponent(fn), size: st.size, mtime: st.mtimeMs, isImage, thumb: thumbExists ? ('/uploads/.thumbs/' + encodeURIComponent(fn + '-thumb.svg')) : null });
+                    } catch (e) { }
+                }
+            }
+        list.sort((a, b) => {
+            let v = 0;
+            if (sort === 'name') v = a.name.localeCompare(b.name);
+            else if (sort === 'size') v = (a.size || 0) - (b.size || 0);
+            else v = (a.mtime || 0) - (b.mtime || 0);
+            return order === 'asc' ? v : -v;
+        });
+        const total = list.length;
+        const start = (page - 1) * pageSize;
+        const paged = list.slice(start, start + pageSize);
+        res.json({ files: paged, total, page, pageSize });
+    } catch (e) { res.status(500).json({ error: String(e) }); }
 };

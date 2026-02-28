@@ -6,78 +6,272 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>molex-http — demo & reference</title>
 	<link rel="stylesheet" href="/styles.css" />
-	<!-- Prism.js (local vendor) -->
 	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
 </head>
 
-<body>
+<body class="toc-hidden">
 	<div class="ui-shell">
 		<header class="ui-header">
+			<button class="toc-toggle" aria-label="Toggle table of contents" title="Toggle table of contents">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+			</button>
+			
 			<div class="brand">
 				<div class="logo">molex-http</div>
-				<div class="subtitle">Zero-dependency Express-like server — interactive demo & reference</div>
+				<div class="subtitle">Zero-dependency Express-like server</div>
+			</div>
+
+			<div class="repo-buttons" role="navigation" aria-label="Repository links">
+				<a class="icon-btn" href="https://github.com/tonywied17/molex-http-npm" target="_blank"
+					rel="noopener noreferrer" aria-label="View on GitHub">
+					<svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+						<path
+							d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.78 2.73 1.27 3.4.97.11-.76.41-1.27.75-1.56-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.45.11-3.02 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 2.87-.39c.98 0 1.97.13 2.87.39 2.18-1.49 3.14-1.18 3.14-1.18.63 1.57.24 2.73.12 3.02.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.27 5.69.42.36.8 1.07.8 2.15 0 1.55-.01 2.8-.01 3.18 0 .31.21.68.8.56C20.71 21.39 24 17.08 24 12c0-6.35-5.15-11.5-12-11.5z" />
+					</svg>
+					<span class="sr">GitHub</span>
+				</a>
+				<a class="icon-btn" href="https://www.npmjs.com/package/molex-http" target="_blank"
+					rel="noopener noreferrer" aria-label="View on npm">
+					<svg class="icon-svg" viewBox="0 0 120 40" aria-hidden="true" role="img">
+						<rect width="220" height="40" rx="6" fill="#CB3837"></rect>
+						<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+							font-family="Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="700"
+							font-size="18" fill="#fff">npm</text>
+					</svg>
+					<span class="sr">npm</span>
+				</a>
 			</div>
 		</header>
 
+		<aside class="toc-sidebar" aria-label="Table of contents">
+			<nav>
+				<ul>
+					<li><a href="#features">Features</a></li>
+					<li><a href="#quickstart">Quickstart</a></li>
+					<li><a href="#upload-testing">Upload testing</a></li>
+					<li><a href="#options">Options</a></li>
+					<li><a href="#api-reference">API Reference</a></li>
+					<li><a href="#parser-tests">Parser tests</a></li>
+					<li><a href="#proxy-test">Proxy test</a></li>
+				</ul>
+			</nav>
+		</aside>
 		<main class="ui-main">
-			<!-- Built-in README / API Reference -->
 			<div class="card docs-card">
-				<div class="card-head">
-					<h3>Docs & API Reference</h3>
-					<div class="small muted">Reference for features, options, and API with runnable examples
+
+				<div class="feature-tabs" id="features">
+					<div class="tabs-nav" role="tablist" aria-label="Docs sections tabs">
+						<button class="tab active" data-target="tab-features" role="tab"
+							aria-selected="true">Features</button>
+						<button class="tab" data-target="tab-behavior" role="tab" aria-selected="false">Server
+							model</button>
+					</div>
+					<div class="tabs-content">
+						<div id="tab-features" class="tab-panel active">
+							<div class="feature-grid">
+								<div class="feature-card">
+									<div class="feature-icon">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path fill="currentColor" d="M13 2L3 14h7v8l10-12h-7z" />
+										</svg>
+									</div>
+									<h5>Zero-dependency</h5>
+									<p>Small, Express-like API without external deps.</p>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path fill="currentColor"
+												d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+										</svg>
+									</div>
+									<h5>Pluggable parsers</h5>
+									<p>json(), urlencoded(), text(), raw() built-in.</p>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path fill="currentColor"
+												d="M19 9v10H5V9H3v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9h-2zM12 3L2 13h7v6h6v-6h7L12 3z" />
+										</svg>
+									</div>
+									<h5>Streaming uploads</h5>
+									<p>Multipart streaming to disk for large files.</p>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path fill="currentColor"
+												d="M10 4H4a2 2 0 0 0-2 2v12h20V8a4 4 0 0 0-4-4h-8z" />
+										</svg>
+									</div>
+									<h5>Static serving</h5>
+									<p>Correct Content-Type handling and caching options.</p>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path fill="currentColor" d="M21 11l-8-7v4H3v6h10v4z" />
+										</svg>
+									</div>
+									<h5>Built-in fetch</h5>
+									<p>Small server-side fetch replacement for HTTP requests.</p>
+								</div>
+							</div>
+						</div>
+						<div id="tab-behavior" class="tab-panel">
+							<div class="behavior-list">
+								<div class="behavior-step">
+									<div class="step-num">1</div>
+									<div class="step-body">
+										<h5>Registration order</h5>
+										<p>Routing and middleware run in the order they're registered—add parsers before
+											handlers.</p>
+									</div>
+								</div>
+								<div class="behavior-step">
+									<div class="step-num">2</div>
+									<div class="step-body">
+										<h5>Body parsing</h5>
+										<p>Body parsers populate <code>req.body</code>; multipart uploads expose
+											<code>req.body.files</code> and <code>req.body.fields</code>.</p>
+									</div>
+								</div>
+								<div class="behavior-step">
+									<div class="step-num">3</div>
+									<div class="step-body">
+										<h5>Handler model</h5>
+										<p>Handlers receive <code>req</code> and <code>res</code>. Use
+											<code>res.json()</code> or <code>res.send()</code> to respond.</p>
+									</div>
+								</div>
+								<div class="behavior-step">
+									<div class="step-num">4</div>
+									<div class="step-body">
+										<h5>Static middleware</h5>
+										<p>Serves files with Content-Type derived from extension and supports caching
+											options.</p>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 
-				<div class="acc-body">
-					<h4>Quickstart</h4>
-					<p>Run the demo server from the repo root and open <code>http://localhost:3000</code>.</p>
-					<pre class="language-bash"><code class="language-bash">node documentation/full-server.js
-# visit http://localhost:3000</code></pre>
+				<script>
+					(function ()
+					{
+						const tabs = document.querySelectorAll('.feature-tabs .tab');
+						tabs.forEach(t => t.addEventListener('click', (ev) =>
+						{
+							const target = t.dataset.target;
+							if (!target) return;
+							tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
+							document.querySelectorAll('.feature-tabs .tab-panel').forEach(p => p.classList.remove('active'));
+							t.classList.add('active'); t.setAttribute('aria-selected', 'true');
+							const panel = document.getElementById(target); if (panel) panel.classList.add('active');
+						}));
+					})();
+					(function(){
+						const btn = document.querySelector('.toc-toggle');
+						const sidebar = document.querySelector('.toc-sidebar');
+						if (!btn || !sidebar) return;
+						const mq = (q) => window.matchMedia(q).matches;
+						const setAria = () => {
+							const expanded = mq('(min-width:900px)') ? !document.body.classList.contains('toc-hidden') : document.body.classList.contains('toc-open');
+							btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+						};
+						setAria();
+						btn.addEventListener('click', (ev) => {
+							if (mq('(min-width:900px)')) {
+								document.body.classList.toggle('toc-hidden');
+								document.body.classList.remove('toc-open');
+							} else {
+								document.body.classList.toggle('toc-open');
+							}
+							setAria();
+						});
+						document.addEventListener('keydown', (e) => {
+							if (e.key === 'Escape') {
+								document.body.classList.remove('toc-open');
+								document.body.classList.remove('toc-hidden');
+								setAria();
+							}
+						});
+						document.addEventListener('click', (e) => {
+							if (!document.body.classList.contains('toc-open')) return;
+							if (e.target.closest('.toc-sidebar') || e.target.closest('.toc-toggle')) return;
+							document.body.classList.remove('toc-open');
+							setAria();
+						});
+						window.addEventListener('resize', () => setAria());
+					})();
 
-					<h4>Overview</h4>
-					<p class="muted">molex-http is a zero-dependency Express-like server with built-in body parsers,
-						streaming multipart uploads, static serving, and a small fetch replacement for Node.</p>
+					(function(){
+						const nav = document.querySelector('.toc-sidebar nav');
+						if (!nav) return;
+						function openAncestors(el){
+							let d = el.closest('details.acc');
+							while(d){ d.open = true; d = d.parentElement ? d.parentElement.closest('details.acc') : null; }
+						}
+						nav.addEventListener('click', (e) => {
+							const a = e.target.closest('a[href^="#"]');
+							if (!a) return;
+							const hash = a.getAttribute('href');
+							if (!hash || hash.charAt(0) !== '#') return;
+							const id = hash.slice(1);
+							const target = document.getElementById(id);
+							if (!target) return;
+							openAncestors(target);
+							setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+							document.body.classList.remove('toc-open');
+							const btn = document.querySelector('.toc-toggle'); if (btn) btn.setAttribute('aria-expanded', 'false');
+						});
+						window.addEventListener('hashchange', () => {
+							const id = location.hash ? location.hash.slice(1) : '';
+							if (!id) return;
+							const target = document.getElementById(id);
+							if (!target) return;
+							openAncestors(target);
+							setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+						});
+					})();
+				</script>
+
+				<div class="acc-body">
+					<h4 id="quickstart">Quickstart</h4>
+
+					<p class="muted">Install from npm and create a simple server:</p>
+					<pre class="language-bash"><code class="language-bash">npm install molex-http</code></pre>
+
+					<pre class="language-javascript"><code class="language-javascript">const { createApp, json, static } = require('molex-http')
+const path = require('path')
+const app = createApp()
+
+app.use(json({ limit: '10kb' }))
+app.use(static(path.join(__dirname, 'public'), { index: 'index.html' }))
+
+app.get('/ping', (req, res) =&gt; res.json({ pong: true }))
+
+app.listen(3000, () =&gt; {
+	console.log('Server listening on http://localhost:3000')
+})</code></pre>
+
+
+
+					<p class="muted">To run this demo server from the repo root and open
+						<code>http://localhost:3000</code>.</p>
+					<pre class="language-bash"><code class="language-bash">npm install molex-http
+npm run docs
+# open http://localhost:3000</code></pre>
+
 
 					<h4>API, Options & Examples</h4>
 
 					<div class="muted">Comprehensive reference for configuration options, runtime behavior, and API
 						examples. Expand each section for details and runnable snippets.</div>
 
-
-
-					<details class="acc">
-						<summary>Features</summary>
-						<div class="acc-body">
-							<ul>
-								<li>Zero-dependency, Express-like API and middleware</li>
-								<li>Built-in parsers: <strong>json()</strong>, <strong>urlencoded()</strong>,
-									<strong>text()</strong>, <strong>raw()</strong>
-								</li>
-								<li>Streaming multipart uploads with file streaming to disk</li>
-								<li>Static file serving with correct Content-Type handling</li>
-								<li>Small built-in fetch replacement for server-side requests</li>
-							</ul>
-						</div>
-					</details>
-
-					<details class="acc">
-						<summary>Server behavior & request model</summary>
-						<div class="acc-body">
-							<ul>
-								<li>Routing and middleware run in registration order — install parsers before handlers
-									that need parsed bodies.</li>
-								<li>Body parsers populate <code>req.body</code>; multipart uploads populate
-									<code>req.body.files</code> and <code>req.body.fields</code>.
-								</li>
-								<li>Handlers receive <code>req</code> and <code>res</code> objects; use
-									<code>res.json()</code>, <code>res.send()</code> or set status and headers directly.
-								</li>
-								<li>Static middleware serves files with Content-Type derived from extension.</li>
-							</ul>
-						</div>
-					</details>
-
-					<details class="acc">
+					<details class="acc" id="options">
 						<summary>Options (middleware & parser settings)</summary>
 						<div class="acc-body">
 							<p class="muted">Common option shapes and defaults for parsers and upload middleware.</p>
@@ -113,25 +307,33 @@
 										<td><strong>raw()</strong></td>
 										<td>function</td>
 										<td><code>application/octet-stream</code></td>
-										<td>Reads raw bytes into a Buffer on <code>req.body</code> (default <code>application/octet-stream</code>).</td>
+										<td>Reads raw bytes into a Buffer on <code>req.body</code> (default
+											<code>application/octet-stream</code>).</td>
 									</tr>
 									<tr>
 										<td><strong>cors([opts])</strong></td>
 										<td>function</td>
 										<td><code>'*'</code></td>
-										<td>Simple CORS middleware. Options: <code>origin</code>, <code>methods</code>, <code>allowedHeaders</code>, <code>credentials</code>.</td>
+										<td>Simple CORS middleware. Options: <code>origin</code>, <code>methods</code>,
+											<code>allowedHeaders</code>, <code>credentials</code>.</td>
 									</tr>
 									<tr>
 										<td><strong>static(rootPath, opts)</strong></td>
 										<td>function</td>
 										<td><code>index.html</code></td>
-										<td>Serves static files. Options: <code>index</code>, <code>maxAge</code>, <code>dotfiles</code>, <code>extensions</code>, <code>setHeaders</code>.</td>
+										<td>Serves static files. Options: <code>index</code>, <code>maxAge</code>,
+											<code>dotfiles</code>, <code>extensions</code>, <code>setHeaders</code>.
+										</td>
 									</tr>
 									<tr>
 										<td><strong>fetch(url, opts)</strong></td>
 										<td>function</td>
 										<td>—</td>
-										<td>Small Node HTTP client. Options include <code>agent</code>, <code>method</code>, <code>headers</code>, <code>body</code>, <code>timeout</code>, <code>signal</code>, and progress callbacks. Response exposes <code>ok</code>, <code>statusText</code>, <code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
+										<td>Small Node HTTP client. Options include <code>agent</code>,
+											<code>method</code>, <code>headers</code>, <code>body</code>,
+											<code>timeout</code>, <code>signal</code>, and progress callbacks. Response
+											exposes <code>ok</code>, <code>statusText</code>,
+											<code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
 									</tr>
 									<tr>
 										<td><strong>multipart({ dir, maxFileSize })</strong></td>
@@ -146,7 +348,7 @@
 						</div>
 					</details>
 
-					<details class="acc">
+					<details class="acc" id="api-reference">
 						<summary>API Reference</summary>
 						<div class="acc-body">
 
@@ -467,16 +669,17 @@ app.use(static(path.join(__dirname, 'documentation', 'public'), {
 													CORS, or an array of origin strings/domains. The middleware will
 													match the request origin against the array internally.</td>
 											</tr>
-																		<tr>
-																			<td><code>credentials</code></td>
-																			<td>boolean</td>
-																			<td><code>false</code></td>
-																			<td>If true, sets <code>Access-Control-Allow-Credentials</code> when a specific origin matches.</td>
-																		</tr>
+											<tr>
+												<td><code>credentials</code></td>
+												<td>boolean</td>
+												<td><code>false</code></td>
+												<td>If true, sets <code>Access-Control-Allow-Credentials</code> when a
+													specific origin matches.</td>
+											</tr>
 											<tr>
 												<td><code>methods</code></td>
 												<td>string</td>
-																			<td><code>'GET,POST,PUT,DELETE,OPTIONS'</code></td>
+												<td><code>'GET,POST,PUT,DELETE,OPTIONS'</code></td>
 												<td>Allowed methods.</td>
 											</tr>
 											<tr>
@@ -515,11 +718,11 @@ app.use(cors({
 											</tr>
 										</thead>
 										<tbody>
-												<tr>
-													<td><code>agent</code></td>
-													<td>object</td>
-													<td>Optional http/https agent for connection pooling or proxies.</td>
-												</tr>
+											<tr>
+												<td><code>agent</code></td>
+												<td>object</td>
+												<td>Optional http/https agent for connection pooling or proxies.</td>
+											</tr>
 											<tr>
 												<td><code>method</code></td>
 												<td>string</td>
@@ -533,7 +736,9 @@ app.use(cors({
 											<tr>
 												<td><code>body</code></td>
 												<td>Buffer|string|Stream</td>
-													<td>Request body. Plain objects are JSON-stringified and <code>Content-Type</code> is set to <code>application/json</code> if not provided. <code>URLSearchParams</code> become urlencoded.</td>
+												<td>Request body. Plain objects are JSON-stringified and
+													<code>Content-Type</code> is set to <code>application/json</code> if
+													not provided. <code>URLSearchParams</code> become urlencoded.</td>
 											</tr>
 											<tr>
 												<td><code>timeout</code></td>
@@ -557,11 +762,13 @@ app.use(cors({
 												<td>function</td>
 												<td>Callback for download progress.</td>
 											</tr>
-												<tr>
-													<td><strong>Response helpers</strong></td>
-													<td></td>
-													<td>Returned object includes <code>ok</code>, <code>statusText</code>, and methods <code>arrayBuffer()</code>, <code>text()</code>, <code>json()</code>.</td>
-												</tr>
+											<tr>
+												<td><strong>Response helpers</strong></td>
+												<td></td>
+												<td>Returned object includes <code>ok</code>, <code>statusText</code>,
+													and methods <code>arrayBuffer()</code>, <code>text()</code>,
+													<code>json()</code>.</td>
+											</tr>
 										</tbody>
 									</table>
 									<h6>Example</h6>
@@ -579,7 +786,7 @@ console.log(data)</code></pre>
 					</details>
 
 					<details class="acc">
-						<summary>Examples</summary>
+						<summary>Simple Examples</summary>
 						<div class="acc-body">
 							<p class="muted">Concise real-world snippets showing how to compose middleware for common
 								tasks.</p>
@@ -623,9 +830,16 @@ app.use('/uploads', static(path.join(__dirname, 'documentation', 'uploads'), {
 					<details class="acc">
 						<summary>Installation & tests</summary>
 						<div class="acc-body">
-							<pre class="language-bash"><code class="language-bash">npm install
+							<pre class="language-bash"><code class="language-bash">#clone and install dependencies
+git clone https://github.com/tonywied17/molex-http-npm.git
+npm install
+
 # run demo server from repo root
+npm run docs
+
+# or directly:
 node documentation/full-server.js
+
 # run tests (project-specific)
 node test/test.js</code></pre>
 						</div>
@@ -638,10 +852,9 @@ node test/test.js</code></pre>
 
 				</div>
 			</div>
-			<!-- Upload section -->
 			<div class="card upload-card constrained">
 				<div class="card-head">
-					<h3>Upload multipart data</h3>
+					<h3 id="upload-testing">Upload multipart data</h3>
 					<div class="small muted">Drag, drop or pick a file</div>
 				</div>
 				<form id="uploadForm" class="uploadForm" enctype="multipart/form-data">
@@ -666,7 +879,7 @@ node test/test.js</code></pre>
 							<button id="delKeepBtn" type="button" class="btn">Delete (keep 1)</button>
 						</div>
 						<div class="right-controls">
-							<label class="selectWrap">Sort
+							<label class="selectWrap">
 								<select id="sortSelect">
 									<option value="mtime">Newest</option>
 									<option value="name">Name</option>
@@ -710,7 +923,7 @@ node test/test.js</code></pre>
 			</div>
 			<div class="card play-card constrained">
 				<div class="card-head">
-					<h3>Quick parser tests</h3>
+					<h3 id="parser-tests">Quick parser tests</h3>
 				</div>
 				<div class="card-body">
 					<div class="playgrid">
@@ -739,7 +952,7 @@ node test/test.js</code></pre>
 
 			<div class="card proxy-card constrained">
 				<div class="card-head">
-					<h3>Proxy Test</h3>
+					<h3 id="proxy-test">Proxy Test</h3>
 				</div>
 				<div class="card-body">
 					<form id="proxyForm" class="play">
@@ -760,10 +973,8 @@ node test/test.js</code></pre>
 			</div>
 		</main>
 
-		<footer class="ui-footer">molex-http demo • zero dependencies</footer>
 	</div>
 
-	<!-- Prism.js (local vendor files) -->
 	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
 	<link rel="stylesheet" href="/prism-overrides.css" />
 	<script src="/vendor/prism.min.js"></script>
