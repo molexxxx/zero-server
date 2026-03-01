@@ -6,6 +6,36 @@
     "code": "const { createApp, json, cors } = require('zero-http')\nconst app = createApp()\n\napp.use(cors({ origin: ['https://example.com'] }))\napp.use(json({ limit: '10kb' }))\n\nconst items = []\n\napp.get('/items', (req, res) => res.json(items))\n\napp.post('/items', (req, res) => {\n\titems.push(req.body)\n\tres.status(201).json({ ok: true, count: items.length })\n})"
   },
   {
+    "title": "WebSocket Chat Server",
+    "description": "A simple multi-client chat using the built-in WebSocket support. Clients connect, set a name via query param, and broadcast messages to all other connected clients.",
+    "language": "javascript",
+    "code": "const { createApp } = require('zero-http')\nconst app = createApp()\n\nconst clients = new Set()\n\napp.ws('/chat', {\n\tmaxPayload: 64 * 1024,\n\tpingInterval: 20000\n}, (ws, req) => {\n\tws.data.name = req.query.name || 'anon'\n\tclients.add(ws)\n\tws.send('Welcome, ' + ws.data.name + '!')\n\n\t// Broadcast to all other clients\n\tws.on('message', msg => {\n\t\tfor (const c of clients) {\n\t\t\tif (c !== ws && c.readyState === 1)\n\t\t\t\tc.send(ws.data.name + ': ' + msg)\n\t\t}\n\t})\n\n\tws.on('close', () => clients.delete(ws))\n})\n\napp.listen(3000)"
+  },
+  {
+    "title": "Server-Sent Events (SSE) Stream",
+    "description": "Push real-time events to browser clients using res.sse(). Supports auto-IDs, named events, keep-alive, and graceful cleanup on disconnect.",
+    "language": "javascript",
+    "code": "const { createApp } = require('zero-http')\nconst app = createApp()\n\napp.get('/events', (req, res) => {\n\tconst sse = res.sse({\n\t\tretry: 5000,\n\t\tautoId: true,\n\t\tkeepAlive: 30000\n\t})\n\n\tsse.send('connected')\n\n\tconst iv = setInterval(() => {\n\t\tsse.event('tick', { time: Date.now() })\n\t}, 1000)\n\n\tsse.on('close', () => {\n\t\tclearInterval(iv)\n\t\tconsole.log('client disconnected')\n\t})\n})\n\n// Browser: const es = new EventSource('/events')\n//          es.addEventListener('tick', e => console.log(JSON.parse(e.data)))\n\napp.listen(3000)"
+  },
+  {
+    "title": "Router Sub-Apps with Introspection",
+    "description": "Organize routes into modular Router instances, mount them under prefixes, and use .routes() to inspect the full route table at runtime.",
+    "language": "javascript",
+    "code": "const { createApp, Router, json } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\nconst users = Router()\nusers.get('/', (req, res) => res.json([]))\nusers.get('/:id', (req, res) => res.json({ id: req.params.id }))\nusers.post('/', (req, res) => res.status(201).json(req.body))\n\nconst posts = Router()\nposts.route('/').get((req, res) => res.json([])).post((req, res) => res.status(201).json(req.body))\nposts.get('/:id', (req, res) => res.json({ id: req.params.id }))\n\napp.use('/api/users', users)\napp.use('/api/posts', posts)\n\napp.get('/debug/routes', (req, res) => res.json(app.routes()))\n\napp.listen(3000)\n// GET /debug/routes returns the full route table"
+  },
+  {
+    "title": "Response Compression",
+    "description": "Automatically compress responses with brotli, gzip, or deflate above a size threshold using the compress() middleware.",
+    "language": "javascript",
+    "code": "const { createApp, compress, json } = require('zero-http')\nconst app = createApp()\n\n// brotli > gzip > deflate, auto-negotiated\napp.use(compress({ threshold: 512, level: 6 }))\napp.use(json())\n\napp.get('/big', (req, res) => {\n\t// This response is large enough to be compressed\n\tres.json({ data: 'x'.repeat(10000) })\n})\n\napp.get('/small', (req, res) => {\n\t// Below threshold — sent uncompressed\n\tres.json({ ok: true })\n})\n\napp.listen(3000)"
+  },
+  {
+    "title": "HTTPS Server",
+    "description": "Start an HTTPS server by passing TLS options to listen(). All modules respect req.secure and req.protocol for protocol-aware logic.",
+    "language": "javascript",
+    "code": "const fs = require('fs')\nconst { createApp, json } = require('zero-http')\nconst app = createApp()\n\napp.use(json())\n\napp.get('/info', (req, res) => {\n\tres.json({\n\t\tsecure: req.secure,\n\t\tprotocol: req.protocol\n\t})\n})\n\n// HTTPS-only route\napp.get('/secret', { secure: true }, (req, res) => {\n\tres.json({ classified: true })\n})\n\napp.listen(443, {\n\tkey: fs.readFileSync('server-key.pem'),\n\tcert: fs.readFileSync('server-cert.pem')\n}, () => console.log('HTTPS on 443'))"
+  },
+  {
     "title": "File Upload with Multipart Streaming",
     "description": "Stream uploaded files to disk and return metadata. Swap the disk writer for an S3 stream to go cloud-native.",
     "language": "javascript",
@@ -36,16 +66,10 @@
     "code": "const { createApp, json } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\napp.get('/fail', (req, res) => {\n\tthrow new Error('Something broke!')\n})\n\napp.onError((err, req, res, next) => {\n\tconsole.error(`[${new Date().toISOString()}]`, err.stack)\n\tres.status(err.statusCode || 500).json({\n\t\terror: err.message,\n\t\tpath: req.url\n\t})\n})\n\napp.listen(3000)"
   },
   {
-    "title": "Server-Side Fetch with Progress",
-    "description": "Use the built-in fetch client with timeout, abort support, and download progress tracking.",
+    "title": "Server-Side Fetch with Progress & TLS",
+    "description": "Use the built-in fetch client with timeout, abort support, download progress tracking, and custom TLS options for HTTPS URLs.",
     "language": "javascript",
-    "code": "const { fetch } = require('zero-http')\n\nasync function download(url) {\n\tconst controller = new AbortController()\n\tsetTimeout(() => controller.abort(), 10000)\n\n\tconst res = await fetch(url, {\n\t\ttimeout: 5000,\n\t\tsignal: controller.signal,\n\t\tonDownloadProgress: ({ loaded, total }) =>\n\t\t\tconsole.log(`${loaded}/${total || '?'} bytes`)\n\t})\n\n\tconsole.log(res.ok, res.status, res.statusText)\n\tconst data = await res.json()\n\treturn data\n}\n\ndownload('https://jsonplaceholder.typicode.com/todos/1')\n\t.then(console.log)\n\t.catch(console.error)"
-  },
-  {
-    "title": "Path-Prefix Middleware (Sub-App)",
-    "description": "Mount middleware on a path prefix. The prefix is stripped from req.url so downstream handlers see relative paths.",
-    "language": "javascript",
-    "code": "const { createApp, json } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\n// Everything under /api gets this middleware\napp.use('/api', (req, res, next) => {\n\tconsole.log('API request:', req.method, req.url)\n\t// req.url is now '/' instead of '/api/'\n\tnext()\n})\n\napp.get('/api/users', (req, res) => {\n\tres.json([{ id: 1, name: 'Alice' }])\n})\n\napp.listen(3000)"
+    "code": "const { fetch } = require('zero-http')\n\nasync function download(url) {\n\tconst controller = new AbortController()\n\tsetTimeout(() => controller.abort(), 10000)\n\n\tconst res = await fetch(url, {\n\t\ttimeout: 5000,\n\t\tsignal: controller.signal,\n\t\trejectUnauthorized: false,  // accept self-signed certs\n\t\tonDownloadProgress: ({ loaded, total }) =>\n\t\t\tconsole.log(`${loaded}/${total || '?'} bytes`)\n\t})\n\n\tconsole.log(res.ok, res.status, res.secure, res.url)\n\tconst data = await res.json()\n\treturn data\n}\n\ndownload('https://jsonplaceholder.typicode.com/todos/1')\n\t.then(console.log)\n\t.catch(console.error)"
   },
   {
     "title": "CORS with Subdomain Matching",
@@ -55,8 +79,8 @@
   },
   {
     "title": "Full-Featured Server Skeleton",
-    "description": "Combines logging, CORS, body parsing, rate limiting, static serving, error handling, and route parameters in one setup.",
+    "description": "Combines logging, CORS, compression, body parsing, rate limiting, static serving, WebSocket, SSE, Router sub-apps, error handling, and route parameters.",
     "language": "javascript",
-    "code": "const path = require('path')\nconst { createApp, cors, json, urlencoded, text,\n\tstatic: serveStatic, logger, rateLimit, multipart } = require('zero-http')\n\nconst app = createApp()\n\n// Middleware stack\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(rateLimit({ windowMs: 60000, max: 200 }))\napp.use(json({ limit: '1mb' }))\napp.use(urlencoded({ extended: true }))\napp.use(text())\napp.use(serveStatic(path.join(__dirname, 'public')))\n\n// Routes\napp.get('/health', (req, res) => res.json({ status: 'ok' }))\napp.get('/users/:id', (req, res) => res.json({ id: req.params.id }))\napp.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024 }),\n\t(req, res) => res.json(req.body))\n\n// Error handler\napp.onError((err, req, res) => {\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('Server running on :3000'))"
+    "code": "const path = require('path')\nconst { createApp, cors, json, urlencoded, text, compress,\n\tstatic: serveStatic, logger, rateLimit, Router } = require('zero-http')\n\nconst app = createApp()\n\n// Middleware stack\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(compress())\napp.use(rateLimit({ windowMs: 60000, max: 200 }))\napp.use(json({ limit: '1mb' }))\napp.use(urlencoded({ extended: true }))\napp.use(text())\napp.use(serveStatic(path.join(__dirname, 'public')))\n\n// Router sub-app\nconst api = Router()\napi.get('/health', (req, res) => res.json({ status: 'ok' }))\napi.get('/users/:id', (req, res) => res.json({ id: req.params.id }))\napp.use('/api', api)\n\n// WebSocket\napp.ws('/chat', (ws) => {\n\tws.on('message', msg => ws.send('echo: ' + msg))\n})\n\n// SSE\napp.get('/events', (req, res) => {\n\tconst sse = res.sse({ retry: 3000, autoId: true })\n\tsse.send('connected')\n\tsse.on('close', () => console.log('bye'))\n})\n\n// Introspection\napp.get('/debug/routes', (req, res) => res.json(app.routes()))\n\napp.onError((err, req, res) => {\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('Server running on :3000'))"
   }
 ]

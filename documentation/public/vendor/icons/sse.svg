@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-sse" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Server box -->
+  <rect x="8" y="16" width="20" height="32" rx="5" fill="url(#g-sse)"/>
+  <!-- White indicator dots on server -->
+  <circle cx="18" cy="25" r="2.5" fill="rgba(255,255,255,0.9)"/>
+  <circle cx="18" cy="32" r="2.5" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="18" cy="39" r="2.5" fill="rgba(255,255,255,0.35)"/>
+  <!-- Three streaming arrows flowing right -->
+  <line x1="32" y1="24" x2="50" y2="24" stroke="url(#g-sse)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M47 20l5 4-5 4" fill="none" stroke="url(#g-sse)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="34" y1="32" x2="52" y2="32" stroke="url(#g-sse)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M49 28l5 4-5 4" fill="none" stroke="url(#g-sse)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <line x1="36" y1="40" x2="54" y2="40" stroke="url(#g-sse)" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+  <path d="M51 36l5 4-5 4" fill="none" stroke="url(#g-sse)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+  <!-- White sparkle -->
+  <circle cx="54" cy="18" r="2" fill="rgba(255,255,255,0.7)"/>
+  <circle cx="57" cy="14" r="1" fill="rgba(255,255,255,0.4)"/>
+</svg>

@@ -12,7 +12,7 @@
  *             highlightAllPre)
  */
 
-/* ── TOC Helpers ───────────────────────────────────────────────────────────── */
+/* -- TOC Helpers ------------------------------------------------------------- */
 
 /**
  * Find a top-level `<li>` in the sidebar TOC whose link matches the given
@@ -56,7 +56,7 @@ function populateTocSub(href, items)
     parentLi.appendChild(sub);
 }
 
-/* ── API Reference ─────────────────────────────────────────────────────────── */
+/* -- API Reference ----------------------------------------------------------- */
 
 /**
  * Render a list of API items into the `#api-items` container and Prism-highlight
@@ -196,7 +196,7 @@ async function loadApiReference()
     } catch (e) { }
 }
 
-/* ── Options Table ─────────────────────────────────────────────────────────── */
+/* -- Options Table ----------------------------------------------------------- */
 
 /**
  * Fetch the options JSON and render a `<table>` into `#options-items`.
@@ -236,7 +236,7 @@ async function loadOptions()
     } catch (e) { console.error('loadOptions error', e); }
 }
 
-/* ── Code Examples ─────────────────────────────────────────────────────────── */
+/* -- Code Examples ----------------------------------------------------------- */
 
 /**
  * Fetch the examples JSON, render each as a collapsible accordion, and

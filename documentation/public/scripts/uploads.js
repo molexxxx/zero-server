@@ -7,14 +7,14 @@
  *             showJsonResult, highlightAllPre)
  */
 
-/* ── Pagination State ──────────────────────────────────────────────────────── */
+/* -- Pagination State -------------------------------------------------------- */
 
 let currentPage  = 1;
 let currentSort  = 'mtime';
 let currentOrder = 'desc';
 const pageSize   = 4;
 
-/* ── Combined Uploads + Trash JSON ─────────────────────────────────────────── */
+/* -- Combined Uploads + Trash JSON ------------------------------------------- */
 
 /**
  * Fetch the combined uploads + trash listing and render it as JSON into the
@@ -30,7 +30,7 @@ async function loadUploadsCombined()
     } catch (e) { }
 }
 
-/* ── Convenience: DELETE + Show Result ─────────────────────────────────────── */
+/* -- Convenience: DELETE + Show Result --------------------------------------- */
 
 /**
  * Issue a DELETE request and display the JSON response.
@@ -46,7 +46,7 @@ async function deleteAndShow(path, container)
     try { await loadUploadsCombined(); } catch (e) { showJsonResult(container, j); }
 }
 
-/* ── Trash Row Factory ─────────────────────────────────────────────────────── */
+/* -- Trash Row Factory ------------------------------------------------------- */
 
 /**
  * Build a trash-row DOM node with Restore and Delete Permanently buttons.
@@ -90,7 +90,7 @@ function createTrashRow(name)
     return row;
 }
 
-/* ── Trash List ────────────────────────────────────────────────────────────── */
+/* -- Trash List -------------------------------------------------------------- */
 
 /**
  * Fetch the trash listing from the server and render rows into `#trashList`.
@@ -125,7 +125,7 @@ function addTrashRow(name)
     else trashList.appendChild(row);
 }
 
-/* ── Undo Toast ────────────────────────────────────────────────────────────── */
+/* -- Undo Toast -------------------------------------------------------------- */
 
 /**
  * Display a transient undo panel when a file is moved to trash.
@@ -161,7 +161,7 @@ function showUndo(name)
     });
 }
 
-/* ── Upload Card Factory ───────────────────────────────────────────────────── */
+/* -- Upload Card Factory ----------------------------------------------------- */
 
 /** Inline SVG placeholder for non-image files. */
 const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -241,7 +241,7 @@ function createUploadCard(f, uploadResult)
     return card;
 }
 
-/* ── Paginated Upload List ─────────────────────────────────────────────────── */
+/* -- Paginated Upload List --------------------------------------------------- */
 
 /**
  * Fetch the paginated upload list and render file cards into `#uploadsList`.
@@ -310,7 +310,7 @@ async function loadUploadsList()
     }
 }
 
-/* ── Wire Upload Form & Bulk Actions ───────────────────────────────────────── */
+/* -- Wire Upload Form & Bulk Actions ----------------------------------------- */
 
 /**
  * Initialise the upload form (XHR with progress), pagination controls, and

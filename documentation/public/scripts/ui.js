@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () =>
     initTocToolbar();
 });
 
-/* ── Feature Tabs ──────────────────────────────────────────────────────────── */
+/* -- Feature Tabs ------------------------------------------------------------ */
 
 /**
  * Wire the feature / server-model tab buttons so clicking one activates
@@ -47,7 +47,7 @@ function initFeatureTabs()
     });
 }
 
-/* ── TOC Sidebar Toggle ────────────────────────────────────────────────────── */
+/* -- TOC Sidebar Toggle ------------------------------------------------------ */
 
 /**
  * Wire the hamburger button to toggle the sidebar on both desktop (persistent)
@@ -106,7 +106,7 @@ function initTocSidebar()
     window.addEventListener('resize', syncAria);
 }
 
-/* ── TOC Smooth-Scroll Navigation ──────────────────────────────────────────── */
+/* -- TOC Smooth-Scroll Navigation -------------------------------------------- */
 
 /**
  * When clicking a TOC link that points to a `#hash`, auto-open any ancestor
@@ -166,7 +166,7 @@ function initTocNavigation()
     });
 }
 
-/* ── TOC Toolbar (scroll-to-top & expand/collapse all) ─────────────────────── */
+/* -- TOC Toolbar (scroll-to-top & expand/collapse all) ----------------------- */
 
 /**
  * Wire the icon-bar buttons at the top of the sidebar:
@@ -179,7 +179,7 @@ function initTocToolbar()
     const toggleBtn = document.getElementById('toc-toggle-acc');
     if (!topBtn && !toggleBtn) return;
 
-    /* ── Scroll to top ────────────────────────────────────────────────── */
+    /* -- Scroll to top -------------------------------------------------- */
     const brandBtn = document.getElementById('brand-top');
 
     [topBtn, brandBtn].forEach(el =>
@@ -192,7 +192,7 @@ function initTocToolbar()
         });
     });
 
-    /* ── Expand / Collapse all accordions ─────────────────────────────── */
+    /* -- Expand / Collapse all accordions ------------------------------- */
     if (toggleBtn)
     {
         let expanded = false;

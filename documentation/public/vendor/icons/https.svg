@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-tls" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Shield shape -->
+  <path d="M32 6 L52 16 L52 34 C52 48 32 58 32 58 C32 58 12 48 12 34 L12 16 Z" fill="url(#g-tls)"/>
+  <!-- White highlight on shield -->
+  <path d="M32 10 L48 18 L48 33 C48 44 32 53 32 53 C32 53 30 52 28 50" fill="rgba(255,255,255,0.08)" stroke="none"/>
+  <!-- Lock body -->
+  <rect x="24" y="30" width="16" height="14" rx="3" fill="rgba(255,255,255,0.9)"/>
+  <!-- Lock shackle -->
+  <path d="M27 30 V24 C27 19 37 19 37 24 V30" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Keyhole -->
+  <circle cx="32" cy="36" r="2.5" fill="url(#g-tls)"/>
+  <rect x="31" y="36" width="2" height="4" rx="1" fill="url(#g-tls)"/>
+  <!-- Sparkle dots -->
+  <circle cx="50" cy="10" r="1.5" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="54" cy="14" r="1" fill="rgba(255,255,255,0.35)"/>
+</svg>

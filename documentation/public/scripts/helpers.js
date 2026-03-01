@@ -4,7 +4,7 @@
  * documentation scripts. Loaded first so every other module can rely on these.
  */
 
-/* ── DOM Selectors ─────────────────────────────────────────────────────────── */
+/* -- DOM Selectors ----------------------------------------------------------- */
 
 /**
  * Query a single element by CSS selector.
@@ -34,7 +34,7 @@ function on(el, evt, cb)
     el.addEventListener(evt, cb);
 }
 
-/* ── String Utilities ──────────────────────────────────────────────────────── */
+/* -- String Utilities -------------------------------------------------------- */
 
 /**
  * Escape HTML special characters for safe insertion into the DOM.
@@ -76,7 +76,7 @@ function formatBytes(n)
     return (n / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sizes[i];
 }
 
-/* ── JSON / Code Rendering ─────────────────────────────────────────────────── */
+/* -- JSON / Code Rendering --------------------------------------------------- */
 
 /**
  * Build a highlighted `<pre>` block containing pretty-printed JSON.
@@ -100,7 +100,7 @@ function showJsonResult(container, obj)
     try { highlightAllPre(); } catch (e) { }
 }
 
-/* ── Prism / Code-Block Helpers ────────────────────────────────────────────── */
+/* -- Prism / Code-Block Helpers ---------------------------------------------- */
 
 /**
  * Trigger Prism syntax highlighting on all `<pre class="code">` blocks, or

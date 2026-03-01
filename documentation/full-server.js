@@ -3,15 +3,20 @@
  * Organized with controllers and JSDoc comments for clarity and maintainability.
  */
 
+// --- Crash protection ---
+process.on('uncaughtException', (err) => { console.error('[UNCAUGHT]', err); });
+process.on('unhandledRejection', (err) => { console.error('[UNHANDLED]', err); });
+
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { createApp, cors, json, urlencoded, text, raw, multipart, static: serveStatic, fetch, logger } = require('..');
+const { createApp, cors, json, urlencoded, text, raw, multipart, static: serveStatic, fetch, logger, compress, Router } = require('..');
 
 // --- App Initialization ---
 const app = createApp();
 app.use(logger({ format: 'dev' }));
 app.use(cors());
+app.use(compress());
 app.use(json());
 app.use(urlencoded());
 app.use(text());
@@ -93,6 +98,82 @@ app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'zero-http
 const proxyController = require('./controllers/proxy');
 const proxyFetch = (typeof globalThis !== 'undefined' && globalThis.fetch) || fetch;
 app.get('/proxy', proxyController.proxy(proxyFetch));
+
+// --- WebSocket Chat ---
+const wsClients = new Set();
+
+app.ws('/ws/chat', { maxPayload: 64 * 1024, pingInterval: 25000 }, (ws, req) =>
+{
+    ws.data.name = ws.query.name || 'anon';
+    wsClients.add(ws);
+    ws.send(JSON.stringify({ type: 'system', text: 'Welcome, ' + ws.data.name + '!' }));
+
+    // Broadcast join
+    for (const c of wsClients)
+    {
+        if (c !== ws && c.readyState === 1)
+            c.send(JSON.stringify({ type: 'system', text: ws.data.name + ' joined' }));
+    }
+
+    ws.on('message', (msg) =>
+    {
+        // Broadcast to all clients including sender
+        const payload = JSON.stringify({ type: 'message', name: ws.data.name, text: String(msg) });
+        for (const c of wsClients)
+        {
+            if (c.readyState === 1) c.send(payload);
+        }
+    });
+
+    ws.on('close', () =>
+    {
+        wsClients.delete(ws);
+        for (const c of wsClients)
+        {
+            if (c.readyState === 1)
+                c.send(JSON.stringify({ type: 'system', text: ws.data.name + ' left' }));
+        }
+    });
+});
+
+// --- Server-Sent Events ---
+const sseClients = new Set();
+
+app.get('/sse/events', (req, res) =>
+{
+    const sse = res.sse({ retry: 5000, autoId: true, keepAlive: 30000 });
+    sseClients.add(sse);
+    sse.send({ type: 'connected', clients: sseClients.size });
+
+    sse.on('close', () => sseClients.delete(sse));
+});
+
+app.post('/sse/broadcast', (req, res) =>
+{
+    const data = req.body || {};
+    for (const sse of sseClients)
+    {
+        sse.event('broadcast', data);
+    }
+    res.json({ sent: sseClients.size });
+});
+
+// --- Router Demo (API sub-app) ---
+const apiRouter = Router();
+
+apiRouter.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+apiRouter.get('/info', (req, res) => res.json({
+    secure: req.secure,
+    protocol: req.protocol,
+    ip: req.ip,
+    method: req.method,
+    url: req.url
+}));
+
+app.use('/api', apiRouter);
+
+// --- Route introspection ---
+app.get('/debug/routes', (req, res) => res.json(app.routes()));
 
 // --- Server Startup ---
 const port = process.env.PORT || 3000;

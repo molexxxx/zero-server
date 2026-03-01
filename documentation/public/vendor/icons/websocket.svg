@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-ws" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Two speech bubbles overlapping to represent bidirectional real-time messaging -->
+  <rect x="6" y="10" width="32" height="22" rx="6" fill="url(#g-ws)"/>
+  <polygon points="14,32 20,40 24,32" fill="url(#g-ws)"/>
+  <!-- White dots in left bubble -->
+  <circle cx="15" cy="21" r="2.5" fill="rgba(255,255,255,0.85)"/>
+  <circle cx="22" cy="21" r="2.5" fill="rgba(255,255,255,0.85)"/>
+  <circle cx="29" cy="21" r="2.5" fill="rgba(255,255,255,0.85)"/>
+  <!-- Second bubble (offset) -->
+  <rect x="26" y="28" width="32" height="20" rx="6" fill="url(#g-ws)" opacity="0.75"/>
+  <polygon points="44,48 48,55 52,48" fill="url(#g-ws)" opacity="0.75"/>
+  <!-- Arrow inside second bubble implying response -->
+  <path d="M34 38h16M44 34l6 4-6 4" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

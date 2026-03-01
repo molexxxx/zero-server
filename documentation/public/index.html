@@ -6,9 +6,9 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>zero-http — demo & reference</title>
 	<meta name="description"
-		content="zero-http is a zero-dependency, Express-like HTTP server for Node.js with built-in parsers, static serving, and upload handling." />
+		content="zero-http is a zero-dependency, Express-like HTTP/HTTPS server for Node.js with built-in WebSocket, Server-Sent Events, body parsers, response compression, static serving, and upload handling." />
 	<meta name="keywords"
-		content="nodejs,http,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client" />
+		content="nodejs,http,https,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client,websocket,sse,server-sent events,compression,router" />
 	<meta name="author" content="Anthony Wiedman" />
 
 	<link rel="stylesheet" href="/styles.css" />
@@ -16,11 +16,11 @@
 	<link rel="stylesheet" href="/vendor/prism-toolbar.css" />
 	<link rel="stylesheet" href="/prism-overrides.css" />
 
-	<script src="/vendor/prism.min.js" async></script>
-	<script src="/vendor/prism-json.min.js" async></script>
-	<script src="/vendor/prism-javascript.min.js" async></script>
-	<script src="/vendor/prism-copy-to-clipboard.min.js" async></script>
-	<script src="/vendor/prism-toolbar.min.js" async></script>
+	<script src="/vendor/prism.min.js" defer></script>
+	<script src="/vendor/prism-json.min.js" defer></script>
+	<script src="/vendor/prism-javascript.min.js" defer></script>
+	<script src="/vendor/prism-copy-to-clipboard.min.js" defer></script>
+	<script src="/vendor/prism-toolbar.min.js" defer></script>
 
 	<script src="/scripts/helpers.js" defer></script>
 	<script src="/scripts/uploads.js" defer></script>
@@ -89,6 +89,8 @@
 							<li class="toc-sub-item"><a href="#upload-testing">Upload multipart data</a></li>
 							<li class="toc-sub-item"><a href="#parser-tests">Parser tests</a></li>
 							<li class="toc-sub-item"><a href="#proxy-test">Proxy test</a></li>
+							<li class="toc-sub-item"><a href="#ws-chat">WebSocket chat</a></li>
+							<li class="toc-sub-item"><a href="#sse-viewer">SSE viewer</a></li>
 						</ul>
 					</li>
 				</ul>
@@ -112,40 +114,80 @@
 										<img class="icon-svg" src="/vendor/icons/zero.svg" alt="" aria-hidden="true"
 											width="48" height="48" />
 									</div>
-									<h5>Zero-dependency</h5>
-									<p>Small, Express-like API without external deps.</p>
+									<div class="feature-text"><h5>Zero-dependency</h5>
+									<p>Small, Express-like API without external deps.</p></div>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
 										<img class="icon-svg" src="/vendor/icons/plug.svg" alt="" aria-hidden="true"
 											width="48" height="48" />
 									</div>
-									<h5>Pluggable parsers</h5>
-									<p>json(), urlencoded(), text(), raw() built-in.</p>
+									<div class="feature-text"><h5>Pluggable parsers</h5>
+									<p>json(), urlencoded(), text(), raw() built-in.</p></div>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
 										<img class="icon-svg" src="/vendor/icons/stream.svg" alt="" aria-hidden="true"
 											width="48" height="48" />
 									</div>
-									<h5>Streaming uploads</h5>
-									<p>Multipart streaming to disk for large files.</p>
+									<div class="feature-text"><h5>Streaming uploads</h5>
+									<p>Multipart streaming to disk for large files.</p></div>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
 										<img class="icon-svg" src="/vendor/icons/static.svg" alt="" aria-hidden="true"
 											width="48" height="48" />
 									</div>
-									<h5>Static serving</h5>
-									<p>Correct Content-Type handling and caching options.</p>
+									<div class="feature-text"><h5>Static serving</h5>
+									<p>Content-Type handling and cache options.</p></div>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
 										<img class="icon-svg" src="/vendor/icons/fetch.svg" alt="" aria-hidden="true"
 											width="48" height="48" />
 									</div>
-									<h5>Built-in fetch</h5>
-									<p>Small server-side fetch replacement for HTTP requests.</p>
+									<div class="feature-text"><h5>Built-in fetch</h5>
+									<p>Server-side fetch with TLS passthrough.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/websocket.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>WebSocket</h5>
+									<p>RFC 6455 with ping/pong &amp; sub-protocols.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/sse.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Server-Sent Events</h5>
+									<p>Auto-IDs, named events, keep-alive.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/compress.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Compression</h5>
+									<p>Gzip/deflate with threshold &amp; filter.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/https.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>HTTPS &amp; TLS</h5>
+									<p>Native HTTPS, req.secure, secure routing.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/router.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Modular Router</h5>
+									<p>Sub-apps, chaining, introspection.</p></div>
 								</div>
 							</div>
 						</div>
@@ -398,6 +440,56 @@ node test/test.js
 						<button class="btn">Proxy Fetch</button>
 					</form>
 					<pre id="proxyResult" class="result mono" style="margin-top:12px"></pre>
+				</div>
+			</div>
+
+			<div class="card play-card constrained">
+				<div class="card-head">
+					<h3 id="ws-chat">WebSocket Chat</h3>
+					<div class="small muted">Connect to the built-in WebSocket server and send messages in real time.</div>
+				</div>
+				<div class="card-body">
+					<div class="playgrid" style="grid-template-columns:1fr">
+						<div class="play" id="wsChat">
+							<div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
+								<label style="flex:1">Name
+									<input id="wsName" class="textInput" placeholder="anon" value="" />
+								</label>
+								<button id="wsConnectBtn" class="btn primary" type="button">Connect</button>
+								<button id="wsDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
+							</div>
+							<div id="wsMessages" class="result mono" style="min-height:120px;max-height:260px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap"></div>
+							<div style="display:flex;gap:8px">
+								<input id="wsMsgInput" class="textInput" placeholder="Type a message…" disabled style="flex:1" />
+								<button id="wsSendBtn" class="btn" type="button" disabled>Send</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="card play-card constrained">
+				<div class="card-head">
+					<h3 id="sse-viewer">SSE Event Viewer</h3>
+					<div class="small muted">Subscribe to the Server-Sent Events endpoint and view incoming events live. Use the broadcast form to push a custom event to all subscribers.</div>
+				</div>
+				<div class="card-body">
+					<div class="playgrid" style="grid-template-columns:1fr">
+						<div class="play" id="sseViewer">
+							<div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
+								<button id="sseConnectBtn" class="btn primary" type="button">Connect</button>
+								<button id="sseDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
+								<span id="sseStatus" class="small muted" style="margin-left:8px">Disconnected</span>
+							</div>
+							<div id="sseMessages" class="result mono" style="min-height:120px;max-height:260px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap"></div>
+							<div style="display:flex;gap:8px;align-items:end">
+								<label style="flex:1">Broadcast message (JSON)
+									<textarea id="sseBroadcastInput" class="textInput" rows="2">{"hello":"world"}</textarea>
+								</label>
+								<button id="sseBroadcastBtn" class="btn" type="button">Broadcast</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 

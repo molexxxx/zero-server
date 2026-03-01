@@ -4,12 +4,16 @@
  *              Re-exports every middleware, the app factory, and the fetch helper.
  */
 const App = require('./lib/app');
-const cors = require('./lib/cors');
+const Router = require('./lib/router');
+const cors = require('./lib/middleware/cors');
 const fetch = require('./lib/fetch');
 const body = require('./lib/body');
-const serveStatic = require('./lib/static');
-const rateLimit = require('./lib/rateLimit');
-const logger = require('./lib/logger');
+const serveStatic = require('./lib/middleware/static');
+const rateLimit = require('./lib/middleware/rateLimit');
+const logger = require('./lib/middleware/logger');
+const compress = require('./lib/middleware/compress');
+const { WebSocketConnection } = require('./lib/ws');
+const { SSEStream } = require('./lib/sse');
 
 module.exports = {
     /**
@@ -17,6 +21,12 @@ module.exports = {
      * @returns {import('./lib/app')} Fresh App with an empty middleware stack.
      */
     createApp: () => new App(),
+    /**
+     * Create a standalone Router for modular route grouping.
+     * Mount on an App with `app.use('/prefix', router)`.
+     * @returns {import('./lib/router')} Fresh Router instance.
+     */
+    Router: () => new Router(),
     /** @see module:cors */
     cors,
     /** @see module:fetch */
@@ -40,4 +50,11 @@ module.exports = {
     rateLimit,
     /** @see module:logger */
     logger,
+    /** @see module:compress */
+    compress,
+    // classes (for advanced / direct usage)
+    /** @see module:ws/connection */
+    WebSocketConnection,
+    /** @see module:sse/stream */
+    SSEStream,
 };
