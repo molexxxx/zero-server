@@ -19,7 +19,4 @@
   <path d="M49 28l5 4-5 4" fill="none" stroke="url(#g-sse)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
   <line x1="36" y1="40" x2="54" y2="40" stroke="url(#g-sse)" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
   <path d="M51 36l5 4-5 4" fill="none" stroke="url(#g-sse)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
-  <!-- White sparkle -->
-  <circle cx="54" cy="18" r="2" fill="rgba(255,255,255,0.7)"/>
-  <circle cx="57" cy="14" r="1" fill="rgba(255,255,255,0.4)"/>
 </svg>
