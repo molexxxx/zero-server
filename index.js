@@ -1,6 +1,6 @@
 /**
- * @module molex-http
- * @description Public entry point for the molex-http package.
+ * @module zero-http
+ * @description Public entry point for the zero-http package.
  *              Re-exports every middleware, the app factory, and the fetch helper.
  */
 const App = require('./lib/app');

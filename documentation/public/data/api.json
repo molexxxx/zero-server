@@ -2,7 +2,7 @@
   {
     "name": "createApp()",
     "description": "Returns an application instance with Express-like routing, middleware support, error handling, and an HTTP server.",
-    "example": "const { createApp, json, cors, logger, static: serveStatic } = require('molex-http')\nconst app = createApp()\n\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(json({ limit: '10kb' }))\napp.use(serveStatic(path.join(__dirname, 'public')))\n\napp.get('/', (req, res) => res.json({ hello: 'world' }))\n\napp.onError((err, req, res, next) => {\n\tconsole.error(err)\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('listening on :3000'))",
+    "example": "const { createApp, json, cors, logger, static: serveStatic } = require('zero-http')\nconst app = createApp()\n\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(json({ limit: '10kb' }))\napp.use(serveStatic(path.join(__dirname, 'public')))\n\napp.get('/', (req, res) => res.json({ hello: 'world' }))\n\napp.onError((err, req, res, next) => {\n\tconsole.error(err)\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('listening on :3000'))",
     "methods": [
       { "method": "use", "signature": "use(fn)", "description": "Register global middleware; fn(req, res, next)." },
       { "method": "use", "signature": "use(prefix, fn)", "description": "Register path-scoped middleware. The prefix is stripped from req.url before calling fn." },
@@ -100,14 +100,14 @@
     "description": "Streaming multipart parser that writes file parts to disk and collects text fields. Sets req.body to { fields, files }. Files are named upload-<timestamp>-<random>.<ext> and streamed via fs.createWriteStream.",
     "example": "const uploadsDir = path.join(os.tmpdir(), 'my-uploads')\n\napp.post('/upload', multipart({\n\tdir: uploadsDir,\n\tmaxFileSize: 10 * 1024 * 1024\n}), (req, res) => {\n\t// req.body.fields  → { desc: 'a photo' }\n\t// req.body.files   → { file: { originalFilename, storedName, path, contentType, size } }\n\tres.json({ files: req.body.files, fields: req.body.fields })\n})",
     "options": [
-      { "option": "dir", "type": "string", "default": "os.tmpdir()/molex-http-uploads", "notes": "Directory to store uploaded files. Relative paths resolve from process.cwd(). Created automatically if missing." },
+      { "option": "dir", "type": "string", "default": "os.tmpdir()/zero-http-uploads", "notes": "Directory to store uploaded files. Relative paths resolve from process.cwd(). Created automatically if missing." },
       { "option": "maxFileSize", "type": "number", "default": "null (no limit)", "notes": "Maximum file size in bytes. Exceeding this aborts the upload and returns HTTP 413." }
     ]
   },
   {
     "name": "static(rootPath, [opts])",
     "description": "Serves static files from a filesystem directory with Content-Type detection (60+ MIME types), dotfile policy, caching, extension fallback, and custom header hooks. Only handles GET and HEAD requests.",
-    "example": "// Basic static serving\napp.use(static(path.join(__dirname, 'public')))\n\n// Full options\napp.use(static(path.join(__dirname, 'public'), {\n\tindex: 'index.html',\n\tmaxAge: 3600000,   // 1 hour in ms\n\tdotfiles: 'ignore',\n\textensions: ['html', 'htm'],\n\tsetHeaders: (res, filePath) => {\n\t\tres.setHeader('X-Served-By', 'molex-http')\n\t}\n}))",
+    "example": "// Basic static serving\napp.use(static(path.join(__dirname, 'public')))\n\n// Full options\napp.use(static(path.join(__dirname, 'public'), {\n\tindex: 'index.html',\n\tmaxAge: 3600000,   // 1 hour in ms\n\tdotfiles: 'ignore',\n\textensions: ['html', 'htm'],\n\tsetHeaders: (res, filePath) => {\n\t\tres.setHeader('X-Served-By', 'zero-http')\n\t}\n}))",
     "options": [
       { "option": "index", "type": "string|false", "default": "index.html", "notes": "File to serve for directory requests. Set false to disable auto-index." },
       { "option": "maxAge", "type": "number", "default": "0", "notes": "Cache-Control max-age in milliseconds. Converted to seconds internally." },
@@ -130,7 +130,7 @@
   {
     "name": "fetch(url, [opts])",
     "description": "Small Node HTTP/HTTPS client returning a response with status, ok, statusText, headers.get(), and helpers: text(), json(), arrayBuffer(). Supports timeouts, AbortSignal, progress callbacks, and auto-serialization of request bodies.",
-    "example": "const { fetch } = require('molex-http')\n\n// Simple GET with timeout\nconst r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {\n\ttimeout: 5000\n})\nconst data = await r.json()\nconsole.log(r.ok, r.status, data)\n\n// POST with auto-serialized JSON body\nawait fetch('https://httpbin.org/post', {\n\tmethod: 'POST',\n\tbody: { hello: 'world' }\n})\n\n// Download with progress tracking\nawait fetch('https://example.com/big-file.zip', {\n\tonDownloadProgress: ({ loaded, total }) =>\n\t\tconsole.log(`${loaded}/${total} bytes`)\n})",
+    "example": "const { fetch } = require('zero-http')\n\n// Simple GET with timeout\nconst r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {\n\ttimeout: 5000\n})\nconst data = await r.json()\nconsole.log(r.ok, r.status, data)\n\n// POST with auto-serialized JSON body\nawait fetch('https://httpbin.org/post', {\n\tmethod: 'POST',\n\tbody: { hello: 'world' }\n})\n\n// Download with progress tracking\nawait fetch('https://example.com/big-file.zip', {\n\tonDownloadProgress: ({ loaded, total }) =>\n\t\tconsole.log(`${loaded}/${total} bytes`)\n})",
     "options": [
       { "option": "method", "type": "string", "default": "GET", "notes": "HTTP method (uppercased internally)." },
       { "option": "headers", "type": "object", "default": "{}", "notes": "Request headers." },
@@ -145,7 +145,7 @@
   {
     "name": "rateLimit([opts])",
     "description": "In-memory, per-IP rate-limiting middleware. Sets standard X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers on every response. Returns 429 JSON error when the limit is exceeded. Expired entries are cleaned up automatically.",
-    "example": "const { rateLimit } = require('molex-http')\n\n// 100 requests per 15 minutes\napp.use(rateLimit({\n\twindowMs: 15 * 60 * 1000,\n\tmax: 100,\n\tmessage: 'Slow down!'\n}))\n\n// Per-route limiting with custom key\napp.post('/login', rateLimit({\n\twindowMs: 60000,\n\tmax: 5,\n\tkeyGenerator: (req) => req.body?.username || req.ip\n}), (req, res) => {\n\tres.json({ ok: true })\n})",
+    "example": "const { rateLimit } = require('zero-http')\n\n// 100 requests per 15 minutes\napp.use(rateLimit({\n\twindowMs: 15 * 60 * 1000,\n\tmax: 100,\n\tmessage: 'Slow down!'\n}))\n\n// Per-route limiting with custom key\napp.post('/login', rateLimit({\n\twindowMs: 60000,\n\tmax: 5,\n\tkeyGenerator: (req) => req.body?.username || req.ip\n}), (req, res) => {\n\tres.json({ ok: true })\n})",
     "options": [
       { "option": "windowMs", "type": "number", "default": "60000", "notes": "Time window in milliseconds (default: 1 minute)." },
       { "option": "max", "type": "number", "default": "100", "notes": "Maximum requests per window per key." },
@@ -157,7 +157,7 @@
   {
     "name": "logger([opts])",
     "description": "Request-logging middleware that prints method, URL, status code, and response time. Supports three output formats with optional ANSI colorization. Hooks into the response 'finish' event to capture final status.",
-    "example": "const { logger } = require('molex-http')\n\n// Colorized dev output (default)\napp.use(logger())\n\n// Short format with custom log function\napp.use(logger({\n\tformat: 'short',\n\tlogger: (msg) => fs.appendFileSync('access.log', msg + '\\n')\n}))\n\n// Tiny format, no colors\napp.use(logger({ format: 'tiny', colors: false }))",
+    "example": "const { logger } = require('zero-http')\n\n// Colorized dev output (default)\napp.use(logger())\n\n// Short format with custom log function\napp.use(logger({\n\tformat: 'short',\n\tlogger: (msg) => fs.appendFileSync('access.log', msg + '\\n')\n}))\n\n// Tiny format, no colors\napp.use(logger({ format: 'tiny', colors: false }))",
     "options": [
       { "option": "format", "type": "string", "default": "dev", "notes": "'dev' (colorized method/status/time), 'short' (IP + method + url + status + time), or 'tiny' (method + url + status + time)." },
       { "option": "logger", "type": "function", "default": "console.log", "notes": "Custom log output function." },

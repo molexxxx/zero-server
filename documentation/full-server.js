@@ -1,5 +1,5 @@
 /**
- * molex-http full-server example
+ * zero-http full-server example
  * Organized with controllers and JSDoc comments for clarity and maintainability.
  */
 
@@ -87,7 +87,7 @@ app.get('/uploads-all', uploadsController.listAll(uploadsDir));
 
 // --- Temp Cleanup ---
 const cleanupController = require('./controllers/cleanup');
-app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'molex-http-uploads')));
+app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'zero-http-uploads')));
 
 // --- Proxy ---
 const proxyController = require('./controllers/proxy');
@@ -98,7 +98,7 @@ app.get('/proxy', proxyController.proxy(proxyFetch));
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () =>
 {
-    console.log(`molex-http full-server listening on http://localhost:${port}`);
+    console.log(`zero-http full-server listening on http://localhost:${port}`);
     if (process.argv.includes('--test')) runTests(port).catch(console.error);
 });
 

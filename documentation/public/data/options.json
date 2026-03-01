@@ -4,7 +4,7 @@
   { "option": "urlencoded([opts])", "type": "function", "default": "—", "notes": "Parses URL-encoded bodies. Options: extended (false), limit, type ('application/x-www-form-urlencoded')." },
   { "option": "text([opts])", "type": "function", "default": "—", "notes": "Reads plain text into req.body. Options: type ('text/*'), limit, encoding ('utf8')." },
   { "option": "raw([opts])", "type": "function", "default": "—", "notes": "Reads raw bytes into a Buffer on req.body. Options: type ('application/octet-stream'), limit." },
-  { "option": "multipart([opts])", "type": "function", "default": "—", "notes": "Streams file parts to disk; sets req.body to { fields, files }. Options: dir (os.tmpdir()/molex-http-uploads), maxFileSize." },
+  { "option": "multipart([opts])", "type": "function", "default": "—", "notes": "Streams file parts to disk; sets req.body to { fields, files }. Options: dir (os.tmpdir()/zero-http-uploads), maxFileSize." },
   { "option": "static(rootPath, [opts])", "type": "function", "default": "—", "notes": "Serves static files with 60+ MIME types. Options: index ('index.html'), maxAge (0), dotfiles ('ignore'), extensions, setHeaders." },
   { "option": "cors([opts])", "type": "function", "default": "—", "notes": "CORS middleware with preflight handling. Options: origin ('*'), methods, allowedHeaders, credentials (false)." },
   { "option": "fetch(url, [opts])", "type": "function", "default": "—", "notes": "Node HTTP/HTTPS client. Response has ok, status, statusText, headers.get(), text(), json(), arrayBuffer(). Options: method, headers, body (auto-serialized), timeout, signal, agent, onDownloadProgress, onUploadProgress." },

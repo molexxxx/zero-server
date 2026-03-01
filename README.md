@@ -1,8 +1,8 @@
-# molex-http
+# zero-http
 
-[![npm version](https://img.shields.io/npm/v/molex-http.svg)](https://www.npmjs.com/package/molex-http)
-[![npm downloads](https://img.shields.io/npm/dm/molex-http.svg)](https://www.npmjs.com/package/molex-http)
-[![GitHub](https://img.shields.io/badge/GitHub-molex--http--npm-blue.svg)](https://github.com/tonywied17/molex-http-npm)
+[![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
+[![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)
+[![GitHub](https://img.shields.io/badge/GitHub-zero--http--npm-blue.svg)](https://github.com/tonywied17/zero-http-npm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
@@ -24,13 +24,13 @@
  
 
 ```bash
-npm install molex-http
+npm install zero-http
 ```
 
 ## Quick start
 
 ```js
-const { createApp, json } = require('molex-http')
+const { createApp, json } = require('zero-http')
 const app = createApp()
 
 app.use(json())
@@ -40,7 +40,7 @@ app.listen(3000)
 
 Demo
 
-You can view the live documentation and playground at https://molex-http.molex.cloud, or run the demo locally:
+You can view the live documentation and playground at https://zero-http.molex.cloud, or run the demo locally:
 
 ```bash
 node documentation/full-server.js
@@ -52,7 +52,7 @@ node documentation/full-server.js
 All exports are available from the package root:
 
 ```js
-const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static: serveStatic, rateLimit, logger } = require('molex-http')
+const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static: serveStatic, rateLimit, logger } = require('zero-http')
 ```
 
 | Export | Type | Description |
@@ -157,7 +157,7 @@ Streaming multipart parser that writes file parts to disk and collects fields.
 
 | Option | Type | Default | Description |
 |---|---:|---|---|
-| `dir` | string | `os.tmpdir()/molex-http-uploads` | Directory to store uploaded files (absolute or relative to `process.cwd()`). |
+| `dir` | string | `os.tmpdir()/zero-http-uploads` | Directory to store uploaded files (absolute or relative to `process.cwd()`). |
 | `maxFileSize` | number | none | Maximum allowed file size in bytes. Exceeding this returns HTTP 413 and aborts the upload. |
 
 Behavior: `multipart` writes file parts to disk with a generated name preserving the original extension when possible. On completion `req.body` will be `{ fields, files }` where `files` contains metadata: `originalFilename`, `storedName`, `path`, `contentType`, `size`.
@@ -266,7 +266,7 @@ app.use('/api', myApiRouter)
 Small JSON API:
 
 ```js
-const { createApp, json, cors } = require('molex-http')
+const { createApp, json, cors } = require('zero-http')
 const app = createApp()
 
 app.use(cors({ origin: ['https://example.com'] }))

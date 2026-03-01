@@ -5,7 +5,7 @@ const path = require('path')
 
 const pkg = require('../package.json')
 
-console.log(`Running molex-http v${pkg.version} integration tests\n`)
+console.log(`Running zero-http v${pkg.version} integration tests\n`)
 
 let passed = 0
 let failed = 0
@@ -148,7 +148,7 @@ async function run()
     // ── Multipart Upload ──────────────────────────────
     console.log('\nMultipart:')
 
-    const boundary = '----molex-test-' + Date.now()
+    const boundary = '----zero-test-' + Date.now()
     const mparts = []
     mparts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="desc"\r\n\r\nmydesc\r\n`))
     mparts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\nContent-Type: text/plain\r\n\r\nhello multipart\r\n`))

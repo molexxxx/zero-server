@@ -1,5 +1,5 @@
 {
-  "name": "molex-http",
+  "name": "zero-http",
   "version": "0.2.0",
   "description": "Zero-dependency, minimal Express-like HTTP server and tiny fetch replacement",
   "main": "index.js",
@@ -23,18 +23,18 @@
     "fetch",
     "multipart",
     "static",
-    "molex"
+    "zero-http"
   ],
   "author": "Anthony Wiedman",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonywied17/molex-http-npm.git"
+    "url": "git+https://github.com/tonywied17/zero-http-npm.git"
   },
   "bugs": {
-    "url": "https://github.com/tonywied17/molex-http-npm/issues"
+    "url": "https://github.com/tonywied17/zero-http-npm/issues"
   },
-  "homepage": "https://molex-http.molex.cloud",
+  "homepage": "https://zero-http.molex.cloud",
   "engines": {
     "node": ">=14.0.0"
   },
