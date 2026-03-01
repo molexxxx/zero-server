@@ -6,10 +6,11 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { createApp, cors, json, urlencoded, text, raw, multipart, static: serveStatic, fetch } = require('..');
+const { createApp, cors, json, urlencoded, text, raw, multipart, static: serveStatic, fetch, logger } = require('..');
 
 // --- App Initialization ---
 const app = createApp();
+app.use(logger({ format: 'dev' }));
 app.use(cors());
 app.use(json());
 app.use(urlencoded());
@@ -32,71 +33,25 @@ app.post('/echo-text', echoController.echoText);
 app.post('/echo-raw', raw(), echoController.echoRaw);
 
 // --- Uploads and Trash ---
-/** @type {string} Directory for uploads */
 const uploadsDir = path.join(__dirname, 'uploads');
 uploadsController.ensureUploadsDir(uploadsDir);
 
-/**
- * Serves uploaded files and thumbnails from /uploads path.
- * @param {import('http').IncomingMessage} req
- * @param {import('http').ServerResponse} res
- * @param {Function} next
- */
-app.use((req, res, next) =>
-{
-    // Only handle requests for the uploads path itself (avoid matching paths like '/uploads-list')
-    if (!req.url || !(req.url === '/uploads' || req.url.startsWith('/uploads/'))) return next();
-    const orig = req.url;
-    req.url = req.url.slice('/uploads'.length) || '/';
-    const mw = serveStatic(uploadsDir);
-    return mw(req, res, (err) => { req.url = orig; next(err); });
-});
+// Serve uploaded files from /uploads path using built-in path-prefix middleware
+app.use('/uploads', serveStatic(uploadsDir));
 
-/**
- * Handles multipart file uploads.
- */
+// Upload, delete, restore, and trash routes
 app.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024, dir: uploadsDir }), uploadsController.upload(uploadsDir));
-
-/**
- * Deletes a single uploaded file (moves to trash).
- */
 app.delete('/uploads/:name', uploadsController.deleteUpload(uploadsDir));
-
-/**
- * Deletes all uploads (optionally keeps the first file).
- */
 app.delete('/uploads', uploadsController.deleteAllUploads(uploadsDir));
-
-/**
- * Restores a trashed file back into uploads.
- */
 app.post('/uploads/:name/restore', uploadsController.restoreUpload(uploadsDir));
-
-/**
- * Lists trashed files.
- */
 app.get('/uploads-trash-list', uploadsController.listTrash(uploadsDir));
-
-/**
- * Permanently deletes a trash item.
- */
 app.delete('/uploads-trash/:name', uploadsController.deleteTrashItem(uploadsDir));
-
-/**
- * Empties the trash.
- */
 app.delete('/uploads-trash', uploadsController.emptyTrash(uploadsDir));
 
 // --- Trash Retention ---
-/**
- * Number of days to retain trashed files before auto-deletion.
- * @type {number}
- */
 const TRASH_RETENTION_DAYS = Number(process.env.TRASH_RETENTION_DAYS || 7);
+const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
-/**
- * Automatically deletes trashed files older than TRASH_RETENTION_DAYS.
- */
 function autoEmptyTrash()
 {
     try
@@ -111,85 +66,64 @@ function autoEmptyTrash()
             {
                 const p = path.join(trash, f);
                 const st = fs.statSync(p);
-                if (now - st.mtimeMs > TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000)
+                if (now - st.mtimeMs > TRASH_RETENTION_MS)
                 {
                     fs.unlinkSync(p);
                     removed.push(f);
-                    // also remove thumbnail if present
-                    try
-                    {
-                        const tthumb = path.join(trash, '.thumbs', f + '-thumb.svg');
-                        if (fs.existsSync(tthumb)) fs.unlinkSync(tthumb);
-                    } catch (e) { }
+                    try { fs.unlinkSync(path.join(trash, '.thumbs', f + '-thumb.svg')); } catch (e) { }
                 }
             } catch (e) { }
         }
-        if (removed.length) console.log('autoEmptyTrash removed', removed.length, 'files');
-    } catch (e) { console.error('autoEmptyTrash error', e); }
+        if (removed.length) console.log(`autoEmptyTrash: removed ${removed.length} file(s)`);
+    } catch (e) { console.error('autoEmptyTrash error:', e); }
 }
-try { autoEmptyTrash(); setInterval(autoEmptyTrash, 24 * 60 * 60 * 1000); } catch (e) { }
 
-// --- Uploads List ---
-/**
- * Lists uploaded files with pagination and sorting.
- */
+autoEmptyTrash();
+setInterval(autoEmptyTrash, 24 * 60 * 60 * 1000).unref();
+
+// --- Uploads Listings ---
 app.get('/uploads-list', uploadsController.listUploads(uploadsDir));
-
-// Combined uploads + trash list for UI convenience
 app.get('/uploads-all', uploadsController.listAll(uploadsDir));
 
-// --- Temp Uploads Cleanup ---
-/**
- * Cleans up uploaded temp files older than a threshold (seconds).
- */
+// --- Temp Cleanup ---
 const cleanupController = require('./controllers/cleanup');
-const tmpDirPath = path.join(os.tmpdir(), 'molex-http-uploads');
-app.post('/cleanup', cleanupController.cleanup(tmpDirPath));
+app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'molex-http-uploads')));
 
-// --- Proxy Example ---
-/**
- * Example proxy endpoint using built-in fetch. Pass ?url=https://example.com to proxy an external resource.
- */
+// --- Proxy ---
 const proxyController = require('./controllers/proxy');
-// Prefer native global fetch (Node 18+) so streaming responses expose a readable stream.
-const nativeFetch = (typeof globalThis !== 'undefined' && globalThis.fetch) ? globalThis.fetch : null;
-app.get('/proxy', proxyController.proxy(nativeFetch || fetch));
+const proxyFetch = (typeof globalThis !== 'undefined' && globalThis.fetch) || fetch;
+app.get('/proxy', proxyController.proxy(proxyFetch));
 
 // --- Server Startup ---
-/**
- * Starts the server and runs optional tests.
- */
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () =>
 {
     console.log(`molex-http full-server listening on http://localhost:${port}`);
-    if (process.argv.includes('--test')) runTests(port).catch(e => console.error(e));
+    if (process.argv.includes('--test')) runTests(port).catch(console.error);
 });
 
-/**
- * Optional test runner using built-in fetch.
- * @param {number|string} port
- */
+/** Quick smoke tests using built-in fetch */
 async function runTests(port)
 {
     const base = `http://localhost:${port}`;
-    const meFetch = fetch;
-    console.log('running built-in quick tests against', base);
-    const doReq = async (label, p) =>
+    console.log('running smoke tests against', base);
+
+    const doReq = async (label, promise) =>
     {
         try
         {
-            const res = await p;
-            const ct = res.headers['content-type'] || res.headers['Content-Type'] || '';
-            const body = ct.includes('application/json') ? await res.json() : await res.text();
-            console.log(label, res.status, JSON.stringify(body));
-        } catch (e) { console.error(label, 'error', e); }
+            const r = await promise;
+            const ct = r.headers.get('content-type') || '';
+            const body = ct.includes('json') ? await r.json() : await r.text();
+            console.log(` ${label}`, r.status, JSON.stringify(body));
+        }
+        catch (e) { console.error(` ${label} error:`, e.message); }
     };
-    await doReq('GET /', meFetch(base + '/'));
-    await doReq('POST /echo-json', meFetch(base + '/echo-json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ a: 1 }) }));
-    await doReq('POST /echo-urlencoded', meFetch(base + '/echo-urlencoded', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'foo=bar' }));
-    await doReq('POST /echo-text', meFetch(base + '/echo-text', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'hello' }));
-    await doReq('GET /headers', meFetch(base + '/headers'));
-    console.log('quick tests complete');
 
+    await doReq('GET /', fetch(base + '/'));
+    await doReq('POST /echo-json', fetch(base + '/echo-json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ a: 1 }) }));
+    await doReq('POST /echo-urlencoded', fetch(base + '/echo-urlencoded', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'foo=bar' }));
+    await doReq('POST /echo-text', fetch(base + '/echo-text', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'hello' }));
+    await doReq('GET /headers', fetch(base + '/headers'));
+    console.log('smoke tests complete');
 }

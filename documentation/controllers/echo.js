@@ -1,7 +1,12 @@
-exports.echoJson = (req, res) => res.json({ received: req.body });
-exports.echo = (req, res) => res.json({ received: req.body });
-exports.echoUrlencoded = (req, res) => res.json({ received: req.body });
+/** Echo JSON body back as { received: ... } */
+const echoBody = (req, res) => res.json({ received: req.body });
+
+exports.echoJson       = echoBody;
+exports.echo           = echoBody;
+exports.echoUrlencoded = echoBody;
+
 exports.echoText = (req, res) => res.text(req.body || '');
+
 exports.echoRaw = (req, res) =>
 {
     const b = req.body || Buffer.alloc(0);

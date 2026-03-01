@@ -1,100 +1,167 @@
 [
   {
     "name": "createApp()",
-    "description": "Returns an application instance with Express-like methods: use(), get(), post(), put(), delete(), and listen().",
-    "example": "const { createApp, json, static } = require('molex-http')\nconst app = createApp()\n\napp.use(json({ limit: '10kb' }))\napp.get('/', (req, res) => res.send('ok'))\napp.listen(3000)",
+    "description": "Returns an application instance with Express-like routing, middleware support, error handling, and an HTTP server.",
+    "example": "const { createApp, json, cors, logger, static: serveStatic } = require('molex-http')\nconst app = createApp()\n\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(json({ limit: '10kb' }))\napp.use(serveStatic(path.join(__dirname, 'public')))\n\napp.get('/', (req, res) => res.json({ hello: 'world' }))\n\napp.onError((err, req, res, next) => {\n\tconsole.error(err)\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('listening on :3000'))",
     "methods": [
-      { "method": "use", "signature": "use(fn)", "description": "Register middleware; fn(req, res, next)." },
+      { "method": "use", "signature": "use(fn)", "description": "Register global middleware; fn(req, res, next)." },
+      { "method": "use", "signature": "use(prefix, fn)", "description": "Register path-scoped middleware. The prefix is stripped from req.url before calling fn." },
       { "method": "get", "signature": "get(path, ...handlers)", "description": "Register GET route handlers." },
       { "method": "post", "signature": "post(path, ...handlers)", "description": "Register POST route handlers." },
       { "method": "put", "signature": "put(path, ...handlers)", "description": "Register PUT route handlers." },
       { "method": "delete", "signature": "delete(path, ...handlers)", "description": "Register DELETE route handlers." },
-      { "method": "listen", "signature": "listen(port = 3000, cb)", "description": "Start the HTTP server." }
+      { "method": "patch", "signature": "patch(path, ...handlers)", "description": "Register PATCH route handlers." },
+      { "method": "options", "signature": "options(path, ...handlers)", "description": "Register OPTIONS route handlers." },
+      { "method": "head", "signature": "head(path, ...handlers)", "description": "Register HEAD route handlers." },
+      { "method": "all", "signature": "all(path, ...handlers)", "description": "Register handlers for ALL HTTP methods." },
+      { "method": "onError", "signature": "onError(fn)", "description": "Register a global error handler: fn(err, req, res, next). Only one at a time." },
+      { "method": "listen", "signature": "listen(port = 3000, cb)", "description": "Start the HTTP server. Returns the http.Server instance." },
+      { "method": "handler", "signature": "(property)", "description": "Bound request handler suitable for http.createServer(app.handler)." }
+    ],
+    "options": []
+  },
+  {
+    "name": "Request (req)",
+    "description": "Wraps the incoming Node http.IncomingMessage with convenient properties and helpers. Populated by the middleware chain.",
+    "example": "app.get('/info', (req, res) => {\n\tconsole.log(req.method)           // 'GET'\n\tconsole.log(req.url)              // '/info?foo=bar'\n\tconsole.log(req.query)            // { foo: 'bar' }\n\tconsole.log(req.ip)               // '127.0.0.1'\n\tconsole.log(req.get('host'))      // 'localhost:3000'\n\tconsole.log(req.is('json'))       // false\n\tres.json({ ok: true })\n})",
+    "methods": [
+      { "method": "method", "signature": "(string)", "description": "HTTP method (GET, POST, etc.)." },
+      { "method": "url", "signature": "(string)", "description": "Request URL path + query string." },
+      { "method": "headers", "signature": "(object)", "description": "Raw request headers (lowercased keys)." },
+      { "method": "query", "signature": "(object)", "description": "Parsed query string via URLSearchParams." },
+      { "method": "params", "signature": "(object)", "description": "Route parameters populated by the router (e.g. { id: '42' })." },
+      { "method": "body", "signature": "(any)", "description": "Parsed request body (null until a body parser runs)." },
+      { "method": "ip", "signature": "(string|null)", "description": "Remote IP address from req.socket.remoteAddress." },
+      { "method": "raw", "signature": "(object)", "description": "The underlying http.IncomingMessage." },
+      { "method": "get", "signature": "get(name)", "description": "Get a request header (case-insensitive)." },
+      { "method": "is", "signature": "is(type)", "description": "Check if Content-Type contains the given type string (e.g. 'json', 'text/html')." }
+    ],
+    "options": []
+  },
+  {
+    "name": "Response (res)",
+    "description": "Wraps the outgoing Node http.ServerResponse with chainable helpers for setting status, headers, and sending responses.",
+    "example": "app.get('/demo', (req, res) => {\n\tres.status(200)\n\t   .set('X-Custom', 'hello')\n\t   .type('json')\n\t   .json({ message: 'ok' })\n})\n\napp.get('/page', (req, res) => res.html('<h1>Hello</h1>'))\napp.get('/go', (req, res) => res.redirect(301, '/new-location'))",
+    "methods": [
+      { "method": "status", "signature": "status(code)", "description": "Set HTTP status code. Returns this (chainable)." },
+      { "method": "set", "signature": "set(name, value)", "description": "Set a response header. Returns this (chainable)." },
+      { "method": "get", "signature": "get(name)", "description": "Get a previously-set response header (case-insensitive)." },
+      { "method": "type", "signature": "type(ct)", "description": "Set Content-Type. Accepts shorthands: 'json', 'html', 'text', 'xml', 'form', 'bin'. Chainable." },
+      { "method": "send", "signature": "send(body)", "description": "Send the response. Auto-detects Content-Type: Buffer→octet-stream, '<…'→html, string→text, object→json." },
+      { "method": "json", "signature": "json(obj)", "description": "Set Content-Type to application/json and send the object." },
+      { "method": "text", "signature": "text(str)", "description": "Set Content-Type to text/plain and send the string." },
+      { "method": "html", "signature": "html(str)", "description": "Set Content-Type to text/html and send the string." },
+      { "method": "redirect", "signature": "redirect([status], url)", "description": "Redirect to URL. Default status is 302." }
     ],
     "options": []
   },
   {
     "name": "json([opts])",
-    "description": "Parses JSON request bodies and populates req.body.",
-    "example": "app.use(json({\n\tlimit: '10kb',\n\tstrict: true,\n\treviver: (k, v) => { if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(v)) return new Date(v); return v },\n\ttype: 'application/json'\n}))",
+    "description": "Parses JSON request bodies and populates req.body. Skips non-matching Content-Types and calls next().",
+    "example": "app.use(json({\n\tlimit: '10kb',\n\tstrict: true,\n\treviver: (k, v) => {\n\t\tif (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(v)) return new Date(v)\n\t\treturn v\n\t},\n\ttype: 'application/json'\n}))",
     "options": [
-      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size (bytes or unit string like '1mb')." },
-      { "option": "strict", "type": "boolean", "default": "true", "notes": "Only accepts objects and arrays when true." },
-      { "option": "reviver", "type": "function", "default": "—", "notes": "Optional JSON reviver passed to JSON.parse." },
-      { "option": "type", "type": "string|function", "default": "application/json", "notes": "Mime type matcher for the parser." }
+      { "option": "limit", "type": "number|string", "default": "null (no limit)", "notes": "Maximum body size. Accepts bytes or unit strings like '100kb', '1mb', '1gb'." },
+      { "option": "strict", "type": "boolean", "default": "true", "notes": "When true, only accepts objects and arrays (rejects primitives)." },
+      { "option": "reviver", "type": "function", "default": "—", "notes": "Optional function passed to JSON.parse for custom reviving." },
+      { "option": "type", "type": "string|function", "default": "application/json", "notes": "MIME type to match. Supports wildcards ('*/*') or a custom predicate function." }
     ]
   },
   {
     "name": "urlencoded([opts])",
-    "description": "Parses application/x-www-form-urlencoded bodies.",
-    "example": "app.use(urlencoded({ extended: true, limit: '20kb' }))",
+    "description": "Parses application/x-www-form-urlencoded bodies into req.body.",
+    "example": "// Simple flat parsing\napp.use(urlencoded())\n\n// Extended mode with nested bracket syntax\napp.use(urlencoded({\n\textended: true,\n\tlimit: '20kb'\n}))\n// a[b][c]=1  → { a: { b: { c: '1' } } }\n// a[]=1&a[]=2 → { a: ['1', '2'] }",
     "options": [
-      { "option": "extended", "type": "boolean", "default": "false", "notes": "When true allows rich objects; when false returns simple key/value pairs." },
-      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size." },
-      { "option": "type", "type": "string|function", "default": "application/x-www-form-urlencoded", "notes": "Mime type matcher." }
+      { "option": "extended", "type": "boolean", "default": "false", "notes": "When true, supports rich nested bracket syntax (a[b]=1, a[]=1). When false, returns flat key/value pairs." },
+      { "option": "limit", "type": "number|string", "default": "null (no limit)", "notes": "Maximum body size (bytes or unit string)." },
+      { "option": "type", "type": "string|function", "default": "application/x-www-form-urlencoded", "notes": "MIME type to match." }
     ]
   },
   {
     "name": "text([opts])",
-    "description": "Reads plain text request bodies into req.body.",
-    "example": "app.use(text({ type: 'text/*', limit: '50kb', encoding: 'utf8' }))",
+    "description": "Reads plain text request bodies into req.body as a string.",
+    "example": "app.use(text({ type: 'text/*', limit: '50kb', encoding: 'utf8' }))\n\napp.post('/echo-text', (req, res) => {\n\tres.text(req.body) // echo back the plain text\n})",
     "options": [
-      { "option": "type", "type": "string|function", "default": "text/*", "notes": "Mime matcher for which requests are treated as text." },
-      { "option": "limit", "type": "number|string", "default": "none", "notes": "Maximum body size." },
+      { "option": "type", "type": "string|function", "default": "text/*", "notes": "MIME matcher — uses wildcard by default so it matches text/plain, text/html, etc." },
+      { "option": "limit", "type": "number|string", "default": "null (no limit)", "notes": "Maximum body size." },
       { "option": "encoding", "type": "string", "default": "utf8", "notes": "Character encoding used to decode the incoming bytes." }
     ]
   },
   {
     "name": "raw([opts])",
-    "description": "Receives raw bytes as a Buffer on req.body.",
-    "example": "app.post('/upload', raw(), (req, res) => { /* req.body is a Buffer */ })",
+    "description": "Receives raw bytes as a Buffer on req.body. Useful for binary payloads.",
+    "example": "app.post('/binary', raw({ limit: '5mb' }), (req, res) => {\n\tconsole.log(req.body)        // <Buffer ...>\n\tconsole.log(req.body.length) // byte count\n\tres.json({ size: req.body.length })\n})",
     "options": [
-      { "option": "type", "type": "string|function", "default": "application/octet-stream", "notes": "Mime matcher for the raw parser." }
-    ]
-  }
-  ,
-  {
-    "name": "multipart({ dir, maxFileSize })",
-    "description": "Streaming multipart parser that writes incoming file parts to disk and exposes req.body.files and req.body.fields.",
-    "example": "// stream uploads to disk, limit single file size and set custom dir\napp.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) => {\n\t// req.body.files contains stored file metadata (originalName, size, path)\n\tres.json({ files: req.body.files })\n})",
-    "options": [
-      { "option": "dir", "type": "string", "default": "os.tmpdir()/molex-http-uploads", "notes": "Directory to stream uploaded parts to (absolute or relative)." },
-      { "option": "maxFileSize", "type": "number", "default": "5 * 1024 * 1024", "notes": "Maximum size in bytes for a single uploaded file." }
+      { "option": "type", "type": "string|function", "default": "application/octet-stream", "notes": "MIME type to match for the raw parser." },
+      { "option": "limit", "type": "number|string", "default": "null (no limit)", "notes": "Maximum body size. Returns 413 if exceeded." }
     ]
   },
   {
-    "name": "static(rootPath, opts)",
-    "description": "Serves files from a filesystem folder with Content-Type detection and optional caching.",
-    "example": "// serve UI and hide internal dotfiles, with caching and header hook\napp.use(static(path.join(__dirname, 'documentation', 'public'), {\n\tindex: 'index.html',\n\tdotfiles: 'ignore',\n\tmaxAge: '1h',\n\tsetHeaders: (res, filePath) => { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }\n}))",
+    "name": "multipart([opts])",
+    "description": "Streaming multipart parser that writes file parts to disk and collects text fields. Sets req.body to { fields, files }. Files are named upload-<timestamp>-<random>.<ext> and streamed via fs.createWriteStream.",
+    "example": "const uploadsDir = path.join(os.tmpdir(), 'my-uploads')\n\napp.post('/upload', multipart({\n\tdir: uploadsDir,\n\tmaxFileSize: 10 * 1024 * 1024\n}), (req, res) => {\n\t// req.body.fields  → { desc: 'a photo' }\n\t// req.body.files   → { file: { originalFilename, storedName, path, contentType, size } }\n\tres.json({ files: req.body.files, fields: req.body.fields })\n})",
     "options": [
-      { "option": "index", "type": "string|false", "default": "index.html", "notes": "Filename to serve for directory requests, or false to disable." },
-      { "option": "dotfiles", "type": "'allow'|'deny'|'ignore'", "default": "ignore", "notes": "How to treat dotfiles in served directories." },
-      { "option": "maxAge", "type": "number|string", "default": "0", "notes": "Cache-Control max-age value for served files (e.g., '1h')." },
-      { "option": "setHeaders", "type": "function", "default": "—", "notes": "Hook to set custom response headers per file (res, filePath) => void." }
+      { "option": "dir", "type": "string", "default": "os.tmpdir()/molex-http-uploads", "notes": "Directory to store uploaded files. Relative paths resolve from process.cwd(). Created automatically if missing." },
+      { "option": "maxFileSize", "type": "number", "default": "null (no limit)", "notes": "Maximum file size in bytes. Exceeding this aborts the upload and returns HTTP 413." }
+    ]
+  },
+  {
+    "name": "static(rootPath, [opts])",
+    "description": "Serves static files from a filesystem directory with Content-Type detection (60+ MIME types), dotfile policy, caching, extension fallback, and custom header hooks. Only handles GET and HEAD requests.",
+    "example": "// Basic static serving\napp.use(static(path.join(__dirname, 'public')))\n\n// Full options\napp.use(static(path.join(__dirname, 'public'), {\n\tindex: 'index.html',\n\tmaxAge: 3600000,   // 1 hour in ms\n\tdotfiles: 'ignore',\n\textensions: ['html', 'htm'],\n\tsetHeaders: (res, filePath) => {\n\t\tres.setHeader('X-Served-By', 'molex-http')\n\t}\n}))",
+    "options": [
+      { "option": "index", "type": "string|false", "default": "index.html", "notes": "File to serve for directory requests. Set false to disable auto-index." },
+      { "option": "maxAge", "type": "number", "default": "0", "notes": "Cache-Control max-age in milliseconds. Converted to seconds internally." },
+      { "option": "dotfiles", "type": "string", "default": "ignore", "notes": "'allow' | 'deny' | 'ignore'. deny→403, ignore→skip to next middleware, allow→serve normally." },
+      { "option": "extensions", "type": "string[]", "default": "null", "notes": "Fallback extensions to try when a file is not found (e.g. ['html', 'htm'])." },
+      { "option": "setHeaders", "type": "function", "default": "null", "notes": "Hook (res, filePath) => {} to set custom headers before streaming the file." }
     ]
   },
   {
     "name": "cors([opts])",
-    "description": "Small CORS middleware used in the demo. Typical options to control allowed origins, methods, and credentials.",
-    "example": "// allow specific domains and credentials, restrict methods\napp.use(cors({ \n\torigin: ['https://example.com', 'https://acme.com'], \n\tcredentials: true, \n\tmethods: 'GET,POST' \n}))",
+    "description": "Small CORS middleware. Handles preflight OPTIONS requests automatically with 204 and sets standard CORS headers on all responses. Supports suffix-based origin matching for subdomains.",
+    "example": "// Allow everything (default)\napp.use(cors())\n\n// Restrict to specific origins with credentials\napp.use(cors({\n\torigin: ['https://example.com', '.mysite.com'],\n\tcredentials: true,\n\tmethods: 'GET,POST'\n}))\n// Origins starting with '.' enable suffix matching:\n// '.mysite.com' matches 'api.mysite.com', 'www.mysite.com', etc.",
     "options": [
-      { "option": "origin", "type": "string|array|function", "default": "'*'", "notes": "Allowed origins. Can be '*' (any), an array of origins, or a function for dynamic checking." },
-      { "option": "methods", "type": "string|array", "default": "'GET,HEAD,PUT,PATCH,POST,DELETE'", "notes": "Allowed HTTP methods." },
-      { "option": "allowedHeaders", "type": "string|array", "default": "undefined", "notes": "Allowed request headers." },
-      { "option": "credentials", "type": "boolean", "default": "false", "notes": "Whether to allow credentials (cookies, Authorization header)." }
+      { "option": "origin", "type": "string|string[]|falsy", "default": "'*'", "notes": "Allowed origins. '*' allows any. Array entries starting with '.' do suffix matching. Set falsy to disable." },
+      { "option": "methods", "type": "string", "default": "GET,POST,PUT,DELETE,OPTIONS", "notes": "Allowed HTTP methods for Access-Control-Allow-Methods." },
+      { "option": "allowedHeaders", "type": "string", "default": "Content-Type,Authorization", "notes": "Allowed headers for Access-Control-Allow-Headers." },
+      { "option": "credentials", "type": "boolean", "default": "false", "notes": "When true and a specific origin matches, sets Access-Control-Allow-Credentials: true." }
     ]
   },
   {
-    "name": "fetch(url, opts)",
-    "description": "Small Node HTTP client returning an object with status, headers and helpers: text(), json(), arrayBuffer(). Supports timeout and progress callbacks.",
-    "example": "// GET with timeout and download progress\nconst r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {\n\ttimeout: 5000,\n\tonDownloadProgress: ({ loaded, total }) => console.log('download', loaded, total)\n})\nconst data = await r.json()\nconsole.log(data)",
+    "name": "fetch(url, [opts])",
+    "description": "Small Node HTTP/HTTPS client returning a response with status, ok, statusText, headers.get(), and helpers: text(), json(), arrayBuffer(). Supports timeouts, AbortSignal, progress callbacks, and auto-serialization of request bodies.",
+    "example": "const { fetch } = require('molex-http')\n\n// Simple GET with timeout\nconst r = await fetch('https://jsonplaceholder.typicode.com/todos/1', {\n\ttimeout: 5000\n})\nconst data = await r.json()\nconsole.log(r.ok, r.status, data)\n\n// POST with auto-serialized JSON body\nawait fetch('https://httpbin.org/post', {\n\tmethod: 'POST',\n\tbody: { hello: 'world' }\n})\n\n// Download with progress tracking\nawait fetch('https://example.com/big-file.zip', {\n\tonDownloadProgress: ({ loaded, total }) =>\n\t\tconsole.log(`${loaded}/${total} bytes`)\n})",
     "options": [
-      { "option": "method", "type": "string", "default": "GET", "notes": "HTTP method to use." },
+      { "option": "method", "type": "string", "default": "GET", "notes": "HTTP method (uppercased internally)." },
       { "option": "headers", "type": "object", "default": "{}", "notes": "Request headers." },
-      { "option": "body", "type": "string|Buffer|Stream", "default": "undefined", "notes": "Request body for non-GET methods." },
-      { "option": "timeout", "type": "number", "default": "undefined", "notes": "Request timeout in ms." },
-      { "option": "onDownloadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } during download." },
-      { "option": "onUploadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } during upload (when supported)." }
+      { "option": "body", "type": "string|Buffer|object|URLSearchParams|Stream", "default": "undefined", "notes": "Request body. Plain objects are auto-JSON-encoded. URLSearchParams produce urlencoded bodies. Streams are piped." },
+      { "option": "timeout", "type": "number", "default": "undefined", "notes": "Request timeout in milliseconds. Creates an ETIMEOUT error on expiry." },
+      { "option": "signal", "type": "AbortSignal", "default": "undefined", "notes": "AbortController signal to cancel the request." },
+      { "option": "agent", "type": "http.Agent", "default": "undefined", "notes": "Optional agent for connection pooling or proxies." },
+      { "option": "onDownloadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } on each response chunk." },
+      { "option": "onUploadProgress", "type": "function", "default": "—", "notes": "Callback receiving { loaded, total } during body upload. Buffer bodies are chunked at 64KB to enable tracking." }
+    ]
+  },
+  {
+    "name": "rateLimit([opts])",
+    "description": "In-memory, per-IP rate-limiting middleware. Sets standard X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers on every response. Returns 429 JSON error when the limit is exceeded. Expired entries are cleaned up automatically.",
+    "example": "const { rateLimit } = require('molex-http')\n\n// 100 requests per 15 minutes\napp.use(rateLimit({\n\twindowMs: 15 * 60 * 1000,\n\tmax: 100,\n\tmessage: 'Slow down!'\n}))\n\n// Per-route limiting with custom key\napp.post('/login', rateLimit({\n\twindowMs: 60000,\n\tmax: 5,\n\tkeyGenerator: (req) => req.body?.username || req.ip\n}), (req, res) => {\n\tres.json({ ok: true })\n})",
+    "options": [
+      { "option": "windowMs", "type": "number", "default": "60000", "notes": "Time window in milliseconds (default: 1 minute)." },
+      { "option": "max", "type": "number", "default": "100", "notes": "Maximum requests per window per key." },
+      { "option": "statusCode", "type": "number", "default": "429", "notes": "HTTP status code for rate-limited responses." },
+      { "option": "message", "type": "string", "default": "Too many requests, please try again later.", "notes": "Error message returned in the JSON response body when limit is exceeded." },
+      { "option": "keyGenerator", "type": "function", "default": "(req) => req.ip || 'unknown'", "notes": "Custom function to extract a rate-limit key from the request." }
+    ]
+  },
+  {
+    "name": "logger([opts])",
+    "description": "Request-logging middleware that prints method, URL, status code, and response time. Supports three output formats with optional ANSI colorization. Hooks into the response 'finish' event to capture final status.",
+    "example": "const { logger } = require('molex-http')\n\n// Colorized dev output (default)\napp.use(logger())\n\n// Short format with custom log function\napp.use(logger({\n\tformat: 'short',\n\tlogger: (msg) => fs.appendFileSync('access.log', msg + '\\n')\n}))\n\n// Tiny format, no colors\napp.use(logger({ format: 'tiny', colors: false }))",
+    "options": [
+      { "option": "format", "type": "string", "default": "dev", "notes": "'dev' (colorized method/status/time), 'short' (IP + method + url + status + time), or 'tiny' (method + url + status + time)." },
+      { "option": "logger", "type": "function", "default": "console.log", "notes": "Custom log output function." },
+      { "option": "colors", "type": "boolean", "default": "auto (TTY detection)", "notes": "Enable or disable ANSI color codes. Auto-detected from process.stdout.isTTY." }
     ]
   }
 ]

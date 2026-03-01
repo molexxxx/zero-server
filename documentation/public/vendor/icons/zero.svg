@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-zero" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1" result="b" />
+      <feBlend in="SourceGraphic" in2="b" />
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <g transform="translate(0 0)">
+    <!-- lightning bolt centered -->
+    <path d="M30 8 L18 36 L28 36 L20 56 L44 24 L34 24 L42 8 Z" fill="url(#g-zero)" filter="url(#soft)"/>
+    <!-- subtle highlight -->
+    <path d="M30 12 L22 36 L28 36 L24 48 L40 22 L34 22 L38 12 Z" fill="rgba(255,255,255,0.12)"/>
+    <!-- white oval-outline '0' badge (slightly smaller) -->
+    <ellipse cx="47" cy="47" rx="5" ry="7.5" fill="none" stroke="#ffffff" stroke-width="1.8" opacity="0.98"/>
+  </g>
+</svg>

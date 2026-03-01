@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-plug" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+    <linearGradient id="g-cord" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#a084ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+
+  <!-- Prong pins -->
+  <rect x="22" y="4" width="5" height="13" rx="2.5" fill="rgba(255,255,255,0.92)"/>
+  <rect x="37" y="4" width="5" height="13" rx="2.5" fill="rgba(255,255,255,0.92)"/>
+
+  <!-- Plug body -->
+  <rect x="11" y="17" width="42" height="20" rx="7" fill="url(#g-plug)"/>
+
+  <!-- Strain relief neck -->
+  <rect x="24" y="37" width="16" height="8" rx="4" fill="url(#g-plug)"/>
+
+  <!-- Cord: sweeps down from neck and curls to the right -->
+  <path d="M 32 45 C 32 54, 16 52, 16 58 C 16 63, 26 64, 36 61"
+        fill="none" stroke="url(#g-cord)" stroke-width="4" stroke-linecap="round"/>
+</svg>

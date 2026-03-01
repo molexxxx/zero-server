@@ -12,11 +12,15 @@
 ## Features
 
 - **Zero dependencies** — implemented using Node core APIs only
-- **Express-like API** — `createApp()`, `use()`, `get()`, `post()`, `put()`, `delete()`, `listen()`
-- **Built-in middlewares** — `cors()`, `json()`, `urlencoded()`, `text()`, `raw()`, `multipart()`
+- **Express-like API** — `createApp()`, `use()`, `get()`, `post()`, `put()`, `delete()`, `patch()`, `head()`, `options()`, `all()`, `listen()`
+- **Built-in middlewares** — `cors()`, `json()`, `urlencoded()`, `text()`, `raw()`, `multipart()`, `rateLimit()`, `logger()`
 - **Streaming multipart parser** — writes file parts to disk and exposes `req.body.files` and `req.body.fields`
 - **Tiny `fetch` replacement** — convenient server-side HTTP client with progress callbacks
-- **Static file serving** — correct Content-Type handling and small footprint
+- **Static file serving** — 60+ MIME types, dotfile policy, caching, extension fallback
+- **Error handling** — automatic 500 responses for thrown errors, global error handler via `app.onError()`
+- **Path-prefix middleware** — `app.use('/api', handler)` with automatic URL rewriting
+- **Rate limiting** — in-memory IP-based rate limiter with configurable windows
+- **Request logger** — colorized dev/short/tiny log formats
  
 
 ```bash
@@ -48,7 +52,7 @@ node documentation/full-server.js
 All exports are available from the package root:
 
 ```js
-const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static } = require('molex-http')
+const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static: serveStatic, rateLimit, logger } = require('molex-http')
 ```
 
 | Export | Type | Description |
@@ -62,17 +66,25 @@ const { createApp, cors, fetch, json, urlencoded, text, raw, multipart, static }
 | `raw` | function | Raw bytes parser factory. |
 | `multipart` | function | Streaming multipart parser factory. |
 | `static` | function | Static file serving middleware factory. |
+| `rateLimit` | function | In-memory rate-limiting middleware factory. |
+| `logger` | function | Request-logging middleware factory. |
 
 createApp() methods
 
 | Method | Signature | Description |
 |---|---|---|
-| `use` | `use(fn)` | Register middleware; `fn(req, res, next)`. |
+| `use` | `use(fn)` or `use(path, fn)` | Register middleware globally or scoped to a path prefix. |
 | `get` | `get(path, ...handlers)` | Register GET route handlers. |
 | `post` | `post(path, ...handlers)` | Register POST route handlers. |
 | `put` | `put(path, ...handlers)` | Register PUT route handlers. |
 | `delete` | `delete(path, ...handlers)` | Register DELETE route handlers. |
-| `listen` | `listen(port = 3000, cb)` | Start the HTTP server. |
+| `patch` | `patch(path, ...handlers)` | Register PATCH route handlers. |
+| `options` | `options(path, ...handlers)` | Register OPTIONS route handlers. |
+| `head` | `head(path, ...handlers)` | Register HEAD route handlers. |
+| `all` | `all(path, ...handlers)` | Register handlers for ALL HTTP methods. |
+| `onError` | `onError(fn)` | Register a global error handler `fn(err, req, res, next)`. |
+| `listen` | `listen(port = 3000, cb)` | Start the HTTP server. Returns the server instance. |
+| `handler` | property | Bound request handler for `http.createServer(app.handler)`. |
 
 Request (`req`) properties & helpers
 
@@ -84,17 +96,24 @@ Request (`req`) properties & helpers
 | `query` | object | Parsed query string. |
 | `params` | object | Route parameters (populated by router). |
 | `body` | any | Parsed body (populated by body parsers). |
-| `parseBody()` | async function | Low-level helper to read & parse body by Content-Type. |
+| `ip` | string | Remote IP address of the client. |
+| `get(name)` | function | Get a request header (case-insensitive). |
+| `is(type)` | function | Check if Content-Type matches a type (e.g. `'json'`, `'text/html'`). |
+| `raw` | object | Underlying `http.IncomingMessage`. |
 
 Response (`res`) helpers
 
 | Method | Signature | Description |
 |---|---|---|
-| `status` | `status(code)` | Set HTTP status code and return `res`. |
-| `set` | `set(name, value)` | Set a response header. |
-| `send` | `send(body)` | Send a response; objects are JSON-serialized. |
+| `status` | `status(code)` | Set HTTP status code. Chainable. |
+| `set` | `set(name, value)` | Set a response header. Chainable. |
+| `get` | `get(name)` | Get a previously-set response header. |
+| `type` | `type(ct)` | Set Content-Type (accepts shorthand like `'json'`, `'html'`, `'text'`). Chainable. |
+| `send` | `send(body)` | Send a response; auto-detects Content-Type for strings, objects, and Buffers. |
 | `json` | `json(obj)` | Set JSON Content-Type and send object. |
 | `text` | `text(str)` | Set text/plain and send string. |
+| `html` | `html(str)` | Set text/html and send string. |
+| `redirect` | `redirect([status], url)` | Redirect to URL (default 302). |
 
 ### Body parsers
 
@@ -189,6 +208,59 @@ const r = await fetch('https://jsonplaceholder.typicode.com/todos/1', { timeout:
 const data = await r.json()
 ```
 
+### rateLimit([opts])
+
+In-memory, per-IP rate-limiting middleware. Sets standard `X-RateLimit-*` headers.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `windowMs` | number | `60000` | Time window in milliseconds. |
+| `max` | number | `100` | Maximum requests per window per key. |
+| `message` | string | `'Too many requests…'` | Error message returned when limit is exceeded. |
+| `statusCode` | number | `429` | HTTP status for rate-limited responses. |
+| `keyGenerator` | function | `(req) => req.ip` | Custom key extraction function. |
+
+Example:
+
+```js
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }))
+```
+
+### logger([opts])
+
+Request-logging middleware that prints method, url, status, and response time.
+
+| Option | Type | Default | Description |
+|---|---:|---|---|
+| `format` | string | `'dev'` | Log format: `'dev'` (colorized), `'short'`, or `'tiny'`. |
+| `logger` | function | `console.log` | Custom log function. |
+| `colors` | boolean | auto (TTY) | Enable/disable ANSI colors. |
+
+Example:
+
+```js
+app.use(logger({ format: 'dev' }))
+```
+
+### Error handling
+
+Thrown errors in route handlers are automatically caught and return a 500 JSON response. Register a custom error handler for more control:
+
+```js
+app.onError((err, req, res, next) => {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+})
+```
+
+### Path-prefix middleware
+
+Mount middleware on a path prefix. The URL is rewritten so downstream middleware sees relative paths:
+
+```js
+app.use('/api', myApiRouter)
+```
+
 ## Examples
 
 Small JSON API:
@@ -224,15 +296,16 @@ app.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.
 
 ## File layout
 
-- `lib/` — core helpers and middleware (router, fetch, body parsers, static server)
+- `lib/` — core helpers and middleware (router, fetch, body parsers, static, rate limiter, logger)
 - `documentation/` — demo server, controllers and public UI used to showcase features
-- `test/` — tests for core functionality and edge cases
+- `test/` — integration tests
 
 ## Testing
 
-Run the demo and use the UI playground for manual testing. There are example/test scripts in `examples/` and `test/`.
+```bash
+node test/test.js
+```
 
 ## License
 
 MIT
-

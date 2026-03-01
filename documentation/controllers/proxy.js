@@ -110,4 +110,3 @@ exports.proxy = (fetch) => async (req, res) =>
         return res.status(500).json({ error: String(e) });
     }
 };
-try { rawHeaders = r.headers.raw(); } catch (e) { rawHeaders = {}; }

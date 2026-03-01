@@ -10,11 +10,28 @@
 	<meta name="keywords"
 		content="nodejs,http,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client" />
 	<meta name="author" content="Anthony Wiedman" />
+
 	<link rel="stylesheet" href="/styles.css" />
 	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
+	<link rel="stylesheet" href="/vendor/prism-toolbar.css" />
+	<link rel="stylesheet" href="/prism-overrides.css" />
+
+	<script src="/vendor/prism.min.js" async></script>
+	<script src="/vendor/prism-json.min.js" async></script>
+	<script src="/vendor/prism-javascript.min.js" async></script>
+	<script src="/vendor/prism-copy-to-clipboard.min.js" async></script>
+	<script src="/vendor/prism-toolbar.min.js" async></script>
+
+	<script src="/scripts/helpers.js" defer></script>
+	<script src="/scripts/uploads.js" defer></script>
+	<script src="/scripts/playground.js" defer></script>
+	<script src="/scripts/proxy.js" defer></script>
+	<script src="/scripts/data-sections.js" defer></script>
+	<script src="/scripts/ui.js" defer></script>
+	<script src="/scripts/app.js" defer></script>
 </head>
 
-<body class="toc-hidden">
+<body>
 	<a id="top"></a>
 	<div class="ui-shell">
 		<header class="ui-header">
@@ -24,10 +41,10 @@
 				</svg>
 			</button>
 
-			<div class="brand">
+			<a class="brand" href="#top" id="brand-top" style="text-decoration:none;color:inherit;cursor:pointer">
 				<div class="logo">molex-http</div>
 				<div class="subtitle">Zero-dependency Express-like server</div>
-			</div>
+			</a>
 
 			<div class="repo-buttons" role="navigation" aria-label="Repository links">
 				<a class="icon-btn" href="https://github.com/tonywied17/molex-http-npm" target="_blank"
@@ -40,11 +57,11 @@
 				</a>
 				<a class="icon-btn" href="https://www.npmjs.com/package/molex-http" target="_blank"
 					rel="noopener noreferrer" aria-label="View on npm">
-					<svg class="icon-svg" viewBox="0 0 120 40" aria-hidden="true" role="img">
-						<rect width="220" height="40" rx="6" fill="#CB3837"></rect>
+					<svg class="icon-svg" viewBox="0 0 48 22" aria-hidden="true" role="img">
+						<rect width="48" height="22" rx="4" fill="#CB3837"></rect>
 						<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-							font-family="Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="700"
-							font-size="18" fill="#fff">npm</text>
+							font-family="Segoe UI, Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="800"
+							font-size="14" fill="#fff">npm</text>
 					</svg>
 					<span class="sr">npm</span>
 				</a>
@@ -53,16 +70,27 @@
 
 		<aside class="toc-sidebar" aria-label="Table of contents">
 			<nav>
+				<div class="toc-toolbar">
+					<button class="toc-tool-btn" id="toc-top-btn" title="Back to top" aria-label="Scroll to top">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 7l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+					<button class="toc-tool-btn" id="toc-toggle-acc" title="Expand all" aria-label="Expand all sections">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+				</div>
 				<ul>
-					<li><a href="#top">Back to top</a></li>
 					<li><a href="#features">Features</a></li>
 					<li><a href="#quickstart">Quickstart</a></li>
 					<li><a href="#options">Options</a></li>
 					<li><a href="#api-reference">API Reference</a></li>
 					<li><a href="#simple-examples">Simple Examples</a></li>
-					<li><a href="#upload-testing">Upload testing</a></li>
-					<li><a href="#parser-tests">Parser tests</a></li>
-					<li><a href="#proxy-test">Proxy test</a></li>
+					<li><a href="#playground">Playground</a>
+						<ul class="toc-sub">
+							<li class="toc-sub-item"><a href="#upload-testing">Upload multipart data</a></li>
+							<li class="toc-sub-item"><a href="#parser-tests">Parser tests</a></li>
+							<li class="toc-sub-item"><a href="#proxy-test">Proxy test</a></li>
+						</ul>
+					</li>
 				</ul>
 			</nav>
 		</aside>
@@ -81,48 +109,40 @@
 							<div class="feature-grid">
 								<div class="feature-card">
 									<div class="feature-icon">
-										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-											<path fill="currentColor" d="M13 2L3 14h7v8l10-12h-7z" />
-										</svg>
+										<img class="icon-svg" src="/vendor/icons/zero.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
 									</div>
 									<h5>Zero-dependency</h5>
 									<p>Small, Express-like API without external deps.</p>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
-										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-											<path fill="currentColor"
-												d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-										</svg>
+										<img class="icon-svg" src="/vendor/icons/plug.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
 									</div>
 									<h5>Pluggable parsers</h5>
 									<p>json(), urlencoded(), text(), raw() built-in.</p>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
-										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-											<path fill="currentColor"
-												d="M19 9v10H5V9H3v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9h-2zM12 3L2 13h7v6h6v-6h7L12 3z" />
-										</svg>
+										<img class="icon-svg" src="/vendor/icons/stream.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
 									</div>
 									<h5>Streaming uploads</h5>
 									<p>Multipart streaming to disk for large files.</p>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
-										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-											<path fill="currentColor"
-												d="M10 4H4a2 2 0 0 0-2 2v12h20V8a4 4 0 0 0-4-4h-8z" />
-										</svg>
+										<img class="icon-svg" src="/vendor/icons/static.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
 									</div>
 									<h5>Static serving</h5>
 									<p>Correct Content-Type handling and caching options.</p>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
-										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-											<path fill="currentColor" d="M21 11l-8-7v4H3v6h10v4z" />
-										</svg>
+										<img class="icon-svg" src="/vendor/icons/fetch.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
 									</div>
 									<h5>Built-in fetch</h5>
 									<p>Small server-side fetch replacement for HTTP requests.</p>
@@ -260,6 +280,12 @@ node test/test.js
 
 				</div>
 			</div>
+
+			<div class="section-divider constrained" id="playground">
+				<h2 class="section-title">Playground</h2>
+				<p class="muted">Interactive tools to test uploads, body parsers, and the built-in proxy.</p>
+			</div>
+
 			<div class="card upload-card constrained">
 				<div class="card-head">
 					<h3 id="upload-testing">Upload multipart data</h3>
@@ -383,106 +409,6 @@ node test/test.js
 
 	</div>
 
-	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
-	<link rel="stylesheet" href="/vendor/prism-toolbar.css" />
-	<link rel="stylesheet" href="/prism-overrides.css" />
-	<script src="/vendor/prism.min.js"></script>
-	<script src="/vendor/prism-json.min.js"></script>
-	<script src="/vendor/prism-javascript.min.js"></script>
-	<script src="/vendor/prism-copy-to-clipboard.min.js"></script>
-	<script src="/vendor/prism-toolbar.min.js"></script>
-	<script src="/app.js"></script>
-	<script>
-		(function ()
-		{
-			const tabs = document.querySelectorAll('.feature-tabs .tab');
-			tabs.forEach(t => t.addEventListener('click', (ev) =>
-			{
-				const target = t.dataset.target;
-				if (!target) return;
-				tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); });
-				document.querySelectorAll('.feature-tabs .tab-panel').forEach(p => p.classList.remove('active'));
-				t.classList.add('active'); t.setAttribute('aria-selected', 'true');
-				const panel = document.getElementById(target); if (panel) panel.classList.add('active');
-			}));
-		})();
-		(function ()
-		{
-			const btn = document.querySelector('.toc-toggle');
-			const sidebar = document.querySelector('.toc-sidebar');
-			if (!btn || !sidebar) return;
-			const mq = (q) => window.matchMedia(q).matches;
-			const setAria = () =>
-			{
-				const expanded = mq('(min-width:900px)') ? !document.body.classList.contains('toc-hidden') : document.body.classList.contains('toc-open');
-				btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-			};
-			setAria();
-			btn.addEventListener('click', (ev) =>
-			{
-				if (mq('(min-width:900px)'))
-				{
-					document.body.classList.toggle('toc-hidden');
-					document.body.classList.remove('toc-open');
-				} else
-				{
-					document.body.classList.toggle('toc-open');
-				}
-				setAria();
-			});
-			document.addEventListener('keydown', (e) =>
-			{
-				if (e.key === 'Escape')
-				{
-					document.body.classList.remove('toc-open');
-					document.body.classList.remove('toc-hidden');
-					setAria();
-				}
-			});
-			document.addEventListener('click', (e) =>
-			{
-				if (!document.body.classList.contains('toc-open')) return;
-				if (e.target.closest('.toc-sidebar') || e.target.closest('.toc-toggle')) return;
-				document.body.classList.remove('toc-open');
-				setAria();
-			});
-			window.addEventListener('resize', () => setAria());
-		})();
-
-		(function ()
-		{
-			const nav = document.querySelector('.toc-sidebar nav');
-			if (!nav) return;
-			function openAncestors(el)
-			{
-				let d = el.closest('details.acc');
-				while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details.acc') : null; }
-			}
-			nav.addEventListener('click', (e) =>
-			{
-				const a = e.target.closest('a[href^="#"]');
-				if (!a) return;
-				const hash = a.getAttribute('href');
-				if (!hash || hash.charAt(0) !== '#') return;
-				const id = hash.slice(1);
-				const target = document.getElementById(id);
-				if (!target) return;
-				openAncestors(target);
-				setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-				document.body.classList.remove('toc-open');
-				const btn = document.querySelector('.toc-toggle'); if (btn) btn.setAttribute('aria-expanded', 'false');
-			});
-			window.addEventListener('hashchange', () =>
-			{
-				const id = location.hash ? location.hash.slice(1) : '';
-				if (!id) return;
-				const target = document.getElementById(id);
-				if (!target) return;
-				openAncestors(target);
-				setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-			});
-		})();
-	</script>
 </body>
 
 </html>

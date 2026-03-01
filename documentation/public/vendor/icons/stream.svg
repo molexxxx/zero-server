@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-stream" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+
+  <!-- Hard disk on the right, big thin white arrow pointing into it from the left -->
+  <!-- Hard disk body -->
+  <rect x="34" y="14" width="22" height="36" rx="5" fill="url(#g-stream)"/>
+  <!-- disk platter slot line -->
+  <line x1="38" y1="26" x2="52" y2="26" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- small read-head dot -->
+  <circle cx="44" cy="38" r="3" fill="rgba(255,255,255,0.2)"/>
+  <circle cx="44" cy="38" r="1.4" fill="rgba(255,255,255,0.55)"/>
+
+  <!-- Big thin white arrow pointing right into the disk -->
+  <path d="M6 32h22" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M22 25l12 7-12 7" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,20 +1,62 @@
 [
-    {
-        "title": "Small JSON API",
-        "description": "Concise JSON API example using cors() and json() parsers.",
-        "language": "javascript",
-        "code": "const { createApp, json, cors } = require('molex-http')\nconst app = createApp()\n\napp.use(cors({ origin: ['https://example.com'] }))\napp.use(json({ limit: '10kb' }))\n\nconst items = []\napp.post('/items', (req, res) => {\n\titems.push(req.body)\n\tres.statusCode = 201\n\tres.json({ ok: true })\n})"
-    },
-    {
-        "title": "Upload handler (disk or custom writer)",
-        "description": "Default multipart writer streams files to disk; swap for S3 as needed.",
-        "language": "javascript",
-        "code": "// default: stream file parts to disk\napp.post('/upload', multipart({ dir: uploadsDir, maxFileSize: 10 * 1024 * 1024 }), (req, res) => {\n\t// req.body.files contains stored file metadata\n\tres.json({ files: req.body.files })\n})\n\n// To adapt to S3: replace file write stream in your handler or multipart writer\n// with an S3 upload stream and return the remote URL in response."
-    },
-    {
-        "title": "Serve UI + Protect Internal Uploads",
-        "description": "Serve the docs UI and mount uploads with protective options.",
-        "language": "javascript",
-        "code": "// serve UI\napp.use(static(path.join(__dirname, 'documentation', 'public'), { index: 'index.html' }))\n\n// mount uploads but hide internal files like .thumbs\napp.use('/uploads', static(path.join(__dirname, 'documentation', 'uploads'), {\n\tdotfiles: 'ignore',\n\tsetHeaders: (res, filePath) => { if (filePath.includes('.thumbs')) res.setHeader('X-Internal', '1') }\n}))"
-    }
+  {
+    "title": "Minimal JSON API",
+    "description": "A concise REST API with CORS, JSON parsing, and a simple in-memory store.",
+    "language": "javascript",
+    "code": "const { createApp, json, cors } = require('molex-http')\nconst app = createApp()\n\napp.use(cors({ origin: ['https://example.com'] }))\napp.use(json({ limit: '10kb' }))\n\nconst items = []\n\napp.get('/items', (req, res) => res.json(items))\n\napp.post('/items', (req, res) => {\n\titems.push(req.body)\n\tres.status(201).json({ ok: true, count: items.length })\n})"
+  },
+  {
+    "title": "File Upload with Multipart Streaming",
+    "description": "Stream uploaded files to disk and return metadata. Swap the disk writer for an S3 stream to go cloud-native.",
+    "language": "javascript",
+    "code": "const path = require('path')\nconst os = require('os')\nconst { createApp, multipart } = require('molex-http')\nconst app = createApp()\n\nconst uploadsDir = path.join(os.tmpdir(), 'my-uploads')\n\napp.post('/upload', multipart({\n\tdir: uploadsDir,\n\tmaxFileSize: 10 * 1024 * 1024  // 10 MB\n}), (req, res) => {\n\tres.json({\n\t\tfiles: req.body.files,\n\t\tfields: req.body.fields\n\t})\n})"
+  },
+  {
+    "title": "Static File Server with Caching",
+    "description": "Serve a public directory with browser caching, dotfile protection, and HTML extension fallback.",
+    "language": "javascript",
+    "code": "const path = require('path')\nconst { createApp, static: serveStatic } = require('molex-http')\nconst app = createApp()\n\napp.use(serveStatic(path.join(__dirname, 'public'), {\n\tindex: 'index.html',\n\tmaxAge: 3600000,          // 1 hour (in ms)\n\tdotfiles: 'ignore',\n\textensions: ['html', 'htm'],\n\tsetHeaders: (res, filePath) => {\n\t\tres.setHeader('X-Served-By', 'molex-http')\n\t}\n}))\n\napp.listen(3000)"
+  },
+  {
+    "title": "Rate-Limited Login Endpoint",
+    "description": "Protect a login route with per-IP rate limiting and a global fallback limiter for the whole app.",
+    "language": "javascript",
+    "code": "const { createApp, json, rateLimit } = require('molex-http')\nconst app = createApp()\n\n// Global: 200 req/min per IP\napp.use(rateLimit({ windowMs: 60000, max: 200 }))\napp.use(json())\n\n// Login: 5 attempts per minute\napp.post('/login', rateLimit({\n\twindowMs: 60000,\n\tmax: 5,\n\tmessage: 'Too many login attempts'\n}), (req, res) => {\n\tconst { username, password } = req.body\n\t// ... authenticate ...\n\tres.json({ ok: true })\n})"
+  },
+  {
+    "title": "Request Logging with Custom Output",
+    "description": "Use the built-in logger middleware for colorized dev output, or write short-format entries to a file.",
+    "language": "javascript",
+    "code": "const fs = require('fs')\nconst { createApp, logger } = require('molex-http')\nconst app = createApp()\n\n// Option A: colorized dev output to stdout\napp.use(logger({ format: 'dev' }))\n\n// Option B: append short-format lines to a log file\napp.use(logger({\n\tformat: 'short',\n\tcolors: false,\n\tlogger: (msg) => fs.appendFileSync('access.log', msg + '\\n')\n}))\n\napp.get('/', (req, res) => res.json({ ok: true }))\napp.listen(3000)"
+  },
+  {
+    "title": "Custom Error Handler",
+    "description": "Register a global error handler so thrown errors return structured JSON instead of a bare 500.",
+    "language": "javascript",
+    "code": "const { createApp, json } = require('molex-http')\nconst app = createApp()\napp.use(json())\n\napp.get('/fail', (req, res) => {\n\tthrow new Error('Something broke!')\n})\n\napp.onError((err, req, res, next) => {\n\tconsole.error(`[${new Date().toISOString()}]`, err.stack)\n\tres.status(err.statusCode || 500).json({\n\t\terror: err.message,\n\t\tpath: req.url\n\t})\n})\n\napp.listen(3000)"
+  },
+  {
+    "title": "Server-Side Fetch with Progress",
+    "description": "Use the built-in fetch client with timeout, abort support, and download progress tracking.",
+    "language": "javascript",
+    "code": "const { fetch } = require('molex-http')\n\nasync function download(url) {\n\tconst controller = new AbortController()\n\tsetTimeout(() => controller.abort(), 10000)\n\n\tconst res = await fetch(url, {\n\t\ttimeout: 5000,\n\t\tsignal: controller.signal,\n\t\tonDownloadProgress: ({ loaded, total }) =>\n\t\t\tconsole.log(`${loaded}/${total || '?'} bytes`)\n\t})\n\n\tconsole.log(res.ok, res.status, res.statusText)\n\tconst data = await res.json()\n\treturn data\n}\n\ndownload('https://jsonplaceholder.typicode.com/todos/1')\n\t.then(console.log)\n\t.catch(console.error)"
+  },
+  {
+    "title": "Path-Prefix Middleware (Sub-App)",
+    "description": "Mount middleware on a path prefix. The prefix is stripped from req.url so downstream handlers see relative paths.",
+    "language": "javascript",
+    "code": "const { createApp, json } = require('molex-http')\nconst app = createApp()\napp.use(json())\n\n// Everything under /api gets this middleware\napp.use('/api', (req, res, next) => {\n\tconsole.log('API request:', req.method, req.url)\n\t// req.url is now '/' instead of '/api/'\n\tnext()\n})\n\napp.get('/api/users', (req, res) => {\n\tres.json([{ id: 1, name: 'Alice' }])\n})\n\napp.listen(3000)"
+  },
+  {
+    "title": "CORS with Subdomain Matching",
+    "description": "Allow all subdomains of a root domain using the dot-prefix origin syntax, with credentials enabled.",
+    "language": "javascript",
+    "code": "const { createApp, cors, json } = require('molex-http')\nconst app = createApp()\n\napp.use(cors({\n\torigin: [\n\t\t'https://mysite.com',     // exact match\n\t\t'.mysite.com'             // suffix: matches api.mysite.com, www.mysite.com, etc.\n\t],\n\tcredentials: true,\n\tmethods: 'GET,POST,PUT,DELETE'\n}))\napp.use(json())\n\napp.get('/data', (req, res) => res.json({ secure: true }))\napp.listen(3000)"
+  },
+  {
+    "title": "Full-Featured Server Skeleton",
+    "description": "Combines logging, CORS, body parsing, rate limiting, static serving, error handling, and route parameters in one setup.",
+    "language": "javascript",
+    "code": "const path = require('path')\nconst { createApp, cors, json, urlencoded, text,\n\tstatic: serveStatic, logger, rateLimit, multipart } = require('molex-http')\n\nconst app = createApp()\n\n// Middleware stack\napp.use(logger({ format: 'dev' }))\napp.use(cors())\napp.use(rateLimit({ windowMs: 60000, max: 200 }))\napp.use(json({ limit: '1mb' }))\napp.use(urlencoded({ extended: true }))\napp.use(text())\napp.use(serveStatic(path.join(__dirname, 'public')))\n\n// Routes\napp.get('/health', (req, res) => res.json({ status: 'ok' }))\napp.get('/users/:id', (req, res) => res.json({ id: req.params.id }))\napp.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024 }),\n\t(req, res) => res.json(req.body))\n\n// Error handler\napp.onError((err, req, res) => {\n\tres.status(500).json({ error: err.message })\n})\n\napp.listen(3000, () => console.log('Server running on :3000'))"
+  }
 ]
