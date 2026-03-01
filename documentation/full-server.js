@@ -175,18 +175,29 @@ app.use('/api', apiRouter);
 // --- Route introspection ---
 app.get('/debug/routes', (req, res) => res.json(app.routes()));
 
+// --- TLS Certificates (HTTPS + WSS) ---
+const certPath = '/www/server/panel/vhost/cert/zero-http.molex.cloud/fullchain.pem';
+const keyPath = '/www/server/panel/vhost/cert/zero-http.molex.cloud/privkey.pem';
+const hasCerts = fs.existsSync(certPath) && fs.existsSync(keyPath);
+
+const tlsOpts = hasCerts
+    ? { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) }
+    : undefined;
+
 // --- Server Startup ---
-const port = process.env.PORT || 3000;
-const server = app.listen(port, () =>
+const port = process.env.PORT || 7273;
+const server = app.listen(port, tlsOpts, () =>
 {
-    console.log(`zero-http full-server listening on http://localhost:${port}`);
+    const proto = hasCerts ? 'https' : 'http';
+    console.log(`zero-http full-server listening on ${proto}://localhost:${port}`);
     if (process.argv.includes('--test')) runTests(port).catch(console.error);
 });
 
 /** Quick smoke tests using built-in fetch */
 async function runTests(port)
 {
-    const base = `http://localhost:${port}`;
+    const proto = hasCerts ? 'https' : 'http';
+    const base = `${proto}://localhost:${port}`;
     console.log('running smoke tests against', base);
 
     const doReq = async (label, promise) =>
