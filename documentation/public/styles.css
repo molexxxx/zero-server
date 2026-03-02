@@ -275,8 +275,8 @@ details.acc[open] > summary:before{transform:rotate(90deg)}
 body.toc-open .toc-sidebar{opacity:1;transform:translateX(0);pointer-events:auto}
 
 /* TOC icon toolbar */
-.toc-toolbar{display:flex;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.04)}
-.toc-tool-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted);cursor:pointer;transition:color .12s ease,background .12s ease,transform .12s ease}
+.toc-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.toc-tool-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted);cursor:pointer;transition:color .12s ease,background .12s ease,transform .12s ease}
 .toc-tool-btn:hover{color:var(--accent);background:rgba(88,101,242,0.08)}
 .toc-tool-btn:active{transform:scale(0.92)}
 .toc-tool-btn.acc-expanded svg{transform:rotate(180deg);transition:transform .18s ease}
@@ -288,6 +288,21 @@ body.toc-open .toc-sidebar{opacity:1;transform:translateX(0);pointer-events:auto
 .toc-sidebar nav li.toc-sub-item a{font-size:13px;color:rgba(255,255,255,0.65);padding:6px 10px;border-radius:6px;display:block}
 .toc-sidebar nav li.toc-sub-item a:hover{color:var(--text);background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
 .toc-sidebar nav li.toc-sub-item a:visited{color:rgba(255,255,255,0.6)}
+
+/* TOC search filter (inline in toolbar) */
+.toc-search-wrap{position:relative;flex:1;min-width:0}
+.toc-search-icon{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.toc-search{width:100%;box-sizing:border-box;padding:6px 8px 6px 26px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:var(--text);font-size:12px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;height:32px}
+.toc-search::placeholder{color:rgba(255,255,255,0.3)}
+.toc-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(88,101,242,0.12)}
+
+/* Collapsible TOC categories */
+.toc-collapsible{position:relative;padding-left:20px !important}
+.toc-collapse-btn{position:absolute;left:2px;top:12px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--muted);cursor:pointer;padding:0;border-radius:4px;transition:color .12s ease,background .12s ease}
+.toc-collapse-btn:hover{color:var(--accent);background:rgba(88,101,242,0.08)}
+.toc-collapse-btn svg{transition:transform .18s ease}
+.toc-collapsible:not(.toc-collapsed) > .toc-collapse-btn svg{transform:rotate(90deg)}
+.toc-collapsible.toc-collapsed > .toc-sub{display:none !important}
 
 
 @media(min-width:900px){

@@ -71,20 +71,24 @@
 		<aside class="toc-sidebar" aria-label="Table of contents">
 			<nav>
 				<div class="toc-toolbar">
+					<div class="toc-search-wrap">
+						<svg class="toc-search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+						<input id="toc-search" class="toc-search" type="text" placeholder="Filter…" autocomplete="off" spellcheck="false" />
+					</div>
+					<button class="toc-tool-btn" id="toc-toggle-acc" title="Collapse all" aria-label="Collapse all sections">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
 					<button class="toc-tool-btn" id="toc-top-btn" title="Back to top" aria-label="Scroll to top">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 7l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-					<button class="toc-tool-btn" id="toc-toggle-acc" title="Expand all" aria-label="Expand all sections">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</button>
 				</div>
 				<ul>
 					<li><a href="#features">Features</a></li>
 					<li><a href="#quickstart">Quickstart</a></li>
 					<li><a href="#options">Options</a></li>
-					<li><a href="#api-reference">API Reference</a></li>
-					<li><a href="#simple-examples">Simple Examples</a></li>
-					<li><a href="#playground">Playground</a>
+					<li class="toc-collapsible"><a href="#api-reference">API Reference</a></li>
+					<li class="toc-collapsible"><a href="#simple-examples">Simple Examples</a></li>
+					<li class="toc-collapsible"><a href="#playground">Playground</a>
 						<ul class="toc-sub">
 							<li class="toc-sub-item"><a href="#upload-testing">Upload multipart data</a></li>
 							<li class="toc-sub-item"><a href="#parser-tests">Parser tests</a></li>
