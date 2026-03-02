@@ -173,7 +173,11 @@ apiRouter.get('/info', (req, res) => res.json({
 app.use('/api', apiRouter);
 
 // --- Route introspection ---
-app.get('/debug/routes', (req, res) => res.json(app.routes()));
+app.get('/debug/routes', (req, res) =>
+{
+    res.set('Content-Type', 'application/json');
+    res.send(JSON.stringify(app.routes(), null, 2));
+});
 
 // --- TLS Certificates (HTTPS + WSS) ---
 const certPath = '/www/server/panel/vhost/cert/zero-http.molex.cloud/fullchain.pem';
