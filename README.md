@@ -1,4 +1,8 @@
-# zero-http
+<p align="center">
+  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-http logo" width="222" height="222">
+</p>
+
+<h1 align="center">zero-http</h1>
 
 [![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
 [![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)

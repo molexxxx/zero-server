@@ -1,24 +1,89 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 40 392 432" width="512" height="512" aria-label="zero-http logo">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00c6ff"></stop>
-      <stop offset="100%" stop-color="#0072ff"></stop>
+    <!-- Primary purple-to-cyan gradient -->
+    <linearGradient id="logo-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="50%" stop-color="#5865f2"/>
+      <stop offset="100%" stop-color="#3ec6ff"/>
     </linearGradient>
+    <!-- Lighter glow version -->
+    <linearGradient id="logo-glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+    <!-- Subtle inner highlight -->
+    <linearGradient id="logo-hi" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+    <!-- Background radial glow -->
+    <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5865f2" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0e1114" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop shadow filter -->
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#5865f2" flood-opacity="0.35"/>
+    </filter>
+    <!-- Soft glow filter -->
+    <filter id="bolt-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
   </defs>
 
-  <rect width="512" height="512" rx="90" fill="#0f172a"></rect>
+  <!-- Background glow -->
+  <circle cx="256" cy="256" r="200" fill="url(#bg-glow)"/>
 
-  <circle cx="256" cy="230" r="110" fill="none" stroke="url(#grad)" stroke-width="28"></circle>
+  <!-- Outer ring — perfect circle -->
+  <circle cx="256" cy="256" r="195" fill="none"
+          stroke="url(#logo-grad)" stroke-width="24"
+          stroke-linecap="round" opacity="0.15"/>
 
-  <line x1="256" y1="120" x2="256" y2="340" stroke="#0f172a" stroke-width="28"></line>
+  <!-- Main ring — perfect circle -->
+  <circle cx="256" cy="256" r="170" fill="none"
+          stroke="url(#logo-grad)" stroke-width="32"
+          stroke-linecap="round" filter="url(#logo-shadow)"/>
 
-  <rect x="180" y="190" width="152" height="80" rx="16" fill="#0f172a"></rect>
+  <!-- Highlight arc on top-left of the ring -->
+  <path d="M 140,175 A 170,170 0 0,1 330,100"
+        fill="none" stroke="url(#logo-hi)" stroke-width="14"
+        stroke-linecap="round" opacity="0.6"/>
 
-  <text x="256" y="245" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="url(#grad)">
-    HTTP
-  </text>
+  <!-- Lightning bolt — centered and thicker -->
+  <g filter="url(#bolt-glow)">
+    <!-- Bolt body -->
+    <path d="
+      M 222 82
+      L 186 242
+      L 252 242
+      L 182 435
+      L 330 205
+      L 258 205
+      L 296 82
+      Z
+    " fill="url(#logo-grad)"/>
 
-  <text x="256" y="430" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="600" fill="white" letter-spacing="4">
-    ZERO
-  </text>
+    <!-- Bolt inner highlight -->
+    <path d="
+      M 228 100
+      L 202 238
+      L 252 238
+      L 204 395
+      L 318 212
+      L 262 212
+      L 288 100
+      Z
+    " fill="url(#logo-hi)" opacity="0.5"/>
+  </g>
+
+  <!-- Small orbital dots — representing HTTP connections -->
+  <circle cx="100" cy="155" r="8" fill="#7b61ff" opacity="0.7"/>
+  <circle cx="410" cy="360" r="8" fill="#3ec6ff" opacity="0.7"/>
+  <circle cx="88" cy="330" r="5" fill="#5865f2" opacity="0.5"/>
+  <circle cx="425" cy="170" r="5" fill="#67e8f9" opacity="0.5"/>
+
+  <!-- Subtle angled scan lines for tech feel -->
+  <line x1="120" y1="400" x2="160" y2="415" stroke="#3ec6ff" stroke-width="2" opacity="0.15" stroke-linecap="round"/>
+  <line x1="350" y1="95" x2="390" y2="110" stroke="#7b61ff" stroke-width="2" opacity="0.15" stroke-linecap="round"/>
 </svg>
