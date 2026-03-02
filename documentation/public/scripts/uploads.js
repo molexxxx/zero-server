@@ -133,28 +133,43 @@ function addTrashRow(name)
  */
 function showUndo(name)
 {
+    /* Remove any existing undo toast first */
+    const prev = document.querySelector('.undo-toast');
+    if (prev) prev.remove();
+
     const box = document.createElement('div');
-    box.className = 'panel';
-    box.textContent = `Trashed ${name} — `;
+    box.className = 'undo-toast';
+    box.textContent = `Trashed ${name} \u2014 `;
 
     const btn = document.createElement('button');
     btn.textContent = 'Undo';
     btn.className = 'btn';
     box.appendChild(btn);
 
-    try
-    {
-        const shell = document.querySelector('.ui-shell') || document.body;
-        shell.prepend(box);
-    } catch (e) { }
+    const close = document.createElement('button');
+    close.className = 'undo-toast-close';
+    close.innerHTML = '&times;';
+    close.setAttribute('aria-label', 'Dismiss');
+    box.appendChild(close);
 
-    const tid = setTimeout(() => box.remove(), 8000);
+    document.body.appendChild(box);
 
-    btn.addEventListener('click', async () =>
+    const dismiss = () => { clearTimeout(tid); box.remove(); document.removeEventListener('click', outsideClick); };
+
+    const tid = setTimeout(dismiss, 8000);
+
+    close.addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
+
+    /* Click outside to dismiss */
+    function outsideClick(e) { if (!box.contains(e.target)) dismiss(); }
+    /* Delay listener so the current click doesn't immediately close it */
+    setTimeout(() => document.addEventListener('click', outsideClick), 0);
+
+    btn.addEventListener('click', async (e) =>
     {
-        clearTimeout(tid);
+        e.stopPropagation();
+        dismiss();
         await fetch('/uploads/' + encodeURIComponent(name) + '/restore', { method: 'POST' });
-        box.remove();
         try { await loadUploadsCombined(); } catch (e) { }
         loadUploadsList();
         loadTrashList();
