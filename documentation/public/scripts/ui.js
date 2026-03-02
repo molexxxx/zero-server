@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () =>
     initTocSidebar();
     initTocNavigation();
     initTocToolbar();
+    initTocCollapsible();
+    initTocSearch();
 });
 
 /* -- Feature Tabs ------------------------------------------------------------ */
@@ -192,19 +194,149 @@ function initTocToolbar()
         });
     });
 
-    /* -- Expand / Collapse all accordions ------------------------------- */
+    /* -- Expand / Collapse sidebar categories only ---------------------- */
     if (toggleBtn)
     {
-        let expanded = false;
+        let expanded = true;   /* Start expanded */
+        toggleBtn.classList.add('acc-expanded');
 
         toggleBtn.addEventListener('click', () =>
         {
             expanded = !expanded;
-            document.querySelectorAll('details.acc').forEach(d => d.open = expanded);
+
+            /* Toggle only collapsible TOC categories in the sidebar */
+            document.querySelectorAll('.toc-collapsible').forEach(li =>
+            {
+                li.classList.toggle('toc-collapsed', !expanded);
+            });
 
             toggleBtn.classList.toggle('acc-expanded', expanded);
             toggleBtn.title = expanded ? 'Collapse all' : 'Expand all';
             toggleBtn.setAttribute('aria-label', expanded ? 'Collapse all sections' : 'Expand all sections');
         });
     }
+}
+
+/* -- TOC Collapsible Categories ---------------------------------------------- */
+
+/**
+ * Make sidebar categories that have (or will have) nested sub-items
+ * collapsible via a toggle chevron. Clicking the chevron expands/collapses
+ * the sub-list. Clicking the link itself still navigates.
+ */
+function initTocCollapsible()
+{
+    const items = document.querySelectorAll('.toc-collapsible');
+    items.forEach(li =>
+    {
+        /* Start expanded */
+
+        /* Create toggle button */
+        const toggle = document.createElement('button');
+        toggle.className = 'toc-collapse-btn';
+        toggle.setAttribute('aria-label', 'Toggle section');
+        toggle.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+        toggle.addEventListener('click', (e) =>
+        {
+            e.preventDefault();
+            e.stopPropagation();
+            li.classList.toggle('toc-collapsed');
+        });
+
+        li.insertBefore(toggle, li.firstChild);
+    });
+}
+
+/* -- TOC Search Filter ------------------------------------------------------- */
+
+/**
+ * Wire the sidebar search input to filter TOC items by matching against
+ * the display name (link text) of each item in the sidebar.
+ */
+function initTocSearch()
+{
+    const input = document.getElementById('toc-search');
+    if (!input) return;
+
+    const nav = document.querySelector('.toc-sidebar nav ul');
+    if (!nav) return;
+
+    /**
+     * Get the visible display name for a TOC list item.
+     */
+    function getDisplayName(li)
+    {
+        const a = li.querySelector(':scope > a');
+        return a ? a.textContent.trim().toLowerCase() : '';
+    }
+
+    /**
+     * Check whether any sub-items match the query by display name.
+     */
+    function hasSubMatch(li, q)
+    {
+        const subItems = li.querySelectorAll('.toc-sub-item');
+        for (const sub of subItems)
+        {
+            if (getDisplayName(sub).includes(q)) return true;
+        }
+        return false;
+    }
+
+    let debounceTimer = null;
+
+    input.addEventListener('input', () =>
+    {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() =>
+        {
+            const q = input.value.trim().toLowerCase();
+
+            const topItems = nav.querySelectorAll(':scope > li');
+
+            if (!q)
+            {
+                /* Reset: show everything, restore collapsed state */
+                topItems.forEach(li =>
+                {
+                    li.style.display = '';
+                    const subItems = li.querySelectorAll('.toc-sub-item');
+                    subItems.forEach(s => s.style.display = '');
+                });
+                return;
+            }
+
+            topItems.forEach(li =>
+            {
+                const titleMatch = getDisplayName(li).includes(q);
+                const subMatch = hasSubMatch(li, q);
+
+                if (titleMatch || subMatch)
+                {
+                    li.style.display = '';
+                    /* Auto-expand when searching */
+                    if (li.classList.contains('toc-collapsible'))
+                    {
+                        li.classList.remove('toc-collapsed');
+                    }
+
+                    /* Filter sub-items if only some match */
+                    const subItems = li.querySelectorAll('.toc-sub-item');
+                    if (subItems.length)
+                    {
+                        subItems.forEach(sub =>
+                        {
+                            /* If parent title matched, show all children; otherwise filter by sub-item name */
+                            sub.style.display = (titleMatch || getDisplayName(sub).includes(q)) ? '' : 'none';
+                        });
+                    }
+                }
+                else
+                {
+                    li.style.display = 'none';
+                }
+            });
+        }, 120);
+    });
 }

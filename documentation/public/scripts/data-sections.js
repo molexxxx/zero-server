@@ -36,6 +36,25 @@ function populateTocSub(href, items)
     const existing = parentLi.querySelector('ul.toc-sub');
     if (existing) existing.remove();
 
+    /* Ensure parent has collapsible behaviour */
+    if (!parentLi.classList.contains('toc-collapsible'))
+    {
+        parentLi.classList.add('toc-collapsible', 'toc-collapsed');
+        parentLi.style.paddingLeft = '20px';
+
+        const toggle = document.createElement('button');
+        toggle.className = 'toc-collapse-btn';
+        toggle.setAttribute('aria-label', 'Toggle section');
+        toggle.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        toggle.addEventListener('click', (e) =>
+        {
+            e.preventDefault();
+            e.stopPropagation();
+            parentLi.classList.toggle('toc-collapsed');
+        });
+        parentLi.insertBefore(toggle, parentLi.firstChild);
+    }
+
     const sub = document.createElement('ul');
     sub.className = 'toc-sub';
 
