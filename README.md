@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-http logo" width="222" height="222">
+  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-http logo" width="300" height="300">
 </p>
 
 <h1 align="center">zero-http</h1>
