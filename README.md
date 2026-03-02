@@ -52,7 +52,7 @@ app.listen(3000)
 You can view the live documentation and playground at https://zero-http.molex.cloud, or run the demo locally:
 
 ```bash
-node documentation/full-server.js
+npm run docs
 # open http://localhost:3000
 ```
 
