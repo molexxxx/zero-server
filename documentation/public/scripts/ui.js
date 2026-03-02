@@ -194,7 +194,7 @@ function initTocToolbar()
         });
     });
 
-    /* -- Expand / Collapse all accordions ------------------------------- */
+    /* -- Expand / Collapse sidebar categories only ---------------------- */
     if (toggleBtn)
     {
         let expanded = true;   /* Start expanded */
@@ -203,9 +203,8 @@ function initTocToolbar()
         toggleBtn.addEventListener('click', () =>
         {
             expanded = !expanded;
-            document.querySelectorAll('details.acc').forEach(d => d.open = expanded);
 
-            /* Also toggle collapsible TOC categories */
+            /* Toggle only collapsible TOC categories in the sidebar */
             document.querySelectorAll('.toc-collapsible').forEach(li =>
             {
                 li.classList.toggle('toc-collapsed', !expanded);
@@ -253,7 +252,7 @@ function initTocCollapsible()
 
 /**
  * Wire the sidebar search input to filter TOC items by matching against
- * the link text (title) and the text content of the target section on the page.
+ * the display name (link text) of each item in the sidebar.
  */
 function initTocSearch()
 {
@@ -264,44 +263,23 @@ function initTocSearch()
     if (!nav) return;
 
     /**
-     * Gather searchable text for a TOC item: its own label plus the visible
-     * text content of the section it links to (descriptions, headings, etc.).
+     * Get the visible display name for a TOC list item.
      */
-    function getSearchableText(li)
+    function getDisplayName(li)
     {
         const a = li.querySelector(':scope > a');
-        let text = a ? a.textContent.toLowerCase() : '';
-
-        /* Also index the content of the linked section */
-        if (a && a.hash)
-        {
-            const target = document.getElementById(a.hash.slice(1));
-            if (target)
-            {
-                /* Grab summary/heading and first paragraph or description */
-                const summary = target.querySelector('summary');
-                const desc = target.querySelector('.acc-body > p, .acc-body > .muted, p.muted');
-                if (summary) text += ' ' + summary.textContent.toLowerCase();
-                if (desc) text += ' ' + desc.textContent.toLowerCase();
-                /* For broader matching, index all visible text (capped) */
-                const full = target.textContent || '';
-                text += ' ' + full.substring(0, 2000).toLowerCase();
-            }
-        }
-
-        return text;
+        return a ? a.textContent.trim().toLowerCase() : '';
     }
 
     /**
-     * Also check sub-items for matches.
+     * Check whether any sub-items match the query by display name.
      */
     function hasSubMatch(li, q)
     {
         const subItems = li.querySelectorAll('.toc-sub-item');
         for (const sub of subItems)
         {
-            const subText = getSearchableText(sub);
-            if (subText.includes(q)) return true;
+            if (getDisplayName(sub).includes(q)) return true;
         }
         return false;
     }
@@ -331,7 +309,7 @@ function initTocSearch()
 
             topItems.forEach(li =>
             {
-                const titleMatch = getSearchableText(li).includes(q);
+                const titleMatch = getDisplayName(li).includes(q);
                 const subMatch = hasSubMatch(li, q);
 
                 if (titleMatch || subMatch)
@@ -349,9 +327,8 @@ function initTocSearch()
                     {
                         subItems.forEach(sub =>
                         {
-                            const subText = getSearchableText(sub);
-                            /* If parent title matched, show all children; otherwise filter */
-                            sub.style.display = (titleMatch || subText.includes(q)) ? '' : 'none';
+                            /* If parent title matched, show all children; otherwise filter by sub-item name */
+                            sub.style.display = (titleMatch || getDisplayName(sub).includes(q)) ? '' : 'none';
                         });
                     }
                 }
