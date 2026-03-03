@@ -1,6 +1,6 @@
 {
   "name": "zero-http",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Zero-dependency, minimal Express-like HTTP server and tiny fetch replacement",
   "main": "index.js",
   "files": [
