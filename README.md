@@ -1,4 +1,8 @@
-# zero-http
+<p align="center">
+  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-http logo" width="300" height="300">
+</p>
+
+<h1 align="center">zero-http</h1>
 
 [![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
 [![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)
@@ -45,10 +49,10 @@ app.listen(3000)
 
 ## Demo
 
-You can view the live documentation and playground at https://zero-http.molex.cloud, or run the demo locally:
+You can view the live documentation and playground at https://z-http.com, or run the demo locally:
 
 ```bash
-node documentation/full-server.js
+npm run docs
 # open http://localhost:3000
 ```
 
