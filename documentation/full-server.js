@@ -180,8 +180,8 @@ app.get('/debug/routes', (req, res) =>
 });
 
 // --- TLS Certificates (HTTPS + WSS) ---
-const certPath = '/www/server/panel/vhost/cert/zero-http.molex.cloud/fullchain.pem';
-const keyPath = '/www/server/panel/vhost/cert/zero-http.molex.cloud/privkey.pem';
+const certPath = '/www/server/panel/vhost/cert/z-http.com/fullchain.pem';
+const keyPath = '/www/server/panel/vhost/cert/z-http.com/privkey.pem';
 const hasCerts = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
 const tlsOpts = hasCerts

@@ -49,7 +49,7 @@ app.listen(3000)
 
 ## Demo
 
-You can view the live documentation and playground at https://zero-http.molex.cloud, or run the demo locally:
+You can view the live documentation and playground at https://z-http.com, or run the demo locally:
 
 ```bash
 npm run docs
