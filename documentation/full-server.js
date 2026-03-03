@@ -179,13 +179,24 @@ app.get('/debug/routes', (req, res) =>
     res.send(JSON.stringify(app.routes(), null, 2));
 });
 
+// --- TLS Certificates (HTTPS + WSS) ---
+const certPath = '/www/server/panel/vhost/cert/z-http.com/fullchain.pem';
+const keyPath = '/www/server/panel/vhost/cert/z-http.com/privkey.pem';
+const hasCerts = fs.existsSync(certPath) && fs.existsSync(keyPath);
+
+const tlsOpts = hasCerts
+    ? { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) }
+    : undefined;
+
 // --- Server Startup ---
-const port = process.env.PORT || 3000;
-const server = app.listen(port, () =>
+const port = process.env.PORT || 7273;
+const server = app.listen(port, tlsOpts, () =>
 {
-    console.log(`zero-http full-server listening on http://localhost:${port}`);
+    const proto = hasCerts ? 'https' : 'http';
+    console.log(`zero-http full-server listening on ${proto}://localhost:${port}`);
     if (process.argv.includes('--test')) runTests(port).catch(console.error);
 });
+
 
 /** Quick smoke tests using built-in fetch */
 async function runTests(port)
