@@ -15,10 +15,20 @@ function applyMiddleware(app)
     app.use(requestId());
     app.use(helmet({
         contentSecurityPolicy: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            connectSrc: ["'self'", 'wss:', 'ws:']
+            directives: {
+                defaultSrc: ["'self'"],
+                baseUri: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrcAttr: ["'none'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                connectSrc: ["'self'", 'wss:', 'ws:'],
+                imgSrc: ["'self'", 'data:'],
+                fontSrc: ["'self'", 'https:', 'data:'],
+                formAction: ["'self'"],
+                frameAncestors: ["'self'"],
+                objectSrc: ["'none'"],
+                upgradeInsecureRequests: []
+            }
         }
     }));
     app.use(cors());
