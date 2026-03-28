@@ -25,10 +25,30 @@ export interface SchemaColumnDef {
     max?: number;
     /** Pattern constraint (string). */
     match?: RegExp;
-    /** Allowed values (string). */
+    /** Allowed values (string/enum type). */
     enum?: string[];
+    /** Allowed values (set type). */
+    values?: string[];
     /** Mass-assignment protection — exclude from bulk writes. */
     guarded?: boolean;
+    /** Precision for decimal types. */
+    precision?: number;
+    /** Scale for decimal types. */
+    scale?: number;
+    /** Length for fixed-width types (binary, varbinary, char). */
+    length?: number;
+    /** MySQL: mark column as unsigned. */
+    unsigned?: boolean;
+    /** MySQL/PG: column charset. */
+    charset?: string;
+    /** MySQL/PG: column collation. */
+    collation?: string;
+    /** MySQL/PG: column comment. */
+    comment?: string;
+    /** PG: array element type for array columns. */
+    arrayOf?: string;
+    /** PG: foreign key reference. */
+    references?: { table: string; column?: string; onDelete?: string; onUpdate?: string };
 }
 
 export const TYPES: {
@@ -42,6 +62,42 @@ export const TYPES: {
     readonly TEXT: 'text';
     readonly BLOB: 'blob';
     readonly UUID: 'uuid';
+    // Extended numeric
+    readonly BIGINT: 'bigint';
+    readonly SMALLINT: 'smallint';
+    readonly TINYINT: 'tinyint';
+    readonly DECIMAL: 'decimal';
+    readonly DOUBLE: 'double';
+    readonly REAL: 'real';
+    // Extended string/binary
+    readonly CHAR: 'char';
+    readonly BINARY: 'binary';
+    readonly VARBINARY: 'varbinary';
+    // Temporal
+    readonly TIMESTAMP: 'timestamp';
+    readonly TIME: 'time';
+    // MySQL-specific
+    readonly ENUM: 'enum';
+    readonly SET: 'set';
+    readonly MEDIUMTEXT: 'mediumtext';
+    readonly LONGTEXT: 'longtext';
+    readonly MEDIUMBLOB: 'mediumblob';
+    readonly LONGBLOB: 'longblob';
+    readonly YEAR: 'year';
+    // PostgreSQL-specific
+    readonly SERIAL: 'serial';
+    readonly BIGSERIAL: 'bigserial';
+    readonly JSONB: 'jsonb';
+    readonly INTERVAL: 'interval';
+    readonly INET: 'inet';
+    readonly CIDR: 'cidr';
+    readonly MACADDR: 'macaddr';
+    readonly MONEY: 'money';
+    readonly XML: 'xml';
+    readonly CITEXT: 'citext';
+    readonly ARRAY: 'array';
+    // SQLite
+    readonly NUMERIC: 'numeric';
 };
 
 /**

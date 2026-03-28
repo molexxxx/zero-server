@@ -443,6 +443,41 @@ function initUploads()
             fileInput.click();
         });
 
+        /* Drag-and-drop support */
+        fileDrop.addEventListener('dragover', (ev) =>
+        {
+            ev.preventDefault();
+            ev.stopPropagation();
+            fileDrop.classList.add('drag-over');
+        });
+
+        fileDrop.addEventListener('dragenter', (ev) =>
+        {
+            ev.preventDefault();
+            ev.stopPropagation();
+            fileDrop.classList.add('drag-over');
+        });
+
+        fileDrop.addEventListener('dragleave', (ev) =>
+        {
+            ev.preventDefault();
+            ev.stopPropagation();
+            fileDrop.classList.remove('drag-over');
+        });
+
+        fileDrop.addEventListener('drop', (ev) =>
+        {
+            ev.preventDefault();
+            ev.stopPropagation();
+            fileDrop.classList.remove('drag-over');
+
+            if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length)
+            {
+                fileInput.files = ev.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
         fileInput.addEventListener('change', () =>
         {
             const names = fileInput.files && fileInput.files.length

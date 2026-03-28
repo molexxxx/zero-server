@@ -530,3 +530,153 @@ describe('Security — Multipart Filename Sanitization', () => {
         }
     });
 });
+
+// ═══════════════════════════════════════════════════════════
+//  Query String Prototype Pollution
+// ═══════════════════════════════════════════════════════════
+describe('Security — Query String Prototype Pollution', () => {
+    let server, base;
+
+    beforeAll(async () => {
+        const app = createApp();
+        app.get('/q', (req, res) => {
+            res.json({
+                hasProto: '__proto__' in req.query,
+                hasConstructor: 'constructor' in req.query,
+                hasPrototype: 'prototype' in req.query,
+                keys: Object.keys(req.query),
+            });
+        });
+        server = http.createServer(app.handler);
+        await new Promise(r => server.listen(0, r));
+        base = `http://localhost:${server.address().port}`;
+    });
+
+    afterAll(() => server?.close());
+
+    it('blocks __proto__ key in query string', async () => {
+        const r = await doFetch(`${base}/q?__proto__=evil&safe=ok`);
+        expect(r.data.hasProto).toBe(false);
+        expect(r.data.keys).toContain('safe');
+    });
+
+    it('blocks constructor key in query string', async () => {
+        const r = await doFetch(`${base}/q?constructor=evil`);
+        expect(r.data.hasConstructor).toBe(false);
+    });
+
+    it('blocks prototype key in query string', async () => {
+        const r = await doFetch(`${base}/q?prototype=evil`);
+        expect(r.data.hasPrototype).toBe(false);
+    });
+
+    it('uses null-prototype object for query', async () => {
+        const r = await doFetch(`${base}/q?a=1`);
+        expect(r.data.keys).toContain('a');
+    });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  MySQL Adapter — SQL Injection Guards
+// ═══════════════════════════════════════════════════════════
+describe('Security — MySQL Adapter Injection Guards', () => {
+    const MysqlAdapter = (() => {
+        try { return require('../lib/orm/adapters/mysql'); } catch { return null; }
+    })();
+
+    const skipIf = !MysqlAdapter;
+
+    it('_safeIdent rejects malicious engine/charset values', () => {
+        if (skipIf) return;
+        const adapter = Object.create(MysqlAdapter.prototype);
+        expect(() => adapter._safeIdent('InnoDB; DROP TABLE users--')).toThrow('Invalid identifier');
+        expect(() => adapter._safeIdent("utf8mb4' OR 1=1")).toThrow('Invalid identifier');
+        expect(() => adapter._safeIdent('utf8mb4')).not.toThrow();
+        expect(() => adapter._safeIdent('utf8mb4_unicode_ci')).not.toThrow();
+    });
+
+    it('_typeMap escapes single quotes in ENUM values', () => {
+        if (skipIf) return;
+        const adapter = Object.create(MysqlAdapter.prototype);
+        const result = adapter._typeMap({ type: 'enum', enum: ["O'Brien", "normal"] });
+        expect(result).toContain("O''Brien");
+        expect(result).not.toContain("O'Brien'");
+    });
+
+    it('_typeMap escapes single quotes in SET values', () => {
+        if (skipIf) return;
+        const adapter = Object.create(MysqlAdapter.prototype);
+        const result = adapter._typeMap({ type: 'set', values: ["it's", "safe"] });
+        expect(result).toContain("it''s");
+    });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PostgreSQL Adapter — SQL Injection Guards
+// ═══════════════════════════════════════════════════════════
+describe('Security — PostgreSQL Adapter Injection Guards', () => {
+    const PgAdapter = (() => {
+        try { return require('../lib/orm/adapters/postgres'); } catch { return null; }
+    })();
+
+    const skipIf = !PgAdapter;
+
+    it('listen() rejects malicious channel names', async () => {
+        if (skipIf) return;
+        const adapter = Object.create(PgAdapter.prototype);
+        await expect(() => adapter.listen("ch; DROP TABLE users--", () => {})).rejects.toThrow('Invalid channel name');
+    });
+
+    it('_typeMap escapes single quotes in enum values', () => {
+        if (skipIf) return;
+        const adapter = Object.create(PgAdapter.prototype);
+        const result = adapter._typeMap({ type: 'enum', _name: 'status', enum: ["it's", "ok"] });
+        expect(result).toContain("it''s");
+    });
+
+    it('_typeMap escapes double quotes in enum column name', () => {
+        if (skipIf) return;
+        const adapter = Object.create(PgAdapter.prototype);
+        const result = adapter._typeMap({ type: 'enum', _name: 'col"name', enum: ["a"] });
+        expect(result).toContain('col""name');
+    });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SQLite Adapter — Pragma Injection Guards
+// ═══════════════════════════════════════════════════════════
+describe('Security — SQLite Adapter Pragma Escaping', () => {
+    const SqliteAdapter = (() => {
+        try { return require('../lib/orm/adapters/sqlite'); } catch { return null; }
+    })();
+
+    it('columns() escapes quotes in table name', () => {
+        if (!SqliteAdapter) return;
+        const db = new SqliteAdapter({ filename: ':memory:' });
+        const tableName = 'test"table';
+        db._db.exec(`CREATE TABLE "${tableName.replace(/"/g, '""')}" (id INTEGER PRIMARY KEY)`);
+        const cols = db.columns(tableName);
+        expect(cols).toHaveLength(1);
+        expect(cols[0].name).toBe('id');
+        db.close();
+    });
+
+    it('indexes() does not throw for table with quotes in name', () => {
+        if (!SqliteAdapter) return;
+        const db = new SqliteAdapter({ filename: ':memory:' });
+        const tableName = 'idx"test';
+        db._db.exec(`CREATE TABLE "${tableName.replace(/"/g, '""')}" (id INTEGER PRIMARY KEY, name TEXT)`);
+        expect(() => db.indexes(tableName)).not.toThrow();
+        db.close();
+    });
+
+    it('foreignKeys() escapes table name', () => {
+        if (!SqliteAdapter) return;
+        const db = new SqliteAdapter({ filename: ':memory:' });
+        const tableName = 'fk"test';
+        db._db.exec(`CREATE TABLE "${tableName.replace(/"/g, '""')}" (id INTEGER PRIMARY KEY)`);
+        const fks = db.foreignKeys(tableName);
+        expect(Array.isArray(fks)).toBe(true);
+        db.close();
+    });
+});

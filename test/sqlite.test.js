@@ -144,6 +144,30 @@ describe('SQLite adapter', () =>
         });
     });
 
+    // -- Type Mapping ------------------------------------
+
+    describe('expanded _typeMap', () =>
+    {
+        it('maps extended types correctly', () =>
+        {
+            db = Database.connect('sqlite');
+            const adapter = db.adapter;
+            expect(adapter._typeMap({ type: 'bigint' })).toBe('INTEGER');
+            expect(adapter._typeMap({ type: 'smallint' })).toBe('INTEGER');
+            expect(adapter._typeMap({ type: 'tinyint' })).toBe('INTEGER');
+            expect(adapter._typeMap({ type: 'decimal' })).toBe('REAL');
+            expect(adapter._typeMap({ type: 'double' })).toBe('REAL');
+            expect(adapter._typeMap({ type: 'real' })).toBe('REAL');
+            expect(adapter._typeMap({ type: 'timestamp' })).toBe('TEXT');
+            expect(adapter._typeMap({ type: 'time' })).toBe('TEXT');
+            expect(adapter._typeMap({ type: 'binary' })).toBe('BLOB');
+            expect(adapter._typeMap({ type: 'varbinary' })).toBe('BLOB');
+            expect(adapter._typeMap({ type: 'char' })).toBe('TEXT');
+            expect(adapter._typeMap({ type: 'varchar' })).toBe('TEXT');
+            expect(adapter._typeMap({ type: 'numeric' })).toBe('NUMERIC');
+        });
+    });
+
     // -- Utilities ---------------------------------------
 
     describe('utility methods', () =>
@@ -204,6 +228,96 @@ describe('SQLite adapter', () =>
         {
             db = Database.connect('sqlite');
             expect(db.adapter.tables()).toEqual([]);
+        });
+
+        it('columns() returns column info', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            const cols = db.adapter.columns('items');
+            expect(cols.length).toBeGreaterThan(0);
+            const idCol = cols.find(c => c.name === 'id');
+            expect(idCol).toBeDefined();
+            expect(idCol.pk).toBe(true);
+        });
+
+        it('indexes() returns index info', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            // SQLite may or may not have indexes; just verifying the method works
+            const idxs = db.adapter.indexes('items');
+            expect(Array.isArray(idxs)).toBe(true);
+        });
+
+        it('foreignKeys() returns an array', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            const fks = db.adapter.foreignKeys('items');
+            expect(Array.isArray(fks)).toBe(true);
+        });
+
+        it('tableStatus() returns row counts', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            await Item.create({ name: 'one' });
+            await Item.create({ name: 'two' });
+            const status = db.adapter.tableStatus('items');
+            expect(status).toHaveLength(1);
+            expect(status[0].name).toBe('items');
+            expect(status[0].rows).toBe(2);
+        });
+
+        it('tableStatus() without argument returns all tables', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            const status = db.adapter.tableStatus();
+            expect(status.length).toBeGreaterThanOrEqual(1);
+        });
+
+        it('overview() summarises the database', async () =>
+        {
+            db = Database.connect('sqlite');
+            db.register(Item);
+            await db.sync();
+            await Item.create({ name: 'x' });
+            const ov = db.adapter.overview();
+            expect(ov.tables).toBeDefined();
+            expect(ov.totalRows).toBeGreaterThanOrEqual(1);
+            expect(typeof ov.fileSize).toBe('string');
+        });
+
+        it('pageInfo() returns page statistics', () =>
+        {
+            db = Database.connect('sqlite');
+            const info = db.adapter.pageInfo();
+            expect(info.pageSize).toBeGreaterThan(0);
+            expect(typeof info.pageCount).toBe('number');
+            expect(typeof info.totalBytes).toBe('number');
+        });
+
+        it('compileOptions() returns an array of strings', () =>
+        {
+            db = Database.connect('sqlite');
+            const opts = db.adapter.compileOptions();
+            expect(Array.isArray(opts)).toBe(true);
+            expect(opts.length).toBeGreaterThan(0);
+        });
+
+        it('cacheStatus() returns cached/max counts', () =>
+        {
+            db = Database.connect('sqlite');
+            const status = db.adapter.cacheStatus();
+            expect(typeof status.cached).toBe('number');
+            expect(status.max).toBe(256);
         });
     });
 

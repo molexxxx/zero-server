@@ -567,3 +567,258 @@ describe('Cross-driver feature matrix', () =>
         expect(typeof db.adapter.createIndex).toBe('function');
     });
 });
+
+// ═══════════════════════════════════════════════════════════
+//  MySQL Adapter — _typeMap & Debug Methods (Phase 10)
+// ═══════════════════════════════════════════════════════════
+
+describe('MySQL adapter _typeMap', () =>
+{
+    let adapter;
+
+    beforeAll(() =>
+    {
+        const db = Database.connect('mysql', {
+            host: 'localhost', user: 'root', password: '', database: 'test',
+        });
+        adapter = db.adapter;
+    });
+
+    it('maps core types correctly', () =>
+    {
+        expect(adapter._typeMap({ type: 'string' })).toBe('VARCHAR(255)');
+        expect(adapter._typeMap({ type: 'string', maxLength: 100 })).toBe('VARCHAR(100)');
+        expect(adapter._typeMap({ type: 'text' })).toBe('TEXT');
+        expect(adapter._typeMap({ type: 'integer' })).toBe('INT');
+        expect(adapter._typeMap({ type: 'float' })).toBe('DOUBLE');
+        expect(adapter._typeMap({ type: 'boolean' })).toBe('TINYINT(1)');
+        expect(adapter._typeMap({ type: 'date' })).toBe('DATE');
+        expect(adapter._typeMap({ type: 'datetime' })).toBe('DATETIME');
+        expect(adapter._typeMap({ type: 'json' })).toBe('JSON');
+        expect(adapter._typeMap({ type: 'blob' })).toBe('BLOB');
+        expect(adapter._typeMap({ type: 'uuid' })).toBe('CHAR(36)');
+    });
+
+    it('maps extended numeric types', () =>
+    {
+        expect(adapter._typeMap({ type: 'bigint' })).toBe('BIGINT');
+        expect(adapter._typeMap({ type: 'smallint' })).toBe('SMALLINT');
+        expect(adapter._typeMap({ type: 'tinyint' })).toBe('TINYINT');
+        expect(adapter._typeMap({ type: 'double' })).toBe('DOUBLE');
+        expect(adapter._typeMap({ type: 'real' })).toBe('REAL');
+    });
+
+    it('maps decimal with precision and scale', () =>
+    {
+        expect(adapter._typeMap({ type: 'decimal' })).toBe('DECIMAL(10,2)');
+        expect(adapter._typeMap({ type: 'decimal', precision: 8, scale: 4 })).toBe('DECIMAL(8,4)');
+    });
+
+    it('maps temporal types', () =>
+    {
+        expect(adapter._typeMap({ type: 'timestamp' })).toBe('TIMESTAMP');
+        expect(adapter._typeMap({ type: 'time' })).toBe('TIME');
+        expect(adapter._typeMap({ type: 'year' })).toBe('YEAR');
+    });
+
+    it('maps MySQL-specific text/blob variants', () =>
+    {
+        expect(adapter._typeMap({ type: 'mediumtext' })).toBe('MEDIUMTEXT');
+        expect(adapter._typeMap({ type: 'longtext' })).toBe('LONGTEXT');
+        expect(adapter._typeMap({ type: 'mediumblob' })).toBe('MEDIUMBLOB');
+        expect(adapter._typeMap({ type: 'longblob' })).toBe('LONGBLOB');
+    });
+
+    it('maps enum with values', () =>
+    {
+        expect(adapter._typeMap({ type: 'enum', enum: ['a', 'b', 'c'] }))
+            .toBe("ENUM('a','b','c')");
+        expect(adapter._typeMap({ type: 'enum' })).toBe('VARCHAR(255)');
+    });
+
+    it('maps set with values', () =>
+    {
+        expect(adapter._typeMap({ type: 'set', values: ['r', 'w', 'd'] }))
+            .toBe("SET('r','w','d')");
+        expect(adapter._typeMap({ type: 'set' })).toBe('VARCHAR(255)');
+    });
+
+    it('maps binary types with length', () =>
+    {
+        expect(adapter._typeMap({ type: 'binary' })).toBe('BINARY(255)');
+        expect(adapter._typeMap({ type: 'binary', length: 16 })).toBe('BINARY(16)');
+        expect(adapter._typeMap({ type: 'varbinary', length: 64 })).toBe('VARBINARY(64)');
+    });
+
+    it('falls back to TEXT for unknown types', () =>
+    {
+        expect(adapter._typeMap({ type: 'unknown_type_xyz' })).toBe('TEXT');
+    });
+});
+
+describe('MySQL adapter debug methods exist', () =>
+{
+    let adapter;
+
+    beforeAll(() =>
+    {
+        const db = Database.connect('mysql', {
+            host: 'localhost', user: 'root', password: '', database: 'test',
+        });
+        adapter = db.adapter;
+    });
+
+    it('has all schema introspection debug methods', () =>
+    {
+        const methods = ['tableStatus', 'tableSize', 'indexes', 'tableCharset',
+                         'foreignKeys', 'overview', 'variables', 'processlist',
+                         'alterTable'];
+        for (const m of methods)
+        {
+            expect(typeof adapter[m]).toBe('function');
+        }
+    });
+
+    it('_q() properly escapes backticks', () =>
+    {
+        expect(adapter._q('users')).toBe('`users`');
+        expect(adapter._q('table`name')).toBe('`table``name`');
+    });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PostgreSQL Adapter — _typeMap & Debug Methods (Phase 10)
+// ═══════════════════════════════════════════════════════════
+
+describe('PostgreSQL adapter _typeMap', () =>
+{
+    let adapter;
+
+    beforeAll(() =>
+    {
+        const db = Database.connect('postgres', {
+            host: 'localhost', user: 'pg', password: 'pass', database: 'test',
+        });
+        adapter = db.adapter;
+    });
+
+    it('maps core types correctly', () =>
+    {
+        expect(adapter._typeMap({ type: 'string' })).toBe('VARCHAR(255)');
+        expect(adapter._typeMap({ type: 'string', maxLength: 50 })).toBe('VARCHAR(50)');
+        expect(adapter._typeMap({ type: 'text' })).toBe('TEXT');
+        expect(adapter._typeMap({ type: 'integer' })).toBe('INTEGER');
+        expect(adapter._typeMap({ type: 'float' })).toBe('DOUBLE PRECISION');
+        expect(adapter._typeMap({ type: 'boolean' })).toBe('BOOLEAN');
+        expect(adapter._typeMap({ type: 'date' })).toBe('DATE');
+        expect(adapter._typeMap({ type: 'datetime' })).toBe('TIMESTAMPTZ');
+        expect(adapter._typeMap({ type: 'json' })).toBe('JSONB');
+        expect(adapter._typeMap({ type: 'blob' })).toBe('BYTEA');
+        expect(adapter._typeMap({ type: 'uuid' })).toBe('UUID');
+    });
+
+    it('maps extended numeric types', () =>
+    {
+        expect(adapter._typeMap({ type: 'bigint' })).toBe('BIGINT');
+        expect(adapter._typeMap({ type: 'smallint' })).toBe('SMALLINT');
+        expect(adapter._typeMap({ type: 'tinyint' })).toBe('SMALLINT');
+        expect(adapter._typeMap({ type: 'double' })).toBe('DOUBLE PRECISION');
+        expect(adapter._typeMap({ type: 'real' })).toBe('REAL');
+        expect(adapter._typeMap({ type: 'money' })).toBe('MONEY');
+    });
+
+    it('maps decimal with precision and scale', () =>
+    {
+        expect(adapter._typeMap({ type: 'decimal' })).toBe('NUMERIC(10,2)');
+        expect(adapter._typeMap({ type: 'decimal', precision: 12, scale: 6 })).toBe('NUMERIC(12,6)');
+    });
+
+    it('maps PG-specific serial types', () =>
+    {
+        expect(adapter._typeMap({ type: 'serial' })).toBe('SERIAL');
+        expect(adapter._typeMap({ type: 'bigserial' })).toBe('BIGSERIAL');
+    });
+
+    it('maps temporal and interval types', () =>
+    {
+        expect(adapter._typeMap({ type: 'timestamp' })).toBe('TIMESTAMP');
+        expect(adapter._typeMap({ type: 'time' })).toBe('TIME');
+        expect(adapter._typeMap({ type: 'interval' })).toBe('INTERVAL');
+    });
+
+    it('maps network types', () =>
+    {
+        expect(adapter._typeMap({ type: 'inet' })).toBe('INET');
+        expect(adapter._typeMap({ type: 'cidr' })).toBe('CIDR');
+        expect(adapter._typeMap({ type: 'macaddr' })).toBe('MACADDR');
+    });
+
+    it('maps jsonb and xml', () =>
+    {
+        expect(adapter._typeMap({ type: 'jsonb' })).toBe('JSONB');
+        expect(adapter._typeMap({ type: 'xml' })).toBe('XML');
+        expect(adapter._typeMap({ type: 'citext' })).toBe('CITEXT');
+    });
+
+    it('maps array with arrayOf', () =>
+    {
+        expect(adapter._typeMap({ type: 'array', arrayOf: 'INTEGER' })).toBe('INTEGER[]');
+        expect(adapter._typeMap({ type: 'array', arrayOf: 'TEXT' })).toBe('TEXT[]');
+        expect(adapter._typeMap({ type: 'array' })).toBe('TEXT[]');
+    });
+
+    it('maps char with length', () =>
+    {
+        expect(adapter._typeMap({ type: 'char' })).toBe('CHAR(1)');
+        expect(adapter._typeMap({ type: 'char', length: 10 })).toBe('CHAR(10)');
+    });
+
+    it('maps binary types to BYTEA', () =>
+    {
+        expect(adapter._typeMap({ type: 'binary' })).toBe('BYTEA');
+        expect(adapter._typeMap({ type: 'varbinary' })).toBe('BYTEA');
+    });
+
+    it('maps enum with CHECK constraint', () =>
+    {
+        const result = adapter._typeMap({ type: 'enum', enum: ['a', 'b'], _name: 'role' });
+        expect(result).toContain('VARCHAR(255)');
+        expect(result).toContain('CHECK');
+        expect(result).toContain("'a'");
+        expect(result).toContain("'b'");
+    });
+
+    it('falls back to TEXT for unknown types', () =>
+    {
+        expect(adapter._typeMap({ type: 'unknown_type_xyz' })).toBe('TEXT');
+    });
+});
+
+describe('PostgreSQL adapter debug methods exist', () =>
+{
+    let adapter;
+
+    beforeAll(() =>
+    {
+        const db = Database.connect('postgres', {
+            host: 'localhost', user: 'pg', password: 'pass', database: 'test',
+        });
+        adapter = db.adapter;
+    });
+
+    it('has all schema introspection debug methods', () =>
+    {
+        const methods = ['tableStatus', 'tableSizeFormatted', 'indexes', 'foreignKeys',
+                         'overview', 'variables', 'processlist', 'constraints', 'comments'];
+        for (const m of methods)
+        {
+            expect(typeof adapter[m]).toBe('function');
+        }
+    });
+
+    it('has PG-specific WHERE builders', () =>
+    {
+        expect(typeof adapter._buildWherePg).toBe('function');
+        expect(typeof adapter._buildWhereFromChainPg).toBe('function');
+    });
+});
