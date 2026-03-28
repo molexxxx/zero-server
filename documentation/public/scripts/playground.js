@@ -127,7 +127,7 @@ function initWsChat()
         ws.onopen = () =>
         {
             setConnected(true);
-            appendMsg('<span style="color:#6f6">● Connected</span>');
+            appendMsg('<span class="pg-success">● Connected</span>');
         };
 
         ws.onmessage = (e) =>
@@ -137,7 +137,7 @@ function initWsChat()
                 const msg = JSON.parse(e.data);
                 if (msg.type === 'system')
                 {
-                    appendMsg(`<span style="color:#aaa">» ${escapeHtml(msg.text)}</span>`);
+                    appendMsg(`<span class="pg-muted">» ${escapeHtml(msg.text)}</span>`);
                 } else
                 {
                     appendMsg(`<strong>${escapeHtml(msg.name)}</strong>: ${escapeHtml(msg.text)}`);
@@ -151,13 +151,13 @@ function initWsChat()
         ws.onclose = () =>
         {
             setConnected(false);
-            appendMsg('<span style="color:#f66">● Disconnected</span>');
+            appendMsg('<span class="pg-danger">● Disconnected</span>');
             ws = null;
         };
 
         ws.onerror = () =>
         {
-            appendMsg('<span style="color:#f66">● Connection error</span>');
+            appendMsg('<span class="pg-danger">● Connection error</span>');
         };
     });
 
@@ -213,7 +213,7 @@ function initSseViewer()
         connectBtn.disabled = connected;
         disconnectBtn.disabled = !connected;
         status.textContent = connected ? 'Connected' : 'Disconnected';
-        status.style.color = connected ? '#6f6' : '';
+        status.style.color = connected ? 'var(--success)' : '';
     }
 
     on(connectBtn, 'click', () =>
@@ -223,19 +223,19 @@ function initSseViewer()
         es.onopen = () =>
         {
             setConnected(true);
-            appendMsg('<span style="color:#6f6">● SSE connected</span>');
+            appendMsg('<span class="pg-success">● SSE connected</span>');
         };
 
         es.onmessage = (e) =>
         {
             const ts = new Date().toLocaleTimeString();
-            appendMsg(`<span style="color:#aaa">[${ts}]</span> ${escapeHtml(e.data)}`);
+            appendMsg(`<span class="pg-muted">[${ts}]</span> ${escapeHtml(e.data)}`);
         };
 
         es.addEventListener('broadcast', (e) =>
         {
             const ts = new Date().toLocaleTimeString();
-            appendMsg(`<span style="color:#ff0">[${ts} broadcast]</span> ${escapeHtml(e.data)}`);
+            appendMsg(`<span class="pg-accent">[${ts} broadcast]</span> ${escapeHtml(e.data)}`);
         });
 
         es.onerror = () =>
@@ -243,11 +243,11 @@ function initSseViewer()
             if (es.readyState === EventSource.CLOSED)
             {
                 setConnected(false);
-                appendMsg('<span style="color:#f66">● SSE closed</span>');
+                appendMsg('<span class="pg-danger">● SSE closed</span>');
                 es = null;
             } else
             {
-                appendMsg('<span style="color:#fa0">● SSE reconnecting…</span>');
+                appendMsg('<span class="pg-warn">● SSE reconnecting…</span>');
             }
         };
     });
@@ -256,7 +256,7 @@ function initSseViewer()
     {
         if (es) { es.close(); es = null; }
         setConnected(false);
-        appendMsg('<span style="color:#f66">● Disconnected</span>');
+        appendMsg('<span class="pg-danger">● Disconnected</span>');
     });
 
     on(broadcastBtn, 'click', async () =>

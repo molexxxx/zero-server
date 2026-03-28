@@ -16,7 +16,8 @@
     "start": "node documentation/full-server.js",
     "docs": "node documentation/full-server.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:api": "node scripts/build-api-md.js"
   },
   "keywords": [
     "http",

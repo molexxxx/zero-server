@@ -76,7 +76,7 @@ function renderDocItem(item, section)
     d.id = slug;
 
     const s = document.createElement('summary');
-    s.innerHTML = `<strong>${escapeHtml(item.name)}</strong>`;
+    s.innerHTML = `<span class="acc-title">${escapeHtml(item.name)}</span>`;
     s.appendChild(createAnchorLink(slug));
     d.appendChild(s);
 
@@ -106,8 +106,8 @@ function renderDocItem(item, section)
             const tr = document.createElement('tr');
             tr.innerHTML =
                 `<td><code>${escapeHtml(opt.option)}</code></td>` +
-                `<td>${escapeHtml(opt.type || '')}</td>` +
-                `<td>${escapeHtml(opt.default != null ? String(opt.default) : '—')}</td>` +
+                `<td><span class="type-badge">${escapeHtml(opt.type || '')}</span></td>` +
+                `<td><span class="default-val">${escapeHtml(opt.default != null ? String(opt.default) : '—')}</span></td>` +
                 `<td>${escapeHtml(opt.notes || '')}</td>`;
             tbody.appendChild(tr);
         }
@@ -129,8 +129,8 @@ function renderDocItem(item, section)
         {
             const tr = document.createElement('tr');
             tr.innerHTML =
-                `<td><code>${escapeHtml(m.method || '')}</code></td>` +
-                `<td><code>${escapeHtml(m.signature || '')}</code></td>` +
+                `<td><code class="method-name">${escapeHtml(m.method || '')}</code></td>` +
+                `<td><code class="signature">${escapeHtml(m.signature || '')}</code></td>` +
                 `<td>${escapeHtml(m.description || '')}</td>`;
             tbody.appendChild(tr);
         }
@@ -154,8 +154,8 @@ function renderDocItem(item, section)
             {
                 const tr = document.createElement('tr');
                 tr.innerHTML =
-                    `<td><code>${escapeHtml(m.method || '')}</code></td>` +
-                    `<td><code>${escapeHtml(m.signature || '')}</code></td>` +
+                    `<td><code class="method-name">${escapeHtml(m.method || '')}</code></td>` +
+                    `<td><code class="signature">${escapeHtml(m.signature || '')}</code></td>` +
                     `<td>${escapeHtml(m.description || '')}</td>`;
                 tbody.appendChild(tr);
             }
@@ -366,7 +366,8 @@ async function loadDocs()
             }
         }
 
-        /* Handle initial URL hash — content didn't exist when the browser first tried */
+        /* Handle initial URL hash — content didn't exist when the browser first tried.
+         * Use generous delay to let Prism highlighting and content-visibility settle. */
         if (location.hash)
         {
             const id = location.hash.slice(1);
@@ -375,7 +376,24 @@ async function loadDocs()
             {
                 let d = target.closest('details');
                 while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
-                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+                /* Expand sidebar category for this hash */
+                if (typeof window.expandTocForId === 'function') window.expandTocForId(id);
+
+                /* Force all lazy sections to render for accurate layout */
+                const lazySections = document.querySelectorAll('.doc-section,.card.play-card,.card.upload-card,.card.proxy-card');
+                lazySections.forEach(s => s.style.contentVisibility = 'visible');
+
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        /* Re-verify after layout settles */
+                        setTimeout(() => {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setTimeout(() => lazySections.forEach(s => s.style.contentVisibility = ''), 800);
+                        }, 400);
+                    }, 150);
+                });
             }
         }
 

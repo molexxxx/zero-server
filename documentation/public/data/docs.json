@@ -567,7 +567,16 @@
           { "method": "fileSize", "signature": "adapter.fileSize()", "description": "Get the database file size in bytes. Returns 0 for in-memory databases." },
           { "method": "tables", "signature": "adapter.tables()", "description": "List all user-created table names." },
           { "method": "raw", "signature": "adapter.raw(sql, ...params)", "description": "Execute a raw SQL SELECT query with parameters." },
-          { "method": "close", "signature": "adapter.close()", "description": "Close the database connection." }
+          { "method": "transaction", "signature": "adapter.transaction(fn)", "description": "Run a function inside a SQLite transaction. Auto-commits or rolls back." },
+          { "method": "close", "signature": "adapter.close()", "description": "Close the database connection." },
+          { "method": "columns", "signature": "adapter.columns(table)", "description": "Get column info: cid, name, type, notnull, defaultValue, pk." },
+          { "method": "indexes", "signature": "adapter.indexes(table)", "description": "Get indexes: name, unique, and column names for each index." },
+          { "method": "foreignKeys", "signature": "adapter.foreignKeys(table)", "description": "Get foreign keys: id, table, from, to, onUpdate, onDelete." },
+          { "method": "tableStatus", "signature": "adapter.tableStatus([table])", "description": "Get row count per table. Omit table to get all tables." },
+          { "method": "overview", "signature": "adapter.overview()", "description": "PHPMyAdmin-style overview: all tables with row counts, total rows, and file size." },
+          { "method": "pageInfo", "signature": "adapter.pageInfo()", "description": "Get page size, page count, and total bytes — helps estimate table overhead." },
+          { "method": "compileOptions", "signature": "adapter.compileOptions()", "description": "Get the compile-time options that SQLite was built with." },
+          { "method": "cacheStatus", "signature": "adapter.cacheStatus()", "description": "Get prepared statement cache stats: { cached, max }." }
         ],
         "options": [
           { "option": "filename", "type": "string", "default": "':memory:'", "notes": "Path to the SQLite file, or ':memory:' for an in-memory database." },
@@ -595,12 +604,16 @@
           "Use checkpoint('TRUNCATE') periodically to reset the WAL file size.",
           "integrity() is useful in health-check endpoints to verify database consistency.",
           "readonly mode is perfect for read replicas — prevents accidental writes.",
-          "The adapter auto-creates parent directories — just point filename to 'Database/app.db'."
+          "The adapter auto-creates parent directories — just point filename to 'Database/app.db'.",
+          "overview() is a one-call dashboard — returns tables, row counts, total rows, and formatted file size.",
+          "columns(table) + indexes(table) + foreignKeys(table) give you full PHPMyAdmin-style schema introspection.",
+          "cacheStatus() shows how many prepared statements are cached — helps tune stmtCacheSize.",
+          "pageInfo() reveals the page size and count — useful for diagnosing storage overhead."
         ]
       },
       {
         "name": "MySQL Adapter",
-        "description": "MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, and pool health monitoring.",
+        "description": "MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, and server variables.",
         "methods": [
           { "method": "raw", "signature": "adapter.raw(sql, ...params)", "description": "Execute a raw SQL SELECT query with parameterized inputs. Returns rows." },
           { "method": "exec", "signature": "adapter.exec(sql, ...params)", "description": "Execute a raw statement (INSERT, UPDATE, DDL). Returns { affectedRows, insertId }." },
@@ -611,7 +624,16 @@
           { "method": "version", "signature": "adapter.version()", "description": "Get MySQL/MariaDB server version string." },
           { "method": "ping", "signature": "adapter.ping()", "description": "Ping the server. Returns true if healthy." },
           { "method": "transaction", "signature": "adapter.transaction(fn)", "description": "Run a function inside a transaction. Receives a connection object. Auto-commits/rollbacks." },
-          { "method": "close", "signature": "adapter.close()", "description": "Close the connection pool." }
+          { "method": "close", "signature": "adapter.close()", "description": "Close the connection pool." },
+          { "method": "tableStatus", "signature": "adapter.tableStatus([table])", "description": "SHOW TABLE STATUS — name, engine, rows, dataLength, indexLength, totalSize, autoIncrement, collation, createTime, updateTime, comment." },
+          { "method": "tableSize", "signature": "adapter.tableSize(table)", "description": "Human-readable table size: { rows, dataSize, indexSize, totalSize }." },
+          { "method": "indexes", "signature": "adapter.indexes(table)", "description": "SHOW INDEX — name, column, unique, type, cardinality." },
+          { "method": "tableCharset", "signature": "adapter.tableCharset(table)", "description": "Get charset and collation of a table." },
+          { "method": "foreignKeys", "signature": "adapter.foreignKeys(table)", "description": "Get foreign keys: constraintName, column, referencedTable, referencedColumn, onDelete, onUpdate." },
+          { "method": "overview", "signature": "adapter.overview()", "description": "Full database overview — all tables with size, rows, and formatted total size." },
+          { "method": "variables", "signature": "adapter.variables([filter])", "description": "SHOW VARIABLES — optionally filtered with a LIKE pattern." },
+          { "method": "processlist", "signature": "adapter.processlist()", "description": "SHOW PROCESSLIST — active connections: id, user, host, db, command, time, state, info." },
+          { "method": "alterTable", "signature": "adapter.alterTable(table, opts)", "description": "Alter a table's engine, charset, or collation. opts: { engine, charset, collation }." }
         ],
         "options": [
           { "option": "host", "type": "string", "default": "'localhost'", "notes": "Server hostname or IP address." },
@@ -637,12 +659,18 @@
           "Use charset: 'utf8mb4' (default) to support emojis and full Unicode.",
           "ping() is ideal for health check endpoints in load balancers.",
           "exec() is for writes that don't return rows — raw() is for SELECTs.",
-          "Credentials are validated on Database.connect() — bad host/port/user types throw immediately."
+          "Credentials are validated on Database.connect() — bad host/port/user types throw immediately.",
+          "tableStatus() + tableSize() + indexes() give you a full PHPMyAdmin-style database inspector.",
+          "overview() returns all tables with sizes and row counts — one call for a dashboard view.",
+          "variables('innodb%') filters server variables by pattern — great for tuning diagnostics.",
+          "processlist() shows active queries — use it to spot slow queries and stuck connections.",
+          "alterTable() lets you change engine/charset/collation live — e.g. migrate from MyISAM to InnoDB.",
+          "createTable supports tableOptions: { engine, charset, collation, comment } for full control."
         ]
       },
       {
         "name": "PostgreSQL Adapter",
-        "description": "PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, and real-time LISTEN/NOTIFY subscriptions.",
+        "description": "PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, constraints, and server variables.",
         "methods": [
           { "method": "raw", "signature": "adapter.raw(sql, ...params)", "description": "Execute a raw SQL SELECT query with $1-style params. Returns rows." },
           { "method": "exec", "signature": "adapter.exec(sql, ...params)", "description": "Execute a raw statement that doesn't return rows. Returns { rowCount }." },
@@ -655,7 +683,16 @@
           { "method": "ping", "signature": "adapter.ping()", "description": "Ping the server. Returns true if healthy." },
           { "method": "listen", "signature": "adapter.listen(channel, callback)", "description": "Subscribe to PG LISTEN/NOTIFY. Returns an unlisten function." },
           { "method": "transaction", "signature": "adapter.transaction(fn)", "description": "Run a function inside a transaction. Receives a client. Auto-commits/rollbacks." },
-          { "method": "close", "signature": "adapter.close()", "description": "Close the connection pool." }
+          { "method": "close", "signature": "adapter.close()", "description": "Close the connection pool." },
+          { "method": "tableStatus", "signature": "adapter.tableStatus([table])", "description": "pg_stat_user_tables — name, rows, totalSize, dataSize, indexSize, sequentialScans, indexScans, liveTuples, deadTuples, lastVacuum, lastAnalyze." },
+          { "method": "tableSizeFormatted", "signature": "adapter.tableSizeFormatted(table)", "description": "Human-readable table size: { rows, dataSize, indexSize, totalSize }." },
+          { "method": "indexes", "signature": "adapter.indexes(table)", "description": "Get indexes: name, columns, unique, type, size." },
+          { "method": "foreignKeys", "signature": "adapter.foreignKeys(table)", "description": "Get foreign keys: constraintName, column, referencedTable, referencedColumn, onDelete, onUpdate." },
+          { "method": "overview", "signature": "adapter.overview()", "description": "Full database overview — all tables with sizes, row counts, and formatted total." },
+          { "method": "variables", "signature": "adapter.variables([filter])", "description": "Get pg_settings — optionally filtered with a LIKE pattern." },
+          { "method": "processlist", "signature": "adapter.processlist()", "description": "Active backends from pg_stat_activity: pid, user, database, state, query, duration." },
+          { "method": "constraints", "signature": "adapter.constraints(table)", "description": "Get all table constraints: name, type (PRIMARY KEY, UNIQUE, CHECK, FK, EXCLUSION), definition." },
+          { "method": "comments", "signature": "adapter.comments(table)", "description": "Get table comment and column comments: { tableComment, columns: [{ name, comment }] }." }
         ],
         "options": [
           { "option": "host", "type": "string", "default": "'localhost'", "notes": "Server hostname." },
@@ -679,7 +716,14 @@
           "LISTEN/NOTIFY is PostgreSQL's built-in pub/sub — great for real-time features without polling.",
           "PostgreSQL uses JSONB natively — the ORM maps TYPES.JSON to JSONB for indexable JSON columns.",
           "poolStatus().waiting > 0 means clients are queued — consider increasing max pool size.",
-          "SERIAL PRIMARY KEY is auto-used for integer autoIncrement columns."
+          "SERIAL PRIMARY KEY is auto-used for integer autoIncrement columns.",
+          "tableStatus() + indexes() + foreignKeys() give you a full PHPMyAdmin-style database inspector.",
+          "overview() returns all tables with sizes and row counts — one call for a dashboard view.",
+          "constraints(table) shows PRIMARY KEY, UNIQUE, CHECK, FK, and EXCLUSION constraints with definitions.",
+          "comments(table) retrieves table and column comments — perfect for auto-generating documentation.",
+          "processlist() shows active backends — use it to spot long-running queries in production.",
+          "variables('work_mem') lets you inspect specific server settings for tuning.",
+          "createTable supports tableOptions: { tablespace, unlogged, comment } and column-level references."
         ]
       },
       {
@@ -1039,12 +1083,42 @@
           { "option": "BOOLEAN", "type": "const", "default": "'boolean'", "notes": "True/false (BOOLEAN/TINYINT)." },
           { "option": "DATE", "type": "const", "default": "'date'", "notes": "Date without time." },
           { "option": "DATETIME", "type": "const", "default": "'datetime'", "notes": "Date with time (TIMESTAMP)." },
-          { "option": "JSON", "type": "const", "default": "'json'", "notes": "JSON column (auto-serialize/deserialize)." },
+          { "option": "JSON", "type": "const", "default": "'json'", "notes": "JSON column (auto-serialize/deserialize). PostgreSQL maps to JSONB." },
           { "option": "TEXT", "type": "const", "default": "'text'", "notes": "Large text field (TEXT/CLOB)." },
           { "option": "BLOB", "type": "const", "default": "'blob'", "notes": "Binary data (BLOB/BYTEA)." },
-          { "option": "UUID", "type": "const", "default": "'uuid'", "notes": "UUID string. Can auto-generate with default: () => crypto.randomUUID()." }
+          { "option": "UUID", "type": "const", "default": "'uuid'", "notes": "UUID string. Can auto-generate with default: () => crypto.randomUUID()." },
+          { "option": "BIGINT", "type": "const", "default": "'bigint'", "notes": "64-bit integer (BIGINT)." },
+          { "option": "SMALLINT", "type": "const", "default": "'smallint'", "notes": "16-bit integer (SMALLINT)." },
+          { "option": "TINYINT", "type": "const", "default": "'tinyint'", "notes": "8-bit integer (TINYINT in MySQL, SMALLINT in PG)." },
+          { "option": "DECIMAL", "type": "const", "default": "'decimal'", "notes": "Fixed-precision number. Use precision/scale in schema: { precision: 10, scale: 2 }." },
+          { "option": "DOUBLE", "type": "const", "default": "'double'", "notes": "Double-precision float (DOUBLE / DOUBLE PRECISION)." },
+          { "option": "REAL", "type": "const", "default": "'real'", "notes": "Single-precision float (REAL)." },
+          { "option": "CHAR", "type": "const", "default": "'char'", "notes": "Fixed-length string. Use length in schema: { length: 10 }." },
+          { "option": "BINARY", "type": "const", "default": "'binary'", "notes": "Fixed-length binary. Use length in schema." },
+          { "option": "VARBINARY", "type": "const", "default": "'varbinary'", "notes": "Variable-length binary. Use length in schema." },
+          { "option": "TIMESTAMP", "type": "const", "default": "'timestamp'", "notes": "Timestamp with time zone (TIMESTAMPTZ in PG)." },
+          { "option": "TIME", "type": "const", "default": "'time'", "notes": "Time without date." },
+          { "option": "ENUM", "type": "const", "default": "'enum'", "notes": "MySQL ENUM. Define values: { enum: ['admin', 'user', 'guest'] }." },
+          { "option": "SET", "type": "const", "default": "'set'", "notes": "MySQL SET (multi-value). Define values: { values: ['read', 'write', 'delete'] }." },
+          { "option": "MEDIUMTEXT", "type": "const", "default": "'mediumtext'", "notes": "MySQL medium text (16 MB max)." },
+          { "option": "LONGTEXT", "type": "const", "default": "'longtext'", "notes": "MySQL long text (4 GB max)." },
+          { "option": "MEDIUMBLOB", "type": "const", "default": "'mediumblob'", "notes": "MySQL medium blob (16 MB max)." },
+          { "option": "LONGBLOB", "type": "const", "default": "'longblob'", "notes": "MySQL long blob (4 GB max)." },
+          { "option": "YEAR", "type": "const", "default": "'year'", "notes": "MySQL YEAR type (4-digit year)." },
+          { "option": "SERIAL", "type": "const", "default": "'serial'", "notes": "PostgreSQL auto-incrementing integer." },
+          { "option": "BIGSERIAL", "type": "const", "default": "'bigserial'", "notes": "PostgreSQL auto-incrementing 64-bit integer." },
+          { "option": "JSONB", "type": "const", "default": "'jsonb'", "notes": "PostgreSQL binary JSON (indexable, faster queries)." },
+          { "option": "INTERVAL", "type": "const", "default": "'interval'", "notes": "PostgreSQL time interval." },
+          { "option": "INET", "type": "const", "default": "'inet'", "notes": "PostgreSQL IPv4/IPv6 address." },
+          { "option": "CIDR", "type": "const", "default": "'cidr'", "notes": "PostgreSQL CIDR network address." },
+          { "option": "MACADDR", "type": "const", "default": "'macaddr'", "notes": "PostgreSQL MAC address." },
+          { "option": "MONEY", "type": "const", "default": "'money'", "notes": "PostgreSQL money type." },
+          { "option": "XML", "type": "const", "default": "'xml'", "notes": "PostgreSQL XML type." },
+          { "option": "CITEXT", "type": "const", "default": "'citext'", "notes": "PostgreSQL case-insensitive text (requires extension)." },
+          { "option": "ARRAY", "type": "const", "default": "'array'", "notes": "PostgreSQL array. Use arrayOf in schema: { arrayOf: 'TEXT' }." },
+          { "option": "NUMERIC", "type": "const", "default": "'numeric'", "notes": "SQLite NUMERIC affinity. Maps to REAL/INTEGER based on value." }
         ],
-        "example": "const { TYPES } = require('zero-http')\n\nstatic schema = {\n\tid:        { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\tuuid:      { type: TYPES.UUID, default: () => crypto.randomUUID() },\n\tname:      { type: TYPES.STRING, required: true, minLength: 2, maxLength: 100 },\n\tbio:       { type: TYPES.TEXT },\n\tage:       { type: TYPES.INTEGER, min: 0, max: 150 },\n\tscore:     { type: TYPES.FLOAT, default: 0.0 },\n\tactive:    { type: TYPES.BOOLEAN, default: true },\n\tbirthday:  { type: TYPES.DATE },\n\tloginAt:   { type: TYPES.DATETIME },\n\tsettings:  { type: TYPES.JSON, default: {} },\n\tavatar:    { type: TYPES.BLOB }\n}"
+        "example": "const { TYPES } = require('zero-http')\n\nstatic schema = {\n\tid:        { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\tuuid:      { type: TYPES.UUID, default: () => crypto.randomUUID() },\n\tname:      { type: TYPES.STRING, required: true, minLength: 2, maxLength: 100 },\n\tbio:       { type: TYPES.TEXT },\n\tage:       { type: TYPES.INTEGER, min: 0, max: 150 },\n\tscore:     { type: TYPES.FLOAT, default: 0.0 },\n\tactive:    { type: TYPES.BOOLEAN, default: true },\n\tbirthday:  { type: TYPES.DATE },\n\tloginAt:   { type: TYPES.DATETIME },\n\tsettings:  { type: TYPES.JSON, default: {} },\n\tavatar:    { type: TYPES.BLOB },\n\tprice:     { type: TYPES.DECIMAL, precision: 10, scale: 2 },\n\trole:      { type: TYPES.ENUM, enum: ['admin', 'user', 'guest'] },\n\tperms:     { type: TYPES.SET, values: ['read', 'write', 'delete'] },\n\ttags:      { type: TYPES.ARRAY, arrayOf: 'TEXT' },\n\tip:        { type: TYPES.INET },\n\tcode:      { type: TYPES.CHAR, length: 6 }\n}"
       }
     ]
   },

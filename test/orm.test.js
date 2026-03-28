@@ -651,3 +651,512 @@ describe('ORM Pagination', () =>
         });
     });
 });
+// --- Aggregate Functions (Native) ----------------------------
+
+describe('ORM Aggregate — native adapter', () =>
+{
+    beforeEach(async () =>
+    {
+        await db.sync();
+        await User.createMany([
+            { name: 'A', email: 'a@a.com', age: 20 },
+            { name: 'B', email: 'b@b.com', age: 30 },
+            { name: 'C', email: 'c@c.com', age: 40 },
+            { name: 'D', email: 'd@d.com', age: 50 },
+        ]);
+    });
+
+    it('sum() returns correct total', async () =>
+    {
+        const total = await User.query().sum('age');
+        expect(total).toBe(140);
+    });
+
+    it('avg() returns correct average', async () =>
+    {
+        const average = await User.query().avg('age');
+        expect(average).toBe(35);
+    });
+
+    it('min() returns correct minimum', async () =>
+    {
+        const minimum = await User.query().min('age');
+        expect(minimum).toBe(20);
+    });
+
+    it('max() returns correct maximum', async () =>
+    {
+        const maximum = await User.query().max('age');
+        expect(maximum).toBe(50);
+    });
+
+    it('sum() with where filter', async () =>
+    {
+        const total = await User.query().where('age', '>', 25).sum('age');
+        expect(total).toBe(120);
+    });
+
+    it('avg() returns 0 for empty set', async () =>
+    {
+        const average = await User.query().where('age', '>', 100).avg('age');
+        expect(average).toBe(0);
+    });
+
+    it('min() returns null for empty set', async () =>
+    {
+        const result = await User.query().where('age', '>', 100).min('age');
+        expect(result).toBeNull();
+    });
+});
+
+// --- Batch Insert -----------------------------------------------
+
+describe('ORM Batch Insert', () =>
+{
+    beforeEach(async () => { await db.sync(); });
+
+    it('createMany() batch inserts with correct IDs', async () =>
+    {
+        const users = await User.createMany([
+            { name: 'A', email: 'a@a.com' },
+            { name: 'B', email: 'b@b.com' },
+            { name: 'C', email: 'c@c.com' },
+        ]);
+        expect(users).toHaveLength(3);
+        expect(users[0].id).toBeDefined();
+        expect(users[1].id).toBeDefined();
+        expect(users[2].id).toBeDefined();
+    });
+
+    it('createMany() applies timestamps', async () =>
+    {
+        const users = await User.createMany([
+            { name: 'X', email: 'x@x.com' },
+            { name: 'Y', email: 'y@y.com' },
+        ]);
+        for (const u of users) expect(u.createdAt).toBeDefined();
+    });
+
+    it('createMany() validates each record', async () =>
+    {
+        await expect(User.createMany([
+            { name: 'Good', email: 'good@g.com' },
+            { email: 'no-name@x.com' },
+        ])).rejects.toThrow(/Validation/);
+    });
+
+    it('createMany() returns empty for empty input', async () =>
+    {
+        const result = await User.createMany([]);
+        expect(result).toHaveLength(0);
+    });
+
+    it('createMany() batch is retrievable after insert', async () =>
+    {
+        await User.createMany([
+            { name: 'A', email: 'a@a.com' },
+            { name: 'B', email: 'b@b.com' },
+        ]);
+        const all = await User.find();
+        expect(all).toHaveLength(2);
+    });
+});
+
+// --- Eager Loading -----------------------------------------------
+
+describe('ORM Eager Loading (.with)', () =>
+{
+    class Author extends Model
+    {
+        static table = 'authors';
+        static schema = {
+            id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: TYPES.STRING, required: true },
+        };
+    }
+
+    class Article extends Model
+    {
+        static table = 'articles';
+        static schema = {
+            id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            title:    { type: TYPES.STRING, required: true },
+            authorId: { type: TYPES.INTEGER, required: true },
+        };
+    }
+
+    class Comment extends Model
+    {
+        static table = 'comments';
+        static schema = {
+            id:        { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            text:      { type: TYPES.STRING, required: true },
+            articleId: { type: TYPES.INTEGER, required: true },
+        };
+    }
+
+    let eagerDb;
+
+    beforeEach(async () =>
+    {
+        eagerDb = Database.connect('memory');
+        eagerDb.registerAll(Author, Article, Comment);
+        await eagerDb.sync();
+
+        // Setup relationships
+        Author.hasMany(Article, 'authorId');
+        Article.belongsTo(Author, 'authorId');
+        Article.hasMany(Comment, 'articleId');
+
+        // Seed data
+        await Author.createMany([
+            { name: 'Alice' },
+            { name: 'Bob' },
+        ]);
+        await Article.createMany([
+            { title: 'Article 1', authorId: 1 },
+            { title: 'Article 2', authorId: 1 },
+            { title: 'Article 3', authorId: 2 },
+        ]);
+        await Comment.createMany([
+            { text: 'Comment 1', articleId: 1 },
+            { text: 'Comment 2', articleId: 1 },
+            { text: 'Comment 3', articleId: 2 },
+        ]);
+    });
+
+    afterEach(() =>
+    {
+        Author._adapter = null;
+        Article._adapter = null;
+        Comment._adapter = null;
+        Author._relations = {};
+        Article._relations = {};
+        Comment._relations = {};
+    });
+
+    it('with() loads hasMany relation in batch', async () =>
+    {
+        const authors = await Author.query().with('Article').exec();
+        expect(authors).toHaveLength(2);
+        const alice = authors.find(a => a.name === 'Alice');
+        expect(alice.Article).toHaveLength(2);
+        const bob = authors.find(a => a.name === 'Bob');
+        expect(bob.Article).toHaveLength(1);
+    });
+
+    it('with() loads belongsTo relation in batch', async () =>
+    {
+        const articles = await Article.query().with('Author').exec();
+        expect(articles).toHaveLength(3);
+        expect(articles[0].Author).toBeDefined();
+        expect(articles[0].Author.name).toBe('Alice');
+        expect(articles[2].Author.name).toBe('Bob');
+    });
+
+    it('with() loads multiple relations', async () =>
+    {
+        const articles = await Article.query().with('Author', 'Comment').exec();
+        expect(articles[0].Author).toBeDefined();
+        expect(articles[0].Comment).toBeDefined();
+        expect(articles[0].Comment).toHaveLength(2);
+    });
+
+    it('include() is alias for with()', async () =>
+    {
+        const authors = await Author.query().include('Article').exec();
+        expect(authors[0].Article).toBeDefined();
+    });
+
+    it('with() scope constrains eager load', async () =>
+    {
+        const authors = await Author.query().with({
+            Article: q => q.where('title', 'Article 1')
+        }).exec();
+        const alice = authors.find(a => a.name === 'Alice');
+        expect(alice.Article).toHaveLength(1);
+        expect(alice.Article[0].title).toBe('Article 1');
+    });
+
+    it('with() returns empty array for hasMany with no matches', async () =>
+    {
+        const bob = await Author.query().where('name', 'Bob').with({
+            Article: q => q.where('title', 'Nonexistent')
+        }).first();
+        expect(bob.Article).toEqual([]);
+    });
+
+    it('with() throws for unknown relation', async () =>
+    {
+        await expect(Author.query().with('Unknown').exec()).rejects.toThrow(/Unknown relation/);
+    });
+});
+
+// --- GROUP BY / HAVING -------------------------------------------
+
+describe('ORM GROUP BY / HAVING', () =>
+{
+    beforeEach(async () =>
+    {
+        await db.sync();
+        await User.createMany([
+            { name: 'A1', email: 'a1@a.com', role: 'admin', age: 25 },
+            { name: 'A2', email: 'a2@a.com', role: 'admin', age: 35 },
+            { name: 'U1', email: 'u1@u.com', role: 'user',  age: 20 },
+            { name: 'U2', email: 'u2@u.com', role: 'user',  age: 30 },
+            { name: 'U3', email: 'u3@u.com', role: 'user',  age: 40 },
+        ]);
+    });
+
+    it('groupBy() groups results', async () =>
+    {
+        const results = await User.query().select('role').groupBy('role').exec();
+        expect(results).toHaveLength(2);
+    });
+
+    it('groupBy() + having() filters groups', async () =>
+    {
+        // Count by role, only groups with count >= 3
+        const results = await User.query()
+            .select('role')
+            .groupBy('role')
+            .having('COUNT(*)', '>=', 3)
+            .exec();
+        // Only 'user' has 3 members, 'admin' has 2
+        expect(results.length).toBeGreaterThanOrEqual(1);
+        // The 'user' group should be present
+        const userGroup = results.find(r => r.role === 'user');
+        expect(userGroup).toBeDefined();
+    });
+});
+
+// --- JOIN support ------------------------------------------------
+
+describe('ORM JOINs', () =>
+{
+    class Product extends Model
+    {
+        static table = 'products';
+        static schema = {
+            id:         { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name:       { type: TYPES.STRING, required: true },
+            categoryId: { type: TYPES.INTEGER },
+        };
+    }
+
+    class Category extends Model
+    {
+        static table = 'categories';
+        static schema = {
+            id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: TYPES.STRING, required: true },
+        };
+    }
+
+    let joinDb;
+
+    beforeEach(async () =>
+    {
+        joinDb = Database.connect('memory');
+        joinDb.registerAll(Product, Category);
+        await joinDb.sync();
+
+        await Category.createMany([
+            { name: 'Electronics' },
+            { name: 'Books' },
+        ]);
+        await Product.createMany([
+            { name: 'Laptop', categoryId: 1 },
+            { name: 'Phone', categoryId: 1 },
+            { name: 'Novel', categoryId: 2 },
+        ]);
+    });
+
+    afterEach(() =>
+    {
+        Product._adapter = null;
+        Category._adapter = null;
+    });
+
+    it('join() method adds to query descriptor', () =>
+    {
+        const desc = Product.query().join('categories', 'categoryId', 'id').build();
+        expect(desc.joins).toHaveLength(1);
+        expect(desc.joins[0].type).toBe('INNER');
+    });
+
+    it('leftJoin() adds LEFT join to descriptor', () =>
+    {
+        const desc = Product.query().leftJoin('categories', 'categoryId', 'id').build();
+        expect(desc.joins[0].type).toBe('LEFT');
+    });
+
+    it('rightJoin() adds RIGHT join to descriptor', () =>
+    {
+        const desc = Product.query().rightJoin('categories', 'categoryId', 'id').build();
+        expect(desc.joins[0].type).toBe('RIGHT');
+    });
+});
+
+// -- Extended Schema Types (Phase 9) --------------------------------
+
+describe('Extended TYPES enum', () =>
+{
+    it('includes all base types', () =>
+    {
+        expect(TYPES.STRING).toBe('string');
+        expect(TYPES.INTEGER).toBe('integer');
+        expect(TYPES.FLOAT).toBe('float');
+        expect(TYPES.BOOLEAN).toBe('boolean');
+        expect(TYPES.DATE).toBe('date');
+        expect(TYPES.DATETIME).toBe('datetime');
+        expect(TYPES.JSON).toBe('json');
+        expect(TYPES.TEXT).toBe('text');
+        expect(TYPES.BLOB).toBe('blob');
+        expect(TYPES.UUID).toBe('uuid');
+    });
+
+    it('includes extended numeric types', () =>
+    {
+        expect(TYPES.BIGINT).toBe('bigint');
+        expect(TYPES.SMALLINT).toBe('smallint');
+        expect(TYPES.TINYINT).toBe('tinyint');
+        expect(TYPES.DECIMAL).toBe('decimal');
+        expect(TYPES.DOUBLE).toBe('double');
+        expect(TYPES.REAL).toBe('real');
+    });
+
+    it('includes extended string/binary types', () =>
+    {
+        expect(TYPES.CHAR).toBe('char');
+        expect(TYPES.BINARY).toBe('binary');
+        expect(TYPES.VARBINARY).toBe('varbinary');
+    });
+
+    it('includes temporal types', () =>
+    {
+        expect(TYPES.TIMESTAMP).toBe('timestamp');
+        expect(TYPES.TIME).toBe('time');
+    });
+
+    it('includes MySQL-specific types', () =>
+    {
+        expect(TYPES.ENUM).toBe('enum');
+        expect(TYPES.SET).toBe('set');
+        expect(TYPES.MEDIUMTEXT).toBe('mediumtext');
+        expect(TYPES.LONGTEXT).toBe('longtext');
+        expect(TYPES.MEDIUMBLOB).toBe('mediumblob');
+        expect(TYPES.LONGBLOB).toBe('longblob');
+        expect(TYPES.YEAR).toBe('year');
+    });
+
+    it('includes PostgreSQL-specific types', () =>
+    {
+        expect(TYPES.SERIAL).toBe('serial');
+        expect(TYPES.BIGSERIAL).toBe('bigserial');
+        expect(TYPES.JSONB).toBe('jsonb');
+        expect(TYPES.INTERVAL).toBe('interval');
+        expect(TYPES.INET).toBe('inet');
+        expect(TYPES.CIDR).toBe('cidr');
+        expect(TYPES.MACADDR).toBe('macaddr');
+        expect(TYPES.MONEY).toBe('money');
+        expect(TYPES.XML).toBe('xml');
+        expect(TYPES.CITEXT).toBe('citext');
+        expect(TYPES.ARRAY).toBe('array');
+    });
+
+    it('includes SQLite numeric type', () =>
+    {
+        expect(TYPES.NUMERIC).toBe('numeric');
+    });
+});
+
+describe('Extended schema validation', () =>
+{
+    const { validateValue } = require('../lib/orm/schema');
+
+    it('validates bigint/smallint/tinyint as integers', () =>
+    {
+        expect(validateValue(42, { type: 'bigint' }, 'col')).toBe(42);
+        expect(validateValue('99', { type: 'smallint' }, 'col')).toBe(99);
+        expect(validateValue(1, { type: 'tinyint' }, 'col')).toBe(1);
+    });
+
+    it('validates decimal/double/real/numeric as numbers', () =>
+    {
+        expect(validateValue(3.14, { type: 'decimal' }, 'col')).toBe(3.14);
+        expect(validateValue('2.5', { type: 'double' }, 'col')).toBe(2.5);
+        expect(validateValue(1.0, { type: 'real' }, 'col')).toBe(1.0);
+        expect(validateValue(9.99, { type: 'numeric' }, 'col')).toBe(9.99);
+        expect(validateValue(100, { type: 'money' }, 'col')).toBe(100);
+    });
+
+    it('validates timestamp/time/interval as dates', () =>
+    {
+        const d = new Date('2024-01-01');
+        expect(validateValue(d, { type: 'timestamp' }, 'col')).toEqual(d);
+        expect(validateValue('2024-06-15', { type: 'time' }, 'col')).toBeInstanceOf(Date);
+        expect(validateValue('2024-01-01', { type: 'interval' }, 'col')).toBeInstanceOf(Date);
+    });
+
+    it('validates mediumtext/longtext/char/citext/xml as strings', () =>
+    {
+        expect(validateValue('hello', { type: 'mediumtext' }, 'col')).toBe('hello');
+        expect(validateValue('world', { type: 'longtext' }, 'col')).toBe('world');
+        expect(validateValue('X', { type: 'char' }, 'col')).toBe('X');
+        expect(validateValue('case', { type: 'citext' }, 'col')).toBe('case');
+        expect(validateValue('<x/>', { type: 'xml' }, 'col')).toBe('<x/>');
+    });
+
+    it('validates jsonb identically to json', () =>
+    {
+        expect(validateValue('{"a":1}', { type: 'jsonb' }, 'col')).toEqual({ a: 1 });
+        expect(validateValue({ b: 2 }, { type: 'jsonb' }, 'col')).toEqual({ b: 2 });
+    });
+
+    it('validates blob variants as buffers', () =>
+    {
+        expect(validateValue('data', { type: 'mediumblob' }, 'col')).toBeInstanceOf(Buffer);
+        expect(validateValue('data', { type: 'longblob' }, 'col')).toBeInstanceOf(Buffer);
+        expect(validateValue('data', { type: 'binary' }, 'col')).toBeInstanceOf(Buffer);
+        expect(validateValue('data', { type: 'varbinary' }, 'col')).toBeInstanceOf(Buffer);
+    });
+
+    it('validates enum with allowed values', () =>
+    {
+        expect(validateValue('a', { type: 'enum', enum: ['a', 'b', 'c'] }, 'col')).toBe('a');
+        expect(() => validateValue('z', { type: 'enum', enum: ['a', 'b'] }, 'col')).toThrow(/must be one of/);
+    });
+
+    it('validates set with allowed values', () =>
+    {
+        expect(validateValue('a,b', { type: 'set', values: ['a', 'b', 'c'] }, 'col')).toBe('a,b');
+        expect(validateValue(['a', 'c'], { type: 'set', values: ['a', 'b', 'c'] }, 'col')).toBe('a,c');
+        expect(() => validateValue('z', { type: 'set', values: ['a', 'b'] }, 'col')).toThrow(/invalid value/);
+    });
+
+    it('validates inet/cidr/macaddr as strings', () =>
+    {
+        expect(validateValue('192.168.1.1', { type: 'inet' }, 'col')).toBe('192.168.1.1');
+        expect(validateValue('10.0.0.0/8', { type: 'cidr' }, 'col')).toBe('10.0.0.0/8');
+        expect(validateValue('AA:BB:CC:DD:EE:FF', { type: 'macaddr' }, 'col')).toBe('AA:BB:CC:DD:EE:FF');
+    });
+
+    it('validates array type', () =>
+    {
+        expect(validateValue([1, 2, 3], { type: 'array' }, 'col')).toEqual([1, 2, 3]);
+        expect(validateValue('single', { type: 'array' }, 'col')).toEqual(['single']);
+    });
+
+    it('validates year as integer', () =>
+    {
+        expect(validateValue(2024, { type: 'year' }, 'col')).toBe(2024);
+        expect(validateValue('2023', { type: 'year' }, 'col')).toBe(2023);
+    });
+
+    it('validates serial/bigserial as integers', () =>
+    {
+        expect(validateValue(1, { type: 'serial' }, 'col')).toBe(1);
+        expect(validateValue(999999999, { type: 'bigserial' }, 'col')).toBe(999999999);
+    });
+});

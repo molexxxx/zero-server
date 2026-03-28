@@ -8,6 +8,7 @@
 
 document.addEventListener('DOMContentLoaded', () =>
 {
+    initThemeToggle();
     initFeatureTabs();
     initTocSidebar();
     initTocNavigation();
@@ -17,6 +18,39 @@ document.addEventListener('DOMContentLoaded', () =>
     initScrollProgress();
     initFabTop();
 });
+
+/* -- Theme Toggle (dark / light) --------------------------------------------- */
+
+function initThemeToggle()
+{
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme()
+    {
+        return document.documentElement.getAttribute('data-theme') || 'dark';
+    }
+
+    function setTheme(theme)
+    {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('zero-theme', theme);
+    }
+
+    btn.addEventListener('click', () =>
+    {
+        setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    });
+
+    /* Listen for OS theme changes (only if user hasn't manually chosen) */
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) =>
+    {
+        if (!localStorage.getItem('zero-theme'))
+        {
+            document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark');
+        }
+    });
+}
 
 /* -- Feature Tabs ------------------------------------------------------------ */
 
@@ -138,6 +172,39 @@ function initTocNavigation()
     }
 
     /**
+     * Expand the sidebar TOC category that contains a link to the given id.
+     * @param {string} id - The hash id to find in the sidebar.
+     */
+    function expandTocForId(id)
+    {
+        const link = nav.querySelector('a[href="#' + id + '"]');
+        if (link)
+        {
+            const parentLi = link.closest('.toc-collapsible');
+            if (parentLi) parentLi.classList.remove('toc-collapsed');
+        }
+        else
+        {
+            /* If the id is a sub-item, find the parent section and expand that */
+            const target = document.getElementById(id);
+            if (!target) return;
+            const section = target.closest('.doc-section');
+            if (section && section.id)
+            {
+                const sectionLink = nav.querySelector('a[href="#' + section.id + '"]');
+                if (sectionLink)
+                {
+                    const parentLi = sectionLink.closest('.toc-collapsible');
+                    if (parentLi) parentLi.classList.remove('toc-collapsed');
+                }
+            }
+        }
+    }
+
+    /* Expose globally so other scripts (data-sections, search) can use it */
+    window.expandTocForId = expandTocForId;
+
+    /**
      * Scroll to an element by id, opening any accordion parents first.
      * @param {string} id - Target element id.
      */
@@ -146,7 +213,22 @@ function initTocNavigation()
         const target = document.getElementById(id);
         if (!target) return;
         openAncestors(target);
-        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        expandTocForId(id);
+
+        /* Force all content-visibility:auto sections to render so layout is accurate */
+        const lazySections = document.querySelectorAll('.doc-section,.card.play-card,.card.upload-card,.card.proxy-card');
+        lazySections.forEach(s => s.style.contentVisibility = 'visible');
+
+        /* Allow layout to settle, then scroll, then restore lazy rendering */
+        requestAnimationFrame(() => {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            /* Re-verify position after scroll completes in case layout shifted */
+            setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                /* Restore content-visibility after scroll settles */
+                setTimeout(() => lazySections.forEach(s => s.style.contentVisibility = ''), 800);
+            }, 350);
+        });
     }
 
     nav.addEventListener('click', (e) =>
@@ -160,6 +242,10 @@ function initTocNavigation()
         history.pushState(null, '', hash);
         scrollToId(hash.slice(1));
         document.body.classList.remove('toc-open');
+
+        /* Auto-expand the parent sidebar category when clicking its link */
+        const parentLi = a.closest('.toc-collapsible');
+        if (parentLi) parentLi.classList.remove('toc-collapsed');
 
         const btn = document.querySelector('.toc-toggle');
         if (btn) btn.setAttribute('aria-expanded', 'false');
@@ -195,6 +281,7 @@ function initTocToolbar()
         {
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            history.pushState(null, '', window.location.pathname);
         });
     });
 
@@ -385,5 +472,6 @@ function initFabTop()
     fab.addEventListener('click', () =>
     {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        history.pushState(null, '', window.location.pathname);
     });
 }

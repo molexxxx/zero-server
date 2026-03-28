@@ -463,7 +463,20 @@
         let d = target.closest('details');
         while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
 
-        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        /* Expand sidebar category */
+        if (typeof window.expandTocForId === 'function') window.expandTocForId(id);
+
+        /* Force content-visibility so layout is accurate before scrolling */
+        const lazySections = document.querySelectorAll('.doc-section,.card.play-card,.card.upload-card,.card.proxy-card');
+        lazySections.forEach(s => s.style.contentVisibility = 'visible');
+
+        requestAnimationFrame(() => {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => lazySections.forEach(s => s.style.contentVisibility = ''), 800);
+            }, 350);
+        });
     }
 
 })();
