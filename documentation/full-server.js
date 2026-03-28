@@ -1,5 +1,5 @@
 /**
- * zero-server full-server example
+ * zero-http full-server example
  * Clean entry point — config, middleware, and routes are in separate modules.
  */
 
@@ -35,7 +35,7 @@ const port = process.env.PORT || 7273;
 app.listen(port, tlsOpts, () =>
 {
     const proto = hasCerts ? 'https' : 'http';
-    console.log(`zero-server full-server listening on ${proto}://localhost:${port}`);
+    console.log(`zero-http full-server listening on ${proto}://localhost:${port}`);
     if (process.argv.includes('--test')) runTests(port).catch(console.error);
 });
 

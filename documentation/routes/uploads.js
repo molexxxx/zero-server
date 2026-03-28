@@ -65,7 +65,7 @@ function mountUploadRoutes(app)
     // Temp cleanup
     const os = require('os');
     const cleanupController = require('../controllers/cleanup');
-    app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'zero-server-uploads')));
+    app.post('/cleanup', cleanupController.cleanup(path.join(os.tmpdir(), 'zero-http-uploads')));
 }
 
 module.exports = mountUploadRoutes;
