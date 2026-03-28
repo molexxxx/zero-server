@@ -71,9 +71,23 @@ textarea{min-height:100px}
 
 /* Controls: select and pager */
 .selectWrap{display:inline-flex;align-items:center;gap:8px;background:transparent}
-.selectWrap select, #sortSelect, #sortOrder{appearance:none;-webkit-appearance:none;border:1px solid rgba(255,255,255,0.06);background:var(--panel);color:var(--text);padding:8px 12px;border-radius:10px;font-size:14px;min-width:110px}
-.selectWrap select option, #sortSelect option, #sortOrder option{background:var(--panel);color:var(--text)}
-.selectWrap select:focus, #sortSelect:focus, #sortOrder:focus{outline:none;box-shadow:0 0 0 4px rgba(88,101,242,0.12)}
+
+/* Custom select */
+.custom-select{position:relative;display:inline-block;min-width:110px;font-size:14px;user-select:none}
+.custom-select .cs-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:var(--panel);color:var(--text);cursor:pointer;transition:border-color .15s,box-shadow .15s;white-space:nowrap}
+.custom-select .cs-trigger:hover{border-color:rgba(88,101,242,0.3)}
+.custom-select.open .cs-trigger{border-color:rgba(88,101,242,0.4);box-shadow:0 0 0 4px rgba(88,101,242,0.12)}
+.custom-select .cs-arrow{width:10px;height:10px;flex-shrink:0;transition:transform .2s ease}
+.custom-select.open .cs-arrow{transform:rotate(180deg)}
+.custom-select .cs-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;min-width:100%;width:max-content;max-height:220px;overflow-y:auto;background:var(--panel);border:1px solid rgba(255,255,255,0.08);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:200;padding:4px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s}
+.custom-select.open .cs-dropdown{opacity:1;visibility:visible;transform:translateY(0)}
+.custom-select .cs-option{padding:7px 12px;border-radius:7px;color:var(--text);cursor:pointer;transition:background .1s;white-space:nowrap}
+.custom-select .cs-option:hover{background:rgba(88,101,242,0.15)}
+.custom-select .cs-option.selected{background:rgba(88,101,242,0.2);font-weight:600}
+.custom-select .cs-dropdown::-webkit-scrollbar{width:5px}
+.custom-select .cs-dropdown::-webkit-scrollbar-track{background:transparent}
+.custom-select .cs-dropdown::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+select.cs-hidden{position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none}
 
 .pager{display:flex;align-items:center;gap:10px}
 .pager button{min-width:36px;height:36px;padding:0;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.03);display:inline-flex;align-items:center;justify-content:center}

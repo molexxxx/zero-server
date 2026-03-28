@@ -13,15 +13,23 @@
 
 > **Zero-dependency backend framework for Node.js — Express-like routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, response compression, and a tiny fetch client.**
 
+> **Full API reference, interactive playground, and live demos at [z-http.com](https://z-http.com)**
+
 ## Features
 
 - **Zero dependencies** — built entirely on Node.js core APIs
 - **Express-like API** — `createApp()`, `use()`, `get()`, `post()`, `put()`, `delete()`, `patch()`, `head()`, `options()`, `all()`, `listen()`
 - **HTTP & HTTPS** — pass `{ key, cert }` to `listen()` for TLS; `req.secure` and `req.protocol` everywhere
+- **Built-in ORM** — `Database.connect()` with memory, JSON, SQLite, MySQL, PostgreSQL, and MongoDB adapters; `Model` base class with schema validation, CRUD, timestamps, soft deletes, scopes, hooks, and a fluent `Query` builder
+- **Environment config** — typed `.env` loader with schema validation, multi-environment file support (`.env.local`, `.env.production`), and property-style access (`env.PORT`)
 - **Built-in WebSocket server** — `app.ws('/path', handler)` with RFC 6455 framing, auto-ping, sub-protocols, `verifyClient`, rooms, and broadcasting via `WebSocketPool`
 - **Server-Sent Events** — `res.sse()` returns a chainable stream controller with auto-IDs, keep-alive, retry hints, and event counting
-- **9 built-in middlewares** — `cors()`, `helmet()`, `compress()`, `rateLimit()`, `logger()`, `timeout()`, `requestId()`, `cookieParser()`, and static file serving
+- **12 built-in middlewares** — `cors()`, `helmet()`, `compress()`, `rateLimit()`, `logger()`, `timeout()`, `requestId()`, `cookieParser()`, `csrf()`, `validate()`, `errorHandler()`, and static file serving
 - **5 body parsers** — `json()`, `urlencoded()`, `text()`, `raw()`, `multipart()` with HTTPS enforcement option
+- **Request validation** — `validate()` middleware with typed schema for body, query, and params — supports string, number, boolean, email, url, uuid, date, and custom validators
+- **CSRF protection** — double-submit cookie pattern with HMAC tokens, automatic rotation, and configurable paths
+- **Error handling** — `HttpError` classes for every common status code, `errorHandler()` middleware with dev/production formatting, and `createError()` factory
+- **Debug logging** — namespaced logger with levels (trace → fatal), `DEBUG=app:*` pattern matching, colors, timestamps, and JSON mode
 - **Router sub-apps** — `Router()` with nested mounting, route chaining, wildcard/param patterns, protocol-aware routing, and full introspection
 - **Request & response helpers** — content negotiation, cookies, caching, range parsing, file downloads, redirects, and more
 - **Tiny `fetch` replacement** — server-side HTTP/HTTPS client with TLS passthrough, progress callbacks, and abort support
@@ -66,6 +74,10 @@ const {
   static: serveStatic,
   rateLimit, logger, compress,
   helmet, timeout, requestId, cookieParser,
+  csrf, validate, errorHandler,
+  env, Database, Model, TYPES, Query,
+  HttpError, NotFoundError, BadRequestError, ValidationError, createError, isHttpError,
+  debug,
   WebSocketConnection, WebSocketPool, SSEStream
 } = require('zero-http')
 ```
@@ -88,6 +100,33 @@ const {
 | `timeout` | function | Request timeout middleware factory. |
 | `requestId` | function | Request ID middleware factory. |
 | `cookieParser` | function | Cookie parsing middleware factory. |
+| `csrf` | function | CSRF protection middleware factory. |
+| `validate` | function | Request validation middleware factory. |
+| `errorHandler` | function | Configurable error-handling middleware factory. |
+| `env` | proxy | Typed environment variable loader and accessor. |
+| `Database` | class | ORM database connection factory. |
+| `Model` | class | Base model class for defining database entities. |
+| `TYPES` | enum | Column type constants for model schemas. |
+| `Query` | class | Fluent query builder. |
+| `HttpError` | class | Base HTTP error class with status code. |
+| `BadRequestError` | class | 400 error. |
+| `UnauthorizedError` | class | 401 error. |
+| `ForbiddenError` | class | 403 error. |
+| `NotFoundError` | class | 404 error. |
+| `MethodNotAllowedError` | class | 405 error. |
+| `ConflictError` | class | 409 error. |
+| `GoneError` | class | 410 error. |
+| `PayloadTooLargeError` | class | 413 error. |
+| `UnprocessableEntityError` | class | 422 error. |
+| `ValidationError` | class | 422 error with field-level details. |
+| `TooManyRequestsError` | class | 429 error. |
+| `InternalError` | class | 500 error. |
+| `NotImplementedError` | class | 501 error. |
+| `BadGatewayError` | class | 502 error. |
+| `ServiceUnavailableError` | class | 503 error. |
+| `createError` | function | Create an `HttpError` by status code. |
+| `isHttpError` | function | Check if a value is an `HttpError` instance. |
+| `debug` | function | Namespaced debug logger factory. |
 | `fetch` | function | Server-side HTTP/HTTPS client. |
 | `WebSocketConnection` | class | WebSocket connection wrapper. |
 | `WebSocketPool` | class | WebSocket connection & room manager. |
@@ -596,6 +635,123 @@ app.use('/public', serveStatic('./public', {
 }))
 ```
 
+#### validate(schema, [opts])
+
+Request validation middleware. Validates `req.body`, `req.query`, and `req.params` against a typed schema. Returns `422` with detailed errors on failure.
+
+**Schema targets:** `body`, `query`, `params` — each is an object mapping field names to rules.
+
+| Rule | Type | Description |
+|---|---|---|
+| `type` | string | `'string'`, `'integer'`, `'number'`, `'float'`, `'boolean'`, `'array'`, `'date'`, `'email'`, `'url'`, `'uuid'`, `'json'`. Auto-coerces from strings. |
+| `required` | boolean | Fail if the field is missing or empty. |
+| `default` | any | Default value when absent (can be a function). |
+| `min` / `max` | number | Numeric range constraints. |
+| `minLength` / `maxLength` | number | String length constraints. |
+| `minItems` / `maxItems` | number | Array length constraints. |
+| `match` | RegExp | Pattern the value must match. |
+| `enum` | array | Whitelist of allowed values. |
+| `validate` | function | Custom validator `(value) => errorString \| undefined`. |
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `stripUnknown` | boolean | `true` | Remove fields not defined in the schema. |
+
+```js
+const { createApp, json, validate } = require('zero-http')
+const app = createApp()
+app.use(json())
+
+app.post('/users', validate({
+  body: {
+    name:  { type: 'string', required: true, minLength: 1, maxLength: 100 },
+    email: { type: 'email',  required: true },
+    age:   { type: 'integer', min: 0, max: 150 },
+    role:  { type: 'string',  enum: ['user', 'admin'], default: 'user' },
+  },
+  query: {
+    format: { type: 'string', enum: ['json', 'xml'], default: 'json' },
+  },
+}), (req, res) => {
+  // req.body and req.query are validated and sanitised
+  res.json(req.body)
+})
+```
+
+#### csrf([opts])
+
+CSRF protection using the double-submit cookie + header/body token pattern. Safe methods (`GET`, `HEAD`, `OPTIONS`) are skipped automatically and receive a token cookie. State-changing requests must include the token.
+
+The middleware checks for a matching token in:
+1. `req.headers['x-csrf-token']`
+2. `req.body._csrf` (if body is parsed)
+3. `req.query._csrf`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `cookie` | string | `'_csrf'` | Name of the double-submit cookie. |
+| `header` | string | `'x-csrf-token'` | Request header that carries the token. |
+| `saltLength` | number | `18` | Bytes of randomness for token generation. |
+| `secret` | string | (auto) | HMAC secret. Auto-generated per process if omitted. |
+| `ignoreMethods` | string[] | `['GET','HEAD','OPTIONS']` | HTTP methods to skip. |
+| `ignorePaths` | string[] | `[]` | Path prefixes to skip (e.g. `['/api/webhooks']`). |
+| `onError` | function | — | Custom error handler `(req, res) => {}`. |
+
+Tokens are rotated automatically on every state-changing request. Access the current token via `req.csrfToken`.
+
+```js
+const { createApp, csrf, cookieParser, json } = require('zero-http')
+const app = createApp()
+
+app.use(cookieParser())
+app.use(json())
+app.use(csrf())
+
+// Read the token for forms or SPAs
+app.get('/form', (req, res) => {
+  res.json({ csrfToken: req.csrfToken })
+})
+
+// State-changing requests are protected automatically
+app.post('/transfer', (req, res) => {
+  res.json({ ok: true })
+})
+```
+
+> **Note:** `csrf()` requires `cookieParser()` to be applied first so it can read the cookie token.
+
+#### errorHandler([opts])
+
+Configurable error-handling middleware that formats error responses based on environment (dev vs production), integrates with `HttpError` classes, and supports custom formatters.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `stack` | boolean | `NODE_ENV !== 'production'` | Include stack traces in responses. |
+| `log` | boolean | `true` | Log errors to console. |
+| `logger` | function | `console.error` | Custom log function. |
+| `formatter` | function | — | Custom response formatter: `(err, req, isDev) => object`. |
+| `onError` | function | — | Callback on every error: `(err, req, res) => void`. |
+
+```js
+const { createApp, errorHandler, NotFoundError } = require('zero-http')
+const app = createApp()
+
+app.use(errorHandler())
+
+app.get('/users/:id', (req, res) => {
+  throw new NotFoundError('User not found')
+  // → 404 { error: 'User not found', code: 'NOT_FOUND', statusCode: 404 }
+})
+
+// Custom formatter
+app.use(errorHandler({
+  formatter: (err, req, isDev) => ({
+    message: err.message,
+    ...(isDev && { stack: err.stack }),
+  }),
+}))
+```
+
 ---
 
 ### fetch(url, [opts])
@@ -858,6 +1014,245 @@ HTTPS awareness is built into every module:
 
 ---
 
+### Environment Config — `env`
+
+Zero-dependency typed environment variable system. Loads `.env` files, validates against a typed schema, and exposes values via property access or function call.
+
+#### File Loading Order
+
+Files are loaded in precedence order (later overrides earlier). `process.env` always takes final precedence.
+
+1. `.env` — shared defaults
+2. `.env.local` — local overrides (gitignored)
+3. `.env.{NODE_ENV}` — environment-specific (e.g. `.env.production`)
+4. `.env.{NODE_ENV}.local` — env-specific local overrides
+
+#### Schema Types
+
+`string`, `number`, `integer`, `boolean`, `port`, `array`, `json`, `url`, `enum`
+
+#### env.load(schema, [opts])
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `path` | string | `process.cwd()` | Directory to load `.env` files from. |
+| `override` | boolean | `false` | Write file values into `process.env`. |
+
+Schema fields support: `type`, `required`, `default`, `min`, `max`, `match`, `separator` (for arrays), `values` (for enums).
+
+```js
+const { env } = require('zero-http')
+
+env.load({
+  PORT:            { type: 'port',    default: 3000 },
+  DATABASE_URL:    { type: 'string',  required: true },
+  DEBUG:           { type: 'boolean', default: false },
+  ALLOWED_ORIGINS: { type: 'array',   separator: ',' },
+  LOG_LEVEL:       { type: 'enum',    values: ['debug','info','warn','error'], default: 'info' },
+})
+
+env.PORT          // => 3000 (number, not string)
+env('PORT')       // => 3000 (callable)
+env.get('PORT')   // => 3000
+env.DEBUG         // => false (boolean)
+env.require('DATABASE_URL')  // throws if missing
+env.has('PORT')   // => true
+env.all()         // => { PORT: 3000, DATABASE_URL: '...', ... }
+```
+
+Throws on startup if required variables are missing or values fail type validation — **fail fast, not at runtime**.
+
+---
+
+### Database / ORM
+
+Built-in ORM with support for memory, JSON file, SQLite, MySQL, PostgreSQL, and MongoDB. Memory and JSON adapters work out of the box; other adapters use "bring your own driver" (`better-sqlite3`, `mysql2`, `pg`, `mongodb`).
+
+#### Database.connect(adapter, [opts])
+
+| Adapter | Driver Required | Options |
+|---|---|---|
+| `'memory'` | none | — |
+| `'json'` | none | `{ path: './data.json' }` |
+| `'sqlite'` | `better-sqlite3` | `{ filename: './db.sqlite' }` |
+| `'mysql'` | `mysql2` | `{ host, port, user, password, database }` |
+| `'postgres'` | `pg` | `{ host, port, user, password, database }` |
+| `'mongo'` | `mongodb` | `{ url, database }` |
+
+```js
+const { Database, Model, TYPES } = require('zero-http')
+
+const db = Database.connect('memory')
+// or
+const db = Database.connect('sqlite', { filename: './app.db' })
+```
+
+#### Model
+
+Define database entities by extending `Model`. Register with a database and call `sync()` to create tables.
+
+| Static Property | Type | Default | Description |
+|---|---|---|---|
+| `table` | string | (required) | Table/collection name. |
+| `schema` | object | `{}` | Column definitions. |
+| `timestamps` | boolean | `false` | Auto-manage `createdAt`/`updatedAt`. |
+| `softDelete` | boolean | `false` | Use `deletedAt` instead of real deletion. |
+| `hidden` | string[] | `[]` | Fields excluded from `toJSON()` (e.g. passwords). |
+| `scopes` | object | `{}` | Named reusable query conditions. |
+
+#### TYPES
+
+Column type constants for schemas:
+
+`STRING`, `INTEGER`, `FLOAT`, `BOOLEAN`, `DATE`, `DATETIME`, `JSON`, `TEXT`, `BLOB`, `UUID`
+
+#### Schema Constraints
+
+| Constraint | Description |
+|---|---|
+| `primaryKey` | Mark as primary key. |
+| `autoIncrement` | Auto-increment (integer PKs). |
+| `required` | Value must be provided. |
+| `unique` | Enforce uniqueness. |
+| `default` | Default value (or function). |
+| `minLength` / `maxLength` | String length. |
+| `min` / `max` | Numeric range. |
+| `enum` | Allowed values whitelist. |
+| `match` | RegExp pattern. |
+| `nullable` | Allow null values. |
+
+```js
+class User extends Model {
+  static table = 'users'
+  static schema = {
+    id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+    name:     { type: TYPES.STRING,  required: true, maxLength: 100 },
+    email:    { type: TYPES.STRING,  required: true, unique: true },
+    role:     { type: TYPES.STRING,  enum: ['user', 'admin'], default: 'user' },
+    password: { type: TYPES.STRING,  required: true },
+  }
+  static timestamps = true
+  static softDelete = true
+  static hidden = ['password']
+  static scopes = {
+    active: q => q.where('active', true),
+    admins: q => q.where('role', 'admin'),
+    olderThan: (q, age) => q.where('age', '>', age),
+  }
+}
+
+db.register(User)
+await db.sync()
+```
+
+#### CRUD Operations
+
+```js
+// Create
+const user = await User.create({ name: 'Alice', email: 'a@b.com', password: 'hashed' })
+
+// Find
+const users = await User.findAll()
+const admins = await User.find({ role: 'admin' })
+const alice = await User.findById(1)
+const one = await User.findOne({ email: 'a@b.com' })
+
+// Update
+await alice.update({ name: 'Alice W.' })
+await User.updateById(1, { role: 'admin' })
+
+// Delete
+await alice.delete()
+await User.deleteById(2)
+
+// Count
+const count = await User.count({ role: 'user' })
+
+// Scopes
+const activeAdmins = await User.scope('active').scope('admins').exec()
+```
+
+#### Fluent Query Builder
+
+```js
+const results = await User.query()
+  .where('age', '>', 18)
+  .where('role', 'admin')
+  .orderBy('name', 'asc')
+  .limit(10)
+  .offset(20)
+  .select('name', 'email')
+
+// Aggregations, grouping, joins also supported
+```
+
+---
+
+### Error Classes — `HttpError`
+
+Structured HTTP error classes with status codes, machine-readable codes, and optional details. Every error extends `HttpError` and serializes cleanly to JSON.
+
+```js
+const { NotFoundError, ValidationError, createError, isHttpError } = require('zero-http')
+
+// Throw named errors
+throw new NotFoundError('User not found')
+// → { error: 'User not found', code: 'NOT_FOUND', statusCode: 404 }
+
+// With extra details
+throw new ValidationError('Invalid input', {
+  email: 'required',
+  age: 'must be >= 18',
+})
+// → { error: 'Invalid input', code: 'VALIDATION_FAILED', statusCode: 422, details: { email: '...', age: '...' } }
+
+// Factory
+throw createError(503, 'Database unavailable')
+
+// Type check
+if (isHttpError(err)) console.log(err.statusCode)
+```
+
+**Available error classes:** `HttpError`, `BadRequestError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `MethodNotAllowedError` (405), `ConflictError` (409), `GoneError` (410), `PayloadTooLargeError` (413), `UnprocessableEntityError` (422), `ValidationError` (422), `TooManyRequestsError` (429), `InternalError` (500), `NotImplementedError` (501), `BadGatewayError` (502), `ServiceUnavailableError` (503).
+
+---
+
+### Debug Logger — `debug(namespace)`
+
+Lightweight namespaced logger with levels, colors, timestamps, and pattern-based filtering via the `DEBUG` environment variable.
+
+**Levels:** `trace` (0) → `debug` (1) → `info` (2) → `warn` (3) → `error` (4) → `fatal` (5) → `silent` (6)
+
+```js
+const { debug } = require('zero-http')
+const log = debug('app:routes')
+
+log('shorthand debug message')
+log.info('server started on port %d', 3000)
+log.warn('deprecated route used')
+log.error('failed to connect', err)
+```
+
+**Environment variables:**
+
+| Variable | Example | Description |
+|---|---|---|
+| `DEBUG` | `app:*,router` | Enable specific namespaces (supports glob patterns). Prefix with `-` to exclude. |
+| `DEBUG_LEVEL` | `warn` | Minimum log level. |
+
+```bash
+# Enable all 'app:' namespaces
+DEBUG=app:* node server.js
+
+# Enable everything except noisy modules
+DEBUG=*,-verbose:* node server.js
+
+# Show only warnings and above
+DEBUG_LEVEL=warn node server.js
+```
+
+---
+
 ## Examples
 
 ### Full-Featured Server
@@ -867,8 +1262,15 @@ const path = require('path')
 const {
   createApp, Router, cors, json, urlencoded, text, compress,
   static: serveStatic, logger, rateLimit, helmet, timeout,
-  requestId, cookieParser, WebSocketPool
+  requestId, cookieParser, csrf, validate, errorHandler,
+  env, WebSocketPool
 } = require('zero-http')
+
+// Load environment config
+env.load({
+  PORT:    { type: 'port', default: 3000 },
+  SECRET:  { type: 'string', required: true },
+})
 
 const app = createApp()
 
@@ -885,19 +1287,29 @@ app.use(compress({ threshold: 512 }))
 // Rate limiting
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }))
 
-// Body parsers
+// Body parsers & security
 app.use(json({ limit: '1mb' }))
 app.use(urlencoded({ extended: true }))
 app.use(text())
-app.use(cookieParser('my-secret'))
+app.use(cookieParser(env.SECRET))
+app.use(csrf())
+
+// Error handler
+app.use(errorHandler())
 
 // Static files
 app.use(serveStatic(path.join(__dirname, 'public'), { maxAge: 86400000 }))
 
-// API routes
+// API routes with validation
 const api = Router()
 api.get('/health', (req, res) => res.json({ status: 'ok', requestId: req.id }))
 api.get('/users/:id', (req, res) => res.json({ id: req.params.id }))
+api.post('/users', validate({
+  body: {
+    name:  { type: 'string', required: true, minLength: 1 },
+    email: { type: 'email', required: true },
+  }
+}), (req, res) => res.status(201).json(req.body))
 app.use('/api', api)
 
 // WebSocket with rooms
@@ -921,7 +1333,7 @@ app.onError((err, req, res) => {
   res.status(500).json({ error: err.message })
 })
 
-app.listen(3000, () => console.log('Server running on :3000'))
+app.listen(env.PORT, () => console.log(`Server running on :${env.PORT}`))
 ```
 
 ### WebSocket Chat with Rooms
@@ -1042,14 +1454,19 @@ app.onError((err, req, res, next) => {
 lib/
   app.js              — App class (middleware pipeline, routing, listen, ws upgrade)
   body/               — body parsers (json, urlencoded, text, raw, multipart)
+  debug.js            — namespaced debug logger with levels and colors
+  env/                — typed .env loader with schema validation
+  errors.js           — HttpError classes and factory
   fetch/              — server-side HTTP/HTTPS client
   http/               — Request & Response wrappers with QoL methods
-  middleware/         — cors, helmet, logger, rateLimit, compress, static, timeout, requestId, cookieParser
+  middleware/         — cors, helmet, logger, rateLimit, compress, static, timeout,
+                        requestId, cookieParser, csrf, validate, errorHandler
+  orm/                — Database, Model, Query, adapters (memory, json, sqlite, mysql, postgres, mongo)
   router/             — Router with sub-app mounting, pattern matching & introspection
   sse/                — SSEStream controller
   ws/                 — WebSocket connection, handshake, and room management
 documentation/        — live demo server, controllers, and playground UI
-test/                 — vitest test suite (194 tests)
+test/                 — vitest test suite (970 tests)
 ```
 
 ## Testing
