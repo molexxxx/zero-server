@@ -7,16 +7,13 @@
 
 (function ()
 {
-    const canvas = document.createElement('canvas');
-    canvas.id = 'bg-canvas';
-    canvas.setAttribute('aria-hidden', 'true');
-    document.body.prepend(canvas);
-
-    const ctx = canvas.getContext('2d');
+    const mql = window.matchMedia('(min-width: 641px)');
+    let canvas, ctx;
     let width, height, time = 0;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let animId = null;
     let paused = localStorage.getItem('zero-waves-paused') === '1';
+    let active = false;
 
     function isDark()
     {
@@ -25,6 +22,7 @@
 
     function resize()
     {
+        if (!canvas) return;
         dpr = Math.min(window.devicePixelRatio || 1, 2);
         width = window.innerWidth;
         height = window.innerHeight;
@@ -174,7 +172,6 @@
         }
 
         updateIcon();
-        btn.classList.add('visible');
 
         btn.addEventListener('click', () =>
         {
@@ -188,30 +185,78 @@
             }
             else
             {
-                if (!animId) draw();
+                if (!animId && active) draw();
             }
         });
     }
 
-    document.addEventListener('DOMContentLoaded', initPauseButton);
+    /* Activate: create canvas and start drawing */
+    function activate()
+    {
+        if (active) return;
+        active = true;
+
+        canvas = document.createElement('canvas');
+        canvas.id = 'bg-canvas';
+        canvas.setAttribute('aria-hidden', 'true');
+        document.body.prepend(canvas);
+        ctx = canvas.getContext('2d');
+
+        /* Show the pause FAB */
+        const btn = document.getElementById('fab-pause');
+        if (btn) btn.classList.add('visible');
+
+        init();
+    }
+
+    /* Deactivate: tear down canvas and stop animation */
+    function deactivate()
+    {
+        if (!active) return;
+        active = false;
+
+        if (animId) { cancelAnimationFrame(animId); animId = null; }
+        if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+        canvas = null;
+        ctx = null;
+
+        /* Hide the pause FAB */
+        const btn = document.getElementById('fab-pause');
+        if (btn) btn.classList.remove('visible');
+    }
+
+    /* Respond to viewport crossing the 640px breakpoint */
+    function onBreakpoint(e)
+    {
+        if (e.matches) activate();
+        else deactivate();
+    }
+
+    mql.addEventListener('change', onBreakpoint);
+
+    function startup()
+    {
+        initPauseButton();
+        if (mql.matches) activate();
+    }
 
     /* Redraw static frame when theme changes while paused */
-    new MutationObserver(() => { if (paused) drawStatic(); })
+    new MutationObserver(() => { if (active && paused) drawStatic(); })
         .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     let resizeTimer;
     window.addEventListener('resize', () =>
     {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => { resize(); if (paused) drawStatic(); }, 150);
+        resizeTimer = setTimeout(() => { if (active) { resize(); if (paused) drawStatic(); } }, 150);
     });
 
     if (document.readyState === 'loading')
     {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', startup);
     }
     else
     {
-        init();
+        startup();
     }
 })();
