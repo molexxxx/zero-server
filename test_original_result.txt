@@ -1,0 +1,158 @@
+﻿Running zero-http v0.2.5 integration tests
+
+
+Body Parsers:
+  [32mΓ£ô[0m json parser
+  [32mΓ£ô[0m urlencoded parser
+  [32mΓ£ô[0m text parser
+  [32mΓ£ô[0m raw parser
+
+Static Serving:
+  [32mΓ£ô[0m static file serve
+
+Response Helpers:
+  [32mΓ£ô[0m res.html()
+  [32mΓ£ô[0m res.html() content-type
+  [32mΓ£ô[0m res.redirect() status 302
+  [32mΓ£ô[0m res.redirect() location header
+  [32mΓ£ô[0m res.redirect(301) status
+
+HTTP Methods:
+  [32mΓ£ô[0m PATCH method
+  [32mΓ£ô[0m all() matches GET
+  [32mΓ£ô[0m all() matches POST
+  [32mΓ£ô[0m all() matches DELETE
+
+Error Handling:
+  [32mΓ£ô[0m thrown error returns 500
+  [32mΓ£ô[0m thrown error returns error body
+  [32mΓ£ô[0m 404 for unknown route
+
+Request Helpers:
+  [32mΓ£ô[0m req.query parsing
+  [32mΓ£ô[0m req.is() type check
+  [32mΓ£ô[0m req.ip populated
+
+Multipart:
+  [32mΓ£ô[0m multipart upload parses files
+  [32mΓ£ô[0m multipart upload parses fields
+
+Rate Limiting:
+  [32mΓ£ô[0m rateLimit export exists
+
+Logger:
+  [32mΓ£ô[0m logger export exists
+
+Router Sub-Apps:
+  [32mΓ£ô[0m sub-router GET /api/items
+  [32mΓ£ô[0m sub-router GET /api/items/:id
+  [32mΓ£ô[0m sub-router POST /api/items
+  [32mΓ£ô[0m nested sub-router GET /api/v2/health
+  [32mΓ£ô[0m route chaining GET
+  [32mΓ£ô[0m route chaining POST
+
+Route Introspection:
+  [32mΓ£ô[0m app.routes() returns array
+  [32mΓ£ô[0m app.routes() is not empty
+  [32mΓ£ô[0m introspection includes /html-test
+  [32mΓ£ô[0m introspection includes sub-router routes
+  [32mΓ£ô[0m introspection includes nested sub-router routes
+
+Router Factory:
+  [32mΓ£ô[0m Router export exists
+  [32mΓ£ô[0m Router instance has .get()
+  [32mΓ£ô[0m Router instance has .post()
+  [32mΓ£ô[0m Router instance has .route()
+  [32mΓ£ô[0m Router instance has .inspect()
+
+Server-Sent Events:
+  [32mΓ£ô[0m SSE content-type header
+  [32mΓ£ô[0m SSE cache-control header
+  [32mΓ£ô[0m SSE retry field
+  [32mΓ£ô[0m SSE unnamed event
+  [32mΓ£ô[0m SSE named event type
+  [32mΓ£ô[0m SSE JSON data
+  [32mΓ£ô[0m SSE comment
+  [32mΓ£ô[0m SSE multi-line data (line 1)
+  [32mΓ£ô[0m SSE multi-line data (line 2)
+  [32mΓ£ô[0m SSE dynamic retry()
+  [32mΓ£ô[0m SSE autoId starts at startId
+  [32mΓ£ô[0m SSE autoId increments
+  [32mΓ£ô[0m SSE send() with autoId
+  [32mΓ£ô[0m SSE sendJSON()
+  [32mΓ£ô[0m SSE event() with autoId
+  [32mΓ£ô[0m SSE event() data
+  [32mΓ£ô[0m SSE comment chaining
+  [32mΓ£ô[0m SSE pad option sent initial comment
+  [32mΓ£ô[0m SSE props event emitted
+  [32mΓ£ô[0m SSE eventCount property
+  [32mΓ£ô[0m SSE bytesSent tracking
+  [32mΓ£ô[0m SSE connected property
+  [32mΓ£ô[0m SSE uptime property
+  [32mΓ£ô[0m SSE listenerCount before
+  [32mΓ£ô[0m SSE listenerCount after once()
+  [32mΓ£ô[0m SSE removeAllListeners()
+  [32mΓ£ô[0m SSE once() not fired after removeAll
+
+Compression:
+  [32mΓ£ô[0m compress export exists
+  [32mΓ£ô[0m gzip Content-Encoding header
+  [32mΓ£ô[0m Vary header set
+  [32mΓ£ô[0m gzip decompressed body correct
+  [32mΓ£ô[0m deflate Content-Encoding header
+  [32mΓ£ô[0m deflate decompressed body correct
+  [32mΓ£ô[0m no Content-Encoding when not accepted
+  [32mΓ£ô[0m uncompressed body correct
+
+WebSocket:
+  [32mΓ£ô[0m WS handshake 101 response
+  [32mΓ£ô[0m WS handshake Accept header
+  [32mΓ£ô[0m WS echo message received
+  [32mΓ£ô[0m WS welcome message on connect
+  [32mΓ£ô[0m WS ping/pong exchange
+  [32mΓ£ô[0m WS meta: received message
+  [32mΓ£ô[0m WS id starts with ws_
+  [32mΓ£ô[0m WS readyState is OPEN (1)
+  [32mΓ£ô[0m WS ip property
+  [32mΓ£ô[0m WS query param: room
+  [32mΓ£ô[0m WS query param: user
+  [32mΓ£ô[0m WS url property
+  [32mΓ£ô[0m WS maxPayload from options
+  [32mΓ£ô[0m WS connectedAt timestamp
+  [32mΓ£ô[0m WS uptime property
+  [32mΓ£ô[0m WS bufferedAmount property
+  [32mΓ£ô[0m WS data store is object
+  [32mΓ£ô[0m WS sendJSON sends valid JSON
+  [32mΓ£ô[0m WS verifyClient rejects unauthorized
+  [32mΓ£ô[0m WS verifyClient accepts authorized
+  [32mΓ£ô[0m WS sub-protocol negotiated
+  [32mΓ£ô[0m WS events: received response
+  [32mΓ£ô[0m WS off() removed listener
+  [32mΓ£ô[0m WS listenerCount() after off()
+  [32mΓ£ô[0m WS 404 for unknown path
+
+Fetch HTTPS Awareness:
+  [32mΓ£ô[0m fetch response secure=false for http
+  [32mΓ£ô[0m fetch response url property
+
+Body Parser requireSecure:
+  [32mΓ£ô[0m json parser requireSecure rejects HTTP with 403
+  [32mΓ£ô[0m json parser requireSecure error message
+
+Router Secure Routes:
+  [32mΓ£ô[0m secure-only route 404 over HTTP
+  [32mΓ£ô[0m http-only route matches HTTP
+  [32mΓ£ô[0m http-only route returns correct body
+  [32mΓ£ô[0m normal route matches HTTP
+  [32mΓ£ô[0m introspection secure=true on secure route
+  [32mΓ£ô[0m introspection secure=false on http-only route
+  [32mΓ£ô[0m introspection no secure flag on normal route
+  [32mΓ£ô[0m Router convenience method passes secure option
+  [32mΓ£ô[0m route() chain passes secure option
+
+HTTPS Support:
+  [32mΓ£ô[0m app.listen() exists
+  [32mΓ£ô[0m app.close() exists
+  [32mΓ£ô[0m HTTPS listen API available (requires key/cert for actual use)
+
+116 passed, 0 failed

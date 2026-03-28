@@ -1,1 +1,1 @@
-exports.getRoot = (req, res) => res.json({ ok: true, msg: 'zero-http full-server example' });
+exports.getRoot = (req, res) => res.json({ ok: true, msg: 'zero-server full-server example' });

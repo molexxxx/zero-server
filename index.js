@@ -1,6 +1,6 @@
 /**
- * @module zero-http
- * @description Public entry point for the zero-http package.
+ * @module zero-server
+ * @description Public entry point for the zero-server package.
  *              Re-exports every middleware, the app factory, and the fetch helper.
  */
 const App = require('./lib/app');
@@ -12,8 +12,19 @@ const serveStatic = require('./lib/middleware/static');
 const rateLimit = require('./lib/middleware/rateLimit');
 const logger = require('./lib/middleware/logger');
 const compress = require('./lib/middleware/compress');
-const { WebSocketConnection } = require('./lib/ws');
+const helmet = require('./lib/middleware/helmet');
+const timeout = require('./lib/middleware/timeout');
+const requestId = require('./lib/middleware/requestId');
+const cookieParser = require('./lib/middleware/cookieParser');
+const csrf = require('./lib/middleware/csrf');
+const validate = require('./lib/middleware/validator');
+const errorHandler = require('./lib/middleware/errorHandler');
+const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
+const env = require('./lib/env');
+const { Database, Model, TYPES, Query } = require('./lib/orm');
+const errors = require('./lib/errors');
+const debug = require('./lib/debug');
 
 module.exports = {
     /**
@@ -52,9 +63,59 @@ module.exports = {
     logger,
     /** @see module:compress */
     compress,
+    /** @see module:helmet */
+    helmet,
+    /** @see module:timeout */
+    timeout,
+    /** @see module:requestId */
+    requestId,
+    /** @see module:cookieParser */
+    cookieParser,
+    /** @see module:csrf */
+    csrf,
+    /** @see module:validator */
+    validate,
+    /** @see module:middleware/errorHandler */
+    errorHandler,
+    // env
+    /** @see module:env */
+    env,
+    // ORM
+    /** @see module:orm */
+    Database,
+    /** @see module:orm/model */
+    Model,
+    /** @see module:orm/schema */
+    TYPES,
+    /** @see module:orm/query */
+    Query,
+    // Error handling & debugging
+    /** @see module:errors */
+    HttpError: errors.HttpError,
+    BadRequestError: errors.BadRequestError,
+    UnauthorizedError: errors.UnauthorizedError,
+    ForbiddenError: errors.ForbiddenError,
+    NotFoundError: errors.NotFoundError,
+    MethodNotAllowedError: errors.MethodNotAllowedError,
+    ConflictError: errors.ConflictError,
+    GoneError: errors.GoneError,
+    PayloadTooLargeError: errors.PayloadTooLargeError,
+    UnprocessableEntityError: errors.UnprocessableEntityError,
+    ValidationError: errors.ValidationError,
+    TooManyRequestsError: errors.TooManyRequestsError,
+    InternalError: errors.InternalError,
+    NotImplementedError: errors.NotImplementedError,
+    BadGatewayError: errors.BadGatewayError,
+    ServiceUnavailableError: errors.ServiceUnavailableError,
+    createError: errors.createError,
+    isHttpError: errors.isHttpError,
+    /** @see module:debug */
+    debug,
     // classes (for advanced / direct usage)
     /** @see module:ws/connection */
     WebSocketConnection,
+    /** @see module:ws/room */
+    WebSocketPool,
     /** @see module:sse/stream */
     SSEStream,
 };

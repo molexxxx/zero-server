@@ -1,10 +1,12 @@
 {
-  "name": "zero-http",
+  "name": "zero-server",
   "version": "0.2.5",
-  "description": "Zero-dependency, minimal Express-like HTTP server and tiny fetch replacement",
+  "description": "Zero-dependency backend framework with routing, ORM, WebSocket, SSE, security middleware, and more",
   "main": "index.js",
+  "types": "types/index.d.ts",
   "files": [
     "lib",
+    "types",
     "documentation",
     "index.js",
     "README.md",
@@ -13,7 +15,8 @@
   "scripts": {
     "start": "node documentation/full-server.js",
     "docs": "node documentation/full-server.js",
-    "test": "node --test"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "http",
@@ -23,16 +26,16 @@
     "fetch",
     "multipart",
     "static",
-    "zero-http"
+    "zero-server"
   ],
   "author": "Anthony Wiedman",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonywied17/zero-http-npm.git"
+    "url": "git+https://github.com/tonywied17/zero-server.git"
   },
   "bugs": {
-    "url": "https://github.com/tonywied17/zero-http-npm/issues"
+    "url": "https://github.com/tonywied17/zero-server/issues"
   },
   "homepage": "https://z-http.com",
   "engines": {
@@ -40,5 +43,12 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "better-sqlite3": "^12.8.0",
+    "mongodb": "^7.1.1",
+    "mysql2": "^3.20.0",
+    "pg": "^8.20.0",
+    "vitest": "^4.1.2"
   }
 }
