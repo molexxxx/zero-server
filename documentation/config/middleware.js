@@ -13,7 +13,14 @@ function applyMiddleware(app)
 {
     app.use(logger({ format: 'dev' }));
     app.use(requestId());
-    app.use(helmet());
+    app.use(helmet({
+        contentSecurityPolicy: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            connectSrc: ["'self'", 'wss:', 'ws:']
+        }
+    }));
     app.use(cors());
     app.use(compress());
     app.use(timeout(30000));
