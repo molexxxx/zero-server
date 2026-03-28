@@ -573,7 +573,7 @@
           { "method": "indexes", "signature": "adapter.indexes(table)", "description": "Get indexes: name, unique, and column names for each index." },
           { "method": "foreignKeys", "signature": "adapter.foreignKeys(table)", "description": "Get foreign keys: id, table, from, to, onUpdate, onDelete." },
           { "method": "tableStatus", "signature": "adapter.tableStatus([table])", "description": "Get row count per table. Omit table to get all tables." },
-          { "method": "overview", "signature": "adapter.overview()", "description": "PHPMyAdmin-style overview: all tables with row counts, total rows, and file size." },
+          { "method": "overview", "signature": "adapter.overview()", "description": "Database overview: all tables with row counts, total rows, and file size." },
           { "method": "pageInfo", "signature": "adapter.pageInfo()", "description": "Get page size, page count, and total bytes — helps estimate table overhead." },
           { "method": "compileOptions", "signature": "adapter.compileOptions()", "description": "Get the compile-time options that SQLite was built with." },
           { "method": "cacheStatus", "signature": "adapter.cacheStatus()", "description": "Get prepared statement cache stats: { cached, max }." }
@@ -606,14 +606,14 @@
           "readonly mode is perfect for read replicas — prevents accidental writes.",
           "The adapter auto-creates parent directories — just point filename to 'Database/app.db'.",
           "overview() is a one-call dashboard — returns tables, row counts, total rows, and formatted file size.",
-          "columns(table) + indexes(table) + foreignKeys(table) give you full PHPMyAdmin-style schema introspection.",
+          "columns(table) + indexes(table) + foreignKeys(table) give you full schema introspection.",
           "cacheStatus() shows how many prepared statements are cached — helps tune stmtCacheSize.",
           "pageInfo() reveals the page size and count — useful for diagnosing storage overhead."
         ]
       },
       {
         "name": "MySQL Adapter",
-        "description": "MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, and server variables.",
+        "description": "MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and built-in debug methods for table status, indexes, foreign keys, and server variables.",
         "methods": [
           { "method": "raw", "signature": "adapter.raw(sql, ...params)", "description": "Execute a raw SQL SELECT query with parameterized inputs. Returns rows." },
           { "method": "exec", "signature": "adapter.exec(sql, ...params)", "description": "Execute a raw statement (INSERT, UPDATE, DDL). Returns { affectedRows, insertId }." },
@@ -660,7 +660,7 @@
           "ping() is ideal for health check endpoints in load balancers.",
           "exec() is for writes that don't return rows — raw() is for SELECTs.",
           "Credentials are validated on Database.connect() — bad host/port/user types throw immediately.",
-          "tableStatus() + tableSize() + indexes() give you a full PHPMyAdmin-style database inspector.",
+          "tableStatus() + tableSize() + indexes() give you a full database inspector.",
           "overview() returns all tables with sizes and row counts — one call for a dashboard view.",
           "variables('innodb%') filters server variables by pattern — great for tuning diagnostics.",
           "processlist() shows active queries — use it to spot slow queries and stuck connections.",
@@ -670,7 +670,7 @@
       },
       {
         "name": "PostgreSQL Adapter",
-        "description": "PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, constraints, and server variables.",
+        "description": "PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and built-in debug methods for table status, indexes, foreign keys, constraints, and server variables.",
         "methods": [
           { "method": "raw", "signature": "adapter.raw(sql, ...params)", "description": "Execute a raw SQL SELECT query with $1-style params. Returns rows." },
           { "method": "exec", "signature": "adapter.exec(sql, ...params)", "description": "Execute a raw statement that doesn't return rows. Returns { rowCount }." },
@@ -717,7 +717,7 @@
           "PostgreSQL uses JSONB natively — the ORM maps TYPES.JSON to JSONB for indexable JSON columns.",
           "poolStatus().waiting > 0 means clients are queued — consider increasing max pool size.",
           "SERIAL PRIMARY KEY is auto-used for integer autoIncrement columns.",
-          "tableStatus() + indexes() + foreignKeys() give you a full PHPMyAdmin-style database inspector.",
+          "tableStatus() + indexes() + foreignKeys() give you a full database inspector.",
           "overview() returns all tables with sizes and row counts — one call for a dashboard view.",
           "constraints(table) shows PRIMARY KEY, UNIQUE, CHECK, FK, and EXCLUSION constraints with definitions.",
           "comments(table) retrieves table and column comments — perfect for auto-generating documentation.",

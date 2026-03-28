@@ -668,7 +668,7 @@ describe('MySQL adapter debug methods exist', () =>
         adapter = db.adapter;
     });
 
-    it('has all PHPMyAdmin-style debug methods', () =>
+    it('has all schema introspection debug methods', () =>
     {
         const methods = ['tableStatus', 'tableSize', 'indexes', 'tableCharset',
                          'foreignKeys', 'overview', 'variables', 'processlist',
@@ -806,7 +806,7 @@ describe('PostgreSQL adapter debug methods exist', () =>
         adapter = db.adapter;
     });
 
-    it('has all PHPMyAdmin-style debug methods', () =>
+    it('has all schema introspection debug methods', () =>
     {
         const methods = ['tableStatus', 'tableSizeFormatted', 'indexes', 'foreignKeys',
                          'overview', 'variables', 'processlist', 'constraints', 'comments'];

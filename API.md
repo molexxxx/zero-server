@@ -1412,7 +1412,7 @@ The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-ba
 | `indexes` | `adapter.indexes(table)` | Get indexes: name, unique, and column names for each index. |
 | `foreignKeys` | `adapter.foreignKeys(table)` | Get foreign keys: id, table, from, to, onUpdate, onDelete. |
 | `tableStatus` | `adapter.tableStatus([table])` | Get row count per table. Omit table to get all tables. |
-| `overview` | `adapter.overview()` | PHPMyAdmin-style overview: all tables with row counts, total rows, and file size. |
+| `overview` | `adapter.overview()` | Database overview: all tables with row counts, total rows, and file size. |
 | `pageInfo` | `adapter.pageInfo()` | Get page size, page count, and total bytes — helps estimate table overhead. |
 | `compileOptions` | `adapter.compileOptions()` | Get the compile-time options that SQLite was built with. |
 | `cacheStatus` | `adapter.cacheStatus()` | Get prepared statement cache stats: { cached, max }. |
@@ -1483,14 +1483,14 @@ const replica = Database.connect('sqlite', {
 > **Tip:** readonly mode is perfect for read replicas — prevents accidental writes.
 > **Tip:** The adapter auto-creates parent directories — just point filename to 'Database/app.db'.
 > **Tip:** overview() is a one-call dashboard — returns tables, row counts, total rows, and formatted file size.
-> **Tip:** columns(table) + indexes(table) + foreignKeys(table) give you full PHPMyAdmin-style schema introspection.
+> **Tip:** columns(table) + indexes(table) + foreignKeys(table) give you full schema introspection.
 > **Tip:** cacheStatus() shows how many prepared statements are cached — helps tune stmtCacheSize.
 > **Tip:** pageInfo() reveals the page size and count — useful for diagnosing storage overhead.
 
 
 ### MySQL Adapter
 
-MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, and server variables.
+MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and built-in debug methods for table status, indexes, foreign keys, and server variables.
 
 #### Methods
 
@@ -1583,7 +1583,7 @@ await db.adapter.exec(
 > **Tip:** ping() is ideal for health check endpoints in load balancers.
 > **Tip:** exec() is for writes that don't return rows — raw() is for SELECTs.
 > **Tip:** Credentials are validated on Database.connect() — bad host/port/user types throw immediately.
-> **Tip:** tableStatus() + tableSize() + indexes() give you a full PHPMyAdmin-style database inspector.
+> **Tip:** tableStatus() + tableSize() + indexes() give you a full database inspector.
 > **Tip:** overview() returns all tables with sizes and row counts — one call for a dashboard view.
 > **Tip:** variables('innodb%') filters server variables by pattern — great for tuning diagnostics.
 > **Tip:** processlist() shows active queries — use it to spot slow queries and stuck connections.
@@ -1593,7 +1593,7 @@ await db.adapter.exec(
 
 ### PostgreSQL Adapter
 
-PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and PHPMyAdmin-style debug methods for table status, indexes, foreign keys, constraints, and server variables.
+PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and built-in debug methods for table status, indexes, foreign keys, constraints, and server variables.
 
 #### Methods
 
@@ -1695,7 +1695,7 @@ const admins = await db.adapter.raw(
 > **Tip:** PostgreSQL uses JSONB natively — the ORM maps TYPES.JSON to JSONB for indexable JSON columns.
 > **Tip:** poolStatus().waiting > 0 means clients are queued — consider increasing max pool size.
 > **Tip:** SERIAL PRIMARY KEY is auto-used for integer autoIncrement columns.
-> **Tip:** tableStatus() + indexes() + foreignKeys() give you a full PHPMyAdmin-style database inspector.
+> **Tip:** tableStatus() + indexes() + foreignKeys() give you a full database inspector.
 > **Tip:** overview() returns all tables with sizes and row counts — one call for a dashboard view.
 > **Tip:** constraints(table) shows PRIMARY KEY, UNIQUE, CHECK, FK, and EXCLUSION constraints with definitions.
 > **Tip:** comments(table) retrieves table and column comments — perfect for auto-generating documentation.
