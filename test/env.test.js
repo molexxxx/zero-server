@@ -238,3 +238,56 @@ describe('Env — accessor patterns', () =>
         expect(env.OVERRIDE).toBe('from_env');
     });
 });
+
+describe('Env — process.env sync', () =>
+{
+    const originalEnv = { ...process.env };
+
+    afterEach(() =>
+    {
+        for (const k of Object.keys(process.env))
+        {
+            if (!(k in originalEnv)) delete process.env[k];
+        }
+        Object.assign(process.env, originalEnv);
+    });
+
+    it('syncs coerced values to process.env by default', () =>
+    {
+        process.env.SYNC_PORT = '3000';
+        env.load({ SYNC_PORT: { type: 'port' } });
+        // process.env stores strings, but the value should be there
+        expect(process.env.SYNC_PORT).toBe('3000');
+    });
+
+    it('syncs default values to process.env', () =>
+    {
+        delete process.env.SYNC_DEF;
+        env.load({ SYNC_DEF: { type: 'string', default: 'hello' } });
+        expect(process.env.SYNC_DEF).toBe('hello');
+    });
+
+    it('syncs boolean defaults to process.env as strings', () =>
+    {
+        delete process.env.SYNC_BOOL;
+        env.load({ SYNC_BOOL: { type: 'boolean', default: false } });
+        expect(process.env.SYNC_BOOL).toBe('false');
+    });
+
+    it('syncs array values to process.env as JSON', () =>
+    {
+        process.env.SYNC_ARR = 'a,b,c';
+        env.load({ SYNC_ARR: { type: 'array', separator: ',' } });
+        expect(process.env.SYNC_ARR).toBe('["a","b","c"]');
+    });
+
+    it('does not sync when override is explicitly false', () =>
+    {
+        delete process.env.NO_SYNC;
+        env.load(
+            { NO_SYNC: { type: 'string', default: 'should_not_sync' } },
+            { override: false }
+        );
+        expect(process.env.NO_SYNC).toBeUndefined();
+    });
+});

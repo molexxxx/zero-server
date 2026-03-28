@@ -39,4 +39,11 @@ document.addEventListener('DOMContentLoaded', () =>
 
     /* Data-driven documentation sections */
     loadDocs().catch(() => {});
+
+    /* Fetch and display package version */
+    fetch('/api/version').then(r => r.json()).then(d =>
+    {
+        const badge = document.getElementById('version-badge');
+        if (badge && d.version) badge.textContent = 'v' + d.version;
+    }).catch(() => {});
 });

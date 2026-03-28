@@ -1,12 +1,29 @@
 const fs = require('fs');
 
-const CERT_PATH = '/www/server/panel/vhost/cert/z-http.com/fullchain.pem';
-const KEY_PATH  = '/www/server/panel/vhost/cert/z-http.com/privkey.pem';
+/**
+ * Resolve TLS certificate paths from environment variables.
+ * Falls back to HTTP when certs are missing or unreadable.
+ */
+const certPath = process.env.TLS_CERT || '';
+const keyPath  = process.env.TLS_KEY  || '';
 
-const hasCerts = fs.existsSync(CERT_PATH) && fs.existsSync(KEY_PATH);
+let hasCerts = false;
+let tlsOpts;
 
-const tlsOpts = hasCerts
-    ? { cert: fs.readFileSync(CERT_PATH), key: fs.readFileSync(KEY_PATH) }
-    : undefined;
+if (certPath && keyPath)
+{
+    try
+    {
+        if (fs.existsSync(certPath) && fs.existsSync(keyPath))
+        {
+            tlsOpts = { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
+            hasCerts = true;
+        }
+    }
+    catch (e)
+    {
+        console.warn('TLS: could not load certificates, falling back to HTTP —', e.message);
+    }
+}
 
 module.exports = { hasCerts, tlsOpts };

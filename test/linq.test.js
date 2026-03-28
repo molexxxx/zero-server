@@ -612,3 +612,640 @@ describe('LINQ chain combinations', () =>
         expect(users.every(u => u.age >= minAge)).toBe(true);
     });
 });
+
+// -- New LINQ C# Parity Methods -------------------------
+
+describe('Query: orderByDescending()', () =>
+{
+    it('is an alias for orderByDesc', async () =>
+    {
+        const users = await User.query().orderByDescending('score').take(3);
+        expect(users[0].score).toBe(150);
+        expect(users[2].score).toBe(130);
+    });
+});
+
+describe('Query: firstOrDefault()', () =>
+{
+    it('returns the first record', async () =>
+    {
+        const user = await User.query().firstOrDefault();
+        expect(user).not.toBeNull();
+    });
+
+    it('returns null when no results', async () =>
+    {
+        const user = await User.query().where('name', 'Ghost').firstOrDefault();
+        expect(user).toBeNull();
+    });
+});
+
+describe('Query: lastOrDefault()', () =>
+{
+    it('returns the last record', async () =>
+    {
+        const user = await User.query().lastOrDefault();
+        expect(user.id).toBe(15);
+    });
+
+    it('returns null when no results', async () =>
+    {
+        const user = await User.query().where('name', 'Ghost').lastOrDefault();
+        expect(user).toBeNull();
+    });
+});
+
+describe('Query: average()', () =>
+{
+    it('is an alias for avg()', async () =>
+    {
+        const avgAge = await User.query().average('age');
+        // ages 16-30, avg = (16+17+...+30)/15 = 345/15 = 23
+        expect(avgAge).toBe(23);
+    });
+});
+
+describe('Query: aggregate()', () =>
+{
+    it('is an alias for reduce()', async () =>
+    {
+        const total = await User.query()
+            .where('role', 'admin')
+            .aggregate((sum, u) => sum + u.score, 0);
+        expect(total).toBe(150);
+    });
+});
+
+describe('Query: single()', () =>
+{
+    it('returns the only matching element', async () =>
+    {
+        const user = await User.query().where('name', 'User1').single();
+        expect(user.name).toBe('User1');
+    });
+
+    it('throws when no elements match', async () =>
+    {
+        await expect(
+            User.query().where('name', 'Ghost').single()
+        ).rejects.toThrow('Sequence contains no elements');
+    });
+
+    it('throws when more than one element matches', async () =>
+    {
+        await expect(
+            User.query().where('role', 'admin').single()
+        ).rejects.toThrow('Sequence contains more than one element');
+    });
+});
+
+describe('Query: singleOrDefault()', () =>
+{
+    it('returns the only element', async () =>
+    {
+        const user = await User.query().where('name', 'User1').singleOrDefault();
+        expect(user.name).toBe('User1');
+    });
+
+    it('returns null when empty', async () =>
+    {
+        const user = await User.query().where('name', 'Ghost').singleOrDefault();
+        expect(user).toBeNull();
+    });
+
+    it('throws when more than one element', async () =>
+    {
+        await expect(
+            User.query().where('role', 'admin').singleOrDefault()
+        ).rejects.toThrow('Sequence contains more than one element');
+    });
+});
+
+describe('Query: elementAt()', () =>
+{
+    it('returns element at index', async () =>
+    {
+        const user = await User.query().orderBy('id').elementAt(4);
+        expect(user.id).toBe(5);
+    });
+
+    it('throws on out-of-range index', async () =>
+    {
+        await expect(
+            User.query().elementAt(100)
+        ).rejects.toThrow('Index out of range');
+    });
+});
+
+describe('Query: elementAtOrDefault()', () =>
+{
+    it('returns element at index', async () =>
+    {
+        const user = await User.query().orderBy('id').elementAtOrDefault(0);
+        expect(user.id).toBe(1);
+    });
+
+    it('returns null for out-of-range index', async () =>
+    {
+        const user = await User.query().elementAtOrDefault(100);
+        expect(user).toBeNull();
+    });
+});
+
+describe('Query: defaultIfEmpty()', () =>
+{
+    it('returns results when not empty', async () =>
+    {
+        const results = await User.query().where('role', 'admin').defaultIfEmpty({ name: 'N/A' });
+        expect(results).toHaveLength(5);
+        expect(results[0].name).not.toBe('N/A');
+    });
+
+    it('returns [defaultValue] when empty', async () =>
+    {
+        const results = await User.query().where('name', 'Ghost').defaultIfEmpty({ name: 'N/A' });
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('N/A');
+    });
+});
+
+describe('Query: any()', () =>
+{
+    it('returns true when records exist (no predicate)', async () =>
+    {
+        const result = await User.query().where('role', 'admin').any();
+        expect(result).toBe(true);
+    });
+
+    it('returns false when no records exist (no predicate)', async () =>
+    {
+        const result = await User.query().where('name', 'Ghost').any();
+        expect(result).toBe(false);
+    });
+
+    it('returns true when predicate matches', async () =>
+    {
+        const result = await User.query().any(u => u.age > 25);
+        expect(result).toBe(true);
+    });
+
+    it('returns false when predicate matches none', async () =>
+    {
+        const result = await User.query().any(u => u.age > 100);
+        expect(result).toBe(false);
+    });
+});
+
+describe('Query: all()', () =>
+{
+    it('returns true when all match', async () =>
+    {
+        const result = await User.query().where('role', 'admin').all(u => u.id <= 5);
+        expect(result).toBe(true);
+    });
+
+    it('returns false when some do not match', async () =>
+    {
+        const result = await User.query().all(u => u.role === 'admin');
+        expect(result).toBe(false);
+    });
+
+    it('returns false on empty results', async () =>
+    {
+        const result = await User.query().where('name', 'Ghost').all(u => true);
+        expect(result).toBe(false);
+    });
+});
+
+describe('Query: contains()', () =>
+{
+    it('returns true when value exists', async () =>
+    {
+        const result = await User.query().contains('name', 'User1');
+        expect(result).toBe(true);
+    });
+
+    it('returns false when value does not exist', async () =>
+    {
+        const result = await User.query().contains('name', 'Ghost');
+        expect(result).toBe(false);
+    });
+});
+
+describe('Query: sequenceEqual()', () =>
+{
+    it('returns true for identical sequences', async () =>
+    {
+        const q1 = User.query().where('role', 'admin').orderBy('id');
+        const q2 = User.query().where('role', 'admin').orderBy('id');
+        const result = await q1.sequenceEqual(q2);
+        expect(result).toBe(true);
+    });
+
+    it('returns false for different sequences', async () =>
+    {
+        const q1 = User.query().where('role', 'admin').orderBy('id');
+        const q2 = User.query().where('role', 'user').orderBy('id');
+        const result = await q1.sequenceEqual(q2);
+        expect(result).toBe(false);
+    });
+
+    it('accepts arrays for comparison', async () =>
+    {
+        const admins = await User.query().where('role', 'admin').orderBy('id').exec();
+        const result = await User.query().where('role', 'admin').orderBy('id').sequenceEqual(admins);
+        expect(result).toBe(true);
+    });
+
+    it('returns false for different lengths', async () =>
+    {
+        const q1 = User.query().where('role', 'admin');
+        const result = await q1.sequenceEqual([]);
+        expect(result).toBe(false);
+    });
+});
+
+describe('Query: thenBy() / thenByDescending()', () =>
+{
+    it('thenBy adds secondary ascending sort', async () =>
+    {
+        const users = await User.query().orderBy('role').thenBy('name').toArray();
+        // admins first (sorted by name), then users (sorted by name)
+        const admins = users.filter(u => u.role === 'admin');
+        expect(admins[0].name).toBe('User1');
+        expect(admins[4].name).toBe('User5');
+    });
+
+    it('thenByDescending adds secondary descending sort', async () =>
+    {
+        const users = await User.query().orderBy('role').thenByDescending('id').toArray();
+        const admins = users.filter(u => u.role === 'admin');
+        expect(admins[0].id).toBe(5);
+        expect(admins[4].id).toBe(1);
+    });
+});
+
+describe('Query: concat()', () =>
+{
+    it('concatenates two query results', async () =>
+    {
+        const admins = User.query().where('role', 'admin');
+        const regularUsers = User.query().where('role', 'user');
+        const all = await admins.concat(regularUsers);
+        expect(all).toHaveLength(15);
+    });
+
+    it('concatenates with an array', async () =>
+    {
+        const users = await User.query().take(2).concat([{ id: 99, name: 'Extra' }]);
+        expect(users).toHaveLength(3);
+        expect(users[2].name).toBe('Extra');
+    });
+});
+
+describe('Query: union()', () =>
+{
+    it('returns distinct union of two queries', async () =>
+    {
+        const q1 = User.query().where('role', 'admin');
+        const q2 = User.query().take(3);
+        // q1 = users 1-5(admin), q2 = first 3 users → union should be 5 unique
+        const result = await q1.union(q2, u => u.id);
+        expect(result).toHaveLength(5);
+    });
+
+    it('union with array', async () =>
+    {
+        const result = await User.query().take(2).union(
+            [{ id: 1 }, { id: 99 }],
+            u => u.id
+        );
+        // first 2 users (id 1,2) + external id 1 (dup) + id 99 (new) = 3
+        expect(result).toHaveLength(3);
+    });
+});
+
+describe('Query: intersect()', () =>
+{
+    it('returns common elements from two queries', async () =>
+    {
+        const q1 = User.query().where('role', 'admin');
+        const q2 = User.query().take(3).orderBy('id');
+        const result = await q1.intersect(q2, u => u.id);
+        // admin = ids 1-5, take(3) = ids 1-3 → intersection = 3
+        expect(result).toHaveLength(3);
+    });
+
+    it('returns empty when no overlap', async () =>
+    {
+        const q1 = User.query().where('role', 'admin');
+        const result = await q1.intersect(
+            [{ id: 99 }, { id: 100 }],
+            u => u.id
+        );
+        expect(result).toHaveLength(0);
+    });
+});
+
+describe('Query: except()', () =>
+{
+    it('returns elements not in other', async () =>
+    {
+        const q1 = User.query().where('role', 'admin');
+        const q2 = User.query().take(3).orderBy('id');
+        const result = await q1.except(q2, u => u.id);
+        // admin = ids 1-5, take(3) = ids 1-3 → except = ids 4,5
+        expect(result).toHaveLength(2);
+        expect(result[0].id).toBe(4);
+    });
+
+    it('returns all when no overlap', async () =>
+    {
+        const result = await User.query().where('role', 'admin').except(
+            [{ id: 99 }],
+            u => u.id
+        );
+        expect(result).toHaveLength(5);
+    });
+});
+
+describe('Query: selectMany()', () =>
+{
+    it('flattens projected arrays', async () =>
+    {
+        const result = await User.query().take(3).orderBy('id')
+            .selectMany(u => [u.name, u.role]);
+        // 3 users × 2 items each = 6
+        expect(result).toHaveLength(6);
+        expect(result[0]).toBe('User1');
+        expect(result[1]).toBe('admin');
+    });
+
+    it('handles empty projections', async () =>
+    {
+        const result = await User.query().take(2)
+            .selectMany(() => []);
+        expect(result).toHaveLength(0);
+    });
+});
+
+describe('Query: zip()', () =>
+{
+    it('combines two sequences element-wise', async () =>
+    {
+        const q1 = User.query().where('role', 'admin').orderBy('id');
+        const q2 = User.query().where('role', 'user').orderBy('id');
+        const result = await q1.zip(q2, (a, b) => ({
+            admin: a.name,
+            user: b.name,
+        }));
+        // min(5 admins, 10 users) = 5
+        expect(result).toHaveLength(5);
+        expect(result[0].admin).toBe('User1');
+        expect(result[0].user).toBe('User6');
+    });
+
+    it('zip with array', async () =>
+    {
+        const labels = ['Gold', 'Silver', 'Bronze'];
+        const result = await User.query().orderByDesc('score').take(3)
+            .zip(labels, (user, label) => `${label}: ${user.name}`);
+        expect(result).toHaveLength(3);
+        expect(result[0]).toBe('Gold: User15');
+    });
+});
+
+describe('Query: toDictionary()', () =>
+{
+    it('converts results to a Map', async () =>
+    {
+        const map = await User.query().take(3).orderBy('id')
+            .toDictionary(u => u.id);
+        expect(map).toBeInstanceOf(Map);
+        expect(map.size).toBe(3);
+        expect(map.get(1).name).toBe('User1');
+    });
+
+    it('supports value selector', async () =>
+    {
+        const map = await User.query().take(3).orderBy('id')
+            .toDictionary(u => u.id, u => u.name);
+        expect(map.get(1)).toBe('User1');
+    });
+
+    it('throws on duplicate keys', async () =>
+    {
+        await expect(
+            User.query().toDictionary(u => u.role)
+        ).rejects.toThrow('Duplicate key');
+    });
+});
+
+describe('Query: toLookup()', () =>
+{
+    it('groups results into a Map of arrays', async () =>
+    {
+        const map = await User.query().toLookup(u => u.role);
+        expect(map).toBeInstanceOf(Map);
+        expect(map.get('admin')).toHaveLength(5);
+        expect(map.get('user')).toHaveLength(10);
+    });
+
+    it('handles single-element groups', async () =>
+    {
+        const map = await User.query().toLookup(u => u.id);
+        expect(map.size).toBe(15);
+        map.forEach(group => expect(group).toHaveLength(1));
+    });
+});
+
+describe('Query: takeWhile()', () =>
+{
+    it('takes while predicate is true', async () =>
+    {
+        const result = await User.query().orderBy('age').takeWhile(u => u.age < 20);
+        // ages: 16,17,18,19 → 4 users
+        expect(result).toHaveLength(4);
+        expect(result[3].age).toBe(19);
+    });
+
+    it('returns empty if first element fails', async () =>
+    {
+        const result = await User.query().orderByDesc('age').takeWhile(u => u.age < 16);
+        expect(result).toHaveLength(0);
+    });
+
+    it('returns all if predicate always true', async () =>
+    {
+        const result = await User.query().takeWhile(u => u.id > 0);
+        expect(result).toHaveLength(15);
+    });
+});
+
+describe('Query: skipWhile()', () =>
+{
+    it('skips while predicate is true', async () =>
+    {
+        const result = await User.query().orderBy('age').skipWhile(u => u.age < 20);
+        // skip ages 16,17,18,19 → remaining 11 users (ages 20-30)
+        expect(result).toHaveLength(11);
+        expect(result[0].age).toBe(20);
+    });
+
+    it('returns all if first element fails predicate', async () =>
+    {
+        const result = await User.query().orderBy('age').skipWhile(u => u.age > 100);
+        expect(result).toHaveLength(15);
+    });
+
+    it('returns empty if predicate always true', async () =>
+    {
+        const result = await User.query().skipWhile(u => u.id > 0);
+        expect(result).toHaveLength(0);
+    });
+});
+
+describe('Query: reverse()', () =>
+{
+    it('reverses the result order', async () =>
+    {
+        const result = await User.query().orderBy('id').take(5).reverse();
+        expect(result[0].id).toBe(5);
+        expect(result[4].id).toBe(1);
+    });
+});
+
+describe('Query: append()', () =>
+{
+    it('appends items to the end', async () =>
+    {
+        const result = await User.query().take(2).append({ id: 99, name: 'Extra' });
+        expect(result).toHaveLength(3);
+        expect(result[2].name).toBe('Extra');
+    });
+
+    it('appends multiple items', async () =>
+    {
+        const result = await User.query().take(1).append(
+            { id: 98, name: 'A' },
+            { id: 99, name: 'B' }
+        );
+        expect(result).toHaveLength(3);
+    });
+});
+
+describe('Query: prepend()', () =>
+{
+    it('prepends items to the beginning', async () =>
+    {
+        const result = await User.query().take(2).prepend({ id: 0, name: 'First' });
+        expect(result).toHaveLength(3);
+        expect(result[0].name).toBe('First');
+    });
+
+    it('prepends multiple items', async () =>
+    {
+        const result = await User.query().take(1).prepend(
+            { id: -1, name: 'A' },
+            { id: 0, name: 'B' }
+        );
+        expect(result).toHaveLength(3);
+        expect(result[0].name).toBe('A');
+    });
+});
+
+describe('Query: distinctBy()', () =>
+{
+    it('returns distinct elements by key', async () =>
+    {
+        const result = await User.query().distinctBy(u => u.role);
+        expect(result).toHaveLength(2);
+        const roles = result.map(u => u.role).sort();
+        expect(roles).toEqual(['admin', 'user']);
+    });
+
+    it('preserves first occurrence', async () =>
+    {
+        const result = await User.query().orderBy('id').distinctBy(u => u.role);
+        expect(result[0].id).toBe(1); // first admin
+    });
+});
+
+describe('Query: minBy()', () =>
+{
+    it('returns element with minimum value', async () =>
+    {
+        const user = await User.query().minBy(u => u.age);
+        expect(user.age).toBe(16);
+    });
+
+    it('returns null on empty results', async () =>
+    {
+        const user = await User.query().where('name', 'Ghost').minBy(u => u.age);
+        expect(user).toBeNull();
+    });
+});
+
+describe('Query: maxBy()', () =>
+{
+    it('returns element with maximum value', async () =>
+    {
+        const user = await User.query().maxBy(u => u.score);
+        expect(user.score).toBe(150);
+        expect(user.name).toBe('User15');
+    });
+
+    it('returns null on empty results', async () =>
+    {
+        const user = await User.query().where('name', 'Ghost').maxBy(u => u.score);
+        expect(user).toBeNull();
+    });
+});
+
+describe('Query: sumBy()', () =>
+{
+    it('sums using a selector', async () =>
+    {
+        const total = await User.query().where('role', 'admin').sumBy(u => u.score);
+        expect(total).toBe(150); // 10+20+30+40+50
+    });
+
+    it('returns 0 for empty results', async () =>
+    {
+        const total = await User.query().where('name', 'Ghost').sumBy(u => u.score);
+        expect(total).toBe(0);
+    });
+});
+
+describe('Query: averageBy()', () =>
+{
+    it('averages using a selector', async () =>
+    {
+        const avg = await User.query().where('role', 'admin').averageBy(u => u.score);
+        expect(avg).toBe(30); // 150/5
+    });
+
+    it('returns 0 for empty results', async () =>
+    {
+        const avg = await User.query().where('name', 'Ghost').averageBy(u => u.score);
+        expect(avg).toBe(0);
+    });
+});
+
+describe('Query: countBy()', () =>
+{
+    it('counts elements per group', async () =>
+    {
+        const counts = await User.query().countBy(u => u.role);
+        expect(counts).toBeInstanceOf(Map);
+        expect(counts.get('admin')).toBe(5);
+        expect(counts.get('user')).toBe(10);
+    });
+
+    it('handles single group', async () =>
+    {
+        const counts = await User.query().where('role', 'admin').countBy(u => u.role);
+        expect(counts.size).toBe(1);
+        expect(counts.get('admin')).toBe(5);
+    });
+});

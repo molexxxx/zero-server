@@ -1,4 +1,4 @@
-const { Router, validate, fetch } = require('../..');
+const { Router, validate, fetch, version } = require('../..');
 const proxyController = require('../controllers/proxy');
 
 /**
@@ -16,6 +16,7 @@ function mountApiRoutes(app)
         method: req.method,
         url: req.url,
     }));
+    apiRouter.get('/version', (req, res) => res.json({ version }));
     app.use('/api', apiRouter);
 
     // --- Validation Demo ---

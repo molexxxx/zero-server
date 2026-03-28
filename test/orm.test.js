@@ -540,3 +540,114 @@ describe('Memory Adapter — edge cases', () =>
         expect(new Set(roles).size).toBe(roles.length);
     });
 });
+
+// --- Pagination --------------------------------------------------
+
+describe('ORM Pagination', () =>
+{
+    beforeEach(async () =>
+    {
+        await db.sync();
+        const users = [];
+        for (let i = 1; i <= 25; i++)
+        {
+            users.push({ name: `User${i}`, email: `user${i}@test.com`, age: 20 + i, role: i <= 10 ? 'admin' : 'user' });
+        }
+        await User.createMany(users);
+    });
+
+    describe('Query.paginate()', () =>
+    {
+        it('returns first page with correct metadata', async () =>
+        {
+            const result = await User.query().paginate(1, 10);
+            expect(result.data).toHaveLength(10);
+            expect(result.total).toBe(25);
+            expect(result.page).toBe(1);
+            expect(result.perPage).toBe(10);
+            expect(result.pages).toBe(3);
+            expect(result.hasNext).toBe(true);
+            expect(result.hasPrev).toBe(false);
+        });
+
+        it('returns middle page with hasNext and hasPrev both true', async () =>
+        {
+            const result = await User.query().paginate(2, 10);
+            expect(result.data).toHaveLength(10);
+            expect(result.page).toBe(2);
+            expect(result.hasNext).toBe(true);
+            expect(result.hasPrev).toBe(true);
+        });
+
+        it('returns last page with remaining items', async () =>
+        {
+            const result = await User.query().paginate(3, 10);
+            expect(result.data).toHaveLength(5);
+            expect(result.page).toBe(3);
+            expect(result.pages).toBe(3);
+            expect(result.hasNext).toBe(false);
+            expect(result.hasPrev).toBe(true);
+        });
+
+        it('defaults to 20 perPage', async () =>
+        {
+            const result = await User.query().paginate(1);
+            expect(result.perPage).toBe(20);
+            expect(result.data).toHaveLength(20);
+            expect(result.pages).toBe(2);
+        });
+
+        it('clamps page to minimum of 1', async () =>
+        {
+            const result = await User.query().paginate(0, 10);
+            expect(result.page).toBe(1);
+            expect(result.data).toHaveLength(10);
+        });
+
+        it('works with where conditions', async () =>
+        {
+            const result = await User.query().where('role', 'admin').paginate(1, 5);
+            expect(result.total).toBe(10);
+            expect(result.data).toHaveLength(5);
+            expect(result.pages).toBe(2);
+        });
+
+        it('returns empty data for page beyond total', async () =>
+        {
+            const result = await User.query().paginate(100, 10);
+            expect(result.data).toHaveLength(0);
+            expect(result.total).toBe(25);
+            expect(result.hasNext).toBe(false);
+            expect(result.hasPrev).toBe(true);
+        });
+    });
+
+    describe('Model.paginate()', () =>
+    {
+        it('returns paginated results with conditions', async () =>
+        {
+            const result = await User.paginate(1, 5, { role: 'admin' });
+            expect(result.data).toHaveLength(5);
+            expect(result.total).toBe(10);
+            expect(result.pages).toBe(2);
+            expect(result.hasNext).toBe(true);
+        });
+
+        it('works without conditions', async () =>
+        {
+            const result = await User.paginate(2, 10);
+            expect(result.data).toHaveLength(10);
+            expect(result.page).toBe(2);
+            expect(result.total).toBe(25);
+        });
+
+        it('returns correct metadata for single-page result', async () =>
+        {
+            const result = await User.paginate(1, 100);
+            expect(result.data).toHaveLength(25);
+            expect(result.pages).toBe(1);
+            expect(result.hasNext).toBe(false);
+            expect(result.hasPrev).toBe(false);
+        });
+    });
+});

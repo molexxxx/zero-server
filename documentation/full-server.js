@@ -31,7 +31,7 @@ require('./routes/api')(app);
 const { hasCerts, tlsOpts } = require('./config/tls');
 
 // --- Start ---
-const port = process.env.PORT || 7273;
+const port = env.PORT || process.env.PORT || 7273;
 app.listen(port, tlsOpts, () =>
 {
     const proto = hasCerts ? 'https' : 'http';

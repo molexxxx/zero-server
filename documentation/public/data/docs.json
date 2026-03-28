@@ -841,66 +841,192 @@
       {
         "name": "Query",
         "description": "Fluent query builder returned by Model.query(). All filter/sort/limit methods are chainable. Execute with .exec(), .first(), .count(), .exists(), .pluck(), or aggregates (sum/avg/min/max). Also thenable — you can await the query directly without calling .exec().",
-        "methods": [
-          { "method": "select", "signature": "select(...fields)", "description": "Select specific columns. Chainable." },
-          { "method": "distinct", "signature": "distinct()", "description": "Return unique rows only. Chainable." },
-          { "method": "where", "signature": "where(field, [op], value)", "description": "Add a WHERE condition. Supports object form, (field, value), or (field, op, value). Operators: =, !=, >, <, >=, <=, LIKE, IN, NOT IN, BETWEEN, IS NULL, IS NOT NULL." },
-          { "method": "orWhere", "signature": "orWhere(field, [op], value)", "description": "Add an OR WHERE condition. Chainable." },
-          { "method": "whereNull", "signature": "whereNull(field)", "description": "WHERE field IS NULL. Chainable." },
-          { "method": "whereNotNull", "signature": "whereNotNull(field)", "description": "WHERE field IS NOT NULL. Chainable." },
-          { "method": "whereIn", "signature": "whereIn(field, values)", "description": "WHERE field IN (...values). Chainable." },
-          { "method": "whereNotIn", "signature": "whereNotIn(field, values)", "description": "WHERE field NOT IN (...values). Chainable." },
-          { "method": "whereBetween", "signature": "whereBetween(field, low, high)", "description": "WHERE field BETWEEN low AND high. Chainable." },
-          { "method": "whereNotBetween", "signature": "whereNotBetween(field, low, high)", "description": "WHERE field NOT BETWEEN low AND high. Chainable." },
-          { "method": "whereLike", "signature": "whereLike(field, pattern)", "description": "WHERE field LIKE pattern (% and _ wildcards). Chainable." },
-          { "method": "orderBy", "signature": "orderBy(field, [dir])", "description": "Sort results. dir: 'asc' (default) or 'desc'. Chainable." },
-          { "method": "limit", "signature": "limit(n)", "description": "Maximum number of results. Chainable." },
-          { "method": "offset", "signature": "offset(n)", "description": "Skip n records. Chainable." },
-          { "method": "page", "signature": "page(pageNum, [perPage])", "description": "Pagination helper. 1-indexed. perPage defaults to 20. Chainable." },
-          { "method": "groupBy", "signature": "groupBy(...fields)", "description": "Group results by columns. Chainable." },
-          { "method": "having", "signature": "having(field, [op], value)", "description": "Add a HAVING condition (use with groupBy). Chainable." },
-          { "method": "join", "signature": "join(table, localKey, foreignKey)", "description": "INNER JOIN. Chainable." },
-          { "method": "leftJoin", "signature": "leftJoin(table, localKey, foreignKey)", "description": "LEFT JOIN. Chainable." },
-          { "method": "rightJoin", "signature": "rightJoin(table, localKey, foreignKey)", "description": "RIGHT JOIN. Chainable." },
-          { "method": "withDeleted", "signature": "withDeleted()", "description": "Include soft-deleted records in results. Chainable." },
-          { "method": "scope", "signature": "scope(name, [...args])", "description": "Apply a named scope from the model's static scopes. Chainable." },
-          { "method": "exec", "signature": "exec()", "description": "Execute the query. Returns Promise<Model[]>." },
-          { "method": "first", "signature": "first()", "description": "Execute and return the first result. Returns Promise<Model|null>." },
-          { "method": "count", "signature": "count()", "description": "Execute and return the count. Returns Promise<number>." },
-          { "method": "exists", "signature": "exists()", "description": "Returns Promise<boolean> — true if any matching records exist." },
-          { "method": "pluck", "signature": "pluck(field)", "description": "Returns Promise<Array> of values for a single column." },
-          { "method": "sum", "signature": "sum(field)", "description": "Returns Promise<number> — sum of a numeric column." },
-          { "method": "avg", "signature": "avg(field)", "description": "Returns Promise<number> — average of a numeric column." },
-          { "method": "min", "signature": "min(field)", "description": "Returns Promise<*> — minimum value of a column." },
-          { "method": "max", "signature": "max(field)", "description": "Returns Promise<*> — maximum value of a column." },
-          { "method": "take", "signature": "take(n)", "description": "Alias for limit() — LINQ naming. Chainable." },
-          { "method": "skip", "signature": "skip(n)", "description": "Alias for offset() — LINQ naming. Chainable." },
-          { "method": "toArray", "signature": "toArray()", "description": "Alias for exec() — returns Promise<Model[]>." },
-          { "method": "orderByDesc", "signature": "orderByDesc(field)", "description": "Shorthand for orderBy(field, 'desc'). Chainable." },
-          { "method": "last", "signature": "last()", "description": "Execute and return the last result. Returns Promise<Model|null>." },
-          { "method": "when", "signature": "when(condition, fn)", "description": "Conditionally apply query logic if condition is truthy. Chainable." },
-          { "method": "unless", "signature": "unless(condition, fn)", "description": "Conditionally apply query logic if condition is falsy. Chainable." },
-          { "method": "tap", "signature": "tap(fn)", "description": "Inspect the query for debugging without breaking the chain. Chainable." },
-          { "method": "chunk", "signature": "chunk(size, fn)", "description": "Process results in batches. Calls fn(batch, batchIndex) for each chunk." },
-          { "method": "each", "signature": "each(fn)", "description": "Execute and iterate each result. fn(item, index) — supports async." },
-          { "method": "map", "signature": "map(fn)", "description": "Execute, transform each result. Returns Promise<Array>." },
-          { "method": "filter", "signature": "filter(fn)", "description": "Execute, post-filter results in JS. Returns Promise<Model[]>." },
-          { "method": "reduce", "signature": "reduce(fn, initial)", "description": "Execute and reduce results to a single value." },
-          { "method": "paginate", "signature": "paginate(page, [perPage])", "description": "Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }." },
-          { "method": "whereRaw", "signature": "whereRaw(sql, ...params)", "description": "Inject raw SQL WHERE clause (SQL adapters only). Parameterized. Chainable." }
+        "methodGroups": [
+          {
+            "category": "Selection",
+            "methods": [
+              { "method": "select", "signature": "select(...fields)", "description": "Select specific columns. Chainable." },
+              { "method": "distinct", "signature": "distinct()", "description": "Return unique rows only. Chainable." }
+            ]
+          },
+          {
+            "category": "Filtering",
+            "methods": [
+              { "method": "where", "signature": "where(field, [op], value)", "description": "Add a WHERE condition. Supports object form, (field, value), or (field, op, value). Operators: =, !=, >, <, >=, <=, LIKE, IN, NOT IN, BETWEEN, IS NULL, IS NOT NULL." },
+              { "method": "orWhere", "signature": "orWhere(field, [op], value)", "description": "Add an OR WHERE condition. Chainable." },
+              { "method": "whereNull", "signature": "whereNull(field)", "description": "WHERE field IS NULL. Chainable." },
+              { "method": "whereNotNull", "signature": "whereNotNull(field)", "description": "WHERE field IS NOT NULL. Chainable." },
+              { "method": "whereIn", "signature": "whereIn(field, values)", "description": "WHERE field IN (...values). Chainable." },
+              { "method": "whereNotIn", "signature": "whereNotIn(field, values)", "description": "WHERE field NOT IN (...values). Chainable." },
+              { "method": "whereBetween", "signature": "whereBetween(field, low, high)", "description": "WHERE field BETWEEN low AND high. Chainable." },
+              { "method": "whereNotBetween", "signature": "whereNotBetween(field, low, high)", "description": "WHERE field NOT BETWEEN low AND high. Chainable." },
+              { "method": "whereLike", "signature": "whereLike(field, pattern)", "description": "WHERE field LIKE pattern (% and _ wildcards). Chainable." },
+              { "method": "whereRaw", "signature": "whereRaw(sql, ...params)", "description": "Inject raw SQL WHERE clause (SQL adapters only). Parameterized. Chainable." },
+              { "method": "withDeleted", "signature": "withDeleted()", "description": "Include soft-deleted records in results. Chainable." },
+              { "method": "scope", "signature": "scope(name, [...args])", "description": "Apply a named scope from the model's static scopes. Chainable." }
+            ]
+          },
+          {
+            "category": "Ordering & Pagination",
+            "methods": [
+              { "method": "orderBy", "signature": "orderBy(field, [dir])", "description": "Sort results. dir: 'asc' (default) or 'desc'. Chainable." },
+              { "method": "orderByDesc", "signature": "orderByDesc(field)", "description": "Shorthand for orderBy(field, 'desc'). Chainable." },
+              { "method": "limit", "signature": "limit(n)", "description": "Maximum number of results. Chainable." },
+              { "method": "offset", "signature": "offset(n)", "description": "Skip n records. Chainable." },
+              { "method": "page", "signature": "page(pageNum, [perPage])", "description": "Pagination helper. 1-indexed. perPage defaults to 20. Chainable." },
+              { "method": "paginate", "signature": "paginate(page, [perPage])", "description": "Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }." }
+            ]
+          },
+          {
+            "category": "Grouping & Joins",
+            "methods": [
+              { "method": "groupBy", "signature": "groupBy(...fields)", "description": "Group results by columns. Chainable." },
+              { "method": "having", "signature": "having(field, [op], value)", "description": "Add a HAVING condition (use with groupBy). Chainable." },
+              { "method": "join", "signature": "join(table, localKey, foreignKey)", "description": "INNER JOIN. Chainable." },
+              { "method": "leftJoin", "signature": "leftJoin(table, localKey, foreignKey)", "description": "LEFT JOIN. Chainable." },
+              { "method": "rightJoin", "signature": "rightJoin(table, localKey, foreignKey)", "description": "RIGHT JOIN. Chainable." }
+            ]
+          },
+          {
+            "category": "Execution",
+            "methods": [
+              { "method": "exec", "signature": "exec()", "description": "Execute the query. Returns Promise<Model[]>." },
+              { "method": "first", "signature": "first()", "description": "Execute and return the first result. Returns Promise<Model|null>." },
+              { "method": "last", "signature": "last()", "description": "Execute and return the last result. Returns Promise<Model|null>." },
+              { "method": "count", "signature": "count()", "description": "Execute and return the count. Returns Promise<number>." },
+              { "method": "exists", "signature": "exists()", "description": "Returns Promise<boolean> — true if any matching records exist." },
+              { "method": "pluck", "signature": "pluck(field)", "description": "Returns Promise<Array> of values for a single column." }
+            ]
+          },
+          {
+            "category": "Aggregates",
+            "methods": [
+              { "method": "sum", "signature": "sum(field)", "description": "Returns Promise<number> — sum of a numeric column." },
+              { "method": "avg", "signature": "avg(field)", "description": "Returns Promise<number> — average of a numeric column." },
+              { "method": "min", "signature": "min(field)", "description": "Returns Promise<*> — minimum value of a column." },
+              { "method": "max", "signature": "max(field)", "description": "Returns Promise<*> — maximum value of a column." }
+            ]
+          },
+          {
+            "category": "Functional Transforms",
+            "methods": [
+              { "method": "each", "signature": "each(fn)", "description": "Execute and iterate each result. fn(item, index) — supports async." },
+              { "method": "map", "signature": "map(fn)", "description": "Execute, transform each result. Returns Promise<Array>." },
+              { "method": "filter", "signature": "filter(fn)", "description": "Execute, post-filter results in JS. Returns Promise<Model[]>." },
+              { "method": "reduce", "signature": "reduce(fn, initial)", "description": "Execute and reduce results to a single value." },
+              { "method": "chunk", "signature": "chunk(size, fn)", "description": "Process results in batches. Calls fn(batch, batchIndex) for each chunk." }
+            ]
+          },
+          {
+            "category": "Conditional & Debugging",
+            "methods": [
+              { "method": "when", "signature": "when(condition, fn)", "description": "Conditionally apply query logic if condition is truthy. Chainable." },
+              { "method": "unless", "signature": "unless(condition, fn)", "description": "Conditionally apply query logic if condition is falsy. Chainable." },
+              { "method": "tap", "signature": "tap(fn)", "description": "Inspect the query for debugging without breaking the chain. Chainable." }
+            ]
+          },
+          {
+            "category": "LINQ Aliases",
+            "methods": [
+              { "method": "take", "signature": "take(n)", "description": "Alias for limit() — LINQ naming. Chainable." },
+              { "method": "skip", "signature": "skip(n)", "description": "Alias for offset() — LINQ naming. Chainable." },
+              { "method": "toArray", "signature": "toArray()", "description": "Alias for exec() — returns Promise<Model[]>." },
+              { "method": "orderByDesc", "signature": "orderByDesc(field)", "description": "Shorthand for orderBy(field, 'desc'). Chainable." },
+              { "method": "orderByDescending", "signature": "orderByDescending(field)", "description": "C# alias for orderByDesc(). Chainable." },
+              { "method": "firstOrDefault", "signature": "firstOrDefault()", "description": "Alias for first() — returns null on empty (JS default)." },
+              { "method": "lastOrDefault", "signature": "lastOrDefault()", "description": "Alias for last() — returns null on empty." },
+              { "method": "average", "signature": "average(field)", "description": "Alias for avg() — C# naming." },
+              { "method": "aggregate", "signature": "aggregate(fn, seed)", "description": "Alias for reduce() — C# Aggregate naming." }
+            ]
+          },
+          {
+            "category": "LINQ Element Operators",
+            "methods": [
+              { "method": "single", "signature": "single()", "description": "Returns the only element. Throws if count !== 1." },
+              { "method": "singleOrDefault", "signature": "singleOrDefault()", "description": "Returns the only element or null. Throws if more than one." },
+              { "method": "elementAt", "signature": "elementAt(index)", "description": "Get element at 0-based index. Throws if out of range." },
+              { "method": "elementAtOrDefault", "signature": "elementAtOrDefault(index)", "description": "Get element at index, or null if out of range." },
+              { "method": "defaultIfEmpty", "signature": "defaultIfEmpty(value)", "description": "Returns results, or [value] if the sequence is empty." }
+            ]
+          },
+          {
+            "category": "LINQ Quantifiers",
+            "methods": [
+              { "method": "any", "signature": "any(predicate?)", "description": "True if any elements match. Without predicate, same as exists()." },
+              { "method": "all", "signature": "all(predicate)", "description": "True if all elements satisfy the predicate." },
+              { "method": "contains", "signature": "contains(field, value)", "description": "True if any record has the given value for a column." },
+              { "method": "sequenceEqual", "signature": "sequenceEqual(other, compareFn?)", "description": "True if both sequences have the same elements in the same order." }
+            ]
+          },
+          {
+            "category": "LINQ Ordering",
+            "methods": [
+              { "method": "thenBy", "signature": "thenBy(field)", "description": "Add secondary ascending sort. Chainable." },
+              { "method": "thenByDescending", "signature": "thenByDescending(field)", "description": "Add secondary descending sort. Chainable." }
+            ]
+          },
+          {
+            "category": "LINQ Set Operations",
+            "methods": [
+              { "method": "concat", "signature": "concat(other)", "description": "Append results from another query or array." },
+              { "method": "union", "signature": "union(other, keyFn?)", "description": "Distinct union of two result sets." },
+              { "method": "intersect", "signature": "intersect(other, keyFn?)", "description": "Elements common to both result sets." },
+              { "method": "except", "signature": "except(other, keyFn?)", "description": "Elements in this set but not in other." }
+            ]
+          },
+          {
+            "category": "LINQ Projection",
+            "methods": [
+              { "method": "selectMany", "signature": "selectMany(fn)", "description": "FlatMap — project each element to an array and flatten." },
+              { "method": "zip", "signature": "zip(other, fn)", "description": "Combine two result sets element-wise using fn(a, b)." },
+              { "method": "toDictionary", "signature": "toDictionary(keyFn, valueFn?)", "description": "Convert results to a Map keyed by selector. Throws on duplicate keys." },
+              { "method": "toLookup", "signature": "toLookup(keyFn)", "description": "Group results into a Map of arrays keyed by selector." }
+            ]
+          },
+          {
+            "category": "LINQ Partitioning",
+            "methods": [
+              { "method": "takeWhile", "signature": "takeWhile(predicate)", "description": "Take elements while predicate returns true." },
+              { "method": "skipWhile", "signature": "skipWhile(predicate)", "description": "Skip elements while predicate returns true, then return the rest." }
+            ]
+          },
+          {
+            "category": "LINQ Transforms",
+            "methods": [
+              { "method": "reverse", "signature": "reverse()", "description": "Reverse the result order." },
+              { "method": "append", "signature": "append(...items)", "description": "Append items to the end of results." },
+              { "method": "prepend", "signature": "prepend(...items)", "description": "Prepend items to the beginning of results." },
+              { "method": "distinctBy", "signature": "distinctBy(keyFn)", "description": "Distinct results by a key selector." }
+            ]
+          },
+          {
+            "category": "LINQ Aggregate Selectors",
+            "methods": [
+              { "method": "minBy", "signature": "minBy(fn)", "description": "Element with the minimum value from a selector." },
+              { "method": "maxBy", "signature": "maxBy(fn)", "description": "Element with the maximum value from a selector." },
+              { "method": "sumBy", "signature": "sumBy(fn)", "description": "Sum using a value selector function." },
+              { "method": "averageBy", "signature": "averageBy(fn)", "description": "Average using a value selector function." },
+              { "method": "countBy", "signature": "countBy(keyFn)", "description": "Count elements per group, returns Map<key, count>." }
+            ]
+          }
         ],
-        "example": "// Filtering with negation\nconst results = await User.query()\n\t.whereNotIn('role', ['banned', 'suspended'])\n\t.whereNotBetween('age', 0, 12)\n\t.whereLike('email', '%@gmail.com')\n\t.orderBy('name')\n\t.exec()\n\n// Scoped queries (chainable)\nconst activeAdmins = await User.query()\n\t.scope('active')\n\t.scope('role', 'admin')\n\t.orderBy('name')\n\t.exec()\n\n// Aggregates\nconst avgAge = await User.query().avg('age')\nconst revenue = await Order.query().where('status', 'paid').sum('total')\nconst maxPrice = await Product.query().max('price')\nconst count = await User.query().where('role', 'admin').count()\n\n// LINQ-style aliases\nconst top5 = await User.query().orderByDesc('score').take(5)\nconst page3 = await User.query().skip(40).take(20)\nconst oldest = await User.query().orderBy('age').last()\n\n// Conditional query building (perfect for API endpoints)\nconst users = await User.query()\n\t.when(req.query.role, q => q.where('role', req.query.role))\n\t.when(req.query.minAge, q => q.where('age', '>=', req.query.minAge))\n\t.unless(req.query.showAll, q => q.limit(50))\n\t.tap(q => console.log('Query:', q.build()))\n\n// Rich pagination with metadata\nconst result = await User.query()\n\t.where('active', true)\n\t.paginate(2, 10)\n// { data: [...], total: 53, page: 2, perPage: 10,\n//   pages: 6, hasNext: true, hasPrev: true }\n\n// Batch processing for large datasets\nawait User.query().chunk(100, async (batch, i) => {\n\tconsole.log(`Batch ${i}: ${batch.length} users`)\n\tfor (const u of batch) await u.update({ migrated: true })\n})\n\n// Functional transforms\nconst names = await User.query().map(u => u.name)\nconst admins = await User.query().filter(u => u.role === 'admin')\nconst totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)",
+        "example": "// Filtering with negation\nconst results = await User.query()\n\t.whereNotIn('role', ['banned', 'suspended'])\n\t.whereNotBetween('age', 0, 12)\n\t.whereLike('email', '%@gmail.com')\n\t.orderBy('name')\n\t.exec()\n\n// Scoped queries (chainable)\nconst activeAdmins = await User.query()\n\t.scope('active')\n\t.scope('role', 'admin')\n\t.orderBy('name')\n\t.exec()\n\n// Aggregates\nconst avgAge = await User.query().avg('age')\nconst revenue = await Order.query().where('status', 'paid').sum('total')\nconst maxPrice = await Product.query().max('price')\nconst count = await User.query().where('role', 'admin').count()\n\n// LINQ-style aliases\nconst top5 = await User.query().orderByDesc('score').take(5)\nconst page3 = await User.query().skip(40).take(20)\nconst oldest = await User.query().orderBy('age').last()\n\n// LINQ element operators\nconst onlyAdmin = await User.query().where('email', 'admin@co.com').single()\nconst third = await User.query().orderBy('id').elementAt(2)\nconst fallback = await User.query().where('role', 'owner').defaultIfEmpty({ name: 'N/A' })\n\n// LINQ quantifiers\nconst hasAdmins = await User.query().where('role', 'admin').any()\nconst allAdults = await User.query().all(u => u.age >= 18)\nconst hasAlice = await User.query().contains('name', 'Alice')\n\n// LINQ ordering with secondary sorts\nconst sorted = await User.query()\n\t.orderBy('role').thenByDescending('score').toArray()\n\n// LINQ set operations\nconst admins = User.query().where('role', 'admin')\nconst seniors = User.query().where('age', '>=', 50)\nconst both = await admins.intersect(seniors, u => u.id)\nconst onlyAdmins = await admins.except(seniors, u => u.id)\n\n// LINQ projection\nconst tags = await Post.query().selectMany(p => p.tags)\nconst byRole = await User.query().toLookup(u => u.role)\nconst idMap = await User.query().toDictionary(u => u.id)\n\n// LINQ partitioning\nconst while18 = await User.query().orderBy('age').takeWhile(u => u.age < 21)\nconst after18 = await User.query().orderBy('age').skipWhile(u => u.age < 18)\n\n// LINQ aggregate selectors\nconst youngest = await User.query().minBy(u => u.age)\nconst topScorer = await User.query().maxBy(u => u.score)\nconst totalScore = await User.query().sumBy(u => u.score)\nconst roleCounts = await User.query().countBy(u => u.role)\n\n// Conditional query building (perfect for API endpoints)\nconst users = await User.query()\n\t.when(req.query.role, q => q.where('role', req.query.role))\n\t.when(req.query.minAge, q => q.where('age', '>=', req.query.minAge))\n\t.unless(req.query.showAll, q => q.limit(50))\n\t.tap(q => console.log('Query:', q.build()))\n\n// Rich pagination with metadata\nconst result = await User.query()\n\t.where('active', true)\n\t.paginate(2, 10)\n// { data: [...], total: 53, page: 2, perPage: 10,\n//   pages: 6, hasNext: true, hasPrev: true }\n\n// Batch processing for large datasets\nawait User.query().chunk(100, async (batch, i) => {\n\tconsole.log(`Batch ${i}: ${batch.length} users`)\n\tfor (const u of batch) await u.update({ migrated: true })\n})\n\n// Functional transforms\nconst names = await User.query().map(u => u.name)\nconst filteredAdmins = await User.query().filter(u => u.role === 'admin')\nconst totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)",
         "tips": [
           "Queries are thenable — 'await User.query().where(...)' works without calling .exec().",
           "take() and skip() are LINQ aliases for limit() and offset() — use whichever feels natural.",
+          "single() vs first(): single() throws if there isn't exactly one result — use it for unique lookups.",
+          "any()/all() accept optional predicates for post-execution checks, or use any() without args like exists().",
+          "thenBy()/thenByDescending() add secondary sorts — chain after orderBy() for multi-column ordering.",
+          "Set operations (union/intersect/except) accept a keyFn for custom equality — defaults to JSON comparison.",
+          "toDictionary() throws on duplicate keys — use toLookup() when keys aren't unique.",
+          "takeWhile()/skipWhile() operate on ordered results — always pair with orderBy() for deterministic output.",
+          "minBy()/maxBy() return the full element, not just the value — great for 'find the user with highest score'.",
+          "countBy() returns a Map — perfect for quick grouping like countBy(u => u.role).",
           "when() is a game-changer for API endpoints — conditionally apply filters based on request params.",
           "tap() is perfect for debugging — inspect the query state without breaking the chain.",
           "paginate() returns everything you need for pagination UI: total, pages, hasNext, hasPrev.",
           "chunk() processes large datasets in batches — no memory explosion on million-row tables.",
-          "map/filter/reduce work like Array methods but on query results — great for transformations.",
-          "last() reverses the first orderBy direction — or defaults to PK DESC if no order is set.",
-          "whereRaw() lets power users inject raw SQL — always parameterized for safety.",
-          "Scopes chain: .scope('active').scope('role', 'admin') applies both conditions."
+          "map/filter/reduce work like Array methods but on query results — great for transformations."
         ]
       },
       {
@@ -1045,7 +1171,13 @@
           "Use rejectUnauthorized: false only for development — never in production.",
           "Timeout and AbortSignal can be used together — whichever fires first cancels the request."
         ]
-      },
+      }
+    ]
+  },
+  {
+    "section": "Error Handling",
+    "icon": "alert-triangle",
+    "items": [
       {
         "name": "Error Classes",
         "description": "Built-in HTTP error classes with status codes, machine-readable codes, and optional details. Every error extends HttpError which carries statusCode, code, and details. Throw them in route handlers — the router catches and sends the correct HTTP response automatically.",
@@ -1078,6 +1210,28 @@
           "createError(statusCode) returns the correct typed class: createError(404) returns NotFoundError.",
           "Use opts.details to attach any structured data (IDs, field names, debug info) to the error.",
           "isHttpError() works as a TypeScript type guard — narrows the type to HttpError."
+        ]
+      },
+      {
+        "name": "Framework Errors",
+        "description": "Specialized error classes for framework-specific failures — database errors, configuration problems, middleware failures, routing issues, and timeouts. Each carries context-specific properties alongside the standard HttpError fields. These are thrown automatically by the framework internals and can also be used directly in application code.",
+        "methods": [
+          { "method": "DatabaseError", "signature": "new DatabaseError([message], [opts])", "description": "500 — Database/ORM failure. opts: { query, adapter, details }. Thrown on adapter-level failures." },
+          { "method": "ConfigurationError", "signature": "new ConfigurationError([message], [opts])", "description": "500 — Invalid configuration. opts: { setting, details }. Thrown when app/adapter config is invalid." },
+          { "method": "MiddlewareError", "signature": "new MiddlewareError([message], [opts])", "description": "500 — Middleware failure. opts: { middleware, details }. Thrown when a middleware function fails unexpectedly." },
+          { "method": "RoutingError", "signature": "new RoutingError([message], [opts])", "description": "500 — Routing failure. opts: { path, method, details }. Thrown when route resolution fails." },
+          { "method": "TimeoutError", "signature": "new TimeoutError([message], [opts])", "description": "408 — Operation timed out. opts: { timeout, details }. Thrown when a request exceeds the allowed time." }
+        ],
+        "example": "const { DatabaseError, ConfigurationError, MiddlewareError,\n\tRoutingError, TimeoutError, isHttpError } = require('zero-http')\n\n// Database error with context\napp.get('/users', async (req, res) => {\n\ttry {\n\t\tconst users = await User.find()\n\t\tres.json(users)\n\t} catch (err) {\n\t\tthrow new DatabaseError('Failed to fetch users', {\n\t\t\tquery: 'SELECT * FROM users',\n\t\t\tadapter: 'sqlite',\n\t\t\tdetails: { originalError: err.message }\n\t\t})\n\t}\n})\n\n// Configuration error\nif (!process.env.DATABASE_URL) {\n\tthrow new ConfigurationError('DATABASE_URL is required', {\n\t\tsetting: 'DATABASE_URL'\n\t})\n}\n\n// Middleware error\nconst safeMiddleware = (req, res, next) => {\n\ttry {\n\t\t// middleware logic\n\t\tnext()\n\t} catch (err) {\n\t\tnext(new MiddlewareError('Auth middleware failed', {\n\t\t\tmiddleware: 'auth',\n\t\t\tdetails: { originalError: err.message }\n\t\t}))\n\t}\n}\n\n// Differentiate error types in error handler\napp.onError((err, req, res, next) => {\n\tif (err instanceof DatabaseError) {\n\t\tconsole.error('DB Error:', err.adapter, err.query)\n\t\tres.status(500).json({ error: 'Database unavailable' })\n\t} else if (err instanceof TimeoutError) {\n\t\tres.status(408).json({ error: err.message, timeout: err.timeout })\n\t} else if (isHttpError(err)) {\n\t\tres.status(err.statusCode).json(err.toJSON())\n\t} else {\n\t\tres.status(500).json({ error: 'Internal error' })\n\t}\n})",
+        "tips": [
+          "All framework errors extend HttpError — they work with isHttpError(), toJSON(), and createError().",
+          "DatabaseError carries .query and .adapter — use them in error handlers for debugging and monitoring.",
+          "ConfigurationError.setting tells you which config key is invalid — great for startup validation.",
+          "MiddlewareError.middleware identifies which middleware failed — useful for debugging middleware chains.",
+          "RoutingError carries .path and .method — helpful for diagnosing route conflicts.",
+          "TimeoutError carries .timeout (in ms) — the limit that was exceeded.",
+          "ORM model validation now throws ValidationError (422) instead of plain Error — catch it with instanceof.",
+          "Use instanceof checks in app.onError() to handle different failure categories with different responses."
         ]
       },
       {

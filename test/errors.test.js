@@ -14,6 +14,7 @@ describe('Error Classes', () =>
         PayloadTooLargeError, UnprocessableEntityError, ValidationError,
         TooManyRequestsError, InternalError, NotImplementedError,
         BadGatewayError, ServiceUnavailableError,
+        DatabaseError, ConfigurationError, MiddlewareError, RoutingError, TimeoutError,
         createError, isHttpError,
     } = require('../lib/errors');
 
@@ -191,6 +192,141 @@ describe('Error Classes', () =>
             expect(isHttpError(undefined)).toBe(false);
             expect(isHttpError({ statusCode: 400 })).toBe(false);  // not Error instance
             expect(isHttpError(new Error('plain'))).toBe(false);     // no statusCode
+        });
+    });
+
+    // --- Framework Error Classes ---------------------------------
+
+    describe('DatabaseError', () =>
+    {
+        it('has status 500 and DATABASE_ERROR code', () =>
+        {
+            const err = new DatabaseError();
+            expect(err.statusCode).toBe(500);
+            expect(err.code).toBe('DATABASE_ERROR');
+            expect(err.message).toBe('Database Error');
+            expect(err).toBeInstanceOf(HttpError);
+        });
+
+        it('stores query and adapter properties', () =>
+        {
+            const err = new DatabaseError('Insert failed', { query: 'INSERT INTO users ...', adapter: 'sqlite' });
+            expect(err.message).toBe('Insert failed');
+            expect(err.query).toBe('INSERT INTO users ...');
+            expect(err.adapter).toBe('sqlite');
+        });
+
+        it('accepts details in options', () =>
+        {
+            const err = new DatabaseError('Constraint violation', { details: { field: 'email', constraint: 'unique' } });
+            expect(err.details).toEqual({ field: 'email', constraint: 'unique' });
+        });
+
+        it('serializes via toJSON', () =>
+        {
+            const err = new DatabaseError('Connection lost');
+            const json = err.toJSON();
+            expect(json.error).toBe('Connection lost');
+            expect(json.code).toBe('DATABASE_ERROR');
+            expect(json.statusCode).toBe(500);
+        });
+    });
+
+    describe('ConfigurationError', () =>
+    {
+        it('has status 500 and CONFIGURATION_ERROR code', () =>
+        {
+            const err = new ConfigurationError();
+            expect(err.statusCode).toBe(500);
+            expect(err.code).toBe('CONFIGURATION_ERROR');
+            expect(err.message).toBe('Configuration Error');
+            expect(err).toBeInstanceOf(HttpError);
+        });
+
+        it('stores setting property', () =>
+        {
+            const err = new ConfigurationError('Invalid port', { setting: 'port' });
+            expect(err.setting).toBe('port');
+        });
+
+        it('accepts custom message', () =>
+        {
+            const err = new ConfigurationError('TLS cert not found');
+            expect(err.message).toBe('TLS cert not found');
+        });
+    });
+
+    describe('MiddlewareError', () =>
+    {
+        it('has status 500 and MIDDLEWARE_ERROR code', () =>
+        {
+            const err = new MiddlewareError();
+            expect(err.statusCode).toBe(500);
+            expect(err.code).toBe('MIDDLEWARE_ERROR');
+            expect(err.message).toBe('Middleware Error');
+            expect(err).toBeInstanceOf(HttpError);
+        });
+
+        it('stores middleware name', () =>
+        {
+            const err = new MiddlewareError('Compression failed', { middleware: 'compress' });
+            expect(err.middleware).toBe('compress');
+        });
+    });
+
+    describe('RoutingError', () =>
+    {
+        it('has status 500 and ROUTING_ERROR code', () =>
+        {
+            const err = new RoutingError();
+            expect(err.statusCode).toBe(500);
+            expect(err.code).toBe('ROUTING_ERROR');
+            expect(err.message).toBe('Routing Error');
+            expect(err).toBeInstanceOf(HttpError);
+        });
+
+        it('stores path and method', () =>
+        {
+            const err = new RoutingError('Duplicate route', { path: '/users', method: 'GET' });
+            expect(err.path).toBe('/users');
+            expect(err.method).toBe('GET');
+        });
+    });
+
+    describe('TimeoutError', () =>
+    {
+        it('has status 408 and TIMEOUT code', () =>
+        {
+            const err = new TimeoutError();
+            expect(err.statusCode).toBe(408);
+            expect(err.code).toBe('TIMEOUT');
+            expect(err.message).toBe('Request Timeout');
+            expect(err).toBeInstanceOf(HttpError);
+        });
+
+        it('stores timeout value', () =>
+        {
+            const err = new TimeoutError('Operation timed out', { timeout: 5000 });
+            expect(err.timeout).toBe(5000);
+        });
+    });
+
+    describe('Framework errors work with createError and isHttpError', () =>
+    {
+        it('createError(408) returns TimeoutError', () =>
+        {
+            const err = createError(408, 'Timed out');
+            expect(err).toBeInstanceOf(TimeoutError);
+            expect(err.statusCode).toBe(408);
+        });
+
+        it('isHttpError recognizes framework error classes', () =>
+        {
+            expect(isHttpError(new DatabaseError())).toBe(true);
+            expect(isHttpError(new ConfigurationError())).toBe(true);
+            expect(isHttpError(new MiddlewareError())).toBe(true);
+            expect(isHttpError(new RoutingError())).toBe(true);
+            expect(isHttpError(new TimeoutError())).toBe(true);
         });
     });
 });
@@ -807,6 +943,15 @@ describe('Error Exports', () =>
         expect(z.NotImplementedError).toBeDefined();
         expect(z.BadGatewayError).toBeDefined();
         expect(z.ServiceUnavailableError).toBeDefined();
+    });
+
+    it('exports framework-specific error classes', () =>
+    {
+        expect(z.DatabaseError).toBeDefined();
+        expect(z.ConfigurationError).toBeDefined();
+        expect(z.MiddlewareError).toBeDefined();
+        expect(z.RoutingError).toBeDefined();
+        expect(z.TimeoutError).toBeDefined();
     });
 
     it('exports factory and utility functions', () =>
