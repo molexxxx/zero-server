@@ -1,6 +1,6 @@
 {
   "name": "zero-http",
-  "version": "0.2.5",
+  "version": "0.3.1",
   "description": "Zero-dependency backend framework with routing, ORM, WebSocket, SSE, security middleware, and more",
   "main": "index.js",
   "types": "types/index.d.ts",
@@ -32,10 +32,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonywied17/zero-server.git"
+    "url": "git+https://github.com/tonywied17/zero-http.git"
   },
   "bugs": {
-    "url": "https://github.com/tonywied17/zero-server/issues"
+    "url": "https://github.com/tonywied17/zero-http/issues"
   },
   "homepage": "https://z-http.com",
   "engines": {

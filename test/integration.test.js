@@ -81,7 +81,7 @@ function wsRawConnect(portNum, wsPath, extraHeaders) {
     });
 }
 
-describe('zero-server integration', () => {
+describe('zero-http integration', () => {
     let server, base, compressServer, compressBase, wsServer, wsPort;
     let doFetch, fetch;
     let staticFolder, uploadsDir;
