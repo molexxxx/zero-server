@@ -4,9 +4,9 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>zero-http — demo & reference</title>
+	<title>zero-server — demo & reference</title>
 	<meta name="description"
-		content="zero-http is a zero-dependency, Express-like HTTP/HTTPS server for Node.js with built-in WebSocket, Server-Sent Events, body parsers, response compression, static serving, and upload handling." />
+		content="zero-server is a zero-dependency backend framework for Node.js with Express-like routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, compression, and more." />
 	<meta name="keywords"
 		content="nodejs,http,https,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client,websocket,sse,server-sent events,compression,router" />
 	<meta name="author" content="Anthony Wiedman" />
@@ -42,15 +42,15 @@
 			</button>
 
 			<a class="brand" href="#top" id="brand-top" style="text-decoration:none;color:inherit;cursor:pointer;display:flex;align-items:center;gap:12px">
-				<img src="/vendor/icons/logo.svg" alt="zero-http logo" class="header-logo" width="50" height="50" />
+				<img src="/vendor/icons/logo.svg" alt="zero-server logo" class="header-logo" width="50" height="50" />
 				<div>
-					<div class="logo">zero-http</div>
-					<div class="subtitle">Zero-dependency Express-like server</div>
+					<div class="logo">zero-server</div>
+					<div class="subtitle">Zero-dependency backend framework for Node.js</div>
 				</div>
 			</a>
 
 			<div class="repo-buttons" role="navigation" aria-label="Repository links">
-				<a class="icon-btn" href="https://github.com/tonywied17/zero-http-npm" target="_blank"
+				<a class="icon-btn" href="https://github.com/tonywied17/zero-server" target="_blank"
 					rel="noopener noreferrer" aria-label="View on GitHub">
 					<svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 						<path
@@ -58,7 +58,7 @@
 					</svg>
 					<span class="sr">GitHub</span>
 				</a>
-				<a class="icon-btn" href="https://www.npmjs.com/package/zero-http" target="_blank"
+				<a class="icon-btn" href="https://www.npmjs.com/package/zero-server" target="_blank"
 					rel="noopener noreferrer" aria-label="View on npm">
 					<svg class="icon-svg" viewBox="0 0 48 22" aria-hidden="true" role="img">
 						<rect width="48" height="22" rx="4" fill="#CB3837"></rect>
@@ -86,18 +86,17 @@
 					</button>
 				</div>
 				<ul>
-					<li><a href="#features">Features</a></li>
-					<li><a href="#quickstart">Quickstart</a></li>
-					<li><a href="#options">Options</a></li>
-					<li class="toc-collapsible"><a href="#api-reference">API Reference</a></li>
-					<li class="toc-collapsible"><a href="#simple-examples">Simple Examples</a></li>
-					<li class="toc-collapsible"><a href="#playground">Playground</a>
+					<li data-static="features"><a href="#features">Features</a></li>
+					<!-- Dynamic doc sections inserted here by data-sections.js -->
+					<li data-static="playground" class="toc-collapsible"><a href="#playground">Playground</a>
 						<ul class="toc-sub">
 							<li class="toc-sub-item"><a href="#upload-testing">Upload multipart data</a></li>
 							<li class="toc-sub-item"><a href="#parser-tests">Parser tests</a></li>
 							<li class="toc-sub-item"><a href="#proxy-test">Proxy test</a></li>
 							<li class="toc-sub-item"><a href="#ws-chat">WebSocket chat</a></li>
 							<li class="toc-sub-item"><a href="#sse-viewer">SSE viewer</a></li>
+							<li class="toc-sub-item"><a href="#orm-crud">ORM Task Manager</a></li>
+							<li class="toc-sub-item"><a href="#cookie-explorer">Cookie Explorer</a></li>
 						</ul>
 					</li>
 				</ul>
@@ -178,7 +177,7 @@
 											width="48" height="48" />
 									</div>
 									<div class="feature-text"><h5>Compression</h5>
-									<p>Gzip/deflate with threshold &amp; filter.</p></div>
+									<p>Brotli/gzip/deflate with threshold &amp; filter.</p></div>
 								</div>
 								<div class="feature-card">
 									<div class="feature-icon">
@@ -194,7 +193,39 @@
 											width="48" height="48" />
 									</div>
 									<div class="feature-text"><h5>Modular Router</h5>
-									<p>Sub-apps, chaining, introspection.</p></div>
+									<p>Sub-apps, groups, chaining, introspection.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/security.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Security</h5>
+									<p>Helmet headers, CSRF protection, cookies.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/validate.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Validation</h5>
+									<p>Schema-based request validation &amp; coercion.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/database.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>ORM &amp; Database</h5>
+									<p>Models, query builder, 6 adapters.</p></div>
+								</div>
+								<div class="feature-card">
+									<div class="feature-icon">
+										<img class="icon-svg" src="/vendor/icons/env.svg" alt="" aria-hidden="true"
+											width="48" height="48" />
+									</div>
+									<div class="feature-text"><h5>Environment Config</h5>
+									<p>Typed .env loading with schema validation.</p></div>
 								</div>
 							</div>
 						</div>
@@ -228,95 +259,11 @@
 					</div>
 				</div>
 
-				<div class="acc-body">
-					<h4 id="quickstart">Quickstart</h4>
-
-					<p class="muted">Install from npm and create a simple server:</p>
-					<pre class="language-bash"><code class="language-bash">npm install zero-http</code></pre>
-
-					<pre class="language-javascript"><code class="language-javascript">const { createApp, json, static } = require('zero-http')
-const path = require('path')
-const app = createApp()
-
-app.use(json({ limit: '10kb' }))
-app.use(static(path.join(__dirname, 'public'), { index: 'index.html' }))
-
-app.get('/ping', (req, res) =&gt; res.json({ pong: true }))
-
-app.listen(3000, () =&gt; {
-	console.log('Server listening on http://localhost:3000')
-})
-</code></pre>
-
-					<p class="muted">To run this demo server from the repo root and open
-						<code>http://localhost:3000</code>.
-					</p>
-					<pre class="language-bash"><code class="language-bash">npm install zero-http
-npm run docs
-# open http://localhost:3000
-</code></pre>
-
-					<h4>API, Options & Examples</h4>
-
-					<div class="muted">Comprehensive reference for configuration options, runtime behavior, and API
-						examples. Expand each section for details and runnable snippets.</div>
-
-					<details class="acc" id="options">
-						<summary>Options (middleware & parser settings)</summary>
-						<div class="acc-body">
-							<p class="muted">Common option shapes and defaults for parsers and upload middleware.</p>
-							<div id="options-items">Loading options…</div>
-						</div>
-					</details>
-
-					<details class="acc" id="api-reference">
-						<summary>API Reference</summary>
-						<div class="acc-body">
-							<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-								<input id="api-search" placeholder="Search API (name, description)"
-									style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:inherit" />
-								<button id="api-clear" class="btn small" type="button">Clear</button>
-							</div>
-							<div id="api-items">Loading API reference…</div>
-						</div>
-					</details>
-
-					<details class="acc" id="simple-examples">
-						<summary>Simple Examples</summary>
-						<div class="acc-body">
-							<p class="muted">Snippets showing how to compose middleware for common
-								tasks.</p>
-							<div id="examples-items">Loading examples…</div>
-						</div>
-					</details>
-
-					<details class="acc">
-						<summary>Installation & tests</summary>
-						<div class="acc-body">
-
-							<pre class="language-bash"><code class="language-shell">#clone and install dependencies
-git clone https://github.com/tonywied17/zero-http-npm.git
-npm install
-
-# run demo server from repo root
-npm run docs
-
-# or directly:
-node documentation/full-server.js
-
-# run tests (project-specific)
-node test/test.js
-</code></pre>
-
-						</div>
-					</details>
-
-					<h4>Extending</h4>
-					<p>Use the provided middlewares and routing helpers to build controllers, add auth, or swap in
-						different storage backends. The multipart parser exposes file streams and writes each part to
-						disk so you can replace disk writes with S3 streams if desired.</p>
-
+				<!-- Dynamic documentation sections rendered by data-sections.js -->
+				<div id="doc-sections" class="doc-sections-container">
+					<p class="muted" style="padding:20px">Loading documentation…</p>
 				</div>
+
 			</div>
 
 			<div class="section-divider constrained" id="playground">
@@ -486,6 +433,96 @@ node test/test.js
 							</div>
 						</div>
 					</div>
+				</div>
+			</div>
+
+			<div class="card play-card constrained">
+				<div class="card-head">
+					<h3 id="orm-crud">ORM Task Manager</h3>
+					<div class="small muted">Full CRUD with the built-in ORM — in-memory Task model with search, filters, scopes, soft-delete &amp; restore.</div>
+				</div>
+				<div class="card-body">
+					<div class="orm-stats" id="ormStats"></div>
+					<div class="orm-toolbar">
+						<form id="taskForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+							<label style="flex:2;min-width:160px">Title
+								<input id="taskTitle" class="textInput" placeholder="Buy groceries…" required />
+							</label>
+							<label>Status
+								<select id="taskStatus" class="textInput">
+									<option value="pending">Pending</option>
+									<option value="in-progress">In-progress</option>
+									<option value="done">Done</option>
+								</select>
+							</label>
+							<label>Priority
+								<select id="taskPriority" class="textInput">
+									<option value="0">0</option>
+									<option value="1">1</option>
+									<option value="2">2</option>
+									<option value="3">3</option>
+									<option value="4">4</option>
+									<option value="5">5</option>
+								</select>
+							</label>
+							<button type="submit" class="btn primary">Add Task</button>
+						</form>
+						<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:end">
+							<label style="flex:1;min-width:120px">Search
+								<input id="taskSearch" class="textInput" placeholder="Filter by title…" />
+							</label>
+							<label>Scope
+								<select id="taskScope" class="textInput">
+									<option value="">All</option>
+									<option value="active">Active</option>
+									<option value="done">Done</option>
+									<option value="highPriority">High Priority (≥3)</option>
+								</select>
+							</label>
+							<button id="taskDeleteAll" type="button" class="btn warn">Delete All</button>
+						</div>
+					</div>
+					<div id="taskList" class="result mono" style="min-height:100px;margin-top:12px;max-height:380px;overflow-y:auto"></div>
+					<pre id="taskResult" class="result mono" style="margin-top:8px;max-height:260px;overflow-y:auto"></pre>
+				</div>
+			</div>
+
+			<div class="card play-card constrained">
+				<div class="card-head">
+					<h3 id="cookie-explorer">Cookie Explorer</h3>
+					<div class="small muted">Set, inspect, and delete cookies in real time using the built-in cookieParser middleware.</div>
+				</div>
+				<div class="card-body">
+					<form id="cookieForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+						<label style="flex:1;min-width:100px">Name
+							<input id="cookieName" class="textInput" placeholder="theme" required />
+						</label>
+						<label style="flex:1;min-width:100px">Value
+							<input id="cookieValue" class="textInput" placeholder="dark" />
+						</label>
+						<label>HttpOnly
+							<select id="cookieHttpOnly" class="textInput">
+								<option value="false">No</option>
+								<option value="true">Yes</option>
+							</select>
+						</label>
+						<label>SameSite
+							<select id="cookieSameSite" class="textInput">
+								<option value="Lax">Lax</option>
+								<option value="Strict">Strict</option>
+								<option value="None">None</option>
+							</select>
+						</label>
+						<label>Max-Age (s)
+							<input id="cookieMaxAge" class="textInput" type="number" placeholder="3600" style="width:90px" />
+						</label>
+						<button type="submit" class="btn primary">Set Cookie</button>
+					</form>
+					<div style="display:flex;gap:8px;margin-top:8px">
+						<button id="cookieRefresh" type="button" class="btn">Refresh Cookies</button>
+					</div>
+					<div id="cookieJar" class="result mono" style="min-height:80px;margin-top:12px;max-height:320px;overflow-y:auto"></div>
+					<pre id="cookieResult" class="result mono" style="margin-top:8px"></pre>
 				</div>
 			</div>
 

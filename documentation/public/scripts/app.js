@@ -38,7 +38,5 @@ document.addEventListener('DOMContentLoaded', () =>
     initProxy();
 
     /* Data-driven documentation sections */
-    loadApiReference().catch(() => {});
-    loadOptions().catch(() => {});
-    loadExamples().catch(() => {});
+    loadDocs().catch(() => {});
 });

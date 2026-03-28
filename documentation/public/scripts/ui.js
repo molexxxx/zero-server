@@ -127,11 +127,11 @@ function initTocNavigation()
      */
     function openAncestors(el)
     {
-        let d = el.closest('details.acc');
+        let d = el.closest('details');
         while (d)
         {
             d.open = true;
-            d = d.parentElement ? d.parentElement.closest('details.acc') : null;
+            d = d.parentElement ? d.parentElement.closest('details') : null;
         }
     }
 
@@ -229,7 +229,8 @@ function initTocCollapsible()
     const items = document.querySelectorAll('.toc-collapsible');
     items.forEach(li =>
     {
-        /* Start expanded */
+        /* Skip if already has a toggle button */
+        if (li.querySelector('.toc-collapse-btn')) return;
 
         /* Create toggle button */
         const toggle = document.createElement('button');

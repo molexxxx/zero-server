@@ -8,7 +8,7 @@ const path = require('path')
 
 const pkg = require('../package.json')
 
-console.log(`Running zero-http v${pkg.version} integration tests\n`)
+console.log(`Running zero-server v${pkg.version} integration tests\n`)
 
 let passed = 0
 let failed = 0
@@ -802,11 +802,11 @@ async function run()
     try { fs.rmSync(staticFolder, { recursive: true, force: true }) } catch (e) { }
 
     console.log(`\n${passed} passed, ${failed} failed`)
-    if (failed > 0) process.exitCode = 2
+    process.exit(failed > 0 ? 1 : 0)
 }
 
 run().catch(err =>
 {
     console.error('Tests crashed:', err)
-    process.exitCode = 2
+    process.exit(1)
 })

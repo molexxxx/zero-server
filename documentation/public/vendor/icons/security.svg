@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-sec" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Shield outline -->
+  <path d="M32 6L10 16v16c0 14 10 22 22 26 12-4 22-12 22-26V16L32 6z" fill="url(#g-sec)" opacity="0.25"/>
+  <!-- Shield solid inner -->
+  <path d="M32 12L16 20v12c0 10 7 17 16 20 9-3 16-10 16-20V20L32 12z" fill="url(#g-sec)"/>
+  <!-- Checkmark inside shield -->
+  <path d="M24 33l6 6 10-12" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

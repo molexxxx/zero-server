@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-val" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Rounded rectangle (form/clipboard) -->
+  <rect x="12" y="6" width="40" height="52" rx="6" fill="url(#g-val)" opacity="0.25"/>
+  <rect x="16" y="10" width="32" height="44" rx="4" fill="url(#g-val)" opacity="0.4"/>
+  <!-- Lines (form fields) -->
+  <line x1="22" y1="22" x2="36" y2="22" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="22" y1="30" x2="34" y2="30" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+  <!-- Large checkmark overlay -->
+  <path d="M22 38l8 8 14-18" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

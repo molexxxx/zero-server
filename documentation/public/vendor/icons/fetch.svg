@@ -4,20 +4,17 @@
       <stop offset="0" stop-color="#7b61ff"/>
       <stop offset="1" stop-color="#3ec6ff"/>
     </linearGradient>
-    <!-- Cloud silhouette via clipPath so gradient is seamless across the whole shape -->
-    <clipPath id="cloud-clip">
-      <circle cx="18" cy="26" r="11"/>
-      <circle cx="32" cy="17" r="14"/>
-      <circle cx="46" cy="24" r="11"/>
-      <rect x="8" y="28" width="48" height="12" rx="6"/>
-    </clipPath>
   </defs>
   <rect width="64" height="64" rx="8" fill="transparent"/>
-
-  <!-- Large centered cloud filled with flat gradient, clipped to cloud silhouette -->
-  <rect x="0" y="0" width="64" height="64" fill="url(#g-fetch)" clip-path="url(#cloud-clip)"/>
-
-  <!-- Centered down arrow below the cloud -->
-  <path d="M32 43v13" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M27 56l5 5 5-5" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Globe/sphere -->
+  <circle cx="32" cy="28" r="20" fill="url(#g-fetch)" opacity="0.3"/>
+  <circle cx="32" cy="28" r="16" fill="url(#g-fetch)"/>
+  <!-- Globe meridians -->
+  <ellipse cx="32" cy="28" rx="8" ry="16" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+  <path d="M16 28h32" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+  <path d="M18 20h28" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <path d="M18 36h28" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <!-- Download arrow below globe -->
+  <path d="M32 46v12" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M27 54l5 5 5-5" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
