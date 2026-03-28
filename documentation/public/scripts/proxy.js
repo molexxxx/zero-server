@@ -77,8 +77,45 @@ function initProxy()
             else if (ct.startsWith('text/') || ct === '')
             {
                 const txt = await r.text();
-                proxyResult.innerHTML = `<pre class="code"><code>${escapeHtml(txt)}</code></pre>`;
-                try { highlightAllPre(); } catch (e) { }
+
+                /* HTML — render in a sandboxed iframe with a <base> tag so
+                   relative src/href attributes resolve against the original URL */
+                if (ct.includes('text/html'))
+                {
+                    /* Derive the base URL (origin + path up to last slash) */
+                    let baseHref;
+                    try
+                    {
+                        const parsed = new URL(url);
+                        const lastSlash = parsed.pathname.lastIndexOf('/');
+                        baseHref = parsed.origin + parsed.pathname.substring(0, lastSlash + 1);
+                    } catch (_) { baseHref = url; }
+
+                    /* Inject <base> right after <head> (or at the top if no <head>) */
+                    const baseTag = '<base href="' + baseHref.replace(/"/g, '&quot;') + '" target="_blank">';
+                    let patched = txt;
+                    if (/<head[^>]*>/i.test(patched))
+                        patched = patched.replace(/(<head[^>]*>)/i, '$1' + baseTag);
+                    else
+                        patched = baseTag + patched;
+
+                    const blob = new Blob([patched], { type: 'text/html;charset=utf-8' });
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    proxyResult.innerHTML =
+                        `<iframe src="${blobUrl}" ` +
+                        `sandbox="allow-scripts allow-same-origin" ` +
+                        `style="width:100%;height:500px;border:1px solid var(--surface-border);border-radius:8px;background:#fff" ` +
+                        `title="Proxied page"></iframe>` +
+                        `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer;font-size:13px">View source</summary>` +
+                        `<pre class="code" style="margin-top:6px"><code>${escapeHtml(txt)}</code></pre></details>`;
+                    try { highlightAllPre(); } catch (e) { }
+                }
+                else
+                {
+                    proxyResult.innerHTML = `<pre class="code"><code>${escapeHtml(txt)}</code></pre>`;
+                    try { highlightAllPre(); } catch (e) { }
+                }
             }
             /* Binary fallback — offer download */
             else
