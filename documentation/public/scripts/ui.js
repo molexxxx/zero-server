@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () =>
     initTocNavigation();
     initTocToolbar();
     initTocCollapsible();
-    initTocSearch();
+    initScrollSpy();
+    initScrollProgress();
+    initFabTop();
 });
 
 /* -- Feature Tabs ------------------------------------------------------------ */
@@ -154,6 +156,8 @@ function initTocNavigation()
         const hash = a.getAttribute('href');
         if (!hash || hash.charAt(0) !== '#') return;
 
+        e.preventDefault();
+        history.pushState(null, '', hash);
         scrollToId(hash.slice(1));
         document.body.classList.remove('toc-open');
 
@@ -249,95 +253,137 @@ function initTocCollapsible()
     });
 }
 
-/* -- TOC Search Filter ------------------------------------------------------- */
+/* -- Scroll-Spy Active TOC Highlighting -------------------------------------- */
 
 /**
- * Wire the sidebar search input to filter TOC items by matching against
- * the display name (link text) of each item in the sidebar.
+ * Track which doc section / sub-item is currently visible and apply
+ * a `toc-active` class to the corresponding sidebar link.
+ * Uses IntersectionObserver for efficient scroll tracking.
  */
-function initTocSearch()
+function initScrollSpy()
 {
-    const input = document.getElementById('toc-search');
-    if (!input) return;
-
-    const nav = document.querySelector('.toc-sidebar nav ul');
-    if (!nav) return;
-
-    /**
-     * Get the visible display name for a TOC list item.
-     */
-    function getDisplayName(li)
+    /* Re-run after docs load since sections are dynamic */
+    const origLoadDocs = window.loadDocs;
+    if (typeof origLoadDocs === 'function' && !window._scrollSpyPatched)
     {
-        const a = li.querySelector(':scope > a');
-        return a ? a.textContent.trim().toLowerCase() : '';
+        window._scrollSpyPatched = true;
+        /* Hook into loadDocs to re-init observer after sections render */
+        const _origLoadDocs = loadDocs;
+        window.loadDocs = async function ()
+        {
+            const result = await _origLoadDocs.apply(this, arguments);
+            setupScrollObserver();
+            return result;
+        };
     }
 
-    /**
-     * Check whether any sub-items match the query by display name.
-     */
-    function hasSubMatch(li, q)
+    /* Also set up immediately for any static sections */
+    setupScrollObserver();
+
+    function setupScrollObserver()
     {
-        const subItems = li.querySelectorAll('.toc-sub-item');
-        for (const sub of subItems)
+        const nav = document.querySelector('.toc-sidebar nav');
+        if (!nav) return;
+
+        /* Gather all observable targets: doc-sections and doc-items */
+        const targets = document.querySelectorAll('.doc-section, .doc-item, [id="features"], [id="playground"]');
+        if (!targets.length) return;
+
+        /* Clear any existing observer */
+        if (window._scrollSpyObserver) window._scrollSpyObserver.disconnect();
+
+        const visibleSet = new Set();
+
+        const observer = new IntersectionObserver((entries) =>
         {
-            if (getDisplayName(sub).includes(q)) return true;
-        }
-        return false;
-    }
-
-    let debounceTimer = null;
-
-    input.addEventListener('input', () =>
-    {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() =>
-        {
-            const q = input.value.trim().toLowerCase();
-
-            const topItems = nav.querySelectorAll(':scope > li');
-
-            if (!q)
+            for (const entry of entries)
             {
-                /* Reset: show everything, restore collapsed state */
-                topItems.forEach(li =>
-                {
-                    li.style.display = '';
-                    const subItems = li.querySelectorAll('.toc-sub-item');
-                    subItems.forEach(s => s.style.display = '');
-                });
-                return;
+                if (entry.isIntersecting) visibleSet.add(entry.target.id);
+                else visibleSet.delete(entry.target.id);
             }
+            updateActiveLink();
+        }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
 
-            topItems.forEach(li =>
+        window._scrollSpyObserver = observer;
+        targets.forEach(t => { if (t.id) observer.observe(t); });
+
+        function updateActiveLink()
+        {
+            /* Remove all active classes */
+            nav.querySelectorAll('.toc-active').forEach(el => el.classList.remove('toc-active'));
+
+            if (!visibleSet.size) return;
+
+            /* Pick the first visible one in DOM order */
+            let activeId = null;
+            for (const t of targets)
             {
-                const titleMatch = getDisplayName(li).includes(q);
-                const subMatch = hasSubMatch(li, q);
+                if (visibleSet.has(t.id)) { activeId = t.id; break; }
+            }
+            if (!activeId) return;
 
-                if (titleMatch || subMatch)
+            /* Find matching sidebar link */
+            const link = nav.querySelector(`a[href="#${activeId}"]`);
+            if (link)
+            {
+                link.classList.add('toc-active');
+                /* Also mark parent category if it's a sub-item */
+                const parentLi = link.closest('li.toc-collapsible');
+                if (parentLi)
                 {
-                    li.style.display = '';
-                    /* Auto-expand when searching */
-                    if (li.classList.contains('toc-collapsible'))
-                    {
-                        li.classList.remove('toc-collapsed');
-                    }
+                    const parentLink = parentLi.querySelector(':scope > a');
+                    if (parentLink) parentLink.classList.add('toc-active');
+                }
+            }
+        }
+    }
+}
 
-                    /* Filter sub-items if only some match */
-                    const subItems = li.querySelectorAll('.toc-sub-item');
-                    if (subItems.length)
-                    {
-                        subItems.forEach(sub =>
-                        {
-                            /* If parent title matched, show all children; otherwise filter by sub-item name */
-                            sub.style.display = (titleMatch || getDisplayName(sub).includes(q)) ? '' : 'none';
-                        });
-                    }
-                }
-                else
-                {
-                    li.style.display = 'none';
-                }
-            });
-        }, 120);
+/* -- Scroll Progress Bar ----------------------------------------------------- */
+
+/**
+ * Thin progress bar at the very top of the viewport indicating how far the
+ * user has scrolled through the page.
+ */
+function initScrollProgress()
+{
+    const bar = document.getElementById('scroll-progress');
+    if (!bar) return;
+
+    function update()
+    {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        bar.style.width = pct + '%';
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+}
+
+/* -- Floating Back-to-Top FAB ------------------------------------------------ */
+
+/**
+ * Floating button in the bottom-right corner that appears after scrolling
+ * past a threshold and smooth-scrolls to the top when clicked.
+ */
+function initFabTop()
+{
+    const fab = document.getElementById('fab-top');
+    if (!fab) return;
+
+    function update()
+    {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        fab.classList.toggle('visible', scrollTop > 300);
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+
+    fab.addEventListener('click', () =>
+    {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }

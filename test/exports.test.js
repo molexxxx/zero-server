@@ -2,7 +2,7 @@ const {
     createApp, Router, json, urlencoded, text, raw, multipart,
     static: staticMid, cors, fetch, rateLimit, logger, compress,
     helmet, timeout, requestId, cookieParser, WebSocketPool,
-    csrf, validate, env, Database, Model, TYPES, Query
+    csrf, validate, env, Database, Model, TYPES, Query, version
 } = require('../');
 
 describe('Module Exports', () => {
@@ -31,4 +31,9 @@ describe('Module Exports', () => {
     it('Model', () => expect(typeof Model).toBe('function'));
     it('TYPES', () => expect(typeof TYPES).toBe('object'));
     it('Query', () => expect(typeof Query).toBe('function'));
+    it('version', () =>
+    {
+        expect(typeof version).toBe('string');
+        expect(version).toMatch(/^\d+\.\d+\.\d+/);
+    });
 });

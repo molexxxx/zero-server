@@ -75,6 +75,57 @@ export class ServiceUnavailableError extends HttpError {
     constructor(message?: string, opts?: HttpErrorOptions);
 }
 
+// --- Framework Error Classes -------------------------------------
+
+export interface DatabaseErrorOptions extends HttpErrorOptions {
+    query?: string;
+    adapter?: string;
+}
+
+export class DatabaseError extends HttpError {
+    readonly query?: string;
+    readonly adapter?: string;
+    constructor(message?: string, opts?: DatabaseErrorOptions);
+}
+
+export interface ConfigurationErrorOptions extends HttpErrorOptions {
+    setting?: string;
+}
+
+export class ConfigurationError extends HttpError {
+    readonly setting?: string;
+    constructor(message?: string, opts?: ConfigurationErrorOptions);
+}
+
+export interface MiddlewareErrorOptions extends HttpErrorOptions {
+    middleware?: string;
+}
+
+export class MiddlewareError extends HttpError {
+    readonly middleware?: string;
+    constructor(message?: string, opts?: MiddlewareErrorOptions);
+}
+
+export interface RoutingErrorOptions extends HttpErrorOptions {
+    path?: string;
+    method?: string;
+}
+
+export class RoutingError extends HttpError {
+    readonly path?: string;
+    readonly method?: string;
+    constructor(message?: string, opts?: RoutingErrorOptions);
+}
+
+export interface TimeoutErrorOptions extends HttpErrorOptions {
+    timeout?: number;
+}
+
+export class TimeoutError extends HttpError {
+    readonly timeout?: number;
+    constructor(message?: string, opts?: TimeoutErrorOptions);
+}
+
 export function createError(statusCode: number, message?: string, opts?: HttpErrorOptions): HttpError;
 export function isHttpError(err: any): err is HttpError;
 

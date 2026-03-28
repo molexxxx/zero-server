@@ -17,8 +17,41 @@ const SECTION_ICONS = {
     settings: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     database: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
     zap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-    globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
+    globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    'alert-triangle': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
 };
+
+/* -- Anchor link helper ------------------------------------------------------- */
+
+const ANCHOR_SVG = '<svg viewBox="0 0 16 16" fill="none"><path d="M6.5 11.5h-2a3 3 0 0 1 0-6h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 4.5h2a3 3 0 0 1 0 6h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 8h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+function createAnchorLink(id)
+{
+    const a = document.createElement('a');
+    a.className = 'anchor-link';
+    a.href = '#' + id;
+    a.title = 'Copy link';
+    a.innerHTML = ANCHOR_SVG;
+    a.addEventListener('click', (e) =>
+    {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = location.origin + location.pathname + '#' + id;
+        navigator.clipboard.writeText(url).then(() => showCopyToast('Link copied!')).catch(() => {});
+    });
+    return a;
+}
+
+function showCopyToast(text)
+{
+    const toast = document.getElementById('copy-toast');
+    const toastText = document.getElementById('copy-toast-text');
+    if (!toast || !toastText) return;
+    toastText.textContent = text;
+    toast.classList.add('visible');
+    clearTimeout(window._copyToastTimer);
+    window._copyToastTimer = setTimeout(() => toast.classList.remove('visible'), 2000);
+}
 
 /* -- Rendering helpers ------------------------------------------------------- */
 
@@ -44,6 +77,7 @@ function renderDocItem(item, section)
 
     const s = document.createElement('summary');
     s.innerHTML = `<strong>${escapeHtml(item.name)}</strong>`;
+    s.appendChild(createAnchorLink(slug));
     d.appendChild(s);
 
     const body = document.createElement('div');
@@ -102,6 +136,32 @@ function renderDocItem(item, section)
         }
         table.appendChild(tbody);
         body.appendChild(table);
+    }
+
+    /* Method groups (categorized methods, e.g. Query) */
+    if (Array.isArray(item.methodGroups) && item.methodGroups.length)
+    {
+        for (const group of item.methodGroups)
+        {
+            const h6 = document.createElement('h6');
+            h6.textContent = group.category || 'Methods';
+            body.appendChild(h6);
+
+            const table = document.createElement('table');
+            table.innerHTML = '<thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>';
+            const tbody = document.createElement('tbody');
+            for (const m of group.methods)
+            {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    `<td><code>${escapeHtml(m.method || '')}</code></td>` +
+                    `<td><code>${escapeHtml(m.signature || '')}</code></td>` +
+                    `<td>${escapeHtml(m.description || '')}</td>`;
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            body.appendChild(table);
+        }
     }
 
     /* Example code block */
@@ -163,6 +223,7 @@ function renderSection(section)
 
     const iconHtml = SECTION_ICONS[section.icon] || '';
     header.innerHTML = `<span class="doc-section-icon">${iconHtml}</span><h4 class="doc-section-title">${escapeHtml(section.section)}</h4>`;
+    header.appendChild(createAnchorLink(slug));
     wrapper.appendChild(header);
 
     /* Section divider line */
@@ -292,6 +353,31 @@ async function loadDocs()
                 if (details) details.open = !details.open;
             });
         });
+
+        /* Auto-open Installation & Quickstart on first load */
+        const firstSection = sections[0];
+        if (firstSection && Array.isArray(firstSection.items))
+        {
+            for (let i = 0; i < Math.min(2, firstSection.items.length); i++)
+            {
+                const id = itemSlug(firstSection.section, firstSection.items[i].name);
+                const el = document.getElementById(id);
+                if (el) el.open = true;
+            }
+        }
+
+        /* Handle initial URL hash — content didn't exist when the browser first tried */
+        if (location.hash)
+        {
+            const id = location.hash.slice(1);
+            const target = document.getElementById(id);
+            if (target)
+            {
+                let d = target.closest('details');
+                while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+            }
+        }
 
     } catch (e) { console.error('loadDocs error', e); }
 }

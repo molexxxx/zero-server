@@ -36,7 +36,7 @@ export {
 export { Env, EnvFieldDef, EnvSchema, EnvLoadOptions, env } from './env';
 export {
     TYPES, SchemaColumnDef, validateValue,
-    Query, Model, ModelHooks, FindOrCreateResult,
+    Query, Model, ModelHooks, FindOrCreateResult, PaginatedResult,
     Database, AdapterType,
 } from './orm';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
@@ -47,6 +47,11 @@ export {
     MethodNotAllowedError, ConflictError, GoneError, PayloadTooLargeError,
     UnprocessableEntityError, ValidationError, TooManyRequestsError,
     InternalError, NotImplementedError, BadGatewayError, ServiceUnavailableError,
+    DatabaseError, DatabaseErrorOptions,
+    ConfigurationError, ConfigurationErrorOptions,
+    MiddlewareError, MiddlewareErrorOptions,
+    RoutingError, RoutingErrorOptions,
+    TimeoutError, TimeoutErrorOptions,
     createError, isHttpError,
     ErrorHandlerOptions, errorHandler,
     Debug, DebugLogger, DebugLevels, debug,
@@ -73,6 +78,7 @@ import {
     PayloadTooLargeError, UnprocessableEntityError, ValidationError,
     TooManyRequestsError, InternalError, NotImplementedError,
     BadGatewayError, ServiceUnavailableError,
+    DatabaseError, ConfigurationError, MiddlewareError, RoutingError, TimeoutError,
     createError, isHttpError, errorHandler, debug,
 } from './errors';
 
@@ -120,6 +126,12 @@ declare const zeroServer: {
     NotImplementedError: typeof NotImplementedError;
     BadGatewayError: typeof BadGatewayError;
     ServiceUnavailableError: typeof ServiceUnavailableError;
+    // Framework-specific errors
+    DatabaseError: typeof DatabaseError;
+    ConfigurationError: typeof ConfigurationError;
+    MiddlewareError: typeof MiddlewareError;
+    RoutingError: typeof RoutingError;
+    TimeoutError: typeof TimeoutError;
     createError: typeof createError;
     isHttpError: typeof isHttpError;
     errorHandler: typeof errorHandler;
@@ -130,6 +142,8 @@ declare const zeroServer: {
         new(): WebSocketPool;
     };
     SSEStream: SSEStream;
+    /** Package version string */
+    version: string;
 };
 
 export = zeroServer;

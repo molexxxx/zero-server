@@ -29,12 +29,34 @@
 	<script src="/scripts/playground.js" defer></script>
 	<script src="/scripts/proxy.js" defer></script>
 	<script src="/scripts/data-sections.js" defer></script>
+	<script src="/scripts/search.js" defer></script>
 	<script src="/scripts/ui.js" defer></script>
 	<script src="/scripts/app.js" defer></script>
 </head>
 
 <body>
+	<div class="scroll-progress" id="scroll-progress"></div>
 	<a id="top"></a>
+
+	<!-- Search Modal (Ctrl+K / /) -->
+	<div class="search-modal-overlay" id="search-modal" aria-hidden="true">
+		<div class="search-modal">
+			<div class="search-modal-header">
+				<svg class="search-modal-icon" width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+				<input id="search-modal-input" class="search-modal-input" type="text" placeholder="Search documentation…" autocomplete="off" spellcheck="false" />
+				<kbd class="search-modal-kbd">Esc</kbd>
+			</div>
+			<div class="search-modal-body" id="search-modal-results">
+				<div class="search-modal-empty">Start typing to search…</div>
+			</div>
+			<div class="search-modal-footer">
+				<span class="search-hint"><kbd>↑</kbd> <kbd>↓</kbd> navigate</span>
+				<span class="search-hint"><kbd>↵</kbd> open</span>
+				<span class="search-hint"><kbd>Esc</kbd> close</span>
+			</div>
+		</div>
+	</div>
+
 	<div class="ui-shell">
 		<header class="ui-header">
 			<button class="toc-toggle" aria-label="Toggle table of contents" title="Toggle table of contents">
@@ -46,12 +68,17 @@
 			<a class="brand" href="#top" id="brand-top" style="text-decoration:none;color:inherit;cursor:pointer;display:flex;align-items:center;gap:12px">
 				<img src="/vendor/icons/logo.svg" alt="zero-http logo" class="header-logo" width="50" height="50" />
 				<div>
-					<div class="logo">zero-http</div>
+					<div class="logo">zero-http <span id="version-badge" class="version-badge"></span></div>
 					<div class="subtitle">Zero-dependency backend framework for Node.js</div>
 				</div>
 			</a>
 
 			<div class="repo-buttons" role="navigation" aria-label="Repository links">
+				<button class="search-trigger" id="search-trigger" aria-label="Search documentation (Ctrl+.)" title="Search (Ctrl+.)">
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+					<span class="search-trigger-text">Search…</span>
+					<kbd class="search-trigger-kbd">Ctrl .</kbd>
+				</button>
 				<a class="icon-btn" href="https://github.com/tonywied17/zero-http" target="_blank"
 					rel="noopener noreferrer" aria-label="View on GitHub">
 					<svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -76,10 +103,11 @@
 		<aside class="toc-sidebar" aria-label="Table of contents">
 			<nav>
 				<div class="toc-toolbar">
-					<div class="toc-search-wrap">
-						<svg class="toc-search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-						<input id="toc-search" class="toc-search" type="text" placeholder="Filter…" autocomplete="off" spellcheck="false" />
-					</div>
+					<button class="search-trigger toc-search-trigger" aria-label="Search documentation (Ctrl+.)" title="Search (Ctrl+.)">
+						<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+						<span>Search…</span>
+						<kbd class="toc-search-kbd">Ctrl .</kbd>
+					</button>
 					<button class="toc-tool-btn" id="toc-toggle-acc" title="Collapse all" aria-label="Collapse all sections">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</button>
@@ -534,6 +562,17 @@
 			</div>
 		</main>
 
+	</div>
+
+	<!-- Floating back-to-top -->
+	<button class="fab-top" id="fab-top" aria-label="Back to top" title="Back to top">
+		<svg viewBox="0 0 16 16" fill="none"><path d="M8 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 7l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+	</button>
+
+	<!-- Copy toast -->
+	<div class="copy-toast" id="copy-toast">
+		<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		<span id="copy-toast-text">Copied!</span>
 	</div>
 
 </body>

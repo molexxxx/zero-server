@@ -25,6 +25,7 @@ const env = require('./lib/env');
 const { Database, Model, TYPES, Query } = require('./lib/orm');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
+const { version } = require('./package.json');
 
 module.exports = {
     /**
@@ -107,6 +108,12 @@ module.exports = {
     NotImplementedError: errors.NotImplementedError,
     BadGatewayError: errors.BadGatewayError,
     ServiceUnavailableError: errors.ServiceUnavailableError,
+    // Framework-specific errors
+    DatabaseError: errors.DatabaseError,
+    ConfigurationError: errors.ConfigurationError,
+    MiddlewareError: errors.MiddlewareError,
+    RoutingError: errors.RoutingError,
+    TimeoutError: errors.TimeoutError,
     createError: errors.createError,
     isHttpError: errors.isHttpError,
     /** @see module:debug */
@@ -118,4 +125,6 @@ module.exports = {
     WebSocketPool,
     /** @see module:sse/stream */
     SSEStream,
+    /** Package version */
+    version,
 };
