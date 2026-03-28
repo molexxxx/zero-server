@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-server logo" width="300" height="300">
+  <img src="documentation/public/vendor/icons/logo.svg" alt="zero-http logo" width="300" height="300">
 </p>
 
-<h1 align="center">zero-server</h1>
+<h1 align="center">zero-http</h1>
 
 [![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
 [![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)
-[![GitHub](https://img.shields.io/badge/GitHub-zero--http--npm-blue.svg)](https://github.com/tonywied17/zero-server)
+[![GitHub](https://img.shields.io/badge/GitHub-zero--http--npm-blue.svg)](https://github.com/tonywied17/zero-http)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)

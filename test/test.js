@@ -8,7 +8,7 @@ const path = require('path')
 
 const pkg = require('../package.json')
 
-console.log(`Running zero-server v${pkg.version} integration tests\n`)
+console.log(`Running zero-http v${pkg.version} integration tests\n`)
 
 let passed = 0
 let failed = 0
