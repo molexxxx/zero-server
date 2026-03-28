@@ -4,8 +4,8 @@
 
 <h1 align="center">zero-server</h1>
 
-[![npm version](https://img.shields.io/npm/v/zero-server.svg)](https://www.npmjs.com/package/zero-server)
-[![npm downloads](https://img.shields.io/npm/dm/zero-server.svg)](https://www.npmjs.com/package/zero-server)
+[![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
+[![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)
 [![GitHub](https://img.shields.io/badge/GitHub-zero--http--npm-blue.svg)](https://github.com/tonywied17/zero-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14-brightgreen.svg)](https://nodejs.org)
@@ -28,13 +28,13 @@
 - **Security built-in** — CRLF injection prevention, prototype pollution filtering, path traversal guards, filename sanitization
 
 ```bash
-npm install zero-server
+npm install zero-http
 ```
 
 ## Quick Start
 
 ```js
-const { createApp, json } = require('zero-server')
+const { createApp, json } = require('zero-http')
 const app = createApp()
 
 app.use(json())
@@ -67,7 +67,7 @@ const {
   rateLimit, logger, compress,
   helmet, timeout, requestId, cookieParser,
   WebSocketConnection, WebSocketPool, SSEStream
-} = require('zero-server')
+} = require('zero-http')
 ```
 
 | Export | Type | Description |
@@ -291,7 +291,7 @@ Create modular route groups with `Router()`. Routers support all the same HTTP v
 | Wildcard catch-all | `/files/*` | `{ '0': 'path/to/file.txt' }` |
 
 ```js
-const { createApp, Router, json } = require('zero-server')
+const { createApp, Router, json } = require('zero-http')
 const app = createApp()
 
 // Modular API router
@@ -378,7 +378,7 @@ Stream file uploads to disk and collect form fields.
 
 | Option | Default | Description |
 |---|---|---|
-| `dir` | `os.tmpdir()/zero-server-uploads` | Upload directory (created automatically). |
+| `dir` | `os.tmpdir()/zero-http-uploads` | Upload directory (created automatically). |
 | `maxFileSize` | — | Maximum file size in bytes. Sends `413` on exceed. |
 
 Sets `req.body = { fields, files }` where each file entry has: `originalFilename`, `storedName`, `path`, `contentType`, `size`.
@@ -630,7 +630,7 @@ Zero-dependency server-side HTTP/HTTPS client.
 | `arrayBuffer()` | Promise\<Buffer\> | Read the body as a Buffer. |
 
 ```js
-const { fetch } = require('zero-server')
+const { fetch } = require('zero-http')
 
 // Simple GET
 const res = await fetch('https://api.example.com/data')
@@ -730,7 +730,7 @@ Manage groups of WebSocket connections with room-based broadcasting.
 | `roomSize` | `roomSize(room)` | Connection count in a room. |
 
 ```js
-const { createApp, WebSocketPool } = require('zero-server')
+const { createApp, WebSocketPool } = require('zero-http')
 const app = createApp()
 const pool = new WebSocketPool()
 
@@ -836,7 +836,7 @@ app.get('/events', (req, res) => {
 
 ```js
 const fs = require('fs')
-const { createApp } = require('zero-server')
+const { createApp } = require('zero-http')
 const app = createApp()
 
 app.listen(443, {
@@ -868,7 +868,7 @@ const {
   createApp, Router, cors, json, urlencoded, text, compress,
   static: serveStatic, logger, rateLimit, helmet, timeout,
   requestId, cookieParser, WebSocketPool
-} = require('zero-server')
+} = require('zero-http')
 
 const app = createApp()
 
@@ -927,7 +927,7 @@ app.listen(3000, () => console.log('Server running on :3000'))
 ### WebSocket Chat with Rooms
 
 ```js
-const { createApp, WebSocketPool } = require('zero-server')
+const { createApp, WebSocketPool } = require('zero-http')
 const app = createApp()
 const pool = new WebSocketPool()
 
@@ -955,7 +955,7 @@ app.listen(3000)
 ### Real-Time Dashboard with SSE
 
 ```js
-const { createApp, helmet, compress } = require('zero-server')
+const { createApp, helmet, compress } = require('zero-http')
 const app = createApp()
 app.use(helmet())
 app.use(compress())
@@ -980,7 +980,7 @@ app.listen(3000)
 ### File Upload API
 
 ```js
-const { createApp, json, multipart } = require('zero-server')
+const { createApp, json, multipart } = require('zero-http')
 const app = createApp()
 
 app.use(json())
