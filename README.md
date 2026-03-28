@@ -165,8 +165,8 @@ const {
 
 ```bash
 # Copy and configure environment
-cp .env.example .env
-# Edit .env if needed (TLS_CERT, TLS_KEY for HTTPS)
+cp documentation/.env.example documentation/.env
+# Edit documentation/.env if needed (TLS_CERT, TLS_KEY for HTTPS)
 
 npm run docs
 # open http://localhost:7273

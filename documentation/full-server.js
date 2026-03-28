@@ -11,7 +11,7 @@ const path = require('path');
 const { createApp, env, fetch } = require('..');
 
 // --- Environment ---
-env.load(path.join(__dirname, '..', '.env'));
+env.load(__dirname);
 
 // --- App ---
 const app = createApp();
