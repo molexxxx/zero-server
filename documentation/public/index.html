@@ -199,8 +199,8 @@
 
 				<div class="bento-section" id="features">
 					<div class="bento-grid">
-						<!-- Row 1: Zero Deps wide-left + Router + Security -->
-						<div class="bento-card bento-wide bento-main" style="--i:0">
+						<!-- Always-visible cards (DOM order = mobile order: featured first) -->
+						<div class="bento-card bento-wide bento-main" style="--i:0;--desktop-order:1">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -212,56 +212,7 @@
 								</div>
 							</div>
 						</div>
-						<a class="bento-card" href="#core-router" style="--i:1">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/router.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Modular Router</h4>
-									<p>Sub-apps, groups, chaining, param handlers, and route introspection.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card" href="#section-cookies-security" style="--i:2">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/security.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Security Suite</h4>
-									<p>Helmet headers, CSRF protection, signed cookies, and timeout guards.</p>
-								</div>
-							</div>
-						</a>
-						<!-- Row 2: Body Parsers + HTTP Client + ORM wide-right -->
-						<a class="bento-card" href="#section-body-parsers" style="--i:3">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/plug.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Body Parsers</h4>
-									<p>Built-in json(), urlencoded(), text(), raw(), and multipart().</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card" href="#networking-fetch" style="--i:4">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/fetch.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>HTTP Client</h4>
-									<p>Built-in server-side fetch with proxy and TLS passthrough.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card bento-wide bento-main" href="#section-orm" style="--i:5">
+						<a class="bento-card bento-wide bento-main" href="#section-orm" style="--i:1;--desktop-order:6">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -273,21 +224,43 @@
 								</div>
 							</div>
 						</a>
-						<!-- Hidden behind toggle -->
-						<!-- Row 3: Real-time wide-left + CORS + Rate Limiting -->
-						<a class="bento-card bento-wide bento-main" href="#section-real-time" style="--i:6">
+						<a class="bento-card" href="#core-router" style="--i:2;--desktop-order:2">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true" width="48" height="48" />
+									<img class="icon-svg" src="/icons/router.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>Real-time</h4>
-									<p>WebSocket rooms, pooling, broadcasting. SSE with auto-IDs and keep-alive.</p>
+									<h4>Modular Router</h4>
+									<p>Sub-apps, groups, chaining, param handlers, and route introspection.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#middleware-cors" style="--i:7">
+						<a class="bento-card" href="#section-cookies-security" style="--i:3;--desktop-order:3">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/security.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Security Suite</h4>
+									<p>Helmet headers, CSRF protection, signed cookies, and timeout guards.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#section-body-parsers" style="--i:4;--desktop-order:4">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/plug.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Body Parsers</h4>
+									<p>Built-in json(), urlencoded(), text(), raw(), and multipart().</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-cors" style="--i:5;--desktop-order:5">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -299,7 +272,20 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#middleware-ratelimit" style="--i:8">
+						<!-- Extra cards — hidden until toggle -->
+						<a class="bento-card bento-extra" href="#networking-fetch" style="--i:6;--desktop-order:7">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/fetch.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>HTTP Client</h4>
+									<p>Built-in server-side fetch with proxy and TLS passthrough.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#middleware-ratelimit" style="--i:7;--desktop-order:8">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -311,7 +297,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#middleware-compress" style="--i:9">
+						<a class="bento-card bento-extra" href="#middleware-compress" style="--i:8;--desktop-order:9">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -323,7 +309,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#middleware-static" style="--i:10">
+						<a class="bento-card bento-extra" href="#middleware-static" style="--i:9;--desktop-order:10">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -335,7 +321,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#body-parsers-multipart" style="--i:11">
+						<a class="bento-card bento-extra" href="#body-parsers-multipart" style="--i:10;--desktop-order:11">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -347,7 +333,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#cookies-security-validate" style="--i:12">
+						<a class="bento-card bento-extra" href="#cookies-security-validate" style="--i:11;--desktop-order:12">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -359,7 +345,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#core-createapp" style="--i:13">
+						<a class="bento-card bento-extra" href="#core-createapp" style="--i:12;--desktop-order:13">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -371,7 +357,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#section-error-handling" style="--i:14">
+						<a class="bento-card bento-extra" href="#section-error-handling" style="--i:13;--desktop-order:14">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -383,7 +369,19 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#middleware-logger" style="--i:15">
+						<a class="bento-card bento-extra bento-wide bento-main" href="#section-real-time" style="--i:14;--desktop-order:15">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Real-time</h4>
+									<p>WebSocket rooms, pooling, broadcasting. SSE with auto-IDs and keep-alive.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#middleware-logger" style="--i:15;--desktop-order:16">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -395,7 +393,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card" href="#section-environment" style="--i:16">
+						<a class="bento-card bento-extra" href="#section-environment" style="--i:16;--desktop-order:17">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">

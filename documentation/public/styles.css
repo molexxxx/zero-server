@@ -255,8 +255,11 @@ a.bento-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 20px 40p
 .bento-card::before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:radial-gradient(ellipse 350px 250px at var(--glow-x,50%) var(--glow-y,50%),rgba(88,101,242,0.30),transparent 65%);opacity:0;transition:opacity .3s ease;z-index:0;pointer-events:none}
 .bento-card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:var(--bg);pointer-events:none;z-index:1}
 .bento-card.bento-lit::before{opacity:1}
-.bento-grid .bento-card:nth-child(n+7){display:none}
-.bento-section.bento-expanded .bento-grid .bento-card:nth-child(n+7){display:flex}
+/* Class-based hiding for extra cards (replaces nth-child) */
+.bento-grid .bento-card.bento-extra{display:none}
+.bento-section.bento-expanded .bento-grid .bento-card.bento-extra{display:flex}
+/* Desktop: use order for correct grid placement */
+@media(min-width:601px){.bento-card{order:var(--desktop-order,0)}}
 .bento-toggle{position:relative;overflow:visible;display:flex;align-items:center;justify-content:center;gap:6px;margin:10px auto 0;padding:8px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:color .15s,border-color .15s}
 .bento-toggle:hover{color:var(--text);border-color:rgba(255,255,255,0.12)}
 .bento-toggle::before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:radial-gradient(ellipse 350px 250px at var(--glow-x,50%) var(--glow-y,50%),rgba(88,101,242,0.30),transparent 65%);opacity:0;transition:opacity .3s ease;z-index:-2;pointer-events:none}
@@ -267,7 +270,7 @@ a.bento-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 20px 40p
 @media(max-width:600px){
 .bento-grid{grid-template-columns:repeat(2,1fr);gap:8px}
 .bento-wide{grid-column:span 2}
-.bento-card{padding:12px}
+.bento-card{padding:12px;order:unset !important}
 .bento-icon{width:32px;height:32px;min-width:32px;border-radius:8px}
 .bento-icon img.icon-svg{width:20px;height:20px}
 .bento-card h4{font-size:12px}
@@ -276,8 +279,8 @@ a.bento-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 20px 40p
 @media(max-width:400px){
 .bento-grid{grid-template-columns:1fr;gap:6px}
 .bento-wide{grid-column:span 1}
-.bento-grid .bento-card:nth-child(n+6){display:none}
-.bento-section.bento-expanded .bento-grid .bento-card:nth-child(n+6){display:flex}
+.bento-grid .bento-card:nth-child(n+7){display:none}
+.bento-section.bento-expanded .bento-grid .bento-card:nth-child(n+7){display:flex}
 }
 
 @media(max-width:900px){.playgrid{grid-template-columns:1fr}.ui-shell{padding:16px}}
