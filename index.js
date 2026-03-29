@@ -22,7 +22,7 @@ const errorHandler = require('./lib/middleware/errorHandler');
 const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
-const { Database, Model, TYPES, Query } = require('./lib/orm');
+const { Database, Model, TYPES, Query, validateFKAction, validateCheck } = require('./lib/orm');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
 const { version } = require('./package.json');
@@ -90,6 +90,10 @@ module.exports = {
     TYPES,
     /** @see module:orm/query */
     Query,
+    /** @see module:orm/schema */
+    validateFKAction,
+    /** @see module:orm/schema */
+    validateCheck,
     // Error handling & debugging
     /** @see module:errors */
     HttpError: errors.HttpError,

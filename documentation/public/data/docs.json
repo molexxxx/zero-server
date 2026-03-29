@@ -534,7 +534,20 @@
           { "method": "drop", "signature": "db.drop()", "description": "Drop tables for all registered models. Returns Promise." },
           { "method": "close", "signature": "db.close()", "description": "Close the database connection. Returns Promise." },
           { "method": "model", "signature": "db.model(name)", "description": "Get a registered model by class name." },
-          { "method": "transaction", "signature": "db.transaction(fn)", "description": "Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions." }
+          { "method": "transaction", "signature": "db.transaction(fn)", "description": "Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions." },
+          { "method": "addColumn", "signature": "db.addColumn(table, column, def)", "description": "Add a column to an existing table. Supports all schema options (type, required, default, references, check)." },
+          { "method": "dropColumn", "signature": "db.dropColumn(table, column)", "description": "Drop a column from a table." },
+          { "method": "renameColumn", "signature": "db.renameColumn(table, old, new)", "description": "Rename a column in a table." },
+          { "method": "renameTable", "signature": "db.renameTable(old, new)", "description": "Rename a table." },
+          { "method": "createIndex", "signature": "db.createIndex(table, cols, [opts])", "description": "Create an index. opts: { name, unique }. cols can be a string or string[]." },
+          { "method": "dropIndex", "signature": "db.dropIndex(table, name)", "description": "Drop an index by name." },
+          { "method": "hasTable", "signature": "db.hasTable(table)", "description": "Check if a table exists. Returns Promise<boolean>." },
+          { "method": "hasColumn", "signature": "db.hasColumn(table, column)", "description": "Check if a column exists on a table. Returns Promise<boolean>." },
+          { "method": "describeTable", "signature": "db.describeTable(table)", "description": "Get column info for a table. Returns Promise<Array>." },
+          { "method": "addForeignKey", "signature": "db.addForeignKey(table, col, refTable, refCol, [opts])", "description": "Add a FK constraint (MySQL/PostgreSQL). opts: { name, onDelete, onUpdate }." },
+          { "method": "dropForeignKey", "signature": "db.dropForeignKey(table, name)", "description": "Drop a FK constraint by name (MySQL/PostgreSQL)." },
+          { "method": "validateFKAction", "signature": "validateFKAction(action)", "description": "Validate a FK action string (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION). Throws on invalid. Used internally by adapters; available for custom DDL." },
+          { "method": "validateCheck", "signature": "validateCheck(expr)", "description": "Validate a CHECK constraint expression for SQL injection patterns (blocks semicolons, DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, EXEC). Throws on dangerous input. Used internally by adapters." }
         ],
         "options": [
           { "option": "memory", "type": "adapter", "default": "—", "notes": "In-memory adapter. No options required. Great for testing and prototyping." },
@@ -553,7 +566,9 @@
           "Network adapter credentials (host, port, user, password, database) are type-checked on connect.",
           "db.transaction() wraps your callback in begin/commit/rollback when the adapter supports it.",
           "db.register() returns the Database instance — you can chain: db.register(User).register(Post).",
-          "Always call db.sync() after registering models to create the database tables."
+          "Always call db.sync() after registering models to create the database tables.",
+          "FK actions (onDelete, onUpdate) and CHECK expressions are automatically validated against injection — invalid values throw immediately.",
+          "Import validateFKAction / validateCheck from 'zero-http' for custom DDL validation outside the ORM."
         ]
       },
       {
@@ -576,7 +591,16 @@
           { "method": "overview", "signature": "adapter.overview()", "description": "Database overview: all tables with row counts, total rows, and file size." },
           { "method": "pageInfo", "signature": "adapter.pageInfo()", "description": "Get page size, page count, and total bytes — helps estimate table overhead." },
           { "method": "compileOptions", "signature": "adapter.compileOptions()", "description": "Get the compile-time options that SQLite was built with." },
-          { "method": "cacheStatus", "signature": "adapter.cacheStatus()", "description": "Get prepared statement cache stats: { cached, max }." }
+          { "method": "cacheStatus", "signature": "adapter.cacheStatus()", "description": "Get prepared statement cache stats: { cached, max }." },
+          { "method": "addColumn", "signature": "adapter.addColumn(table, col, def)", "description": "Add a column to a table. def supports type, required, default, check, references." },
+          { "method": "dropColumn", "signature": "adapter.dropColumn(table, col)", "description": "Drop a column (SQLite 3.35+)." },
+          { "method": "renameColumn", "signature": "adapter.renameColumn(table, old, new)", "description": "Rename a column (SQLite 3.25+)." },
+          { "method": "renameTable", "signature": "adapter.renameTable(old, new)", "description": "Rename a table." },
+          { "method": "createIndex", "signature": "adapter.createIndex(table, cols, [opts])", "description": "Create an index. opts: { name, unique }." },
+          { "method": "dropIndex", "signature": "adapter.dropIndex(table, name)", "description": "Drop an index by name (table is ignored — indexes are schema-scoped in SQLite)." },
+          { "method": "hasTable", "signature": "adapter.hasTable(table)", "description": "Check if a table exists. Returns boolean." },
+          { "method": "hasColumn", "signature": "adapter.hasColumn(table, col)", "description": "Check if a column exists. Returns boolean." },
+          { "method": "describeTable", "signature": "adapter.describeTable(table)", "description": "Get full table info: { columns, indexes, foreignKeys }." }
         ],
         "options": [
           { "option": "filename", "type": "string", "default": "':memory:'", "notes": "Path to the SQLite file, or ':memory:' for an in-memory database." },
@@ -633,7 +657,18 @@
           { "method": "overview", "signature": "adapter.overview()", "description": "Full database overview — all tables with size, rows, and formatted total size." },
           { "method": "variables", "signature": "adapter.variables([filter])", "description": "SHOW VARIABLES — optionally filtered with a LIKE pattern." },
           { "method": "processlist", "signature": "adapter.processlist()", "description": "SHOW PROCESSLIST — active connections: id, user, host, db, command, time, state, info." },
-          { "method": "alterTable", "signature": "adapter.alterTable(table, opts)", "description": "Alter a table's engine, charset, or collation. opts: { engine, charset, collation }." }
+          { "method": "alterTable", "signature": "adapter.alterTable(table, opts)", "description": "Alter a table's engine, charset, or collation. opts: { engine, charset, collation }." },
+          { "method": "addColumn", "signature": "adapter.addColumn(table, col, def, [opts])", "description": "Add a column. def: schema definition. opts: { after: 'col' } to position after a column." },
+          { "method": "dropColumn", "signature": "adapter.dropColumn(table, col)", "description": "Drop a column." },
+          { "method": "renameColumn", "signature": "adapter.renameColumn(table, old, new)", "description": "Rename a column." },
+          { "method": "renameTable", "signature": "adapter.renameTable(old, new)", "description": "Rename a table." },
+          { "method": "createIndex", "signature": "adapter.createIndex(table, cols, [opts])", "description": "Create an index. opts: { name, unique }." },
+          { "method": "dropIndex", "signature": "adapter.dropIndex(table, name)", "description": "Drop an index from a table." },
+          { "method": "addForeignKey", "signature": "adapter.addForeignKey(table, col, refTable, refCol, [opts])", "description": "Add a FK constraint. opts: { name, onDelete, onUpdate }." },
+          { "method": "dropForeignKey", "signature": "adapter.dropForeignKey(table, name)", "description": "Drop a FK constraint by name." },
+          { "method": "hasTable", "signature": "adapter.hasTable(table)", "description": "Check if a table exists. Returns Promise<boolean>." },
+          { "method": "hasColumn", "signature": "adapter.hasColumn(table, col)", "description": "Check if a column exists. Returns Promise<boolean>." },
+          { "method": "describeTable", "signature": "adapter.describeTable(table)", "description": "Get detailed column info. Returns Promise<Array>." }
         ],
         "options": [
           { "option": "host", "type": "string", "default": "'localhost'", "notes": "Server hostname or IP address." },
@@ -692,7 +727,18 @@
           { "method": "variables", "signature": "adapter.variables([filter])", "description": "Get pg_settings — optionally filtered with a LIKE pattern." },
           { "method": "processlist", "signature": "adapter.processlist()", "description": "Active backends from pg_stat_activity: pid, user, database, state, query, duration." },
           { "method": "constraints", "signature": "adapter.constraints(table)", "description": "Get all table constraints: name, type (PRIMARY KEY, UNIQUE, CHECK, FK, EXCLUSION), definition." },
-          { "method": "comments", "signature": "adapter.comments(table)", "description": "Get table comment and column comments: { tableComment, columns: [{ name, comment }] }." }
+          { "method": "comments", "signature": "adapter.comments(table)", "description": "Get table comment and column comments: { tableComment, columns: [{ name, comment }] }." },
+          { "method": "addColumn", "signature": "adapter.addColumn(table, col, def)", "description": "Add a column. def supports type, required, default, check, references." },
+          { "method": "dropColumn", "signature": "adapter.dropColumn(table, col)", "description": "Drop a column." },
+          { "method": "renameColumn", "signature": "adapter.renameColumn(table, old, new)", "description": "Rename a column." },
+          { "method": "renameTable", "signature": "adapter.renameTable(old, new)", "description": "Rename a table." },
+          { "method": "createIndex", "signature": "adapter.createIndex(table, cols, [opts])", "description": "Create an index. opts: { name, unique }." },
+          { "method": "dropIndex", "signature": "adapter.dropIndex(table, name)", "description": "Drop an index by name (table is ignored — indexes are schema-scoped in PostgreSQL)." },
+          { "method": "addForeignKey", "signature": "adapter.addForeignKey(table, col, refTable, refCol, [opts])", "description": "Add a FK constraint. opts: { name, onDelete, onUpdate }." },
+          { "method": "dropForeignKey", "signature": "adapter.dropForeignKey(table, name)", "description": "Drop a FK constraint by name." },
+          { "method": "hasTable", "signature": "adapter.hasTable(table)", "description": "Check if a table exists. Returns Promise<boolean>." },
+          { "method": "hasColumn", "signature": "adapter.hasColumn(table, col)", "description": "Check if a column exists. Returns Promise<boolean>." },
+          { "method": "describeTable", "signature": "adapter.describeTable(table)", "description": "Get column info with types, nullable, defaults, and PK flags." }
         ],
         "options": [
           { "option": "host", "type": "string", "default": "'localhost'", "notes": "Server hostname." },
@@ -741,7 +787,14 @@
           { "method": "version", "signature": "adapter.version()", "description": "Get the MongoDB server version." },
           { "method": "isConnected", "signature": "adapter.isConnected", "description": "Property — true if currently connected." },
           { "method": "transaction", "signature": "adapter.transaction(fn)", "description": "Run operations in a transaction (requires replica set). Receives a session object." },
-          { "method": "close", "signature": "adapter.close()", "description": "Close the connection." }
+          { "method": "close", "signature": "adapter.close()", "description": "Close the connection." },
+          { "method": "hasTable", "signature": "adapter.hasTable(collection)", "description": "Check if a collection exists. Returns Promise<boolean>." },
+          { "method": "renameTable", "signature": "adapter.renameTable(old, new)", "description": "Rename a collection." },
+          { "method": "addColumn", "signature": "adapter.addColumn(collection, field, def)", "description": "Add a field to all documents with a default value." },
+          { "method": "dropColumn", "signature": "adapter.dropColumn(collection, field)", "description": "Remove a field from all documents." },
+          { "method": "renameColumn", "signature": "adapter.renameColumn(collection, old, new)", "description": "Rename a field in all documents." },
+          { "method": "hasColumn", "signature": "adapter.hasColumn(collection, field)", "description": "Check if a field exists in any document. Returns Promise<boolean>." },
+          { "method": "describeTable", "signature": "adapter.describeTable(collection, [sample])", "description": "Infer schema by sampling documents. Returns [{ name, types }]." }
         ],
         "options": [
           { "option": "url", "type": "string", "default": "'mongodb://127.0.0.1:27017'", "notes": "MongoDB connection string. Supports SRV: mongodb+srv://..." },
@@ -778,7 +831,17 @@
           { "method": "toJSON", "signature": "adapter.toJSON()", "description": "Export all data as a plain object: { tableName: rows[], ... }." },
           { "method": "fromJSON", "signature": "adapter.fromJSON(data)", "description": "Import data from a plain object. Merges with existing data." },
           { "method": "clone", "signature": "adapter.clone()", "description": "Deep-copy the entire database state into a new MemoryAdapter." },
-          { "method": "clear", "signature": "adapter.clear()", "description": "Delete all rows from all tables (tables remain registered)." }
+          { "method": "clear", "signature": "adapter.clear()", "description": "Delete all rows from all tables (tables remain registered)." },
+          { "method": "addColumn", "signature": "adapter.addColumn(table, col, def)", "description": "Add a column. Sets default value for existing rows." },
+          { "method": "dropColumn", "signature": "adapter.dropColumn(table, col)", "description": "Drop a column from all rows." },
+          { "method": "renameColumn", "signature": "adapter.renameColumn(table, old, new)", "description": "Rename a column in schema and all rows." },
+          { "method": "renameTable", "signature": "adapter.renameTable(old, new)", "description": "Rename a table." },
+          { "method": "createIndex", "signature": "adapter.createIndex(table, cols, [opts])", "description": "Track an index in metadata. opts: { name, unique }." },
+          { "method": "dropIndex", "signature": "adapter.dropIndex(table, name)", "description": "Remove an index from metadata (table is ignored — searches all tables)." },
+          { "method": "hasTable", "signature": "adapter.hasTable(table)", "description": "Check if a table exists. Returns Promise<boolean>." },
+          { "method": "hasColumn", "signature": "adapter.hasColumn(table, col)", "description": "Check if a column exists. Returns Promise<boolean>." },
+          { "method": "describeTable", "signature": "adapter.describeTable(table)", "description": "Get column info from schema: name, type, nullable, defaultValue, primaryKey." },
+          { "method": "indexes", "signature": "adapter.indexes(table)", "description": "Get tracked indexes: name, columns, unique." }
         ],
         "example": "const { Database, Model, TYPES } = require('zero-http')\n\nconst db = Database.connect('memory')\n\nclass User extends Model {\n\tstatic table = 'users'\n\tstatic schema = {\n\t\tid: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\t\tname: { type: TYPES.STRING, required: true },\n\t}\n}\n\ndb.register(User)\nawait db.sync()\n\n// Seed data for tests\nawait User.createMany([\n\t{ name: 'Alice' },\n\t{ name: 'Bob' },\n\t{ name: 'Charlie' },\n])\n\n// Introspection\nconsole.log(db.adapter.tables())     // ['users']\nconsole.log(db.adapter.totalRows())  // 3\nconsole.log(db.adapter.stats())      // { tables: 1, totalRows: 3, estimatedBytes: ... }\n\n// Snapshot & restore\nconst snapshot = db.adapter.toJSON()\n// ... run tests that mutate data ...\nawait db.adapter.clear()\ndb.adapter.fromJSON(snapshot)  // restore!\n\n// Independent clone for parallel testing\nconst fork = db.adapter.clone()\n// fork has its own isolated copy of all data",
         "tips": [
@@ -861,7 +924,7 @@
         ],
         "options": [
           { "option": "table", "type": "string", "default": "—", "notes": "Database table name (required)." },
-          { "option": "schema", "type": "object", "default": "—", "notes": "Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded." },
+          { "option": "schema", "type": "object", "default": "—", "notes": "Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded, references, check, index, compositeKey, compositeUnique, compositeIndex." },
           { "option": "timestamps", "type": "boolean", "default": "false", "notes": "Auto-manage createdAt and updatedAt columns." },
           { "option": "softDelete", "type": "boolean", "default": "false", "notes": "Mark records as deleted (deletedAt) instead of removing them. Use .restore() to undelete." },
           { "option": "hooks", "type": "object", "default": "{}", "notes": "Lifecycle hooks: beforeCreate, afterCreate, beforeUpdate, afterUpdate, beforeDelete, afterDelete." },
@@ -1071,6 +1134,33 @@
           "paginate() returns everything you need for pagination UI: total, pages, hasNext, hasPrev.",
           "chunk() processes large datasets in batches — no memory explosion on million-row tables.",
           "map/filter/reduce work like Array methods but on query results — great for transformations."
+        ]
+      },
+      {
+        "name": "Schema DDL",
+        "description": "Advanced schema options for DDL generation. Define foreign keys, CHECK constraints, indexes, composite primary keys, composite unique constraints, and composite indexes directly in your schema — the ORM generates the correct DDL for every adapter. Sync ordering is automatic: tables with foreign key references are created after their targets.",
+        "options": [
+          { "option": "references", "type": "object", "default": "—", "notes": "Foreign key: { table, column, onDelete, onUpdate }. Generates REFERENCES clause in SQL. onDelete/onUpdate accept CASCADE, SET NULL, RESTRICT, NO ACTION." },
+          { "option": "check", "type": "string", "default": "—", "notes": "SQL CHECK constraint expression. e.g. '\"price\" > 0'. Applied inline on the column." },
+          { "option": "index", "type": "boolean|string", "default": "false", "notes": "Create a single-column index. true = auto-named, string = custom index name. e.g. index: 'idx_users_email'." },
+          { "option": "compositeKey", "type": "boolean", "default": "false", "notes": "Mark as part of a composite primary key. Set primaryKey: true and compositeKey: true on each column." },
+          { "option": "compositeUnique", "type": "string", "default": "—", "notes": "Group columns into a composite UNIQUE constraint. Columns with the same string value form one constraint." },
+          { "option": "compositeIndex", "type": "string", "default": "—", "notes": "Group columns into a composite index. Columns with the same string value form one multi-column index." },
+          { "option": "guarded", "type": "boolean", "default": "false", "notes": "Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance." }
+        ],
+        "example": "const { Database, Model, TYPES } = require('zero-http')\n\n// Foreign Keys — CASCADE delete from parent removes children\nclass Post extends Model {\n\tstatic table = 'posts'\n\tstatic schema = {\n\t\tid:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\t\ttitle:    { type: TYPES.STRING, required: true, index: true },\n\t\tauthorId: {\n\t\t\ttype: TYPES.INTEGER, required: true,\n\t\t\treferences: { table: 'users', column: 'id', onDelete: 'CASCADE' }\n\t\t},\n\t\tstatus: { type: TYPES.STRING, check: '\"status\" IN (\\'draft\\', \\'published\\', \\'archived\\')' },\n\t}\n}\n\n// Composite Primary Key — junction table for many-to-many\nclass Enrollment extends Model {\n\tstatic table = 'enrollments'\n\tstatic schema = {\n\t\tstudentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,\n\t\t\treferences: { table: 'students', column: 'id', onDelete: 'CASCADE' } },\n\t\tcourseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,\n\t\t\treferences: { table: 'courses', column: 'id', onDelete: 'CASCADE' } },\n\t\tgrade: { type: TYPES.STRING },\n\t\tenrolledAt: { type: TYPES.DATETIME },\n\t}\n}\n\n// Composite Unique + Composite Index\nclass UserRole extends Model {\n\tstatic table = 'user_roles'\n\tstatic schema = {\n\t\tid:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\t\tuserId: { type: TYPES.INTEGER, compositeUnique: 'user_role',\n\t\t\tcompositeIndex: 'user_lookup' },\n\t\trole:   { type: TYPES.STRING, compositeUnique: 'user_role' },\n\t\torgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },\n\t}\n}\n\n// Migrations — evolve your schema after deployment\nconst db = Database.connect('sqlite', { filename: 'app.db' })\n\n// Add a column\nawait db.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' })\n\n// Create an index\nawait db.createIndex('users', ['email'], { name: 'idx_email', unique: true })\n\n// Rename a column\nawait db.renameColumn('users', 'bio', 'biography')\n\n// Check if table/column exists before migrating\nif (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {\n\tawait db.addColumn('users', 'avatar', { type: TYPES.STRING })\n}\n\n// Introspect existing schema\nconst info = await db.describeTable('users')\nconsole.log(info)",
+        "tips": [
+          "references generates real FK constraints in SQL — enforced at the database level, not just app level.",
+          "db.sync() automatically creates referenced tables first (topological ordering).",
+          "compositeKey: true creates a multi-column PRIMARY KEY — perfect for junction tables.",
+          "compositeUnique groups columns into a single UNIQUE constraint — e.g. (userId, role) must be unique together.",
+          "compositeIndex groups columns into a single multi-column index — speeds up queries filtering on both columns.",
+          "check constraints are raw SQL expressions — use double-quoted column names for portability.",
+          "Migration methods (addColumn, dropColumn, renameColumn) work on all adapters including memory.",
+          "hasTable/hasColumn are essential before running migrations — check before you change.",
+          "describeTable returns adapter-specific column metadata — columns, types, defaults, and PK flags.",
+          "The memory adapter enforces unique and compositeUnique constraints at insert time — throws on duplicates.",
+          "MongoDB adapter uses JSON Schema validation and unique indexes from schema definitions."
         ]
       },
       {

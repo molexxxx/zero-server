@@ -2050,3 +2050,204 @@ describe('Database.registerAll (doc example)', () =>
         expect(db.adapter.tables()).toContain('reg_b');
     });
 });
+
+// ════════════════════════════════════════════════════════════
+//  § Schema DDL — references, check, index, composites (SQLite)
+// ════════════════════════════════════════════════════════════
+
+describe('Schema DDL coverage (SQLite)', () =>
+{
+    let db;
+
+    beforeAll(async () =>
+    {
+        db = Database.connect('sqlite');
+
+        class Parent extends Model
+        {
+            static table  = 'parents';
+            static schema = {
+                id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+                name: { type: TYPES.STRING, required: true },
+            };
+        }
+
+        class Child extends Model
+        {
+            static table  = 'children';
+            static schema = {
+                id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+                parentId: {
+                    type: TYPES.INTEGER,
+                    references: { table: 'parents', column: 'id', onDelete: 'CASCADE' }
+                },
+                score: { type: TYPES.INTEGER, check: '"score" >= 0 AND "score" <= 100', index: true },
+            };
+        }
+
+        class JunctionTable extends Model
+        {
+            static table  = 'junctions';
+            static schema = {
+                a: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true },
+                b: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true },
+                tag: { type: TYPES.STRING, compositeUnique: 'ab_tag', compositeIndex: 'ab_lookup' },
+                cat: { type: TYPES.STRING, compositeUnique: 'ab_tag', compositeIndex: 'ab_lookup' },
+            };
+        }
+
+        db.register(Parent);
+        db.register(Child);
+        db.register(JunctionTable);
+        await db.sync();
+    });
+
+    afterAll(() => db.close());
+
+    it('FK CASCADE removes children', async () =>
+    {
+        await db.adapter.insert('parents', { name: 'P1' });
+        const p = db.adapter._db.prepare('SELECT * FROM "parents"').get();
+        await db.adapter.insert('children', { parentId: p.id, score: 50 });
+        expect(db.adapter._db.prepare('SELECT * FROM "children"').all().length).toBe(1);
+        db.adapter._db.prepare('DELETE FROM "parents" WHERE id = ?').run(p.id);
+        expect(db.adapter._db.prepare('SELECT * FROM "children"').all().length).toBe(0);
+    });
+
+    it('CHECK rejects out-of-range values', async () =>
+    {
+        await db.adapter.insert('parents', { name: 'P2' });
+        const p = db.adapter._db.prepare('SELECT * FROM "parents" WHERE name = ?').get('P2');
+        expect(() => {
+            db.adapter._db.prepare('INSERT INTO "children" ("parentId", "score") VALUES (?, ?)').run(p.id, 200);
+        }).toThrow();
+    });
+
+    it('single-column index is created', () =>
+    {
+        const idxs = db.adapter.indexes('children');
+        expect(idxs.some(i => i.columns?.includes('score'))).toBe(true);
+    });
+
+    it('composite PK rejects duplicates', async () =>
+    {
+        await db.adapter.insert('junctions', { a: 1, b: 1, tag: 'x', cat: 'y' });
+        expect(() => {
+            db.adapter._db.prepare('INSERT INTO "junctions" ("a", "b", "tag", "cat") VALUES (?, ?, ?, ?)').run(1, 1, 'z', 'w');
+        }).toThrow();
+    });
+
+    it('composite unique rejects duplicates', async () =>
+    {
+        await db.adapter.insert('junctions', { a: 2, b: 1, tag: 'hello', cat: 'world' });
+        expect(() => {
+            db.adapter._db.prepare('INSERT INTO "junctions" ("a", "b", "tag", "cat") VALUES (?, ?, ?, ?)').run(3, 1, 'hello', 'world');
+        }).toThrow();
+    });
+
+    it('composite index is created', () =>
+    {
+        const idxs = db.adapter.indexes('junctions');
+        expect(idxs.some(i => i.columns?.includes('tag') && i.columns?.includes('cat'))).toBe(true);
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+//  § Migration methods coverage (memory adapter)
+// ════════════════════════════════════════════════════════════
+
+describe('Migration methods coverage (memory adapter)', () =>
+{
+    let db;
+
+    beforeAll(async () =>
+    {
+        db = Database.connect('memory');
+
+        class Widget extends Model
+        {
+            static table  = 'widgets';
+            static schema = {
+                id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+                name: { type: TYPES.STRING, required: true },
+            };
+        }
+
+        db.register(Widget);
+        await db.sync();
+    });
+
+    afterAll(() => db.close());
+
+    it('db.addColumn works', async () =>
+    {
+        await db.addColumn('widgets', 'color', { type: TYPES.STRING, default: 'red' });
+        expect(await db.hasColumn('widgets', 'color')).toBe(true);
+    });
+
+    it('db.renameColumn works', async () =>
+    {
+        await db.renameColumn('widgets', 'color', 'colour');
+        expect(await db.hasColumn('widgets', 'colour')).toBe(true);
+        expect(await db.hasColumn('widgets', 'color')).toBe(false);
+    });
+
+    it('db.dropColumn works', async () =>
+    {
+        await db.dropColumn('widgets', 'colour');
+        expect(await db.hasColumn('widgets', 'colour')).toBe(false);
+    });
+
+    it('db.createIndex works', async () =>
+    {
+        await db.createIndex('widgets', ['name'], { name: 'idx_w_name' });
+        const idxs = await db.adapter.indexes('widgets');
+        expect(idxs.some(i => i.name === 'idx_w_name')).toBe(true);
+    });
+
+    it('db.dropIndex works', async () =>
+    {
+        await db.dropIndex('widgets', 'idx_w_name');
+        const idxs = await db.adapter.indexes('widgets');
+        expect(idxs.some(i => i.name === 'idx_w_name')).toBe(false);
+    });
+
+    it('db.renameTable works', async () =>
+    {
+        await db.renameTable('widgets', 'gadgets');
+        expect(await db.hasTable('gadgets')).toBe(true);
+        expect(await db.hasTable('widgets')).toBe(false);
+        await db.renameTable('gadgets', 'widgets');
+    });
+
+    it('db.describeTable works', async () =>
+    {
+        const info = await db.describeTable('widgets');
+        expect(Array.isArray(info)).toBe(true);
+        expect(info.some(c => c.name === 'name')).toBe(true);
+    });
+
+    it('db.hasTable works', async () =>
+    {
+        expect(await db.hasTable('widgets')).toBe(true);
+        expect(await db.hasTable('nonexistent')).toBe(false);
+    });
+
+    it('db.hasColumn works', async () =>
+    {
+        expect(await db.hasColumn('widgets', 'name')).toBe(true);
+        expect(await db.hasColumn('widgets', 'nope')).toBe(false);
+    });
+
+    it('db.addForeignKey throws for unsupported adapter', async () =>
+    {
+        await expect(db.addForeignKey('widgets', 'name', 'other', 'id'))
+            .rejects.toThrow(/does not support/);
+    });
+
+    it('db.dropForeignKey throws for unsupported adapter', async () =>
+    {
+        await expect(db.dropForeignKey('widgets', 'fk_test'))
+            .rejects.toThrow(/does not support/);
+    });
+});

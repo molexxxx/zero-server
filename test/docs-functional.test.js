@@ -1831,6 +1831,321 @@ describe('Docs — ORM', () => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  17b. ORM — Schema DDL (references, check, index, composites, guarded)
+// ════════════════════════════════════════════════════════════
+
+describe('Docs — ORM: Schema DDL', () => {
+	let db, Post, Enrollment, UserRole;
+	const { Database, Model, TYPES } = require('../');
+
+	beforeAll(async () => {
+		db = Database.connect('sqlite');
+
+		class UserModel extends Model {
+			static table = 'users';
+			static schema = {
+				id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				name: { type: TYPES.STRING, required: true },
+			};
+		}
+
+		// Foreign Keys — CASCADE delete
+		class PostModel extends Model {
+			static table = 'posts';
+			static schema = {
+				id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				title:    { type: TYPES.STRING, required: true, index: true },
+				authorId: {
+					type: TYPES.INTEGER, required: true,
+					references: { table: 'users', column: 'id', onDelete: 'CASCADE' }
+				},
+				status: { type: TYPES.STRING, check: '"status" IN (\'draft\', \'published\', \'archived\')' },
+			};
+		}
+
+		// Composite Primary Key — junction table
+		class EnrollmentModel extends Model {
+			static table = 'enrollments';
+			static schema = {
+				studentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true },
+				courseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true },
+				grade:     { type: TYPES.STRING },
+			};
+		}
+
+		// Composite Unique + Composite Index
+		class UserRoleModel extends Model {
+			static table = 'user_roles';
+			static schema = {
+				id:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				userId: { type: TYPES.INTEGER, compositeUnique: 'user_role', compositeIndex: 'user_lookup' },
+				role:   { type: TYPES.STRING, compositeUnique: 'user_role' },
+				orgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },
+			};
+		}
+
+		Post = PostModel;
+		Enrollment = EnrollmentModel;
+		UserRole = UserRoleModel;
+
+		db.register(UserModel);
+		db.register(Post);
+		db.register(Enrollment);
+		db.register(UserRole);
+		await db.sync(); // topological sort: users before posts
+	});
+
+	afterAll(() => db.close());
+
+	it('sync creates tables with FK references (topological order)', () => {
+		expect(db.adapter.hasTable('users')).toBe(true);
+		expect(db.adapter.hasTable('posts')).toBe(true);
+	});
+
+	it('FK CASCADE deletes children when parent is deleted', async () => {
+		await db.adapter.insert('users', { name: 'Alice' });
+		const users = db.adapter._db.prepare('SELECT * FROM "users"').all();
+		const user = users[0];
+		await db.adapter.insert('posts', { title: 'Hello', authorId: user.id, status: 'draft' });
+		expect(db.adapter._db.prepare('SELECT * FROM "posts"').all().length).toBe(1);
+
+		// Delete parent — CASCADE should remove posts
+		db.adapter._db.prepare('DELETE FROM "users" WHERE id = ?').run(user.id);
+		expect(db.adapter._db.prepare('SELECT * FROM "posts"').all().length).toBe(0);
+	});
+
+	it('CHECK constraint rejects invalid values', async () => {
+		await db.adapter.insert('users', { name: 'Bob' });
+		const users = db.adapter._db.prepare('SELECT * FROM "users"').all();
+		const user = users[0];
+		expect(() => {
+			db.adapter._db.prepare('INSERT INTO "posts" ("title", "authorId", "status") VALUES (?, ?, ?)').run('Bad', user.id, 'invalid');
+		}).toThrow();
+	});
+
+	it('single-column index is created via index: true', () => {
+		const indexes = db.adapter.indexes('posts');
+		expect(indexes.some(i => i.columns && i.columns.includes('title'))).toBe(true);
+	});
+
+	it('composite primary key works', async () => {
+		await db.adapter.insert('enrollments', { studentId: 1, courseId: 1, grade: 'A' });
+		await db.adapter.insert('enrollments', { studentId: 1, courseId: 2, grade: 'B' });
+
+		// Duplicate composite key should fail
+		expect(() => {
+			db.adapter._db.prepare('INSERT INTO "enrollments" ("studentId", "courseId", "grade") VALUES (?, ?, ?)').run(1, 1, 'C');
+		}).toThrow();
+	});
+
+	it('composite unique constraint works', async () => {
+		await db.adapter.insert('user_roles', { userId: 1, role: 'admin', orgId: 10 });
+		await db.adapter.insert('user_roles', { userId: 1, role: 'user', orgId: 10 }); // different role OK
+
+		expect(() => {
+			db.adapter._db.prepare('INSERT INTO "user_roles" ("userId", "role", "orgId") VALUES (?, ?, ?)').run(1, 'admin', 20);
+		}).toThrow();
+	});
+
+	it('composite index is created', () => {
+		const indexes = db.adapter.indexes('user_roles');
+		// Should have a composite index covering userId + orgId
+		expect(indexes.some(i => i.columns && i.columns.includes('userId') && i.columns.includes('orgId'))).toBe(true);
+	});
+});
+
+// ════════════════════════════════════════════════════════════
+//  17c. ORM — Migration Methods
+// ════════════════════════════════════════════════════════════
+
+describe('Docs — ORM: Migrations', () => {
+	let db;
+	const { Database, Model, TYPES } = require('../');
+
+	beforeAll(async () => {
+		db = Database.connect('sqlite');
+
+		class User extends Model {
+			static table = 'users';
+			static schema = {
+				id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				name:  { type: TYPES.STRING, required: true },
+				email: { type: TYPES.STRING, required: true },
+			};
+		}
+		db.register(User);
+		await db.sync();
+	});
+
+	afterAll(() => db.close());
+
+	it('db.addColumn adds a column to an existing table', () => {
+		db.adapter.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' });
+		expect(db.adapter.hasColumn('users', 'bio')).toBe(true);
+	});
+
+	it('db.createIndex creates an index', () => {
+		db.adapter.createIndex('users', ['email'], { name: 'idx_email', unique: true });
+		const indexes = db.adapter.indexes('users');
+		expect(indexes.some(i => i.name === 'idx_email')).toBe(true);
+	});
+
+	it('db.renameColumn renames a column', () => {
+		db.adapter.renameColumn('users', 'bio', 'biography');
+		expect(db.adapter.hasColumn('users', 'biography')).toBe(true);
+		expect(db.adapter.hasColumn('users', 'bio')).toBe(false);
+	});
+
+	it('db.hasTable and db.hasColumn check existence', async () => {
+		expect(await db.hasTable('users')).toBe(true);
+		expect(await db.hasTable('nope')).toBe(false);
+		expect(await db.hasColumn('users', 'name')).toBe(true);
+		expect(await db.hasColumn('users', 'nope')).toBe(false);
+	});
+
+	it('db.describeTable returns column info', async () => {
+		const info = await db.describeTable('users');
+		expect(Array.isArray(info.columns)).toBe(true);
+		expect(info.columns.some(c => c.name === 'name')).toBe(true);
+	});
+
+	it('db.renameTable renames a table', async () => {
+		db.adapter.createTable('temp_table', { id: { type: TYPES.INTEGER, primaryKey: true } });
+		await db.renameTable('temp_table', 'renamed_table');
+		expect(await db.hasTable('renamed_table')).toBe(true);
+		expect(await db.hasTable('temp_table')).toBe(false);
+		// Clean up
+		db.adapter._db.exec('DROP TABLE IF EXISTS "renamed_table"');
+	});
+
+	it('db.dropIndex drops an index', () => {
+		db.adapter.createIndex('users', ['name'], { name: 'idx_name_temp' });
+		expect(db.adapter.indexes('users').some(i => i.name === 'idx_name_temp')).toBe(true);
+		db.adapter.dropIndex('users', 'idx_name_temp');
+		expect(db.adapter.indexes('users').some(i => i.name === 'idx_name_temp')).toBe(false);
+	});
+
+	it('db.dropColumn drops a column', () => {
+		db.adapter.addColumn('users', 'temp_col', { type: TYPES.STRING });
+		expect(db.adapter.hasColumn('users', 'temp_col')).toBe(true);
+		db.adapter.dropColumn('users', 'temp_col');
+		expect(db.adapter.hasColumn('users', 'temp_col')).toBe(false);
+	});
+
+	it('conditional migration pattern works', async () => {
+		// Doc example: check if table/column exists before migrating
+		if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
+			await db.addColumn('users', 'avatar', { type: TYPES.STRING });
+		}
+		expect(await db.hasColumn('users', 'avatar')).toBe(true);
+
+		// Running again should be idempotent — column already exists
+		if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
+			await db.addColumn('users', 'avatar', { type: TYPES.STRING });
+		}
+		expect(await db.hasColumn('users', 'avatar')).toBe(true);
+	});
+});
+
+// ════════════════════════════════════════════════════════════
+//  17d. ORM — Memory Adapter Schema DDL & Migrations
+// ════════════════════════════════════════════════════════════
+
+describe('Docs — ORM: Memory Adapter DDL', () => {
+	let db;
+	const { Database, Model, TYPES } = require('../');
+
+	beforeAll(async () => {
+		db = Database.connect('memory');
+
+		class Item extends Model {
+			static table = 'items';
+			static schema = {
+				id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				name:  { type: TYPES.STRING, required: true, unique: true },
+				price: { type: TYPES.FLOAT },
+			};
+		}
+		db.register(Item);
+		await db.sync();
+	});
+
+	afterAll(() => db.close());
+
+	it('unique constraint enforced in memory adapter', async () => {
+		await db.adapter.insert('items', { name: 'Widget', price: 9.99 });
+		await expect(async () => {
+			await db.adapter.insert('items', { name: 'Widget', price: 19.99 });
+		}).rejects.toThrow(/unique/i);
+	});
+
+	it('createIndex and dropIndex track metadata', async () => {
+		await db.adapter.createIndex('items', ['name'], { name: 'idx_name' });
+		let indexes = await db.adapter.indexes('items');
+		expect(indexes.some(i => i.name === 'idx_name')).toBe(true);
+
+		await db.adapter.dropIndex('items', 'idx_name');
+		indexes = await db.adapter.indexes('items');
+		expect(indexes.some(i => i.name === 'idx_name')).toBe(false);
+	});
+
+	it('addColumn and dropColumn work', async () => {
+		await db.adapter.addColumn('items', 'category', { type: TYPES.STRING, default: 'general' });
+		expect(await db.adapter.hasColumn('items', 'category')).toBe(true);
+
+		await db.adapter.dropColumn('items', 'category');
+		expect(await db.adapter.hasColumn('items', 'category')).toBe(false);
+	});
+
+	it('renameColumn works', async () => {
+		await db.adapter.addColumn('items', 'desc', { type: TYPES.TEXT });
+		await db.adapter.renameColumn('items', 'desc', 'description');
+		expect(await db.adapter.hasColumn('items', 'description')).toBe(true);
+		expect(await db.adapter.hasColumn('items', 'desc')).toBe(false);
+	});
+
+	it('renameTable works', async () => {
+		await db.adapter.renameTable('items', 'products');
+		expect(await db.adapter.hasTable('products')).toBe(true);
+		expect(await db.adapter.hasTable('items')).toBe(false);
+		// Rename back for other tests
+		await db.adapter.renameTable('products', 'items');
+	});
+
+	it('describeTable returns schema info', async () => {
+		const info = await db.adapter.describeTable('items');
+		expect(Array.isArray(info)).toBe(true);
+		expect(info.some(c => c.name === 'name')).toBe(true);
+	});
+
+	it('hasTable and hasColumn work', async () => {
+		expect(await db.hasTable('items')).toBe(true);
+		expect(await db.hasTable('nope')).toBe(false);
+		expect(await db.hasColumn('items', 'name')).toBe(true);
+		expect(await db.hasColumn('items', 'nope')).toBe(false);
+	});
+
+	it('Database.createIndex delegates to adapter', async () => {
+		await db.createIndex('items', ['price'], { name: 'idx_price' });
+		const indexes = await db.adapter.indexes('items');
+		expect(indexes.some(i => i.name === 'idx_price')).toBe(true);
+	});
+
+	it('Database.dropIndex delegates to adapter', async () => {
+		await db.dropIndex('items', 'idx_price');
+		const indexes = await db.adapter.indexes('items');
+		expect(indexes.some(i => i.name === 'idx_price')).toBe(false);
+	});
+
+	it('snapshot and restore preserves schemas', async () => {
+		const snapshot = db.adapter.toJSON();
+		const clone = db.adapter.clone();
+		expect(await clone.hasTable('items')).toBe(true);
+		expect(await clone.hasColumn('items', 'name')).toBe(true);
+	});
+});
+
+// ════════════════════════════════════════════════════════════
 //  18. REAL-TIME — WebSocket
 // ════════════════════════════════════════════════════════════
 

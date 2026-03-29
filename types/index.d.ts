@@ -35,7 +35,7 @@ export {
 } from './fetch';
 export { Env, EnvFieldDef, EnvSchema, EnvLoadOptions, env } from './env';
 export {
-    TYPES, SchemaColumnDef, validateValue,
+    TYPES, SchemaColumnDef, validateValue, validateFKAction, validateCheck,
     Query, Model, ModelHooks, FindOrCreateResult, PaginatedResult,
     Database, AdapterType,
 } from './orm';
@@ -71,7 +71,7 @@ import {
 import { fetch } from './fetch';
 import { Env } from './env';
 import { Database, Model, Query } from './orm';
-import { TYPES } from './orm';
+import { TYPES, validateFKAction, validateCheck } from './orm';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -109,6 +109,8 @@ declare const zeroServer: {
     Model: typeof Model;
     TYPES: typeof TYPES;
     Query: typeof Query;
+    validateFKAction: typeof validateFKAction;
+    validateCheck: typeof validateCheck;
     // Error handling & debugging
     HttpError: typeof HttpError;
     BadRequestError: typeof BadRequestError;

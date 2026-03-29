@@ -617,4 +617,106 @@ describe('Documentation Examples', () => {
             expect(typeof zeroHttp.debug.reset).toBe('function');
         });
     });
+
+    /* --- Database migration methods exist -------------------------- */
+    describe('Database migration API', () => {
+        let db;
+        beforeAll(() => { db = zeroHttp.Database.connect('memory'); });
+        afterAll(() => db.close());
+
+        const migrationMethods = [
+            'addColumn', 'dropColumn', 'renameColumn', 'renameTable',
+            'createIndex', 'dropIndex', 'hasTable', 'hasColumn',
+            'describeTable', 'addForeignKey', 'dropForeignKey',
+        ];
+
+        for (const method of migrationMethods) {
+            it(`db.${method}() exists`, () => {
+                expect(typeof db[method]).toBe('function');
+            });
+        }
+    });
+
+    /* --- Memory adapter migration methods exist -------------------- */
+    describe('Memory adapter migration API', () => {
+        let adapter;
+        beforeAll(() => {
+            const db = zeroHttp.Database.connect('memory');
+            adapter = db.adapter;
+        });
+
+        const adapterMethods = [
+            'addColumn', 'dropColumn', 'renameColumn', 'renameTable',
+            'createIndex', 'dropIndex', 'hasTable', 'hasColumn',
+            'describeTable', 'indexes',
+        ];
+
+        for (const method of adapterMethods) {
+            it(`adapter.${method}() exists`, () => {
+                expect(typeof adapter[method]).toBe('function');
+            });
+        }
+    });
+
+    /* --- Schema DDL options documented correctly ------------------- */
+    describe('Schema DDL options', () => {
+        const ormSection = docs.find(s => s.section === 'ORM');
+        const schemaDDL = ormSection?.items.find(i => i.name === 'Schema DDL');
+
+        it('Schema DDL item exists in docs', () => {
+            expect(schemaDDL).toBeDefined();
+        });
+
+        it('has all expected DDL options', () => {
+            const optionNames = schemaDDL.options.map(o => o.option);
+            const expected = ['references', 'check', 'index', 'compositeKey', 'compositeUnique', 'compositeIndex', 'guarded'];
+            for (const opt of expected) {
+                expect(optionNames).toContain(opt);
+            }
+        });
+
+        it('has an example that imports Database', () => {
+            expect(schemaDDL.example).toContain('Database');
+            expect(schemaDDL.example).toContain("require('zero-http')");
+        });
+
+        it('example includes FK, composite PK, and migration patterns', () => {
+            expect(schemaDDL.example).toContain('references');
+            expect(schemaDDL.example).toContain('compositeKey');
+            expect(schemaDDL.example).toContain('compositeUnique');
+            expect(schemaDDL.example).toContain('compositeIndex');
+            expect(schemaDDL.example).toContain('addColumn');
+            expect(schemaDDL.example).toContain('createIndex');
+            expect(schemaDDL.example).toContain('hasTable');
+            expect(schemaDDL.example).toContain('describeTable');
+        });
+    });
+
+    /* --- Database docs list all migration methods ------------------ */
+    describe('Database docs completeness', () => {
+        const ormSection = docs.find(s => s.section === 'ORM');
+        const dbItem = ormSection?.items.find(i => i.name === 'Database');
+
+        it('Database item exists in docs', () => {
+            expect(dbItem).toBeDefined();
+        });
+
+        it('has all migration methods documented', () => {
+            const documented = dbItem.methods.map(m => m.method);
+            const expected = [
+                'addColumn', 'dropColumn', 'renameColumn', 'renameTable',
+                'createIndex', 'dropIndex', 'hasTable', 'hasColumn',
+                'describeTable', 'addForeignKey', 'dropForeignKey',
+            ];
+            for (const m of expected) {
+                expect(documented).toContain(m);
+            }
+        });
+
+        it('dropIndex signature uses (table, name)', () => {
+            const di = dbItem.methods.find(m => m.method === 'dropIndex');
+            expect(di.signature).toContain('table');
+            expect(di.signature).toContain('name');
+        });
+    });
 });
