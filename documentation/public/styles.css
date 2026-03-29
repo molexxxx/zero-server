@@ -226,7 +226,7 @@ details.acc[open] > summary:before{transform:rotate(90deg)}
 /* Bento grid feature display */
 .bento-section{margin:12px 0;scroll-margin-top:calc(var(--header-height) + 24px)}
 .bento-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.bento-card{position:relative;overflow:visible;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:transparent;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:0;transition:transform .25s cubic-bezier(.22,.68,0,1.2),box-shadow .25s ease;opacity:0;transform:translateY(24px) scale(0.97);animation:bentoReveal .5s cubic-bezier(.22,.68,0,1.1) forwards;animation-delay:calc(var(--i,0) * 0.04s)}
+.bento-card{position:relative;overflow:visible;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:transparent;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:0;transition:transform .25s cubic-bezier(.22,.68,0,1.2),box-shadow .4s ease;opacity:0;transform:translateY(24px) scale(0.97);animation:bentoReveal .5s cubic-bezier(.22,.68,0,1.1) forwards;animation-delay:calc(var(--i,0) * 0.04s)}
 a.bento-card{cursor:pointer}
 a.bento-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 20px 40px rgba(0,0,0,0.35)}
 .bento-card.bento-lit .bento-glow{opacity:1}
@@ -593,7 +593,7 @@ code.signature{color:#9fe6a0;background:rgba(159,230,160,0.06);padding:2px 7px;b
 [data-theme="light"] .btn:hover{box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 [data-theme="light"] .btn.warn{background:linear-gradient(180deg,#e55a4f,#d43d3d)}
 [data-theme="light"] .bento-card{background:transparent;border-color:rgba(0,0,0,0.08);backdrop-filter:blur(8px)}
-[data-theme="light"] a.bento-card:hover{box-shadow:0 20px 40px rgba(0,0,0,0.12)}
+[data-theme="light"] a.bento-card:hover{box-shadow:0 12px 28px rgba(0,0,0,0.07)}
 [data-theme="light"] .bento-ghost{border-color:rgba(0,0,0,0.04);background:linear-gradient(135deg,rgba(79,91,213,0.05) 0%,transparent 35%,transparent 65%,rgba(26,125,224,0.05) 100%)}
 [data-theme="light"] .bento-main{border-color:rgba(79,91,213,0.15);background:linear-gradient(135deg,rgba(79,91,213,0.06) 0%,transparent 40%,transparent 60%,rgba(26,125,224,0.06) 100%)}
 [data-theme="light"] .bento-main .bento-icon{background:linear-gradient(135deg,rgba(79,91,213,0.18),rgba(26,125,224,0.10))}
