@@ -11,7 +11,7 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
 
-> **Zero-dependency backend framework for Node.js — Express-like routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, response compression, and a tiny fetch client.**
+> **Zero-dependency backend framework for Node.js — full-featured routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, response compression, and a built-in HTTP client.**
 
 <p align="center">
   <strong>
@@ -48,7 +48,7 @@ app.listen(3000, () => console.log('Listening on :3000'))
 
 | Category | What you get |
 |---|---|
-| **Routing** | Express-like `get`, `post`, `put`, `delete`, `patch`, `head`, `options`, `all`, plus `Router()` sub-apps, route chaining, wildcard & param patterns, and protocol-aware routes |
+| **Routing** | `get`, `post`, `put`, `delete`, `patch`, `head`, `options`, `all`, plus `Router()` sub-apps, route chaining, wildcard & param patterns, and protocol-aware routes |
 | **Body Parsers** | `json()`, `urlencoded()`, `text()`, `raw()`, `multipart()` with streaming uploads |
 | **Middleware** | `cors()`, `helmet()`, `compress()`, `rateLimit()`, `logger()`, `timeout()`, `requestId()`, `cookieParser()`, `csrf()`, `validate()`, `errorHandler()`, static file serving |
 | **ORM** | `Database.connect()` with memory, JSON, SQLite, MySQL, PostgreSQL, and MongoDB adapters; `Model` with schema validation, CRUD, timestamps, soft deletes, scopes, hooks, and fluent `Query` builder |

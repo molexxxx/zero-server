@@ -42,7 +42,7 @@
     "items": [
       {
         "name": "createApp",
-        "description": "Creates an application instance — the central object for registering middleware, routes, and settings. Supports Express-like set/get, enable/disable, locals, param handlers, groups, chaining, and route introspection.",
+        "description": "Creates an application instance — the central object for registering middleware, routes, and settings. Supports set/get, enable/disable, locals, param handlers, groups, chaining, and route introspection.",
         "methods": [
           { "method": "use", "signature": "use([path], ...handlers)", "description": "Register middleware or mount a Router at a prefix. Runs in registration order." },
           { "method": "get", "signature": "get(path, [opts], ...handlers)", "description": "Register a GET route handler. Also: app.get(key) returns an app setting." },
