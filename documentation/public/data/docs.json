@@ -298,10 +298,16 @@
         "description": "Security headers middleware. Sets Content-Security-Policy, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and 11 more headers. Every header can be individually configured or disabled with false.",
         "options": [
           { "option": "contentSecurityPolicy", "type": "object | false", "default": "default policy", "notes": "CSP directives or false to disable." },
+          { "option": "crossOriginEmbedderPolicy", "type": "boolean", "default": "false", "notes": "Set Cross-Origin-Embedder-Policy header (require-corp)." },
+          { "option": "crossOriginOpenerPolicy", "type": "string | false", "default": "'same-origin'", "notes": "Cross-Origin-Opener-Policy value." },
+          { "option": "crossOriginResourcePolicy", "type": "string | false", "default": "'same-origin'", "notes": "Cross-Origin-Resource-Policy value." },
+          { "option": "dnsPrefetchControl", "type": "boolean", "default": "true", "notes": "Set X-DNS-Prefetch-Control: off." },
           { "option": "frameguard", "type": "string | false", "default": "'deny'", "notes": "'deny', 'sameorigin', or false." },
           { "option": "hsts", "type": "boolean | false", "default": "true", "notes": "Strict-Transport-Security header." },
           { "option": "hstsMaxAge", "type": "number", "default": "15552000", "notes": "HSTS max-age in seconds (180 days)." },
+          { "option": "hstsPreload", "type": "boolean", "default": "false", "notes": "Add preload directive to HSTS header." },
           { "option": "noSniff", "type": "boolean", "default": "true", "notes": "X-Content-Type-Options: nosniff." },
+          { "option": "permittedCrossDomainPolicies", "type": "string | false", "default": "'none'", "notes": "X-Permitted-Cross-Domain-Policies header value." },
           { "option": "referrerPolicy", "type": "string | false", "default": "'no-referrer'", "notes": "Referrer-Policy header value." },
           { "option": "hidePoweredBy", "type": "boolean", "default": "true", "notes": "Remove X-Powered-By header." },
           { "option": "xssFilter", "type": "boolean", "default": "false", "notes": "Legacy X-XSS-Protection header." }
@@ -373,7 +379,11 @@
           { "option": "generator", "type": "function", "default": "crypto.randomUUID", "notes": "Custom ID generator function." },
           { "option": "trustProxy", "type": "boolean", "default": "false", "notes": "Trust incoming X-Request-Id from upstream proxies." }
         ],
-        "example": "const { createApp, requestId, logger } = require('zero-http')\nconst app = createApp()\n\napp.use(requestId()) // sets req.id + X-Request-Id header\napp.use(logger())    // logs include the request ID\n\napp.get('/info', (req, res) => {\n\tres.json({ requestId: req.id })\n})"
+        "example": "const { createApp, requestId, logger } = require('zero-http')\nconst app = createApp()\n\napp.use(requestId()) // sets req.id + X-Request-Id header\napp.use(logger())    // logs include the request ID\n\napp.get('/info', (req, res) => {\n\tres.json({ requestId: req.id })\n})",
+        "tips": [
+          "When trustProxy is true, incoming X-Request-Id headers are accepted but truncated to 128 characters to prevent abuse.",
+          "Use a custom generator to create shorter or application-specific IDs (e.g. nanoid, ULID, or prefixed UUIDs)."
+        ]
       },
       {
         "name": "logger",

@@ -12,7 +12,7 @@
 
 const { Database, Model, TYPES } = require('../lib/orm');
 
-// ─── Helpers ────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------
 
 function sqliteDb()
 {
@@ -24,7 +24,7 @@ function memoryDb()
     return Database.connect('memory');
 }
 
-// ─── SQLite DDL Tests ───────────────────────────────────────────────────
+// --- SQLite DDL Tests ---------------------------------------------------
 
 describe('SQLite DDL — Foreign Keys', () =>
 {
@@ -320,7 +320,7 @@ describe('SQLite DDL — Composite Unique Constraints', () =>
     });
 });
 
-// ─── SQLite Migration Methods ───────────────────────────────────────────
+// --- SQLite Migration Methods -------------------------------------------
 
 describe('SQLite Migrations', () =>
 {
@@ -414,7 +414,7 @@ describe('SQLite Migrations', () =>
     });
 });
 
-// ─── Memory Adapter Tests ───────────────────────────────────────────────
+// --- Memory Adapter Tests -----------------------------------------------
 
 describe('Memory Adapter — Schema Tracking', () =>
 {
@@ -590,7 +590,7 @@ describe('Memory Adapter — Migration Methods', () =>
     });
 });
 
-// ─── Database Class Migration Proxies ───────────────────────────────────
+// --- Database Class Migration Proxies -----------------------------------
 
 describe('Database — Migration API', () =>
 {
@@ -653,7 +653,7 @@ describe('Database — Migration API', () =>
     });
 });
 
-// ─── Topological Sync Ordering ──────────────────────────────────────────
+// --- Topological Sync Ordering ------------------------------------------
 
 describe('Database — Topological Sync Ordering', () =>
 {
@@ -738,7 +738,7 @@ describe('Database — Topological Sync Ordering', () =>
     });
 });
 
-// ─── Full Integration: Schema with ALL features ─────────────────────────
+// --- Full Integration: Schema with ALL features -------------------------
 
 describe('SQLite — Full-Feature Schema Integration', () =>
 {
@@ -802,7 +802,7 @@ describe('SQLite — Full-Feature Schema Integration', () =>
     });
 });
 
-// ─── SQLite Migration Full Workflow ─────────────────────────────────────
+// --- SQLite Migration Full Workflow -------------------------------------
 
 describe('SQLite — Migration Workflow', () =>
 {
@@ -844,7 +844,7 @@ describe('SQLite — Migration Workflow', () =>
     });
 });
 
-// ─── Composite Index in SQLite ──────────────────────────────────────────
+// --- Composite Index in SQLite ------------------------------------------
 
 describe('SQLite — Composite Index via createIndex', () =>
 {
@@ -874,7 +874,7 @@ describe('SQLite — Composite Index via createIndex', () =>
     });
 });
 
-// ─── JSON Adapter inherits from Memory ──────────────────────────────────
+// --- JSON Adapter inherits from Memory ----------------------------------
 
 describe('JSON Adapter — inherits migration methods from Memory', () =>
 {
@@ -905,7 +905,7 @@ describe('JSON Adapter — inherits migration methods from Memory', () =>
     });
 });
 
-// ─── MySQL Adapter DDL (quick constructor check, no live connection) ────
+// --- MySQL Adapter DDL (quick constructor check, no live connection) ----
 
 describe('MySQL Adapter — DDL method signatures', () =>
 {
@@ -928,7 +928,7 @@ describe('MySQL Adapter — DDL method signatures', () =>
     });
 });
 
-// ─── PostgreSQL Adapter DDL (method signatures) ─────────────────────────
+// --- PostgreSQL Adapter DDL (method signatures) -------------------------
 
 describe('PostgreSQL Adapter — DDL method signatures', () =>
 {
@@ -950,7 +950,7 @@ describe('PostgreSQL Adapter — DDL method signatures', () =>
     });
 });
 
-// ─── MongoDB Adapter DDL (method signatures) ────────────────────────────
+// --- MongoDB Adapter DDL (method signatures) ----------------------------
 
 describe('MongoDB Adapter — DDL method signatures', () =>
 {
@@ -969,7 +969,7 @@ describe('MongoDB Adapter — DDL method signatures', () =>
     });
 });
 
-// ─── Edge Cases ─────────────────────────────────────────────────────────
+// --- Edge Cases ---------------------------------------------------------
 
 describe('Edge Cases', () =>
 {

@@ -749,10 +749,16 @@ Security headers middleware. Sets Content-Security-Policy, HSTS, X-Frame-Options
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `contentSecurityPolicy` | object \| false | `default policy` | CSP directives or false to disable. |
+| `crossOriginEmbedderPolicy` | boolean | `false` | Set Cross-Origin-Embedder-Policy header (require-corp). |
+| `crossOriginOpenerPolicy` | string \| false | `'same-origin'` | Cross-Origin-Opener-Policy value. |
+| `crossOriginResourcePolicy` | string \| false | `'same-origin'` | Cross-Origin-Resource-Policy value. |
+| `dnsPrefetchControl` | boolean | `true` | Set X-DNS-Prefetch-Control: off. |
 | `frameguard` | string \| false | `'deny'` | 'deny', 'sameorigin', or false. |
 | `hsts` | boolean \| false | `true` | Strict-Transport-Security header. |
 | `hstsMaxAge` | number | `15552000` | HSTS max-age in seconds (180 days). |
+| `hstsPreload` | boolean | `false` | Add preload directive to HSTS header. |
 | `noSniff` | boolean | `true` | X-Content-Type-Options: nosniff. |
+| `permittedCrossDomainPolicies` | string \| false | `'none'` | X-Permitted-Cross-Domain-Policies header value. |
 | `referrerPolicy` | string \| false | `'no-referrer'` | Referrer-Policy header value. |
 | `hidePoweredBy` | boolean | `true` | Remove X-Powered-By header. |
 | `xssFilter` | boolean | `false` | Legacy X-XSS-Protection header. |
@@ -918,6 +924,10 @@ app.get('/info', (req, res) => {
 	res.json({ requestId: req.id })
 })
 ```
+
+
+> **Tip:** When trustProxy is true, incoming X-Request-Id headers are accepted but truncated to 128 characters to prevent abuse.
+> **Tip:** Use a custom generator to create shorter or application-specific IDs (e.g. nanoid, ULID, or prefixed UUIDs).
 
 
 ### logger
