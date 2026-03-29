@@ -58,6 +58,7 @@
   - [JSON Adapter](#json-adapter)
   - [Model](#model)
   - [Query](#query)
+  - [Schema DDL](#schema-ddl)
   - [TYPES](#types)
 - [Real-Time](#real-time)
   - [WebSocket](#websocket)
@@ -357,7 +358,7 @@ Creates a standalone modular router instance for organizing routes into sub-apps
 | `all` | `all(path, [opts], ...handlers)` | Register a handler for all HTTP methods. |
 | `use` | `use([prefix], handler)` | Mount middleware or a nested router. |
 | `route` | `route(path)` | Create a route chain: router.route('/items').get(fn).post(fn). |
-| `routes` | `routes()` | Return the route table for this router. |
+| `inspect` | `inspect()` | Return the route table for this router. |
 
 
 ```js
@@ -1322,6 +1323,19 @@ The ORM entry point. Connect to a database using one of 6 built-in adapters (mem
 | `close` | `db.close()` | Close the database connection. Returns Promise. |
 | `model` | `db.model(name)` | Get a registered model by class name. |
 | `transaction` | `db.transaction(fn)` | Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions. |
+| `addColumn` | `db.addColumn(table, column, def)` | Add a column to an existing table. Supports all schema options (type, required, default, references, check). |
+| `dropColumn` | `db.dropColumn(table, column)` | Drop a column from a table. |
+| `renameColumn` | `db.renameColumn(table, old, new)` | Rename a column in a table. |
+| `renameTable` | `db.renameTable(old, new)` | Rename a table. |
+| `createIndex` | `db.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. cols can be a string or string[]. |
+| `dropIndex` | `db.dropIndex(table, name)` | Drop an index by name. |
+| `hasTable` | `db.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `db.hasColumn(table, column)` | Check if a column exists on a table. Returns Promise<boolean>. |
+| `describeTable` | `db.describeTable(table)` | Get column info for a table. Returns Promise<Array>. |
+| `addForeignKey` | `db.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint (MySQL/PostgreSQL). opts: { name, onDelete, onUpdate }. |
+| `dropForeignKey` | `db.dropForeignKey(table, name)` | Drop a FK constraint by name (MySQL/PostgreSQL). |
+| `validateFKAction` | `validateFKAction(action)` | Validate a FK action string (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION). Throws on invalid. Used internally by adapters; available for custom DDL. |
+| `validateCheck` | `validateCheck(expr)` | Validate a CHECK constraint expression for SQL injection patterns (blocks semicolons, DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, EXEC). Throws on dangerous input. Used internally by adapters. |
 
 
 #### Options
@@ -1389,6 +1403,8 @@ await db.transaction(async () => {
 > **Tip:** db.transaction() wraps your callback in begin/commit/rollback when the adapter supports it.
 > **Tip:** db.register() returns the Database instance — you can chain: db.register(User).register(Post).
 > **Tip:** Always call db.sync() after registering models to create the database tables.
+> **Tip:** FK actions (onDelete, onUpdate) and CHECK expressions are automatically validated against injection — invalid values throw immediately.
+> **Tip:** Import validateFKAction / validateCheck from 'zero-http' for custom DDL validation outside the ORM.
 
 
 ### SQLite Adapter
@@ -1416,6 +1432,15 @@ The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-ba
 | `pageInfo` | `adapter.pageInfo()` | Get page size, page count, and total bytes — helps estimate table overhead. |
 | `compileOptions` | `adapter.compileOptions()` | Get the compile-time options that SQLite was built with. |
 | `cacheStatus` | `adapter.cacheStatus()` | Get prepared statement cache stats: { cached, max }. |
+| `addColumn` | `adapter.addColumn(table, col, def)` | Add a column to a table. def supports type, required, default, check, references. |
+| `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column (SQLite 3.35+). |
+| `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column (SQLite 3.25+). |
+| `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
+| `createIndex` | `adapter.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. |
+| `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index by name (table is ignored — indexes are schema-scoped in SQLite). |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns boolean. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns boolean. |
+| `describeTable` | `adapter.describeTable(table)` | Get full table info: { columns, indexes, foreignKeys }. |
 
 
 #### Options
@@ -1515,6 +1540,17 @@ MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepare
 | `variables` | `adapter.variables([filter])` | SHOW VARIABLES — optionally filtered with a LIKE pattern. |
 | `processlist` | `adapter.processlist()` | SHOW PROCESSLIST — active connections: id, user, host, db, command, time, state, info. |
 | `alterTable` | `adapter.alterTable(table, opts)` | Alter a table's engine, charset, or collation. opts: { engine, charset, collation }. |
+| `addColumn` | `adapter.addColumn(table, col, def, [opts])` | Add a column. def: schema definition. opts: { after: 'col' } to position after a column. |
+| `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column. |
+| `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column. |
+| `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
+| `createIndex` | `adapter.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. |
+| `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index from a table. |
+| `addForeignKey` | `adapter.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint. opts: { name, onDelete, onUpdate }. |
+| `dropForeignKey` | `adapter.dropForeignKey(table, name)` | Drop a FK constraint by name. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get detailed column info. Returns Promise<Array>. |
 
 
 #### Options
@@ -1620,6 +1656,17 @@ PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameteri
 | `processlist` | `adapter.processlist()` | Active backends from pg_stat_activity: pid, user, database, state, query, duration. |
 | `constraints` | `adapter.constraints(table)` | Get all table constraints: name, type (PRIMARY KEY, UNIQUE, CHECK, FK, EXCLUSION), definition. |
 | `comments` | `adapter.comments(table)` | Get table comment and column comments: { tableComment, columns: [{ name, comment }] }. |
+| `addColumn` | `adapter.addColumn(table, col, def)` | Add a column. def supports type, required, default, check, references. |
+| `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column. |
+| `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column. |
+| `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
+| `createIndex` | `adapter.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. |
+| `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index by name (table is ignored — indexes are schema-scoped in PostgreSQL). |
+| `addForeignKey` | `adapter.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint. opts: { name, onDelete, onUpdate }. |
+| `dropForeignKey` | `adapter.dropForeignKey(table, name)` | Drop a FK constraint by name. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get column info with types, nullable, defaults, and PK flags. |
 
 
 #### Options
@@ -1724,6 +1771,13 @@ MongoDB adapter using the official mongodb driver with connection pooling, autom
 | `isConnected` | `adapter.isConnected` | Property — true if currently connected. |
 | `transaction` | `adapter.transaction(fn)` | Run operations in a transaction (requires replica set). Receives a session object. |
 | `close` | `adapter.close()` | Close the connection. |
+| `hasTable` | `adapter.hasTable(collection)` | Check if a collection exists. Returns Promise<boolean>. |
+| `renameTable` | `adapter.renameTable(old, new)` | Rename a collection. |
+| `addColumn` | `adapter.addColumn(collection, field, def)` | Add a field to all documents with a default value. |
+| `dropColumn` | `adapter.dropColumn(collection, field)` | Remove a field from all documents. |
+| `renameColumn` | `adapter.renameColumn(collection, old, new)` | Rename a field in all documents. |
+| `hasColumn` | `adapter.hasColumn(collection, field)` | Check if a field exists in any document. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(collection, [sample])` | Infer schema by sampling documents. Returns [{ name, types }]. |
 
 
 #### Options
@@ -1805,6 +1859,16 @@ Zero-dependency in-memory adapter — perfect for tests, prototyping, and epheme
 | `fromJSON` | `adapter.fromJSON(data)` | Import data from a plain object. Merges with existing data. |
 | `clone` | `adapter.clone()` | Deep-copy the entire database state into a new MemoryAdapter. |
 | `clear` | `adapter.clear()` | Delete all rows from all tables (tables remain registered). |
+| `addColumn` | `adapter.addColumn(table, col, def)` | Add a column. Sets default value for existing rows. |
+| `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column from all rows. |
+| `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column in schema and all rows. |
+| `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
+| `createIndex` | `adapter.createIndex(table, cols, [opts])` | Track an index in metadata. opts: { name, unique }. |
+| `dropIndex` | `adapter.dropIndex(table, name)` | Remove an index from metadata (table is ignored — searches all tables). |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get column info from schema: name, type, nullable, defaultValue, primaryKey. |
+| `indexes` | `adapter.indexes(table)` | Get tracked indexes: name, columns, unique. |
 
 
 ```js
@@ -1980,7 +2044,7 @@ The ORM base class — extend it to define your data models. Supports typed sche
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `table` | string | `—` | Database table name (required). |
-| `schema` | object | `—` | Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded. |
+| `schema` | object | `—` | Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded, references, check, index, compositeKey, compositeUnique, compositeIndex. |
 | `timestamps` | boolean | `false` | Auto-manage createdAt and updatedAt columns. |
 | `softDelete` | boolean | `false` | Mark records as deleted (deletedAt) instead of removing them. Use .restore() to undelete. |
 | `hooks` | object | `{}` | Lifecycle hooks: beforeCreate, afterCreate, beforeUpdate, afterUpdate, beforeDelete, afterDelete. |
@@ -2355,6 +2419,101 @@ const totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)
 > **Tip:** paginate() returns everything you need for pagination UI: total, pages, hasNext, hasPrev.
 > **Tip:** chunk() processes large datasets in batches — no memory explosion on million-row tables.
 > **Tip:** map/filter/reduce work like Array methods but on query results — great for transformations.
+
+
+### Schema DDL
+
+Advanced schema options for DDL generation. Define foreign keys, CHECK constraints, indexes, composite primary keys, composite unique constraints, and composite indexes directly in your schema — the ORM generates the correct DDL for every adapter. Sync ordering is automatic: tables with foreign key references are created after their targets.
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `references` | object | `—` | Foreign key: { table, column, onDelete, onUpdate }. Generates REFERENCES clause in SQL. onDelete/onUpdate accept CASCADE, SET NULL, RESTRICT, NO ACTION. |
+| `check` | string | `—` | SQL CHECK constraint expression. e.g. '"price" > 0'. Applied inline on the column. |
+| `index` | boolean\|string | `false` | Create a single-column index. true = auto-named, string = custom index name. e.g. index: 'idx_users_email'. |
+| `compositeKey` | boolean | `false` | Mark as part of a composite primary key. Set primaryKey: true and compositeKey: true on each column. |
+| `compositeUnique` | string | `—` | Group columns into a composite UNIQUE constraint. Columns with the same string value form one constraint. |
+| `compositeIndex` | string | `—` | Group columns into a composite index. Columns with the same string value form one multi-column index. |
+| `guarded` | boolean | `false` | Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance. |
+
+
+```js
+const { Database, Model, TYPES } = require('zero-http')
+
+// Foreign Keys — CASCADE delete from parent removes children
+class Post extends Model {
+	static table = 'posts'
+	static schema = {
+		id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		title:    { type: TYPES.STRING, required: true, index: true },
+		authorId: {
+			type: TYPES.INTEGER, required: true,
+			references: { table: 'users', column: 'id', onDelete: 'CASCADE' }
+		},
+		status: { type: TYPES.STRING, check: '"status" IN (\'draft\', \'published\', \'archived\')' },
+	}
+}
+
+// Composite Primary Key — junction table for many-to-many
+class Enrollment extends Model {
+	static table = 'enrollments'
+	static schema = {
+		studentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
+			references: { table: 'students', column: 'id', onDelete: 'CASCADE' } },
+		courseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
+			references: { table: 'courses', column: 'id', onDelete: 'CASCADE' } },
+		grade: { type: TYPES.STRING },
+		enrolledAt: { type: TYPES.DATETIME },
+	}
+}
+
+// Composite Unique + Composite Index
+class UserRole extends Model {
+	static table = 'user_roles'
+	static schema = {
+		id:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		userId: { type: TYPES.INTEGER, compositeUnique: 'user_role',
+			compositeIndex: 'user_lookup' },
+		role:   { type: TYPES.STRING, compositeUnique: 'user_role' },
+		orgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },
+	}
+}
+
+// Migrations — evolve your schema after deployment
+const db = Database.connect('sqlite', { filename: 'app.db' })
+
+// Add a column
+await db.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' })
+
+// Create an index
+await db.createIndex('users', ['email'], { name: 'idx_email', unique: true })
+
+// Rename a column
+await db.renameColumn('users', 'bio', 'biography')
+
+// Check if table/column exists before migrating
+if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
+	await db.addColumn('users', 'avatar', { type: TYPES.STRING })
+}
+
+// Introspect existing schema
+const info = await db.describeTable('users')
+console.log(info)
+```
+
+
+> **Tip:** references generates real FK constraints in SQL — enforced at the database level, not just app level.
+> **Tip:** db.sync() automatically creates referenced tables first (topological ordering).
+> **Tip:** compositeKey: true creates a multi-column PRIMARY KEY — perfect for junction tables.
+> **Tip:** compositeUnique groups columns into a single UNIQUE constraint — e.g. (userId, role) must be unique together.
+> **Tip:** compositeIndex groups columns into a single multi-column index — speeds up queries filtering on both columns.
+> **Tip:** check constraints are raw SQL expressions — use double-quoted column names for portability.
+> **Tip:** Migration methods (addColumn, dropColumn, renameColumn) work on all adapters including memory.
+> **Tip:** hasTable/hasColumn are essential before running migrations — check before you change.
+> **Tip:** describeTable returns adapter-specific column metadata — columns, types, defaults, and PK flags.
+> **Tip:** The memory adapter enforces unique and compositeUnique constraints at insert time — throws on duplicates.
+> **Tip:** MongoDB adapter uses JSON Schema validation and unique indexes from schema definitions.
 
 
 ### TYPES

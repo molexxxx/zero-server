@@ -49,6 +49,12 @@ export interface SchemaColumnDef {
     arrayOf?: string;
     /** PG: foreign key reference. */
     references?: { table: string; column?: string; onDelete?: string; onUpdate?: string };
+    /** SQL CHECK constraint expression. */
+    check?: string;
+    /** Part of a composite primary key. */
+    compositeKey?: boolean;
+    /** Composite unique constraint group name (or true for default group). */
+    compositeUnique?: string | boolean;
 }
 
 export const TYPES: {
@@ -114,6 +120,18 @@ export function validate(
     columns: Record<string, SchemaColumnDef>,
     options?: { partial?: boolean }
 ): { valid: boolean; errors: string[]; sanitized: object };
+
+/**
+ * Validate and normalise a FK action string (CASCADE, SET NULL, etc.).
+ * Throws on invalid action.
+ */
+export function validateFKAction(action: string): string;
+
+/**
+ * Validate a CHECK constraint expression for dangerous SQL patterns.
+ * Throws on potentially dangerous expressions.
+ */
+export function validateCheck(expr: string): string;
 
 // --- Query Builder -----------------------------------------------
 
@@ -663,4 +681,29 @@ export class Database {
      * Run a function inside a transaction (begin/commit/rollback if supported).
      */
     transaction(fn: () => Promise<void>): Promise<void>;
+
+    // -- DDL / Migration Methods --------------------------------
+
+    /** Add a column to an existing table. */
+    addColumn(table: string, column: string, definition: SchemaColumnDef): Promise<void>;
+    /** Drop a column from a table. */
+    dropColumn(table: string, column: string): Promise<void>;
+    /** Rename a column. */
+    renameColumn(table: string, oldName: string, newName: string): Promise<void>;
+    /** Rename a table. */
+    renameTable(oldName: string, newName: string): Promise<void>;
+    /** Create an index on a table. */
+    createIndex(table: string, columns: string | string[], options?: { name?: string; unique?: boolean }): Promise<void>;
+    /** Drop an index. */
+    dropIndex(table: string, name: string): Promise<void>;
+    /** Check if a table exists. */
+    hasTable(table: string): Promise<boolean>;
+    /** Check if a column exists on a table. */
+    hasColumn(table: string, column: string): Promise<boolean>;
+    /** Get detailed column info for a table. */
+    describeTable(table: string): Promise<Array<any>>;
+    /** Add a foreign key constraint. */
+    addForeignKey(table: string, column: string, refTable: string, refColumn: string, options?: { onDelete?: string; onUpdate?: string; name?: string }): Promise<void>;
+    /** Drop a foreign key constraint. */
+    dropForeignKey(table: string, constraintName: string): Promise<void>;
 }
