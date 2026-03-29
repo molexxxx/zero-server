@@ -7,9 +7,9 @@ const {
     static: serveStatic, helmet, cors, cookieParser
 } = require('../');
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  CRLF Header Injection
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — CRLF Header Injection', () => {
     let server, base;
 
@@ -68,9 +68,9 @@ describe('Security — CRLF Header Injection', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Prototype Pollution via urlencoded extended
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Prototype Pollution', () => {
     let server, base;
 
@@ -119,9 +119,9 @@ describe('Security — Prototype Pollution', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Path Traversal in Static Middleware
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Static Path Traversal', () => {
     let server, base;
     const dir = path.join(__dirname, 'sec-static');
@@ -173,9 +173,9 @@ describe('Security — Static Path Traversal', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Path Traversal in sendFile with root option
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — sendFile Traversal', () => {
     let server, base;
     const dir = path.join(__dirname, 'sec-sendfile');
@@ -214,9 +214,9 @@ describe('Security — sendFile Traversal', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Body Size Limits
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Body Size Limits', () => {
     let server, base;
 
@@ -260,9 +260,9 @@ describe('Security — Body Size Limits', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  requireSecure option on body parsers
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — requireSecure on Body Parsers', () => {
     let server, base;
 
@@ -286,9 +286,9 @@ describe('Security — requireSecure on Body Parsers', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Cookie Name Injection
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Cookie Name Validation', () => {
     let server, base;
 
@@ -329,9 +329,9 @@ describe('Security — Cookie Name Validation', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Signed Cookie Integrity
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Signed Cookie Integrity', () => {
     let server, base;
     const secret = 'security-test-secret';
@@ -383,9 +383,9 @@ describe('Security — Signed Cookie Integrity', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Helmet Default Headers
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Helmet Headers', () => {
     let server, base;
 
@@ -426,9 +426,9 @@ describe('Security — Helmet Headers', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Double-Send Protection
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Double Send Protection', () => {
     let server, base;
 
@@ -471,9 +471,9 @@ describe('Security — Double Send Protection', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Multipart Filename Sanitization
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Multipart Filename Sanitization', () => {
     let server, base;
     const uploadDir = path.join(__dirname, 'sec-uploads');
@@ -531,9 +531,9 @@ describe('Security — Multipart Filename Sanitization', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  Query String Prototype Pollution
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — Query String Prototype Pollution', () => {
     let server, base;
 
@@ -576,9 +576,9 @@ describe('Security — Query String Prototype Pollution', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  MySQL Adapter — SQL Injection Guards
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — MySQL Adapter Injection Guards', () => {
     const MysqlAdapter = (() => {
         try { return require('../lib/orm/adapters/mysql'); } catch { return null; }
@@ -611,9 +611,9 @@ describe('Security — MySQL Adapter Injection Guards', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  PostgreSQL Adapter — SQL Injection Guards
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — PostgreSQL Adapter Injection Guards', () => {
     const PgAdapter = (() => {
         try { return require('../lib/orm/adapters/postgres'); } catch { return null; }
@@ -642,9 +642,9 @@ describe('Security — PostgreSQL Adapter Injection Guards', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 //  SQLite Adapter — Pragma Injection Guards
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 describe('Security — SQLite Adapter Pragma Escaping', () => {
     const SqliteAdapter = (() => {
         try { return require('../lib/orm/adapters/sqlite'); } catch { return null; }
