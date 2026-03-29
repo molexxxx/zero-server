@@ -6,7 +6,7 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>zero-http — demo & reference</title>
 	<meta name="description"
-		content="zero-http is a zero-dependency backend framework for Node.js with Express-like routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, compression, and more." />
+		content="zero-http is a zero-dependency backend framework for Node.js with routing, built-in ORM, WebSocket, SSE, CORS, rate limiting, security middleware, body parsers, compression, and more." />
 	<meta name="keywords"
 		content="nodejs,http,https,server,express,expressjs,middleware,body-parser,multipart,uploads,static files,fetch,http client,websocket,sse,server-sent events,compression,router" />
 	<meta name="author" content="Anthony Wiedman" />
@@ -197,158 +197,218 @@
 		<main class="ui-main">
 			<div class="card docs-card">
 
-				<div class="feature-tabs" id="features">
-					<div class="tabs-nav" role="tablist" aria-label="Docs sections tabs">
-						<button class="tab active" data-target="tab-features" role="tab"
-							aria-selected="true">Features</button>
-						<button class="tab" data-target="tab-behavior" role="tab" aria-selected="false">Server
-							model</button>
-					</div>
-					<div class="tabs-content">
-						<div id="tab-features" class="tab-panel active">
-							<div class="feature-grid">
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/zero.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Zero-dependency</h5>
-									<p>Small, Express-like API without external deps.</p></div>
+				<div class="bento-section" id="features">
+					<div class="bento-grid">
+						<!-- Row 1: Zero Deps wide-left + Router + Security -->
+						<div class="bento-card bento-wide bento-main" style="--i:0">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/zero.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/plug.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Pluggable parsers</h5>
-									<p>json(), urlencoded(), text(), raw() built-in.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/stream.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Streaming uploads</h5>
-									<p>Multipart streaming to disk for large files.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/static.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Static serving</h5>
-									<p>Content-Type handling and cache options.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/fetch.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Built-in fetch</h5>
-									<p>Server-side fetch with TLS passthrough.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>WebSocket</h5>
-									<p>RFC 6455 with ping/pong &amp; sub-protocols.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/sse.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Server-Sent Events</h5>
-									<p>Auto-IDs, named events, keep-alive.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/compress.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Compression</h5>
-									<p>Brotli/gzip/deflate with threshold &amp; filter.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/https.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>HTTPS &amp; TLS</h5>
-									<p>Native HTTPS, req.secure, secure routing.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/router.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Modular Router</h5>
-									<p>Sub-apps, groups, chaining, introspection.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/security.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Security</h5>
-									<p>Helmet headers, CSRF protection, cookies.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/validate.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Validation</h5>
-									<p>Schema-based request validation &amp; coercion.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/database.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>ORM &amp; Database</h5>
-									<p>Models, query builder, 6 adapters.</p></div>
-								</div>
-								<div class="feature-card">
-									<div class="feature-icon">
-										<img class="icon-svg" src="/icons/env.svg" alt="" aria-hidden="true"
-											width="48" height="48" />
-									</div>
-									<div class="feature-text"><h5>Environment Config</h5>
-									<p>Typed .env loading with schema validation.</p></div>
+								<div class="bento-text">
+									<h4>Zero Dependencies</h4>
+									<p>Built entirely on Node.js core — no <code>node_modules</code> needed. ORM database drivers are the only optional extras.</p>
 								</div>
 							</div>
 						</div>
-						<div id="tab-behavior" class="tab-panel">
-							<div class="pipeline">
-								<div class="pipe-stage">
-									<div class="pipe-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
-									<h5>Registration order</h5>
-									<p>Middleware runs in the order registered—add parsers before handlers.</p>
+						<a class="bento-card" href="#core-router" style="--i:1">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/router.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
-								<div class="pipe-arrow" aria-hidden="true" style="--i:0"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
-								<div class="pipe-stage">
-									<div class="pipe-icon"><svg viewBox="0 0 24 24"><path d="M9 3H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2"/><path d="M15 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2"/></svg></div>
-									<h5>Body parsing</h5>
-									<p>Populates <code>req.body</code>; multipart exposes <code>req.body.files</code> and <code>req.body.fields</code>.</p>
-								</div>
-								<div class="pipe-arrow" aria-hidden="true" style="--i:1"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
-								<div class="pipe-stage">
-									<div class="pipe-icon"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
-									<h5>Handler model</h5>
-									<p>Handlers receive <code>req</code> + <code>res</code>. Respond with <code>res.json()</code> or <code>res.send()</code>.</p>
-								</div>
-								<div class="pipe-arrow" aria-hidden="true" style="--i:2"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
-								<div class="pipe-stage">
-									<div class="pipe-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-									<h5>Static middleware</h5>
-									<p>Serves files with Content-Type from extension and supports caching options.</p>
+								<div class="bento-text">
+									<h4>Modular Router</h4>
+									<p>Sub-apps, groups, chaining, param handlers, and route introspection.</p>
 								</div>
 							</div>
-						</div>
+						</a>
+						<a class="bento-card" href="#section-cookies-security" style="--i:2">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/security.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Security Suite</h4>
+									<p>Helmet headers, CSRF protection, signed cookies, and timeout guards.</p>
+								</div>
+							</div>
+						</a>
+						<!-- Row 2: Body Parsers + HTTP Client + ORM wide-right -->
+						<a class="bento-card" href="#section-body-parsers" style="--i:3">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/plug.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Body Parsers</h4>
+									<p>Built-in json(), urlencoded(), text(), raw(), and multipart().</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#networking-fetch" style="--i:4">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/fetch.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>HTTP Client</h4>
+									<p>Built-in server-side fetch with proxy and TLS passthrough.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-wide bento-main" href="#section-orm" style="--i:5">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/database.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>ORM &amp; Database</h4>
+									<p>LINQ-style query builder, schema DDL, and 6 adapters — Memory, JSON, SQLite, MySQL, PostgreSQL, and MongoDB.</p>
+								</div>
+							</div>
+						</a>
+						<!-- Hidden behind toggle -->
+						<!-- Row 3: Real-time wide-left + CORS + Rate Limiting -->
+						<a class="bento-card bento-wide bento-main" href="#section-real-time" style="--i:6">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Real-time</h4>
+									<p>WebSocket rooms, pooling, broadcasting. SSE with auto-IDs and keep-alive.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-cors" style="--i:7">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/cors.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>CORS</h4>
+									<p>Cross-origin resource sharing with preflight and origin control.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-ratelimit" style="--i:8">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/ratelimit.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Rate Limiting</h4>
+									<p>Per-IP request throttling with configurable windows and limits.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-compress" style="--i:9">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/compress.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Compression</h4>
+									<p>Brotli, gzip, and deflate with threshold and content filtering.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-static" style="--i:10">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/static.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Static Files</h4>
+									<p>Content-Type detection, ETag caching, and index file support.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#body-parsers-multipart" style="--i:11">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/stream.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Streaming Uploads</h4>
+									<p>Multipart file streaming to disk with size limits and progress.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#cookies-security-validate" style="--i:12">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/validate.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Validation</h4>
+									<p>Schema-based request validation with type coercion and custom rules.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#core-createapp" style="--i:13">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/https.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>HTTPS &amp; TLS</h4>
+									<p>Native HTTPS with req.secure and secure-only routing.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#section-error-handling" style="--i:14">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/error.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Error Handling</h4>
+									<p>Typed HTTP and framework error classes with global error handling.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#middleware-logger" style="--i:15">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/logger.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Logging &amp; Debugging</h4>
+									<p>Request logger with timing, request IDs, and debug output.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card" href="#section-environment" style="--i:16">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/env.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Environment Config</h4>
+									<p>Typed .env loading with schema validation and default values.</p>
+								</div>
+							</div>
+						</a>
 					</div>
+					<button class="bento-toggle" id="bento-toggle">Show all features</button>
 				</div>
 
 				<!-- Dynamic documentation sections rendered by data-sections.js -->

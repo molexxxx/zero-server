@@ -270,7 +270,7 @@ app.listen(3000)
 
 ### createApp
 
-Creates an application instance — the central object for registering middleware, routes, and settings. Supports Express-like set/get, enable/disable, locals, param handlers, groups, chaining, and route introspection.
+Creates an application instance — the central object for registering middleware, routes, and settings. Supports set/get, enable/disable, locals, param handlers, groups, chaining, and route introspection.
 
 #### Methods
 

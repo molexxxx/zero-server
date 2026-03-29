@@ -1,6 +1,6 @@
 /**
  * ui.js
- * Shell UI behaviours — feature tabs, TOC sidebar toggle, and smooth-scroll
+ * Shell UI behaviours — bento grid glow, TOC sidebar toggle, and smooth-scroll
  * anchor navigation.  Runs on DOMContentLoaded alongside the other scripts.
  *
  * No external dependencies — pure DOM.
@@ -9,7 +9,7 @@
 document.addEventListener('DOMContentLoaded', () =>
 {
     initThemeToggle();
-    initFeatureTabs();
+    initBentoGrid();
     initTocSidebar();
     initTocNavigation();
     initTocToolbar();
@@ -52,37 +52,121 @@ function initThemeToggle()
     });
 }
 
-/* -- Feature Tabs ------------------------------------------------------------ */
+/* -- Bento Grid — Win11 border glow ----------------------------------------- */
 
 /**
- * Wire the feature / server-model tab buttons so clicking one activates
- * its panel and deactivates the rest.
+ * Track mouse position on the bento section and update CSS custom
+ * properties on ALL nearby cards so the radial-gradient border glow bleeds
+ * across adjacent cards seamlessly (Windows 11 "Mica reveal" style).
+ * Uses requestAnimationFrame + lerp for smooth, slightly delayed movement.
  */
-function initFeatureTabs()
+function initBentoGrid()
 {
-    const tabs = document.querySelectorAll('.feature-tabs .tab');
-    tabs.forEach(tab =>
+    const section = document.querySelector('.bento-section');
+    if (!section) return;
+    const RADIUS = 300;
+    const LERP   = 0.08; /* 0 = frozen, 1 = instant tracking */
+
+    /* Lerped cursor state per card */
+    const cardStates = new Map();
+    const cards = section.querySelectorAll('.bento-card');
+    const toggle = document.getElementById('bento-toggle');
+    /* Combine cards + toggle into one tracked set */
+    const glowTargets = toggle ? [...cards, toggle] : [...cards];
+
+    let mouseX = 0, mouseY = 0, rafId = null;
+
+    function tick()
     {
-        tab.addEventListener('click', () =>
+        glowTargets.forEach(card =>
         {
-            const target = tab.dataset.target;
-            if (!target) return;
+            let st = cardStates.get(card);
+            if (!st) { st = { x: 0, y: 0, lit: false }; cardStates.set(card, st); }
 
-            tabs.forEach(t =>
+            const rect = card.getBoundingClientRect();
+            const tx = mouseX - rect.left;
+            const ty = mouseY - rect.top;
+
+            /* distance from cursor to nearest edge of card */
+            const closestX = Math.max(rect.left, Math.min(mouseX, rect.right));
+            const closestY = Math.max(rect.top, Math.min(mouseY, rect.bottom));
+            const dist = Math.hypot(mouseX - closestX, mouseY - closestY);
+
+            if (dist < RADIUS)
             {
-                t.classList.remove('active');
-                t.setAttribute('aria-selected', 'false');
-            });
+                st.x += (tx - st.x) * LERP;
+                st.y += (ty - st.y) * LERP;
+                card.style.setProperty('--glow-x', st.x + 'px');
+                card.style.setProperty('--glow-y', st.y + 'px');
+                if (!st.lit) { card.classList.add('bento-lit'); st.lit = true; }
+            }
+            else if (st.lit)
+            {
+                card.classList.remove('bento-lit');
+                st.lit = false;
+            }
+        });
+        rafId = requestAnimationFrame(tick);
+    }
 
-            document.querySelectorAll('.feature-tabs .tab-panel').forEach(p => p.classList.remove('active'));
+    section.addEventListener('mouseenter', () =>
+    {
+        if (!rafId) rafId = requestAnimationFrame(tick);
+    });
 
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
+    section.addEventListener('mousemove', (e) =>
+    {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    });
 
-            const panel = document.getElementById(target);
-            if (panel) panel.classList.add('active');
+    section.addEventListener('mouseleave', () =>
+    {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        glowTargets.forEach(card =>
+        {
+            card.classList.remove('bento-lit');
+            const st = cardStates.get(card);
+            if (st) st.lit = false;
         });
     });
+
+    /* Scroll-triggered stagger reveal */
+    if ('IntersectionObserver' in window)
+    {
+        const observer = new IntersectionObserver((entries) =>
+        {
+            entries.forEach(entry =>
+            {
+                if (entry.isIntersecting)
+                {
+                    entry.target.style.animationPlayState = 'running';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card =>
+        {
+            card.style.animationPlayState = 'paused';
+            observer.observe(card);
+        });
+    }
+
+    /* Mobile "Show all features" toggle */
+    if (toggle)
+    {
+        toggle.addEventListener('click', () =>
+        {
+            const expanded = section.classList.toggle('bento-expanded');
+            toggle.textContent = expanded ? 'Show fewer' : 'Show all features';
+
+            /* Re-query cards after toggling so newly visible ones get tracked */
+            glowTargets.length = 0;
+            section.querySelectorAll('.bento-card').forEach(c => glowTargets.push(c));
+            glowTargets.push(toggle);
+        });
+    }
 }
 
 /* -- TOC Sidebar Toggle ------------------------------------------------------ */

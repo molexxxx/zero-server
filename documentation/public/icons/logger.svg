@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-log" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Terminal window -->
+  <rect x="6" y="10" width="52" height="44" rx="5" fill="url(#g-log)" opacity="0.25"/>
+  <rect x="6" y="10" width="52" height="44" rx="5" fill="none" stroke="url(#g-log)" stroke-width="2.5"/>
+  <!-- Title bar -->
+  <line x1="6" y1="20" x2="58" y2="20" stroke="url(#g-log)" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="14" cy="15" r="2" fill="url(#g-log)" opacity="0.6"/>
+  <circle cx="21" cy="15" r="2" fill="url(#g-log)" opacity="0.6"/>
+  <circle cx="28" cy="15" r="2" fill="url(#g-log)" opacity="0.6"/>
+  <!-- Log lines -->
+  <line x1="12" y1="28" x2="20" y2="28" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="23" y1="28" x2="48" y2="28" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="12" y1="35" x2="20" y2="35" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="23" y1="35" x2="42" y2="35" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="12" y1="42" x2="20" y2="42" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="23" y1="42" x2="52" y2="42" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+</svg>

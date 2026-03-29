@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-cors" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Globe circle -->
+  <circle cx="32" cy="32" r="20" fill="url(#g-cors)" opacity="0.25"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="url(#g-cors)" stroke-width="2.5"/>
+  <!-- Longitude lines -->
+  <ellipse cx="32" cy="32" rx="10" ry="20" fill="none" stroke="url(#g-cors)" stroke-width="1.8"/>
+  <!-- Latitude lines -->
+  <line x1="12" y1="32" x2="52" y2="32" stroke="url(#g-cors)" stroke-width="1.8"/>
+  <line x1="16" y1="22" x2="48" y2="22" stroke="url(#g-cors)" stroke-width="1.2" opacity="0.6"/>
+  <line x1="16" y1="42" x2="48" y2="42" stroke="url(#g-cors)" stroke-width="1.2" opacity="0.6"/>
+  <!-- Bi-directional arrows -->
+  <path d="M8 50l4-4M8 50l4 4" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M56 14l-4-4M56 14l-4 4" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <line x1="8" y1="50" x2="56" y2="14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-err" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Warning triangle -->
+  <path d="M32 8L4 56h56L32 8z" fill="url(#g-err)" opacity="0.25"/>
+  <path d="M32 14L10 52h44L32 14z" fill="url(#g-err)"/>
+  <!-- Exclamation mark -->
+  <line x1="32" y1="24" x2="32" y2="38" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="32" cy="45" r="2.5" fill="#ffffff"/>
+</svg>
