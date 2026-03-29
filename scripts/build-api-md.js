@@ -16,7 +16,7 @@ const ROOT      = path.resolve(__dirname, '..');
 const DOCS_JSON = path.join(ROOT, 'documentation', 'public', 'data', 'docs.json');
 const OUTPUT    = path.join(ROOT, 'API.md');
 
-// ── Static content ──────────────────────────────────────────
+// -- Static content ------------------------------------------
 
 const HEADER = `<p align="center">
   <a href="https://z-http.com">
@@ -208,7 +208,7 @@ app.onError((err, req, res) => {
 })
 \`\`\``;
 
-// ── Helpers ─────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------
 
 function slugify(text)
 {
@@ -307,7 +307,7 @@ function renderTips(tips)
     return lines.join('\n');
 }
 
-// ── Build ───────────────────────────────────────────────────
+// -- Build ---------------------------------------------------
 
 function buildToc(sections)
 {

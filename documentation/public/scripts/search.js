@@ -94,7 +94,7 @@
         input.blur();
     }
 
-    /* ── Index builder ─────────────────────────────────────────── */
+    /* -- Index builder ------------------------------------------- */
 
     function sectionSlug(name) { return 'section-' + slugify(name); }
     function itemSlug(section, item) { return slugify(section) + '-' + slugify(item); }
@@ -202,9 +202,9 @@
         }
     }
 
-    /* ── Search logic ──────────────────────────────────────────── */
+    /* -- Search logic -------------------------------------------- */
 
-    /* ── Recent selections (localStorage) ─────────────────────── */
+    /* -- Recent selections (localStorage) ----------------------- */
 
     function getRecent()
     {
@@ -338,7 +338,7 @@
         renderResults(currentResults, words);
     }
 
-    /* ── Rendering ─────────────────────────────────────────────── */
+    /* -- Rendering ----------------------------------------------- */
 
     const TYPE_ICONS = {
         item: '<svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -427,7 +427,7 @@
         });
     }
 
-    /* ── Keyboard navigation ───────────────────────────────────── */
+    /* -- Keyboard navigation ------------------------------------- */
 
     function moveActive(delta)
     {

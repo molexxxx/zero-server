@@ -90,7 +90,7 @@
           { "method": "all", "signature": "all(path, [opts], ...handlers)", "description": "Register a handler for all HTTP methods." },
           { "method": "use", "signature": "use([prefix], handler)", "description": "Mount middleware or a nested router." },
           { "method": "route", "signature": "route(path)", "description": "Create a route chain: router.route('/items').get(fn).post(fn)." },
-          { "method": "routes", "signature": "routes()", "description": "Return the route table for this router." }
+          { "method": "inspect", "signature": "inspect()", "description": "Return the route table for this router." }
         ],
         "example": "const { createApp, Router, json } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\nconst users = Router()\nusers.get('/', (req, res) => res.json([]))\nusers.get('/:id', (req, res) => res.json({ id: req.params.id }))\nusers.post('/', (req, res) => res.status(201).json(req.body))\n\nconst posts = Router()\nposts.route('/')\n\t.get((req, res) => res.json([]))\n\t.post((req, res) => res.status(201).json(req.body))\nposts.get('/:id', (req, res) => res.json({ id: req.params.id }))\n\napp.use('/api/users', users)\napp.use('/api/posts', posts)\n\napp.get('/debug/routes', (req, res) => res.json(app.routes()))\n\napp.listen(3000)",
         "tips": [
