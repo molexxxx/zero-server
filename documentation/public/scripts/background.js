@@ -179,6 +179,9 @@
             localStorage.setItem('zero-waves-paused', paused ? '1' : '0');
             updateIcon();
 
+            /* Notify other canvas scripts (hero-canvas.js) */
+            window.dispatchEvent(new Event(paused ? 'waves-pause' : 'waves-resume'));
+
             if (paused)
             {
                 if (animId) { cancelAnimationFrame(animId); animId = null; }

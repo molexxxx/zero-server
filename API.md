@@ -64,6 +64,8 @@
   - [Migrator](#migrator)
   - [QueryCache](#querycache)
   - [Seeder & Factory](#seeder-factory)
+  - [QueryProfiler](#queryprofiler)
+  - [ReplicaManager](#replicamanager)
 - [Real-Time](#real-time)
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
@@ -1366,6 +1368,10 @@ The ORM entry point. Connect to a database using one of 7 built-in adapters (mem
 | `dropForeignKey` | `db.dropForeignKey(table, name)` | Drop a FK constraint by name (MySQL/PostgreSQL). |
 | `validateFKAction` | `validateFKAction(action)` | Validate a FK action string (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION). Throws on invalid. Used internally by adapters; available for custom DDL. |
 | `validateCheck` | `validateCheck(expr)` | Validate a CHECK constraint expression for SQL injection patterns (blocks semicolons, DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, EXEC). Throws on dangerous input. Used internally by adapters. |
+| `enableProfiling` | `db.enableProfiling([options])` | Attach a QueryProfiler to this database instance. Returns the profiler. Options: { enabled, slowThreshold, maxHistory, onSlow, n1Threshold, n1Window, onN1, maxN1History }. |
+| `connectWithReplicas` | `Database.connectWithReplicas(type, primaryOpts, replicaConfigs, [options])` | Static. Create a Database with a primary adapter and read replicas. replicaConfigs is an array of connection option objects. Options: { strategy, stickyWrite, stickyWindow }. |
+| `profiler` | `db.profiler` | Getter. Returns the attached QueryProfiler instance, or null if profiling is not enabled. |
+| `replicas` | `db.replicas` | Getter. Returns the ReplicaManager instance, or null if no replicas are configured. |
 
 
 #### Options
@@ -1925,6 +1931,15 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 | `sumBy` | `sumBy(fn)` | Sum using a value selector function. |
 | `averageBy` | `averageBy(fn)` | Average using a value selector function. |
 | `countBy` | `countBy(keyFn)` | Count elements per group, returns Map<key, count>. |
+
+
+#### Performance & Scalability
+
+| Method | Signature | Description |
+|---|---|---|
+| `withCount` | `withCount(relation)` | Eager-load a related record count without loading the records. Adds a <relation>_count property to each result. |
+| `onReplica` | `onReplica()` | Force this query to execute on a read replica (if configured). Returns the query for chaining. |
+| `explain` | `explain([options])` | Return the execution plan for this query instead of results. Options vary by adapter: { format, analyze, buffers }. |
 
 
 ```js
@@ -3039,6 +3054,164 @@ console.log(Fake.pick(['a', 'b', 'c']))  // 'b'
 > **Tip:** Fake.pick() and Fake.pickMany() are great for selecting from enums or option lists.
 > **Tip:** SeederRunner.fresh() clears all data before seeding — ideal for resetting test databases.
 > **Tip:** Extend Seeder and implement run(db) — SeederRunner instantiates and executes them for you.
+
+
+### QueryProfiler
+
+Automatic query profiling, slow-query detection, and N+1 pattern identification. Attach to any Database instance via db.enableProfiling(). Records every query execution with timing, flags queries exceeding a configurable threshold, and detects rapid repeated SELECTs on the same table within a time window. Capped history prevents memory leaks in long-running servers.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `record` | `profiler.record(entry)` | Record a query execution. Entry: { table, action, duration }. Called automatically by the ORM when profiling is enabled. |
+| `metrics` | `profiler.metrics()` | Return aggregate stats: { totalQueries, totalTime, avgLatency, queriesPerSecond, slowQueries, n1Detections }. |
+| `slowQueries` | `profiler.slowQueries()` | Return all queries from history that exceeded the slow threshold. |
+| `n1Detections` | `profiler.n1Detections()` | Return all N+1 pattern detections: { table, count, timestamp, message }. |
+| `getQueries` | `profiler.getQueries([options])` | Get filtered query history. Options: { table, action, minDuration }. |
+| `reset` | `profiler.reset()` | Clear all profiling state — queries, counters, and N+1 detections. |
+| `enabled` | `profiler.enabled` | Getter/setter. Enable or disable profiling at runtime. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `true` | Enable/disable profiling. |
+| `slowThreshold` | number | `100` | Duration in ms above which a query is flagged as slow. |
+| `maxHistory` | number | `1000` | Maximum number of query entries retained in memory. |
+| `onSlow` | function | `null` | Callback invoked on every slow query: (entry) => {}. |
+| `n1Threshold` | number | `5` | Minimum rapid same-table SELECTs to flag as N+1. |
+| `n1Window` | number | `100` | Time window in ms for N+1 detection. |
+| `onN1` | function | `null` | Callback invoked on N+1 detection: (info) => {}. |
+| `maxN1History` | number | `100` | Maximum N+1 detection entries to retain. Oldest entries are evicted when exceeded. |
+
+
+```js
+const { Database, Model, TYPES, QueryProfiler } = require('zero-http')
+
+const db = Database.connect('memory')
+
+// Enable profiling with custom threshold
+const profiler = db.enableProfiling({
+	slowThreshold: 50,
+	maxHistory: 500,
+	onSlow: (entry) => console.warn('Slow:', entry.table, entry.duration + 'ms'),
+	n1Threshold: 3,
+	onN1: (info) => console.warn(info.message),
+})
+
+class User extends Model {
+	static table = 'users'
+	static schema = {
+		id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		name: { type: TYPES.STRING },
+	}
+}
+db.register(User)
+await db.sync()
+
+await User.create({ name: 'Alice' })
+await User.create({ name: 'Bob' })
+await User.all()
+
+// Check aggregate metrics
+console.log(profiler.metrics())
+// { totalQueries: 3, totalTime: ..., avgLatency: ..., queriesPerSecond: ..., slowQueries: 0, n1Detections: 0 }
+
+// Filter query history
+const selects = profiler.getQueries({ action: 'select' })
+console.log(selects.length)
+
+// Toggle profiling at runtime
+profiler.enabled = false
+profiler.enabled = true
+
+// Reset all state
+profiler.reset()
+```
+
+
+> **Tip:** enableProfiling() returns the profiler — store it or access later via db.profiler.
+> **Tip:** slowThreshold defaults to 100 ms — lower it during development, raise it in production.
+> **Tip:** maxHistory caps query retention to prevent memory growth in long-running processes.
+> **Tip:** onSlow and onN1 callbacks let you pipe alerts to external monitoring (Sentry, Datadog, etc.).
+> **Tip:** N+1 detection watches for repeated SELECTs on the same table within n1Window ms — tune n1Threshold for your workload.
+> **Tip:** Use profiler.reset() between test runs to isolate measurements.
+> **Tip:** maxN1History caps N+1 detection entries — prevents unbounded memory growth from recurring patterns.
+
+
+### ReplicaManager
+
+Read replica load balancing for horizontal read scaling. Distributes read queries across replica database connections using round-robin or random strategies. Supports health checks, sticky writes (reads go to primary briefly after a write to avoid stale data), and automatic fallback to primary when all replicas are down.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `setPrimary` | `manager.setPrimary(adapter)` | Set the primary (read-write) adapter. Throws if adapter is null. |
+| `addReplica` | `manager.addReplica(adapter)` | Add a read replica adapter to the pool. |
+| `removeReplica` | `manager.removeReplica(adapter)` | Remove a replica adapter from the pool. |
+| `getReadAdapter` | `manager.getReadAdapter()` | Get the next read adapter. Returns primary during sticky window after a write, otherwise selects from healthy replicas using the configured strategy. Falls back to primary if no healthy replicas. |
+| `getWriteAdapter` | `manager.getWriteAdapter()` | Get the primary adapter for write operations. Records the write timestamp for sticky-write tracking. |
+| `markUnhealthy` | `manager.markUnhealthy(adapter)` | Mark a replica as unhealthy. It will be excluded from read selection until marked healthy. |
+| `markHealthy` | `manager.markHealthy(adapter)` | Mark a previously unhealthy replica as healthy again. |
+| `healthCheck` | `await manager.healthCheck()` | Ping all replicas and automatically mark them healthy or unhealthy based on response. |
+| `status` | `manager.status()` | Return pool status: { primary, total, healthy, unhealthy, strategy }. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `strategy` | string | `'round-robin'` | Replica selection strategy. Must be 'round-robin' or 'random'. Throws on invalid value. |
+| `stickyWrite` | boolean | `true` | When true, reads go to primary for a brief window after a write to avoid stale data. |
+| `stickyWindow` | number | `1000` | Duration in ms to read from primary after a write (sticky-write window). |
+
+
+```js
+const { Database, ReplicaManager } = require('zero-http')
+
+// Using the static helper
+const db = Database.connectWithReplicas('memory',
+	{},
+	[{}, {}],
+	{ strategy: 'round-robin', stickyWindow: 2000 }
+)
+
+console.log(db.replicas.status())
+// { primary: true, total: 2, healthy: 2, unhealthy: 0, strategy: 'round-robin' }
+
+// Manual setup
+const manager = new ReplicaManager({ strategy: 'random' })
+const primary = Database.connect('memory')
+manager.setPrimary(primary.adapter)
+
+const replica1 = Database.connect('memory')
+const replica2 = Database.connect('memory')
+manager.addReplica(replica1.adapter)
+manager.addReplica(replica2.adapter)
+
+// Get adapters for read/write
+const reader = manager.getReadAdapter()
+const writer = manager.getWriteAdapter()
+
+// Health management
+manager.markUnhealthy(replica1.adapter)
+console.log(manager.status().unhealthy) // 1
+manager.markHealthy(replica1.adapter)
+
+// Automatic health check (calls adapter.ping())
+await manager.healthCheck()
+```
+
+
+> **Tip:** connectWithReplicas() is the easiest way to set up replicas — it wires everything automatically.
+> **Tip:** Sticky writes prevent reading stale data right after a write — keep stickyWindow short (1-2s).
+> **Tip:** healthCheck() pings every replica — run it on an interval in production for automatic failover.
+> **Tip:** Use onReplica() in queries to explicitly route a specific query to a read replica.
+> **Tip:** strategy must be 'round-robin' or 'random' — invalid values throw immediately.
+> **Tip:** If all replicas are unhealthy, reads automatically fall back to the primary.
 
 
 

@@ -22,7 +22,7 @@ const errorHandler = require('./lib/middleware/errorHandler');
 const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
-const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake } = require('./lib/orm');
+const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager } = require('./lib/orm');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
 const { version } = require('./package.json');
@@ -111,6 +111,11 @@ module.exports = {
     Factory,
     /** @see module:orm/seed */
     Fake,
+    // ORM: Performance & Scalability
+    /** @see module:orm/profiler */
+    QueryProfiler,
+    /** @see module:orm/replicas */
+    ReplicaManager,
     // Error handling & debugging
     /** @see module:errors */
     HttpError: errors.HttpError,

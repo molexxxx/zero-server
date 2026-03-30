@@ -212,6 +212,15 @@ export class Query {
     /** Returns the maximum value of a column. */
     max(field: string): Promise<any>;
 
+    // -- Performance / Scalability (Phase 2) -----------------
+
+    /** Eager-count relationships without loading records. Adds `RelationName_count` fields. */
+    withCount(...relations: string[]): Query;
+    /** Force this query to run against a read replica if configured. */
+    onReplica(): Query;
+    /** Get the query execution plan from the adapter. */
+    explain(options?: { analyze?: boolean; buffers?: boolean; format?: string }): Promise<any>;
+
     // -- LINQ-Inspired Methods --------------------------
 
     /** Alias for limit (LINQ naming). */
@@ -813,6 +822,29 @@ export class Database {
     ping(): Promise<boolean>;
     /** Retry a function with exponential backoff. */
     retry<T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>;
+
+    // -- Performance & Scalability (Phase 2) -----------------
+
+    /** Enable query profiling on this database instance. */
+    enableProfiling(options?: QueryProfilerOptions): QueryProfiler;
+    /** The attached profiler (null if not enabled). */
+    readonly profiler: QueryProfiler | null;
+    /** The attached replica manager (null if not configured). */
+    readonly replicas: ReplicaManager | null;
+
+    /**
+     * Connect with read replicas.
+     * @param type       - Adapter type for all connections.
+     * @param primaryOpts - Connection options for the primary.
+     * @param replicaConfigs - Array of connection options for each replica.
+     * @param options    - ReplicaManager options.
+     */
+    static connectWithReplicas(
+        type: AdapterType,
+        primaryOpts: AdapterOptions,
+        replicaConfigs: AdapterOptions[],
+        options?: ReplicaManagerOptions,
+    ): Database;
 }
 
 export interface RetryOptions {
@@ -988,4 +1020,109 @@ export class Fake {
     static pick<T>(arr: T[]): T;
     static pickMany<T>(arr: T[], n: number): T[];
     static json(): { key: string; value: string; count: number; active: boolean };
+}
+
+// --- QueryProfiler --------------------------------------------------
+
+export interface QueryProfilerOptions {
+    /** Enable/disable profiling (default: true). */
+    enabled?: boolean;
+    /** Duration (ms) above which a query is "slow" (default: 100). */
+    slowThreshold?: number;
+    /** Maximum recorded query entries (default: 1000). */
+    maxHistory?: number;
+    /** Callback on slow query. */
+    onSlow?: (entry: ProfiledQuery) => void;
+    /** Minimum rapid same-table SELECTs to flag N+1 (default: 5). */
+    n1Threshold?: number;
+    /** Time window (ms) for N+1 detection (default: 100). */
+    n1Window?: number;
+    /** Callback on N+1 detection. */
+    onN1?: (info: N1Detection) => void;
+}
+
+export interface ProfiledQuery {
+    table: string;
+    action: string;
+    duration: number;
+    timestamp: number;
+}
+
+export interface N1Detection {
+    table: string;
+    count: number;
+    timestamp: number;
+    message: string;
+}
+
+export interface ProfilerMetrics {
+    totalQueries: number;
+    totalTime: number;
+    avgLatency: number;
+    queriesPerSecond: number;
+    slowQueries: number;
+    n1Detections: number;
+}
+
+export class QueryProfiler {
+    constructor(options?: QueryProfilerOptions);
+
+    /** Whether profiling is currently enabled. */
+    get enabled(): boolean;
+    set enabled(value: boolean);
+
+    /** Record a query execution. */
+    record(entry: { table: string; action: string; duration: number }): void;
+    /** Get aggregate profiling metrics. */
+    metrics(): ProfilerMetrics;
+    /** Get all slow queries from history. */
+    slowQueries(): ProfiledQuery[];
+    /** Get all N+1 detections. */
+    n1Detections(): N1Detection[];
+    /** Get filtered query history. */
+    getQueries(options?: { table?: string; action?: string; minDuration?: number }): ProfiledQuery[];
+    /** Reset all profiling state. */
+    reset(): void;
+}
+
+// --- ReplicaManager -------------------------------------------------
+
+export interface ReplicaManagerOptions {
+    /** Selection strategy: 'round-robin' | 'random' (default: 'round-robin'). */
+    strategy?: 'round-robin' | 'random';
+    /** Read from primary after a write for stickyWindow ms (default: true). */
+    stickyWrite?: boolean;
+    /** Duration (ms) to read from primary after a write (default: 1000). */
+    stickyWindow?: number;
+}
+
+export interface HealthCheckResult {
+    healthy: boolean;
+    lastChecked: number;
+}
+
+export class ReplicaManager {
+    constructor(options?: ReplicaManagerOptions);
+
+    /** Number of registered replicas. */
+    readonly replicaCount: number;
+
+    /** Set the primary (read-write) adapter. */
+    setPrimary(adapter: any): void;
+    /** Add a read replica adapter. */
+    addReplica(adapter: any): void;
+    /** Get an adapter for read operations (respects strategy, health, sticky writes). */
+    getReadAdapter(): any;
+    /** Get the primary adapter for write operations (updates sticky window). */
+    getWriteAdapter(): any;
+    /** Mark a replica as unhealthy. */
+    markUnhealthy(adapter: any): void;
+    /** Mark a replica as healthy. */
+    markHealthy(adapter: any): void;
+    /** Run a health check on all replicas. */
+    healthCheck(): Promise<HealthCheckResult[]>;
+    /** Get all adapters (primary + replicas). */
+    getAllAdapters(): any[];
+    /** Close all adapters (primary + replicas). */
+    closeAll(): Promise<void>;
 }

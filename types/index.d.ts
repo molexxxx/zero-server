@@ -41,6 +41,8 @@ export {
     Migrator, MigrationDefinition, MigrateResult, RollbackResult, MigrationStatus, defineMigration,
     QueryCache, QueryCacheOptions, CacheStats,
     Seeder, SeederRunner, Factory, Fake,
+    QueryProfiler, QueryProfilerOptions, ProfiledQuery, N1Detection, ProfilerMetrics,
+    ReplicaManager, ReplicaManagerOptions, HealthCheckResult,
 } from './orm';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
 export { validate as schemaValidate } from './orm';
@@ -82,6 +84,7 @@ import { Env } from './env';
 import { Database, Model, Query } from './orm';
 import { TYPES, validateFKAction, validateCheck } from './orm';
 import { Migrator, QueryCache, Seeder, SeederRunner, Factory, Fake, defineMigration } from './orm';
+import { QueryProfiler, ReplicaManager } from './orm';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -164,6 +167,8 @@ declare const zeroServer: {
     SeederRunner: typeof SeederRunner;
     Factory: typeof Factory;
     Fake: typeof Fake;
+    QueryProfiler: typeof QueryProfiler;
+    ReplicaManager: typeof ReplicaManager;
     // classes
     WebSocketConnection: WebSocketConnection;
     WebSocketPool: {

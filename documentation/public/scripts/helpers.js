@@ -98,6 +98,7 @@ function showJsonResult(container, obj)
     if (!container) return;
     container.innerHTML = jsonHtml(obj);
     try { highlightAllPre(); } catch (e) { }
+    if (window.innerWidth <= 640) container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /* -- Prism / Code-Block Helpers ---------------------------------------------- */

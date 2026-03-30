@@ -3091,3 +3091,195 @@ describe('Docs — Error Handling: ORM Error Classes', () => {
 		}
 	});
 });
+
+// ===========================================================
+// 27. ORM — QueryProfiler
+// ===========================================================
+
+describe('Docs — ORM: QueryProfiler', () => {
+	const { Database, Model, TYPES, QueryProfiler } = require('../');
+
+	let db;
+
+	class PUser extends Model {
+		static table  = 'p_users';
+		static schema = {
+			id:   { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+			name: { type: TYPES.STRING },
+		};
+	}
+
+	beforeEach(async () => {
+		db = Database.connect('memory');
+		db.register(PUser);
+		await db.sync();
+	});
+	afterEach(() => db.close());
+
+	it('enableProfiling attaches a profiler and returns it', () => {
+		const profiler = db.enableProfiling({ slowThreshold: 50 });
+		expect(profiler).toBeInstanceOf(QueryProfiler);
+		expect(db.profiler).toBe(profiler);
+	});
+
+	it('profiler tracks ORM operations end-to-end', async () => {
+		const profiler = db.enableProfiling();
+		await PUser.query().exec();
+
+		const m = profiler.metrics();
+		expect(m.totalQueries).toBeGreaterThanOrEqual(1);
+		expect(m.totalTime).toBeGreaterThanOrEqual(0);
+		expect(m.avgLatency).toBeGreaterThanOrEqual(0);
+		expect(m.queriesPerSecond).toBeGreaterThan(0);
+	});
+
+	it('onSlow callback fires for slow queries', () => {
+		const slow = [];
+		const profiler = db.enableProfiling({
+			slowThreshold: 0,
+			onSlow: (entry) => slow.push(entry),
+		});
+		profiler.record({ table: 'test', action: 'select', duration: 5 });
+		expect(slow.length).toBe(1);
+		expect(slow[0].duration).toBe(5);
+	});
+
+	it('N+1 detection fires onN1 callback', () => {
+		const hits = [];
+		const profiler = db.enableProfiling({
+			n1Threshold: 3,
+			n1Window: 5000,
+			onN1: (info) => hits.push(info),
+		});
+		for (let i = 0; i < 4; i++) {
+			profiler.record({ table: 'comments', action: 'select', duration: 1 });
+		}
+		expect(hits.length).toBe(1);
+		expect(hits[0].table).toBe('comments');
+		expect(hits[0].message).toContain('N+1');
+	});
+
+	it('getQueries filters by table and action', () => {
+		const profiler = db.enableProfiling();
+		profiler.record({ table: 'users', action: 'select', duration: 1 });
+		profiler.record({ table: 'posts', action: 'insert', duration: 2 });
+		expect(profiler.getQueries({ table: 'users' })).toHaveLength(1);
+		expect(profiler.getQueries({ action: 'insert' })).toHaveLength(1);
+	});
+
+	it('reset clears everything', () => {
+		const profiler = db.enableProfiling();
+		profiler.record({ table: 'users', action: 'select', duration: 5 });
+		profiler.reset();
+		expect(profiler.metrics().totalQueries).toBe(0);
+		expect(profiler.getQueries()).toHaveLength(0);
+		expect(profiler.n1Detections()).toHaveLength(0);
+	});
+
+	it('enabled can be toggled at runtime', () => {
+		const profiler = db.enableProfiling();
+		profiler.enabled = false;
+		profiler.record({ table: 'x', action: 'select', duration: 1 });
+		expect(profiler.getQueries()).toHaveLength(0);
+		profiler.enabled = true;
+		profiler.record({ table: 'x', action: 'select', duration: 1 });
+		expect(profiler.getQueries()).toHaveLength(1);
+	});
+});
+
+// ===========================================================
+// 28. ORM — ReplicaManager
+// ===========================================================
+
+describe('Docs — ORM: ReplicaManager', () => {
+	const { Database, ReplicaManager } = require('../');
+
+	it('connectWithReplicas sets up db with replicas', () => {
+		const db = Database.connectWithReplicas('memory', {}, [{}, {}], {
+			strategy: 'round-robin',
+			stickyWindow: 2000,
+		});
+		expect(db.replicas).toBeDefined();
+		expect(db.replicas.status().total).toBe(2);
+		expect(db.replicas.status().strategy).toBe('round-robin');
+	});
+
+	it('manual setup with setPrimary and addReplica', () => {
+		const mgr = new ReplicaManager({ strategy: 'random' });
+		const primary = Database.connect('memory');
+		mgr.setPrimary(primary.adapter);
+
+		const r1 = Database.connect('memory');
+		const r2 = Database.connect('memory');
+		mgr.addReplica(r1.adapter);
+		mgr.addReplica(r2.adapter);
+
+		expect(mgr.status().total).toBe(2);
+		expect(mgr.status().primary).toBe(true);
+	});
+
+	it('getReadAdapter distributes reads (round-robin)', () => {
+		const mgr = new ReplicaManager({ strategy: 'round-robin' });
+		const p = Database.connect('memory');
+		const r1 = Database.connect('memory');
+		const r2 = Database.connect('memory');
+		mgr.setPrimary(p.adapter);
+		mgr.addReplica(r1.adapter);
+		mgr.addReplica(r2.adapter);
+
+		const a1 = mgr.getReadAdapter();
+		const a2 = mgr.getReadAdapter();
+		expect(a1).not.toBe(a2);
+	});
+
+	it('getWriteAdapter returns primary and triggers sticky', () => {
+		const mgr = new ReplicaManager({ stickyWrite: true, stickyWindow: 5000 });
+		const p = Database.connect('memory');
+		const r1 = Database.connect('memory');
+		mgr.setPrimary(p.adapter);
+		mgr.addReplica(r1.adapter);
+
+		const writer = mgr.getWriteAdapter();
+		expect(writer).toBe(p.adapter);
+
+		// After a write, reads go to primary (sticky)
+		const reader = mgr.getReadAdapter();
+		expect(reader).toBe(p.adapter);
+	});
+
+	it('markUnhealthy/markHealthy toggles availability', () => {
+		const mgr = new ReplicaManager();
+		const p = Database.connect('memory');
+		const r1 = Database.connect('memory');
+		mgr.setPrimary(p.adapter);
+		mgr.addReplica(r1.adapter);
+
+		mgr.markUnhealthy(r1.adapter);
+		expect(mgr.status().unhealthy).toBe(1);
+		// Falls back to primary
+		expect(mgr.getReadAdapter()).toBe(p.adapter);
+
+		mgr.markHealthy(r1.adapter);
+		expect(mgr.status().unhealthy).toBe(0);
+	});
+
+	it('healthCheck auto-detects down replicas', async () => {
+		const mgr = new ReplicaManager();
+		const p = Database.connect('memory');
+		mgr.setPrimary(p.adapter);
+
+		const fakeDown = { ping: async () => { throw new Error('down'); } };
+		mgr.addReplica(fakeDown);
+
+		await mgr.healthCheck();
+		expect(mgr.status().unhealthy).toBe(1);
+	});
+
+	it('strategy validation rejects invalid values', () => {
+		expect(() => new ReplicaManager({ strategy: 'fastest' })).toThrow(/Invalid replica strategy/);
+	});
+
+	it('connectWithReplicas rejects non-array replicaConfigs', () => {
+		expect(() => Database.connectWithReplicas('memory', {}, 'not-array')).toThrow(/must be an array/);
+	});
+});
