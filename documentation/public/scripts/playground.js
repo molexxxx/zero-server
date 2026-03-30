@@ -361,7 +361,7 @@ function initOrmPlayground()
                         `<div class="small muted">ID ${t.id} · ${new Date(t.createdAt).toLocaleString()}</div>` +
                     `</div>` +
                     `<div class="task-actions">` +
-                        `<button class="btn small task-edit-btn" data-id="${t.id}">Edit</button>` +
+                        `<button class="btn small task-edit-btn" data-id="${t.id}" data-status="${t.status}" data-priority="${t.priority}">Edit</button>` +
                         `<button class="btn small task-cycle-btn" data-id="${t.id}" data-status="${t.status}" title="Cycle status">↻</button>` +
                         `<button class="btn small warn task-del-btn" data-id="${t.id}">Delete</button>` +
                     `</div>` +
@@ -437,6 +437,10 @@ function initOrmPlayground()
             const row = btn.closest('.task-row');
             const title = row.querySelector('strong').textContent;
             titleIn.value = title;
+            statusIn.value = btn.dataset.status;
+            priorityIn.value = btn.dataset.priority;
+            statusIn.dispatchEvent(new Event('change', { bubbles: true }));
+            priorityIn.dispatchEvent(new Event('change', { bubbles: true }));
             form.querySelector('button[type="submit"]').textContent = 'Save';
             titleIn.focus();
         }
