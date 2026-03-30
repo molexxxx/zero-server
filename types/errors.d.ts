@@ -129,6 +129,78 @@ export class TimeoutError extends HttpError {
 export function createError(statusCode: number, message?: string, opts?: HttpErrorOptions): HttpError;
 export function isHttpError(err: any): err is HttpError;
 
+// --- ORM Error Classes -------------------------------------------
+
+export interface ConnectionErrorOptions extends DatabaseErrorOptions {
+    attempt?: number;
+    maxRetries?: number;
+    host?: string;
+    port?: number;
+}
+
+export class ConnectionError extends DatabaseError {
+    readonly attempt?: number;
+    readonly maxRetries?: number;
+    readonly host?: string;
+    readonly port?: number;
+    constructor(message?: string, opts?: ConnectionErrorOptions);
+}
+
+export interface MigrationErrorOptions extends DatabaseErrorOptions {
+    migration?: string;
+    direction?: 'up' | 'down';
+    batch?: number;
+}
+
+export class MigrationError extends DatabaseError {
+    readonly migration?: string;
+    readonly direction?: 'up' | 'down';
+    readonly batch?: number;
+    constructor(message?: string, opts?: MigrationErrorOptions);
+}
+
+export interface TransactionErrorOptions extends DatabaseErrorOptions {
+    phase?: 'begin' | 'commit' | 'rollback';
+}
+
+export class TransactionError extends DatabaseError {
+    readonly phase?: 'begin' | 'commit' | 'rollback';
+    constructor(message?: string, opts?: TransactionErrorOptions);
+}
+
+export interface QueryErrorOptions extends DatabaseErrorOptions {
+    sql?: string;
+    params?: any[];
+    table?: string;
+}
+
+export class QueryError extends DatabaseError {
+    readonly sql?: string;
+    readonly params?: any[];
+    readonly table?: string;
+    constructor(message?: string, opts?: QueryErrorOptions);
+}
+
+export interface AdapterErrorOptions extends DatabaseErrorOptions {
+    operation?: string;
+}
+
+export class AdapterError extends DatabaseError {
+    readonly operation?: string;
+    constructor(message?: string, opts?: AdapterErrorOptions);
+}
+
+export interface CacheErrorOptions extends HttpErrorOptions {
+    operation?: string;
+    key?: string;
+}
+
+export class CacheError extends HttpError {
+    readonly operation?: string;
+    readonly key?: string;
+    constructor(message?: string, opts?: CacheErrorOptions);
+}
+
 // --- Error Handler Middleware ------------------------------------
 
 import { Request } from './request';

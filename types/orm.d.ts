@@ -212,6 +212,15 @@ export class Query {
     /** Returns the maximum value of a column. */
     max(field: string): Promise<any>;
 
+    // -- Performance / Scalability (Phase 2) -----------------
+
+    /** Eager-count relationships without loading records. Adds `RelationName_count` fields. */
+    withCount(...relations: string[]): Query;
+    /** Force this query to run against a read replica if configured. */
+    onReplica(): Query;
+    /** Get the query execution plan from the adapter. */
+    explain(options?: { analyze?: boolean; buffers?: boolean; format?: string }): Promise<any>;
+
     // -- LINQ-Inspired Methods --------------------------
 
     /** Alias for limit (LINQ naming). */
@@ -479,7 +488,31 @@ export interface JsonOptions {
     autoFlush?: boolean;
 }
 
-export type AdapterOptions = SqliteOptions | MySqlOptions | PostgresOptions | MongoOptions | JsonOptions | object;
+export interface RedisOptions {
+    /** Redis connection URL: redis://user:pass@host:6379/0. */
+    url?: string;
+    /** Redis server hostname. Must be a non-empty string. */
+    host?: string;
+    /** Redis server port. Must be between 1 and 65535. */
+    port?: number;
+    /** Redis password (AUTH). */
+    password?: string;
+    /** Redis database index. Must be between 0 and 15. */
+    db?: number;
+    /** Key prefix for namespacing all keys. */
+    prefix?: string;
+    /** Max connection retry attempts. */
+    maxRetries?: number;
+    /** Defer connection until first operation. */
+    lazyConnect?: boolean;
+    /** Connection timeout in ms. Must be non-negative. */
+    connectTimeout?: number;
+    /** TLS options for secure connections. */
+    tls?: object;
+    [key: string]: any;
+}
+
+export type AdapterOptions = SqliteOptions | MySqlOptions | PostgresOptions | MongoOptions | JsonOptions | RedisOptions | object;
 
 // --- SQLite Adapter ----------------------------------------------
 
@@ -625,9 +658,86 @@ export interface JsonAdapter extends MemoryAdapter {
     flush(): Promise<void>;
 }
 
+// --- Redis Adapter -----------------------------------------------
+
+export interface RedisAdapter {
+    /** Get a value by key. Auto-parses JSON. */
+    get(key: string): Promise<any>;
+    /** Set a key/value pair. Optional TTL in seconds (must be >= 0). */
+    set(key: string, value: any, ttl?: number): Promise<void>;
+    /** Delete a key. */
+    del(key: string): Promise<number>;
+    /** Check if a key exists. */
+    exists(key: string): Promise<boolean>;
+    /** Set a TTL on an existing key. Seconds must be >= 0. */
+    expire(key: string, seconds: number): Promise<boolean>;
+    /** Get remaining TTL in seconds (-1 = no expiry, -2 = missing). */
+    ttl(key: string): Promise<number>;
+    /** Increment a numeric key by 1. Returns the new value. */
+    incr(key: string): Promise<number>;
+    /** Decrement a numeric key by 1. Returns the new value. */
+    decr(key: string): Promise<number>;
+    /** Set a hash field. */
+    hset(key: string, field: string, value: any): Promise<number>;
+    /** Get a hash field value. */
+    hget(key: string, field: string): Promise<string | null>;
+    /** Get all fields and values in a hash. */
+    hgetall(key: string): Promise<Record<string, string>>;
+    /** Delete a hash field. */
+    hdel(key: string, field: string): Promise<number>;
+    /** Append values to a list (right). */
+    rpush(key: string, ...values: any[]): Promise<number>;
+    /** Prepend values to a list (left). */
+    lpush(key: string, ...values: any[]): Promise<number>;
+    /** Get a range of list elements. */
+    lrange(key: string, start: number, stop: number): Promise<string[]>;
+    /** Remove and return the last list element. */
+    rpop(key: string): Promise<string | null>;
+    /** Remove and return the first list element. */
+    lpop(key: string): Promise<string | null>;
+    /** Get the length of a list. */
+    llen(key: string): Promise<number>;
+    /** Add members to a set. */
+    sadd(key: string, ...members: any[]): Promise<number>;
+    /** Get all members of a set. */
+    smembers(key: string): Promise<string[]>;
+    /** Check if a value is in a set. */
+    sismember(key: string, member: any): Promise<boolean>;
+    /** Remove a member from a set. */
+    srem(key: string, member: any): Promise<number>;
+    /** Get the number of members in a set. */
+    scard(key: string): Promise<number>;
+    /** Add a member to a sorted set with a score. */
+    zadd(key: string, score: number, member: any): Promise<number>;
+    /** Get members in a sorted set by index range. */
+    zrange(key: string, start: number, stop: number): Promise<string[]>;
+    /** Get members by score range. */
+    zrangebyscore(key: string, min: number, max: number): Promise<string[]>;
+    /** Remove a member from a sorted set. */
+    zrem(key: string, member: any): Promise<number>;
+    /** Get the number of members in a sorted set. */
+    zcard(key: string): Promise<number>;
+    /** Subscribe to a pub/sub channel. callback must be a function. Returns an unsubscribe function. */
+    subscribe(channel: string, callback: (message: string) => void): Promise<() => Promise<void>>;
+    /** Publish a message to a channel. Returns number of receivers. */
+    publish(channel: string, message: string): Promise<number>;
+    /** Create a pipeline for batching commands. */
+    pipeline(): any;
+    /** Execute a raw Redis command. Command must be a non-empty string. */
+    raw(command: string, ...args: any[]): Promise<any>;
+    /** Ping the Redis server. Returns 'PONG' if healthy. */
+    ping(): Promise<string>;
+    /** Get Redis server info. Optional section filter. */
+    info(section?: string): Promise<string>;
+    /** Get the number of keys in the current database. */
+    dbsize(): Promise<number>;
+    /** Close the Redis connection. */
+    close(): Promise<void>;
+}
+
 // --- Database ----------------------------------------------------
 
-export type AdapterType = 'memory' | 'json' | 'sqlite' | 'mysql' | 'postgres' | 'mongo';
+export type AdapterType = 'memory' | 'json' | 'sqlite' | 'mysql' | 'postgres' | 'mongo' | 'redis';
 
 export class Database {
     /** The underlying adapter instance. */
@@ -643,6 +753,7 @@ export class Database {
     static connect(type: 'mysql', options?: MySqlOptions): Database & { adapter: MySqlAdapter };
     static connect(type: 'postgres', options?: PostgresOptions): Database & { adapter: PostgresAdapter };
     static connect(type: 'mongo', options?: MongoOptions): Database & { adapter: MongoAdapter };
+    static connect(type: 'redis', options?: RedisOptions): Database & { adapter: RedisAdapter };
     static connect(type: 'memory', options?: object): Database & { adapter: MemoryAdapter };
     static connect(type: 'json', options?: JsonOptions): Database & { adapter: JsonAdapter };
     static connect(type: AdapterType, options?: AdapterOptions): Database;
@@ -706,4 +817,312 @@ export class Database {
     addForeignKey(table: string, column: string, refTable: string, refColumn: string, options?: { onDelete?: string; onUpdate?: string; name?: string }): Promise<void>;
     /** Drop a foreign key constraint. */
     dropForeignKey(table: string, constraintName: string): Promise<void>;
+
+    /** Ping the database to check connectivity. */
+    ping(): Promise<boolean>;
+    /** Retry a function with exponential backoff. */
+    retry<T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>;
+
+    // -- Performance & Scalability (Phase 2) -----------------
+
+    /** Enable query profiling on this database instance. */
+    enableProfiling(options?: QueryProfilerOptions): QueryProfiler;
+    /** The attached profiler (null if not enabled). */
+    readonly profiler: QueryProfiler | null;
+    /** The attached replica manager (null if not configured). */
+    readonly replicas: ReplicaManager | null;
+
+    /**
+     * Connect with read replicas.
+     * @param type       - Adapter type for all connections.
+     * @param primaryOpts - Connection options for the primary.
+     * @param replicaConfigs - Array of connection options for each replica.
+     * @param options    - ReplicaManager options.
+     */
+    static connectWithReplicas(
+        type: AdapterType,
+        primaryOpts: AdapterOptions,
+        replicaConfigs: AdapterOptions[],
+        options?: ReplicaManagerOptions,
+    ): Database;
+}
+
+export interface RetryOptions {
+    retries?: number;
+    delay?: number;
+    maxDelay?: number;
+    factor?: number;
+    onRetry?: (error: Error, attempt: number) => void;
+}
+
+// --- Migrator -------------------------------------------------------
+
+export interface MigrationDefinition {
+    /** Unique migration name. Only letters, digits, underscores, hyphens, and dots are allowed. */
+    name: string;
+    up: (db: Database) => Promise<void>;
+    down: (db: Database) => Promise<void>;
+}
+
+export interface MigrateResult {
+    migrated: string[];
+    batch: number;
+}
+
+export interface RollbackResult {
+    rolledBack: string[];
+    batch: number;
+}
+
+export interface MigrationStatus {
+    executed: Array<{ name: string; batch: number; executedAt: string }>;
+    pending: string[];
+    lastBatch: number;
+}
+
+export class Migrator {
+    constructor(db: Database, options?: { table?: string });
+
+    /** Add a migration definition. */
+    add(migration: MigrationDefinition): Migrator;
+    /** Add multiple migration definitions. */
+    addAll(migrations: MigrationDefinition[]): Migrator;
+    /** Run all pending migrations. */
+    migrate(): Promise<MigrateResult>;
+    /** Rollback the last batch. */
+    rollback(): Promise<RollbackResult>;
+    /** Rollback all migrations. */
+    rollbackAll(): Promise<{ rolledBack: string[] }>;
+    /** Rollback all, then re-migrate. */
+    reset(): Promise<MigrateResult & { rolledBack: string[] }>;
+    /** Drop everything and re-migrate. */
+    fresh(): Promise<MigrateResult>;
+    /** Get current migration status. */
+    status(): Promise<MigrationStatus>;
+    /** Check if there are pending migrations. */
+    hasPending(): Promise<boolean>;
+    /** List registered migration names. */
+    list(): string[];
+}
+
+/** Helper to create a migration definition. */
+export function defineMigration(
+    name: string,
+    up: (db: Database) => Promise<void>,
+    down: (db: Database) => Promise<void>,
+): MigrationDefinition;
+
+// --- QueryCache -----------------------------------------------------
+
+export interface QueryCacheOptions {
+    maxEntries?: number;
+    defaultTTL?: number;
+    prefix?: string;
+    redis?: any;
+}
+
+export interface CacheStats {
+    size: number;
+    hits: number;
+    misses: number;
+    hitRate: number;
+    maxEntries: number;
+}
+
+export class QueryCache {
+    constructor(options?: QueryCacheOptions);
+
+    /** Generate a cache key from a query descriptor. */
+    static keyFromDescriptor(descriptor: Record<string, any>): string;
+    /** Get a cached value. */
+    get(key: string): any;
+    /** Set a cached value. */
+    set(key: string, value: any, ttl?: number): void;
+    /** Delete a cached entry. */
+    delete(key: string): boolean;
+    /** Check if a key exists and is not expired. */
+    has(key: string): boolean;
+    /** Invalidate all entries matching a table name. */
+    invalidate(table: string): number;
+    /** Clear the entire cache. */
+    flush(): number;
+    /** Get hit/miss statistics. */
+    stats(): CacheStats;
+    /** Remove expired entries. */
+    prune(): number;
+    /** Get or compute and cache a value. */
+    remember<T>(key: string, fn: () => Promise<T>, ttl?: number): Promise<T>;
+    /** Wrap a query execution with caching. */
+    wrap<T>(descriptor: Record<string, any>, executor: () => Promise<T>, ttl?: number): Promise<T>;
+}
+
+// --- Seeder ---------------------------------------------------------
+
+/** Base Seeder class. Extend to create seeders. */
+export class Seeder {
+    /** Override this method to define seeding logic. */
+    run(db: Database): Promise<void>;
+}
+
+export class SeederRunner {
+    constructor(db: Database);
+
+    /** Run one or more seeder classes. */
+    run(...seeders: Array<(new () => Seeder) | Seeder>): Promise<string[]>;
+    /** Run a single seeder. */
+    call(SeederClass: new () => Seeder): Promise<void>;
+    /** Clear all data, then run seeders. */
+    fresh(...seeders: Array<(new () => Seeder) | Seeder>): Promise<string[]>;
+}
+
+// --- Factory --------------------------------------------------------
+
+export class Factory<T extends typeof Model = typeof Model> {
+    constructor(ModelClass: T);
+
+    /** Define default field generators. */
+    define(definition: Record<string, any | ((index: number) => any)>): Factory<T>;
+    /** Set how many records to create. */
+    count(n: number): Factory<T>;
+    /** Define a named state variation. */
+    state(name: string, overrides: Record<string, any>): Factory<T>;
+    /** Apply a named state to the next create/make. */
+    withState(name: string): Factory<T>;
+    /** Register an after-create callback. */
+    afterCreating(fn: (record: any, index: number) => Promise<void>): Factory<T>;
+    /** Build records without persisting. */
+    make(overrides?: Record<string, any>): any | any[];
+    /** Create and persist records. */
+    create(overrides?: Record<string, any>): Promise<any | any[]>;
+}
+
+// --- Fake -----------------------------------------------------------
+
+export class Fake {
+    static firstName(): string;
+    static lastName(): string;
+    static fullName(): string;
+    static email(): string;
+    static username(): string;
+    static uuid(): string;
+    static integer(min?: number, max?: number): number;
+    static float(min?: number, max?: number, decimals?: number): number;
+    static boolean(): boolean;
+    static date(start?: Date, end?: Date): Date;
+    static dateString(start?: Date, end?: Date): string;
+    static paragraph(sentences?: number): string;
+    static sentence(wordCount?: number): string;
+    static word(): string;
+    static phone(): string;
+    static color(): string;
+    static url(): string;
+    static ip(): string;
+    static pick<T>(arr: T[]): T;
+    static pickMany<T>(arr: T[], n: number): T[];
+    static json(): { key: string; value: string; count: number; active: boolean };
+}
+
+// --- QueryProfiler --------------------------------------------------
+
+export interface QueryProfilerOptions {
+    /** Enable/disable profiling (default: true). */
+    enabled?: boolean;
+    /** Duration (ms) above which a query is "slow" (default: 100). */
+    slowThreshold?: number;
+    /** Maximum recorded query entries (default: 1000). */
+    maxHistory?: number;
+    /** Callback on slow query. */
+    onSlow?: (entry: ProfiledQuery) => void;
+    /** Minimum rapid same-table SELECTs to flag N+1 (default: 5). */
+    n1Threshold?: number;
+    /** Time window (ms) for N+1 detection (default: 100). */
+    n1Window?: number;
+    /** Callback on N+1 detection. */
+    onN1?: (info: N1Detection) => void;
+}
+
+export interface ProfiledQuery {
+    table: string;
+    action: string;
+    duration: number;
+    timestamp: number;
+}
+
+export interface N1Detection {
+    table: string;
+    count: number;
+    timestamp: number;
+    message: string;
+}
+
+export interface ProfilerMetrics {
+    totalQueries: number;
+    totalTime: number;
+    avgLatency: number;
+    queriesPerSecond: number;
+    slowQueries: number;
+    n1Detections: number;
+}
+
+export class QueryProfiler {
+    constructor(options?: QueryProfilerOptions);
+
+    /** Whether profiling is currently enabled. */
+    get enabled(): boolean;
+    set enabled(value: boolean);
+
+    /** Record a query execution. */
+    record(entry: { table: string; action: string; duration: number }): void;
+    /** Get aggregate profiling metrics. */
+    metrics(): ProfilerMetrics;
+    /** Get all slow queries from history. */
+    slowQueries(): ProfiledQuery[];
+    /** Get all N+1 detections. */
+    n1Detections(): N1Detection[];
+    /** Get filtered query history. */
+    getQueries(options?: { table?: string; action?: string; minDuration?: number }): ProfiledQuery[];
+    /** Reset all profiling state. */
+    reset(): void;
+}
+
+// --- ReplicaManager -------------------------------------------------
+
+export interface ReplicaManagerOptions {
+    /** Selection strategy: 'round-robin' | 'random' (default: 'round-robin'). */
+    strategy?: 'round-robin' | 'random';
+    /** Read from primary after a write for stickyWindow ms (default: true). */
+    stickyWrite?: boolean;
+    /** Duration (ms) to read from primary after a write (default: 1000). */
+    stickyWindow?: number;
+}
+
+export interface HealthCheckResult {
+    healthy: boolean;
+    lastChecked: number;
+}
+
+export class ReplicaManager {
+    constructor(options?: ReplicaManagerOptions);
+
+    /** Number of registered replicas. */
+    readonly replicaCount: number;
+
+    /** Set the primary (read-write) adapter. */
+    setPrimary(adapter: any): void;
+    /** Add a read replica adapter. */
+    addReplica(adapter: any): void;
+    /** Get an adapter for read operations (respects strategy, health, sticky writes). */
+    getReadAdapter(): any;
+    /** Get the primary adapter for write operations (updates sticky window). */
+    getWriteAdapter(): any;
+    /** Mark a replica as unhealthy. */
+    markUnhealthy(adapter: any): void;
+    /** Mark a replica as healthy. */
+    markHealthy(adapter: any): void;
+    /** Run a health check on all replicas. */
+    healthCheck(): Promise<HealthCheckResult[]>;
+    /** Get all adapters (primary + replicas). */
+    getAllAdapters(): any[];
+    /** Close all adapters (primary + replicas). */
+    closeAll(): Promise<void>;
 }

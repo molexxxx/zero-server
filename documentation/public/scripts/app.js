@@ -37,6 +37,21 @@ document.addEventListener('DOMContentLoaded', () =>
     initPlayground();
     initProxy();
 
+    /* Copy-to-clipboard for info banner */
+    const copyBtn = document.getElementById('cloneCopyBtn');
+    const copySource = document.getElementById('cloneCmd');
+    if (copyBtn && copySource) {
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(copySource.textContent).then(() => {
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+            }).catch(() => {
+                copyBtn.textContent = 'Failed';
+                setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+            });
+        });
+    }
+
     /* Data-driven documentation sections */
     loadDocs().catch(() => {});
 

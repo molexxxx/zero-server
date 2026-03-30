@@ -8,10 +8,7 @@ exports.list = (req, res) =>
 
 exports.set = (req, res) =>
 {
-    const { name, value, options } = req.body || {};
-    if (!name || typeof name !== 'string')
-        return res.status(400).json({ error: 'name is required' });
-
+    const { name, value, options } = req.body;
     const val = value != null ? value : '';
     const opts = {};
     if (options)
