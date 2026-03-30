@@ -84,6 +84,16 @@ function wrapSelect(native)
     wrapper.appendChild(native);
     native.classList.add('cs-hidden');
 
+    // Sync custom UI when native value is changed programmatically
+    native.addEventListener('change', () =>
+    {
+        dropdown.querySelectorAll('.cs-option').forEach(o =>
+        {
+            o.classList.toggle('selected', o.dataset.value === native.value);
+        });
+        syncTriggerLabel(native, trigger);
+    });
+
     // If select is inside a <label>, intercept label click to open dropdown
     const parentLabel = wrapper.closest('label');
     if (parentLabel)
