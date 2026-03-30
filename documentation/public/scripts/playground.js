@@ -124,7 +124,8 @@ function initWsChat()
     {
         const name = encodeURIComponent(nameInput.value || 'anon');
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${proto}//${location.host}/ws/chat?name=${name}`);
+        const wsHost = location.port ? location.host : location.hostname + ':7273';
+        ws = new WebSocket(`${proto}//${wsHost}/ws/chat?name=${name}`);
 
         ws.onopen = () =>
         {
