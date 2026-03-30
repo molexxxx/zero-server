@@ -405,6 +405,8 @@ function initOrmPlayground()
         titleIn.value = '';
         statusIn.value = 'pending';
         priorityIn.value = '0';
+        statusIn.dispatchEvent(new Event('change', { bubbles: true }));
+        priorityIn.dispatchEvent(new Event('change', { bubbles: true }));
         loadTasks();
     });
 
@@ -636,6 +638,8 @@ function initBlogExplorer()
         authorName.value = '';
         authorEmail.value = '';
         authorBio.value = '';
+        authorRole.value = 'author';
+        authorRole.dispatchEvent(new Event('change', { bubbles: true }));
         loadAuthors();
         loadStats();
     });
@@ -668,6 +672,12 @@ function initBlogExplorer()
         });
         postTitle.value = '';
         postBody.value = '';
+        postAuthor.value = '';
+        postCategory.value = 'general';
+        postStatus.value = 'draft';
+        postAuthor.dispatchEvent(new Event('change', { bubbles: true }));
+        postCategory.dispatchEvent(new Event('change', { bubbles: true }));
+        postStatus.dispatchEvent(new Event('change', { bubbles: true }));
         loadPosts();
     });
 
@@ -817,6 +827,10 @@ function initCookieExplorer()
         nameIn.value = '';
         valueIn.value = '';
         maxAgeIn.value = '';
+        httpOnlyIn.value = 'false';
+        sameSiteIn.value = 'Lax';
+        httpOnlyIn.dispatchEvent(new Event('change', { bubbles: true }));
+        sameSiteIn.dispatchEvent(new Event('change', { bubbles: true }));
         loadCookies();
     });
 
