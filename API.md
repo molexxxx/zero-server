@@ -50,16 +50,20 @@
   - [Schema Types](#schema-types)
 - [ORM](#orm)
   - [Database](#database)
+  - [Model](#model)
+  - [Schema DDL](#schema-ddl)
+  - [TYPES](#types)
+  - [Query](#query)
   - [SQLite Adapter](#sqlite-adapter)
   - [MySQL Adapter](#mysql-adapter)
   - [PostgreSQL Adapter](#postgresql-adapter)
   - [MongoDB Adapter](#mongodb-adapter)
+  - [Redis Adapter](#redis-adapter)
   - [Memory Adapter](#memory-adapter)
   - [JSON Adapter](#json-adapter)
-  - [Model](#model)
-  - [Query](#query)
-  - [Schema DDL](#schema-ddl)
-  - [TYPES](#types)
+  - [Migrator](#migrator)
+  - [QueryCache](#querycache)
+  - [Seeder & Factory](#seeder-factory)
 - [Real-Time](#real-time)
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
@@ -87,7 +91,10 @@ const {
   helmet, timeout, requestId, cookieParser,
   csrf, validate, errorHandler,
   env, Database, Model, TYPES, Query,
+  Migrator, defineMigration, QueryCache,
+  Seeder, SeederRunner, Factory, Fake,
   HttpError, NotFoundError, BadRequestError, ValidationError, createError, isHttpError,
+  ConnectionError, MigrationError, TransactionError, QueryError, AdapterError, CacheError,
   debug, version,
   WebSocketConnection, WebSocketPool, SSEStream
 } = require('zero-http')
@@ -119,6 +126,13 @@ const {
 | `Model` | class | Base model class for defining database entities |
 | `TYPES` | enum | Column type constants for model schemas |
 | `Query` | class | Fluent query builder |
+| `Migrator` | class | Versioned migration framework |
+| `defineMigration` | function | Migration definition helper |
+| `QueryCache` | class | In-memory LRU query cache with TTL |
+| `Seeder` | class | Base seeder class for data population |
+| `SeederRunner` | class | Seeder orchestration runner |
+| `Factory` | class | Model record factory for testing |
+| `Fake` | class | Built-in fake data generator |
 | `HttpError` | class | Base HTTP error class with status code |
 | `BadRequestError` | class | 400 error |
 | `UnauthorizedError` | class | 401 error |
@@ -136,6 +150,12 @@ const {
 | `BadGatewayError` | class | 502 error |
 | `ServiceUnavailableError` | class | 503 error |
 | `DatabaseError` | class | Database operation error |
+| `ConnectionError` | class | Database connection error |
+| `MigrationError` | class | Migration execution error |
+| `TransactionError` | class | Transaction error |
+| `QueryError` | class | Query execution error |
+| `AdapterError` | class | Adapter-level error |
+| `CacheError` | class | Cache operation error |
 | `ConfigurationError` | class | Configuration/setup error |
 | `MiddlewareError` | class | Middleware pipeline error |
 | `RoutingError` | class | Routing resolution error |
@@ -1319,7 +1339,7 @@ env.load({
 
 ### Database
 
-The ORM entry point. Connect to a database using one of 6 built-in adapters (memory, json, sqlite, mysql, postgres, mongo), register your Model classes, and sync schemas. The Database instance manages the connection lifecycle and provides transaction support. All network-facing adapters (mysql, postgres, mongo) validate credentials on connect — invalid host, port, user, or database values throw immediately.
+The ORM entry point. Connect to a database using one of 7 built-in adapters (memory, json, sqlite, mysql, postgres, mongo, redis), register your Model classes, and sync schemas. The Database instance manages the connection lifecycle and provides transaction support. All network-facing adapters (mysql, postgres, mongo, redis) validate credentials on connect — invalid host, port, user, or database values throw immediately.
 
 #### Methods
 
@@ -1358,6 +1378,7 @@ The ORM entry point. Connect to a database using one of 6 built-in adapters (mem
 | `mysql` | adapter | `—` | MySQL adapter. Options: { host, user, password, database, port }. Requires mysql2. Credentials validated on connect. |
 | `postgres` | adapter | `—` | PostgreSQL adapter. Options: { host, user, password, database, port, ssl }. Requires pg. Credentials validated on connect. |
 | `mongo` | adapter | `—` | MongoDB adapter. Options: { url, database, clientOptions }. Requires mongodb. URL and database validated on connect. |
+| `redis` | adapter | `—` | Redis adapter. Options: { url, host, port, password, db, prefix }. Requires ioredis. Key-value, hashes, lists, sets, sorted sets, pub/sub. |
 
 
 ```js
@@ -1415,6 +1436,601 @@ await db.transaction(async () => {
 > **Tip:** Always call db.sync() after registering models to create the database tables.
 > **Tip:** FK actions (onDelete, onUpdate) and CHECK expressions are automatically validated against injection — invalid values throw immediately.
 > **Tip:** Import validateFKAction / validateCheck from 'zero-http' for custom DDL validation outside the ORM.
+
+
+### Model
+
+The ORM base class — extend it to define your data models. Supports typed schemas with validation, timestamps, soft deletes, lifecycle hooks, hidden fields, reusable scopes, relationships (hasMany, hasOne, belongsTo, belongsToMany), and a full suite of CRUD operations.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `create` | `Model.create(data)` | Insert a new record. Runs validation and beforeCreate/afterCreate hooks. Returns Promise<Model>. |
+| `createMany` | `Model.createMany([data, ...])` | Insert multiple records. Returns Promise<Model[]>. |
+| `find` | `Model.find([conditions])` | Find all records matching conditions. Returns Promise<Model[]>. |
+| `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
+| `findById` | `Model.findById(id)` | Find by primary key. Returns Promise<Model\|null>. |
+| `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
+| `exists` | `Model.exists([conditions])` | Check if any matching records exist. Returns Promise<boolean>. |
+| `upsert` | `Model.upsert(conditions, data)` | Insert or update. Finds by conditions, creates with merged data if not found, updates if found. Returns Promise<{ instance, created }>. |
+| `updateWhere` | `Model.updateWhere(conditions, data)` | Update all matching records. Returns Promise<number> (affected count). |
+| `deleteWhere` | `Model.deleteWhere(conditions)` | Delete all matching records (respects softDelete). Returns Promise<number>. |
+| `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
+| `query` | `Model.query()` | Start a fluent Query builder. See ORM → Query. |
+| `scope` | `Model.scope(name, [...args])` | Start a query with a named scope applied. Returns Query. |
+| `save` | `instance.save()` | Insert (if new) or update dirty fields (if persisted). Returns Promise<Model>. |
+| `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
+| `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
+| `restore` | `instance.restore()` | Restore a soft-deleted instance (sets deletedAt to null). |
+| `reload` | `instance.reload()` | Re-fetch the instance from the database. Returns Promise<Model>. |
+| `toJSON` | `instance.toJSON()` | Return a plain object, excluding fields listed in static hidden. |
+| `load` | `instance.load(relationName)` | Eagerly load a relationship. Sets instance[relationName]. Returns Promise. |
+| `increment` | `instance.increment(field, [by])` | Increment a numeric field by amount (default 1). Saves immediately. |
+| `decrement` | `instance.decrement(field, [by])` | Decrement a numeric field by amount (default 1). Saves immediately. |
+| `hasMany` | `Model.hasMany(Related, foreignKey, [localKey])` | Define a one-to-many relationship. |
+| `hasOne` | `Model.hasOne(Related, foreignKey, [localKey])` | Define a one-to-one relationship. |
+| `belongsTo` | `Model.belongsTo(Related, foreignKey, [otherKey])` | Define an inverse belongs-to relationship. |
+| `belongsToMany` | `Model.belongsToMany(Related, opts)` | Define a many-to-many relationship through a junction table. Options: { through, foreignKey, otherKey, localKey, relatedKey }. |
+| `first` | `Model.first([conditions])` | Find the first record. Returns Promise<Model\|null>. |
+| `last` | `Model.last([conditions])` | Find the last record (by PK descending). Returns Promise<Model\|null>. |
+| `all` | `Model.all([conditions])` | Get all records (alias for find). Returns Promise<Model[]>. |
+| `paginate` | `Model.paginate(page, [perPage], [conditions])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
+| `chunk` | `Model.chunk(size, fn, [conditions])` | Process all records in batches. fn(batch, batchIndex) — supports async. |
+| `random` | `Model.random([conditions])` | Get a random record. Returns Promise<Model\|null>. |
+| `pluck` | `Model.pluck(field, [conditions])` | Pluck values for a single column. Returns Promise<Array>. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `table` | string | `—` | Database table name (required). |
+| `schema` | object | `—` | Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded, references, check, index, compositeKey, compositeUnique, compositeIndex. |
+| `timestamps` | boolean | `false` | Auto-manage createdAt and updatedAt columns. |
+| `softDelete` | boolean | `false` | Mark records as deleted (deletedAt) instead of removing them. Use .restore() to undelete. |
+| `hooks` | object | `{}` | Lifecycle hooks: beforeCreate, afterCreate, beforeUpdate, afterUpdate, beforeDelete, afterDelete. |
+| `hidden` | string[] | `[]` | Fields excluded from toJSON() output. Use for passwords, tokens, internal IDs. |
+| `scopes` | object | `{}` | Named reusable query conditions. Each scope is a function: (query, ...args) => query.where(...). |
+
+
+```js
+const { Model, TYPES } = require('zero-http')
+
+class User extends Model {
+	static table = 'users'
+	static timestamps = true
+	static softDelete = true
+	static hidden = ['password', 'resetToken']
+	static scopes = {
+		active: (q) => q.where('active', true),
+		role: (q, role) => q.where('role', role),
+		recent: (q) => q.orderBy('createdAt', 'desc').limit(10)
+	}
+	static schema = {
+		id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		name:     { type: TYPES.STRING, required: true, minLength: 2 },
+		email:    { type: TYPES.STRING, required: true, unique: true },
+		password: { type: TYPES.STRING, guarded: true },
+		role:     { type: TYPES.STRING, enum: ['user', 'admin'], default: 'user' },
+		logins:   { type: TYPES.INTEGER, default: 0 },
+		active:   { type: TYPES.BOOLEAN, default: true }
+	}
+	static hooks = {
+		beforeCreate: (data) => { data.email = data.email.toLowerCase() }
+	}
+}
+
+// Static shortcuts — no query builder needed
+const first = await User.first({ role: 'admin' })  // first admin
+const last  = await User.last()                     // last user by PK
+const all   = await User.all({ active: true })      // alias for find()
+const pick  = await User.random()                   // random user
+const names = await User.pluck('name')              // ['Alice','Bob',...]
+
+// Pagination with rich metadata
+const page = await User.paginate(2, 10, { active: true })
+// { data: [...], total: 42, page: 2, perPage: 10, pages: 5, hasNext: true, hasPrev: true }
+
+// Batch processing — never loads all records at once
+await User.chunk(100, async (batch, i) => {
+	console.log(`Processing batch ${i}: ${batch.length} users`)
+})
+
+// Scoped queries
+const activeAdmins = await User.scope('active')
+const recentAdmins = await User.scope('role', 'admin')
+
+// Upsert — insert or update
+const { instance, created } = await User.upsert(
+	{ email: 'alice@example.com' },
+	{ name: 'Alice', role: 'admin' }
+)
+
+// Increment/decrement
+const user = await User.findById(1)
+await user.increment('logins')      // logins + 1
+await user.decrement('logins', 5)   // logins - 5
+
+// toJSON respects hidden — no password leak
+console.log(user.toJSON())
+```
+
+
+> **Tip:** Model.first/last/all/random/pluck are shortcuts — they build queries internally so you don't have to.
+> **Tip:** Model.paginate() returns metadata (total, pages, hasNext, hasPrev) — perfect for REST API pagination endpoints.
+> **Tip:** Model.chunk() processes large tables in batches — avoids loading millions of records into memory at once.
+> **Tip:** static hidden = ['password'] prevents accidental password leaks in API responses.
+> **Tip:** Scopes are the most powerful feature for DRY queries — define once, reuse everywhere.
+> **Tip:** upsert() is atomic find-or-create-or-update — avoids race conditions in concurrent environments.
+> **Tip:** increment/decrement save immediately — no need to call instance.save() after.
+> **Tip:** guarded: true on a schema field prevents it from being set via mass-assignment (create/update with object).
+> **Tip:** Hooks are great for data normalization (lowercase emails) and audit logging.
+> **Tip:** belongsToMany requires a junction table name and the foreign keys for both sides.
+
+
+### Schema DDL
+
+Advanced schema options for DDL generation. Define foreign keys, CHECK constraints, indexes, composite primary keys, composite unique constraints, and composite indexes directly in your schema — the ORM generates the correct DDL for every adapter. Sync ordering is automatic: tables with foreign key references are created after their targets.
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `references` | object | `—` | Foreign key: { table, column, onDelete, onUpdate }. Generates REFERENCES clause in SQL. onDelete/onUpdate accept CASCADE, SET NULL, RESTRICT, NO ACTION. |
+| `check` | string | `—` | SQL CHECK constraint expression. e.g. '"price" > 0'. Applied inline on the column. |
+| `index` | boolean\|string | `false` | Create a single-column index. true = auto-named, string = custom index name. e.g. index: 'idx_users_email'. |
+| `compositeKey` | boolean | `false` | Mark as part of a composite primary key. Set primaryKey: true and compositeKey: true on each column. |
+| `compositeUnique` | string | `—` | Group columns into a composite UNIQUE constraint. Columns with the same string value form one constraint. |
+| `compositeIndex` | string | `—` | Group columns into a composite index. Columns with the same string value form one multi-column index. |
+| `guarded` | boolean | `false` | Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance. |
+
+
+```js
+const { Database, Model, TYPES } = require('zero-http')
+
+// Foreign Keys — CASCADE delete from parent removes children
+class Post extends Model {
+	static table = 'posts'
+	static schema = {
+		id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		title:    { type: TYPES.STRING, required: true, index: true },
+		authorId: {
+			type: TYPES.INTEGER, required: true,
+			references: { table: 'users', column: 'id', onDelete: 'CASCADE' }
+		},
+		status: { type: TYPES.STRING, check: '"status" IN (\'draft\', \'published\', \'archived\')' },
+	}
+}
+
+// Composite Primary Key — junction table for many-to-many
+class Enrollment extends Model {
+	static table = 'enrollments'
+	static schema = {
+		studentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
+			references: { table: 'students', column: 'id', onDelete: 'CASCADE' } },
+		courseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
+			references: { table: 'courses', column: 'id', onDelete: 'CASCADE' } },
+		grade: { type: TYPES.STRING },
+		enrolledAt: { type: TYPES.DATETIME },
+	}
+}
+
+// Composite Unique + Composite Index
+class UserRole extends Model {
+	static table = 'user_roles'
+	static schema = {
+		id:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		userId: { type: TYPES.INTEGER, compositeUnique: 'user_role',
+			compositeIndex: 'user_lookup' },
+		role:   { type: TYPES.STRING, compositeUnique: 'user_role' },
+		orgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },
+	}
+}
+
+// Migrations — evolve your schema after deployment
+const db = Database.connect('sqlite', { filename: 'app.db' })
+
+// Add a column
+await db.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' })
+
+// Create an index
+await db.createIndex('users', ['email'], { name: 'idx_email', unique: true })
+
+// Rename a column
+await db.renameColumn('users', 'bio', 'biography')
+
+// Check if table/column exists before migrating
+if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
+	await db.addColumn('users', 'avatar', { type: TYPES.STRING })
+}
+
+// Introspect existing schema
+const info = await db.describeTable('users')
+console.log(info)
+```
+
+
+> **Tip:** references generates real FK constraints in SQL — enforced at the database level, not just app level.
+> **Tip:** db.sync() automatically creates referenced tables first (topological ordering).
+> **Tip:** compositeKey: true creates a multi-column PRIMARY KEY — perfect for junction tables.
+> **Tip:** compositeUnique groups columns into a single UNIQUE constraint — e.g. (userId, role) must be unique together.
+> **Tip:** compositeIndex groups columns into a single multi-column index — speeds up queries filtering on both columns.
+> **Tip:** check constraints are raw SQL expressions — use double-quoted column names for portability.
+> **Tip:** Migration methods (addColumn, dropColumn, renameColumn) work on all adapters including memory.
+> **Tip:** hasTable/hasColumn are essential before running migrations — check before you change.
+> **Tip:** describeTable returns adapter-specific column metadata — columns, types, defaults, and PK flags.
+> **Tip:** The memory adapter enforces unique and compositeUnique constraints at insert time — throws on duplicates.
+> **Tip:** MongoDB adapter uses JSON Schema validation and unique indexes from schema definitions.
+
+
+### TYPES
+
+Column type constants for defining model schemas. Each type maps to the appropriate native type in the target database adapter.
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `STRING` | const | `'string'` | Variable-length string (VARCHAR). |
+| `INTEGER` | const | `'integer'` | Whole number (INT). |
+| `FLOAT` | const | `'float'` | Floating-point number (REAL/DOUBLE). |
+| `BOOLEAN` | const | `'boolean'` | True/false (BOOLEAN/TINYINT). |
+| `DATE` | const | `'date'` | Date without time. |
+| `DATETIME` | const | `'datetime'` | Date with time (TIMESTAMP). |
+| `JSON` | const | `'json'` | JSON column (auto-serialize/deserialize). PostgreSQL maps to JSONB. |
+| `TEXT` | const | `'text'` | Large text field (TEXT/CLOB). |
+| `BLOB` | const | `'blob'` | Binary data (BLOB/BYTEA). |
+| `UUID` | const | `'uuid'` | UUID string. Can auto-generate with default: () => crypto.randomUUID(). |
+| `BIGINT` | const | `'bigint'` | 64-bit integer (BIGINT). |
+| `SMALLINT` | const | `'smallint'` | 16-bit integer (SMALLINT). |
+| `TINYINT` | const | `'tinyint'` | 8-bit integer (TINYINT in MySQL, SMALLINT in PG). |
+| `DECIMAL` | const | `'decimal'` | Fixed-precision number. Use precision/scale in schema: { precision: 10, scale: 2 }. |
+| `DOUBLE` | const | `'double'` | Double-precision float (DOUBLE / DOUBLE PRECISION). |
+| `REAL` | const | `'real'` | Single-precision float (REAL). |
+| `CHAR` | const | `'char'` | Fixed-length string. Use length in schema: { length: 10 }. |
+| `BINARY` | const | `'binary'` | Fixed-length binary. Use length in schema. |
+| `VARBINARY` | const | `'varbinary'` | Variable-length binary. Use length in schema. |
+| `TIMESTAMP` | const | `'timestamp'` | Timestamp with time zone (TIMESTAMPTZ in PG). |
+| `TIME` | const | `'time'` | Time without date. |
+| `ENUM` | const | `'enum'` | MySQL ENUM. Define values: { enum: ['admin', 'user', 'guest'] }. |
+| `SET` | const | `'set'` | MySQL SET (multi-value). Define values: { values: ['read', 'write', 'delete'] }. |
+| `MEDIUMTEXT` | const | `'mediumtext'` | MySQL medium text (16 MB max). |
+| `LONGTEXT` | const | `'longtext'` | MySQL long text (4 GB max). |
+| `MEDIUMBLOB` | const | `'mediumblob'` | MySQL medium blob (16 MB max). |
+| `LONGBLOB` | const | `'longblob'` | MySQL long blob (4 GB max). |
+| `YEAR` | const | `'year'` | MySQL YEAR type (4-digit year). |
+| `SERIAL` | const | `'serial'` | PostgreSQL auto-incrementing integer. |
+| `BIGSERIAL` | const | `'bigserial'` | PostgreSQL auto-incrementing 64-bit integer. |
+| `JSONB` | const | `'jsonb'` | PostgreSQL binary JSON (indexable, faster queries). |
+| `INTERVAL` | const | `'interval'` | PostgreSQL time interval. |
+| `INET` | const | `'inet'` | PostgreSQL IPv4/IPv6 address. |
+| `CIDR` | const | `'cidr'` | PostgreSQL CIDR network address. |
+| `MACADDR` | const | `'macaddr'` | PostgreSQL MAC address. |
+| `MONEY` | const | `'money'` | PostgreSQL money type. |
+| `XML` | const | `'xml'` | PostgreSQL XML type. |
+| `CITEXT` | const | `'citext'` | PostgreSQL case-insensitive text (requires extension). |
+| `ARRAY` | const | `'array'` | PostgreSQL array. Use arrayOf in schema: { arrayOf: 'TEXT' }. |
+| `NUMERIC` | const | `'numeric'` | SQLite NUMERIC affinity. Maps to REAL/INTEGER based on value. |
+
+
+```js
+const { TYPES } = require('zero-http')
+
+static schema = {
+	id:        { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+	uuid:      { type: TYPES.UUID, default: () => crypto.randomUUID() },
+	name:      { type: TYPES.STRING, required: true, minLength: 2, maxLength: 100 },
+	bio:       { type: TYPES.TEXT },
+	age:       { type: TYPES.INTEGER, min: 0, max: 150 },
+	score:     { type: TYPES.FLOAT, default: 0.0 },
+	active:    { type: TYPES.BOOLEAN, default: true },
+	birthday:  { type: TYPES.DATE },
+	loginAt:   { type: TYPES.DATETIME },
+	settings:  { type: TYPES.JSON, default: {} },
+	avatar:    { type: TYPES.BLOB },
+	price:     { type: TYPES.DECIMAL, precision: 10, scale: 2 },
+	role:      { type: TYPES.ENUM, enum: ['admin', 'user', 'guest'] },
+	perms:     { type: TYPES.SET, values: ['read', 'write', 'delete'] },
+	tags:      { type: TYPES.ARRAY, arrayOf: 'TEXT' },
+	ip:        { type: TYPES.INET },
+	code:      { type: TYPES.CHAR, length: 6 }
+}
+```
+
+
+### Query
+
+Fluent query builder returned by Model.query(). All filter/sort/limit methods are chainable. Execute with .exec(), .first(), .count(), .exists(), .pluck(), or aggregates (sum/avg/min/max). Also thenable — you can await the query directly without calling .exec().
+
+#### Selection
+
+| Method | Signature | Description |
+|---|---|---|
+| `select` | `select(...fields)` | Select specific columns. Chainable. |
+| `distinct` | `distinct()` | Return unique rows only. Chainable. |
+
+
+#### Filtering
+
+| Method | Signature | Description |
+|---|---|---|
+| `where` | `where(field, [op], value)` | Add a WHERE condition. Supports object form, (field, value), or (field, op, value). Operators: =, !=, >, <, >=, <=, LIKE, IN, NOT IN, BETWEEN, IS NULL, IS NOT NULL. |
+| `orWhere` | `orWhere(field, [op], value)` | Add an OR WHERE condition. Chainable. |
+| `whereNull` | `whereNull(field)` | WHERE field IS NULL. Chainable. |
+| `whereNotNull` | `whereNotNull(field)` | WHERE field IS NOT NULL. Chainable. |
+| `whereIn` | `whereIn(field, values)` | WHERE field IN (...values). Chainable. |
+| `whereNotIn` | `whereNotIn(field, values)` | WHERE field NOT IN (...values). Chainable. |
+| `whereBetween` | `whereBetween(field, low, high)` | WHERE field BETWEEN low AND high. Chainable. |
+| `whereNotBetween` | `whereNotBetween(field, low, high)` | WHERE field NOT BETWEEN low AND high. Chainable. |
+| `whereLike` | `whereLike(field, pattern)` | WHERE field LIKE pattern (% and _ wildcards). Chainable. |
+| `whereRaw` | `whereRaw(sql, ...params)` | Inject raw SQL WHERE clause (SQL adapters only). Parameterized. Chainable. |
+| `withDeleted` | `withDeleted()` | Include soft-deleted records in results. Chainable. |
+| `scope` | `scope(name, [...args])` | Apply a named scope from the model's static scopes. Chainable. |
+
+
+#### Ordering & Pagination
+
+| Method | Signature | Description |
+|---|---|---|
+| `orderBy` | `orderBy(field, [dir])` | Sort results. dir: 'asc' (default) or 'desc'. Chainable. |
+| `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). Chainable. |
+| `limit` | `limit(n)` | Maximum number of results. Chainable. |
+| `offset` | `offset(n)` | Skip n records. Chainable. |
+| `page` | `page(pageNum, [perPage])` | Pagination helper. 1-indexed. perPage defaults to 20. Chainable. |
+| `paginate` | `paginate(page, [perPage])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
+
+
+#### Grouping & Joins
+
+| Method | Signature | Description |
+|---|---|---|
+| `groupBy` | `groupBy(...fields)` | Group results by columns. Chainable. |
+| `having` | `having(field, [op], value)` | Add a HAVING condition (use with groupBy). Chainable. |
+| `join` | `join(table, localKey, foreignKey)` | INNER JOIN. Chainable. |
+| `leftJoin` | `leftJoin(table, localKey, foreignKey)` | LEFT JOIN. Chainable. |
+| `rightJoin` | `rightJoin(table, localKey, foreignKey)` | RIGHT JOIN. Chainable. |
+
+
+#### Execution
+
+| Method | Signature | Description |
+|---|---|---|
+| `exec` | `exec()` | Execute the query. Returns Promise<Model[]>. |
+| `first` | `first()` | Execute and return the first result. Returns Promise<Model\|null>. |
+| `last` | `last()` | Execute and return the last result. Returns Promise<Model\|null>. |
+| `count` | `count()` | Execute and return the count. Returns Promise<number>. |
+| `exists` | `exists()` | Returns Promise<boolean> — true if any matching records exist. |
+| `pluck` | `pluck(field)` | Returns Promise<Array> of values for a single column. |
+
+
+#### Aggregates
+
+| Method | Signature | Description |
+|---|---|---|
+| `sum` | `sum(field)` | Returns Promise<number> — sum of a numeric column. |
+| `avg` | `avg(field)` | Returns Promise<number> — average of a numeric column. |
+| `min` | `min(field)` | Returns Promise<*> — minimum value of a column. |
+| `max` | `max(field)` | Returns Promise<*> — maximum value of a column. |
+
+
+#### Functional Transforms
+
+| Method | Signature | Description |
+|---|---|---|
+| `each` | `each(fn)` | Execute and iterate each result. fn(item, index) — supports async. |
+| `map` | `map(fn)` | Execute, transform each result. Returns Promise<Array>. |
+| `filter` | `filter(fn)` | Execute, post-filter results in JS. Returns Promise<Model[]>. |
+| `reduce` | `reduce(fn, initial)` | Execute and reduce results to a single value. |
+| `chunk` | `chunk(size, fn)` | Process results in batches. Calls fn(batch, batchIndex) for each chunk. |
+
+
+#### Conditional & Debugging
+
+| Method | Signature | Description |
+|---|---|---|
+| `when` | `when(condition, fn)` | Conditionally apply query logic if condition is truthy. Chainable. |
+| `unless` | `unless(condition, fn)` | Conditionally apply query logic if condition is falsy. Chainable. |
+| `tap` | `tap(fn)` | Inspect the query for debugging without breaking the chain. Chainable. |
+
+
+#### LINQ Aliases
+
+| Method | Signature | Description |
+|---|---|---|
+| `take` | `take(n)` | Alias for limit() — LINQ naming. Chainable. |
+| `skip` | `skip(n)` | Alias for offset() — LINQ naming. Chainable. |
+| `toArray` | `toArray()` | Alias for exec() — returns Promise<Model[]>. |
+| `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). Chainable. |
+| `orderByDescending` | `orderByDescending(field)` | C# alias for orderByDesc(). Chainable. |
+| `firstOrDefault` | `firstOrDefault()` | Alias for first() — returns null on empty (JS default). |
+| `lastOrDefault` | `lastOrDefault()` | Alias for last() — returns null on empty. |
+| `average` | `average(field)` | Alias for avg() — C# naming. |
+| `aggregate` | `aggregate(fn, seed)` | Alias for reduce() — C# Aggregate naming. |
+
+
+#### LINQ Element Operators
+
+| Method | Signature | Description |
+|---|---|---|
+| `single` | `single()` | Returns the only element. Throws if count !== 1. |
+| `singleOrDefault` | `singleOrDefault()` | Returns the only element or null. Throws if more than one. |
+| `elementAt` | `elementAt(index)` | Get element at 0-based index. Throws if out of range. |
+| `elementAtOrDefault` | `elementAtOrDefault(index)` | Get element at index, or null if out of range. |
+| `defaultIfEmpty` | `defaultIfEmpty(value)` | Returns results, or [value] if the sequence is empty. |
+
+
+#### LINQ Quantifiers
+
+| Method | Signature | Description |
+|---|---|---|
+| `any` | `any(predicate?)` | True if any elements match. Without predicate, same as exists(). |
+| `all` | `all(predicate)` | True if all elements satisfy the predicate. |
+| `contains` | `contains(field, value)` | True if any record has the given value for a column. |
+| `sequenceEqual` | `sequenceEqual(other, compareFn?)` | True if both sequences have the same elements in the same order. |
+
+
+#### LINQ Ordering
+
+| Method | Signature | Description |
+|---|---|---|
+| `thenBy` | `thenBy(field)` | Add secondary ascending sort. Chainable. |
+| `thenByDescending` | `thenByDescending(field)` | Add secondary descending sort. Chainable. |
+
+
+#### LINQ Set Operations
+
+| Method | Signature | Description |
+|---|---|---|
+| `concat` | `concat(other)` | Append results from another query or array. |
+| `union` | `union(other, keyFn?)` | Distinct union of two result sets. |
+| `intersect` | `intersect(other, keyFn?)` | Elements common to both result sets. |
+| `except` | `except(other, keyFn?)` | Elements in this set but not in other. |
+
+
+#### LINQ Projection
+
+| Method | Signature | Description |
+|---|---|---|
+| `selectMany` | `selectMany(fn)` | FlatMap — project each element to an array and flatten. |
+| `zip` | `zip(other, fn)` | Combine two result sets element-wise using fn(a, b). |
+| `toDictionary` | `toDictionary(keyFn, valueFn?)` | Convert results to a Map keyed by selector. Throws on duplicate keys. |
+| `toLookup` | `toLookup(keyFn)` | Group results into a Map of arrays keyed by selector. |
+
+
+#### LINQ Partitioning
+
+| Method | Signature | Description |
+|---|---|---|
+| `takeWhile` | `takeWhile(predicate)` | Take elements while predicate returns true. |
+| `skipWhile` | `skipWhile(predicate)` | Skip elements while predicate returns true, then return the rest. |
+
+
+#### LINQ Transforms
+
+| Method | Signature | Description |
+|---|---|---|
+| `reverse` | `reverse()` | Reverse the result order. |
+| `append` | `append(...items)` | Append items to the end of results. |
+| `prepend` | `prepend(...items)` | Prepend items to the beginning of results. |
+| `distinctBy` | `distinctBy(keyFn)` | Distinct results by a key selector. |
+
+
+#### LINQ Aggregate Selectors
+
+| Method | Signature | Description |
+|---|---|---|
+| `minBy` | `minBy(fn)` | Element with the minimum value from a selector. |
+| `maxBy` | `maxBy(fn)` | Element with the maximum value from a selector. |
+| `sumBy` | `sumBy(fn)` | Sum using a value selector function. |
+| `averageBy` | `averageBy(fn)` | Average using a value selector function. |
+| `countBy` | `countBy(keyFn)` | Count elements per group, returns Map<key, count>. |
+
+
+```js
+// Filtering with negation
+const results = await User.query()
+	.whereNotIn('role', ['banned', 'suspended'])
+	.whereNotBetween('age', 0, 12)
+	.whereLike('email', '%@gmail.com')
+	.orderBy('name')
+	.exec()
+
+// Scoped queries (chainable)
+const activeAdmins = await User.query()
+	.scope('active')
+	.scope('role', 'admin')
+	.orderBy('name')
+	.exec()
+
+// Aggregates
+const avgAge = await User.query().avg('age')
+const revenue = await Order.query().where('status', 'paid').sum('total')
+const maxPrice = await Product.query().max('price')
+const count = await User.query().where('role', 'admin').count()
+
+// LINQ-style aliases
+const top5 = await User.query().orderByDesc('score').take(5)
+const page3 = await User.query().skip(40).take(20)
+const oldest = await User.query().orderBy('age').last()
+
+// LINQ element operators
+const onlyAdmin = await User.query().where('email', 'admin@co.com').single()
+const third = await User.query().orderBy('id').elementAt(2)
+const fallback = await User.query().where('role', 'owner').defaultIfEmpty({ name: 'N/A' })
+
+// LINQ quantifiers
+const hasAdmins = await User.query().where('role', 'admin').any()
+const allAdults = await User.query().all(u => u.age >= 18)
+const hasAlice = await User.query().contains('name', 'Alice')
+
+// LINQ ordering with secondary sorts
+const sorted = await User.query()
+	.orderBy('role').thenByDescending('score').toArray()
+
+// LINQ set operations
+const admins = User.query().where('role', 'admin')
+const seniors = User.query().where('age', '>=', 50)
+const both = await admins.intersect(seniors, u => u.id)
+const onlyAdmins = await admins.except(seniors, u => u.id)
+
+// LINQ projection
+const tags = await Post.query().selectMany(p => p.tags)
+const byRole = await User.query().toLookup(u => u.role)
+const idMap = await User.query().toDictionary(u => u.id)
+
+// LINQ partitioning
+const while18 = await User.query().orderBy('age').takeWhile(u => u.age < 21)
+const after18 = await User.query().orderBy('age').skipWhile(u => u.age < 18)
+
+// LINQ aggregate selectors
+const youngest = await User.query().minBy(u => u.age)
+const topScorer = await User.query().maxBy(u => u.score)
+const totalScore = await User.query().sumBy(u => u.score)
+const roleCounts = await User.query().countBy(u => u.role)
+
+// Conditional query building (perfect for API endpoints)
+const users = await User.query()
+	.when(req.query.role, q => q.where('role', req.query.role))
+	.when(req.query.minAge, q => q.where('age', '>=', req.query.minAge))
+	.unless(req.query.showAll, q => q.limit(50))
+	.tap(q => console.log('Query:', q.build()))
+
+// Rich pagination with metadata
+const result = await User.query()
+	.where('active', true)
+	.paginate(2, 10)
+// { data: [...], total: 53, page: 2, perPage: 10,
+//   pages: 6, hasNext: true, hasPrev: true }
+
+// Batch processing for large datasets
+await User.query().chunk(100, async (batch, i) => {
+	console.log(`Batch ${i}: ${batch.length} users`)
+	for (const u of batch) await u.update({ migrated: true })
+})
+
+// Functional transforms
+const names = await User.query().map(u => u.name)
+const filteredAdmins = await User.query().filter(u => u.role === 'admin')
+const totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)
+```
+
+
+> **Tip:** Queries are thenable — 'await User.query().where(...)' works without calling .exec().
+> **Tip:** take() and skip() are LINQ aliases for limit() and offset() — use whichever feels natural.
+> **Tip:** single() vs first(): single() throws if there isn't exactly one result — use it for unique lookups.
+> **Tip:** any()/all() accept optional predicates for post-execution checks, or use any() without args like exists().
+> **Tip:** thenBy()/thenByDescending() add secondary sorts — chain after orderBy() for multi-column ordering.
+> **Tip:** Set operations (union/intersect/except) accept a keyFn for custom equality — defaults to JSON comparison.
+> **Tip:** toDictionary() throws on duplicate keys — use toLookup() when keys aren't unique.
+> **Tip:** takeWhile()/skipWhile() operate on ordered results — always pair with orderBy() for deterministic output.
+> **Tip:** minBy()/maxBy() return the full element, not just the value — great for 'find the user with highest score'.
+> **Tip:** countBy() returns a Map — perfect for quick grouping like countBy(u => u.role).
+> **Tip:** when() is a game-changer for API endpoints — conditionally apply filters based on request params.
+> **Tip:** tap() is perfect for debugging — inspect the query state without breaking the chain.
+> **Tip:** paginate() returns everything you need for pagination UI: total, pages, hasNext, hasPrev.
+> **Tip:** chunk() processes large datasets in batches — no memory explosion on million-row tables.
+> **Tip:** map/filter/reduce work like Array methods but on query results — great for transformations.
 
 
 ### SQLite Adapter
@@ -1854,6 +2470,131 @@ console.log(db.adapter.isConnected) // true
 > **Tip:** collectionStats().avgObjSize tells you the average document size — useful for capacity planning.
 
 
+### Redis Adapter
+
+Redis adapter using ioredis with key-value operations, hashes, lists, sets, sorted sets, pub/sub, pipelines, TTL management, and full ORM CRUD. Stores table data as Redis hashes with sorted-set indexes for ordering and filtering. Bring-your-own-driver: npm install ioredis.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `get` | `adapter.get(key)` | Get a value by key. Auto-parses JSON. Key must be a non-empty string without control characters. |
+| `set` | `adapter.set(key, value, [ttl])` | Set a key/value pair. Optional TTL in seconds (must be ≥ 0). Key must be a non-empty string without control characters. |
+| `del` | `adapter.del(key)` | Delete a key. |
+| `exists` | `adapter.exists(key)` | Check if a key exists. Returns boolean. |
+| `expire` | `adapter.expire(key, seconds)` | Set a TTL on an existing key. Seconds must be ≥ 0. |
+| `ttl` | `adapter.ttl(key)` | Get remaining TTL in seconds (-1 = no expiry, -2 = missing). |
+| `hset` | `adapter.hset(key, field, value)` | Set a hash field. |
+| `hget` | `adapter.hget(key, field)` | Get a hash field value. |
+| `hgetall` | `adapter.hgetall(key)` | Get all fields and values in a hash. |
+| `hdel` | `adapter.hdel(key, field)` | Delete a hash field. |
+| `rpush` | `adapter.rpush(key, ...values)` | Append values to a list (right). |
+| `lpush` | `adapter.lpush(key, ...values)` | Prepend values to a list (left). |
+| `lrange` | `adapter.lrange(key, start, stop)` | Get a range of list elements. |
+| `rpop` | `adapter.rpop(key)` | Remove and return the last list element. |
+| `lpop` | `adapter.lpop(key)` | Remove and return the first list element. |
+| `llen` | `adapter.llen(key)` | Get the length of a list. |
+| `sadd` | `adapter.sadd(key, ...members)` | Add members to a set. |
+| `smembers` | `adapter.smembers(key)` | Get all members of a set. |
+| `sismember` | `adapter.sismember(key, member)` | Check if a value is in a set. Returns boolean. |
+| `srem` | `adapter.srem(key, member)` | Remove a member from a set. |
+| `scard` | `adapter.scard(key)` | Get the number of members in a set. |
+| `zadd` | `adapter.zadd(key, score, member)` | Add a member to a sorted set with a score. |
+| `zrange` | `adapter.zrange(key, start, stop)` | Get members in a sorted set by index range. |
+| `zrangebyscore` | `adapter.zrangebyscore(key, min, max)` | Get members by score range. |
+| `zrem` | `adapter.zrem(key, member)` | Remove a member from a sorted set. |
+| `zcard` | `adapter.zcard(key)` | Get the number of members in a sorted set. |
+| `subscribe` | `adapter.subscribe(channel, callback)` | Subscribe to a pub/sub channel. callback must be a function. Returns an unsubscribe function. |
+| `publish` | `adapter.publish(channel, message)` | Publish a message to a channel. Returns number of receivers. |
+| `pipeline` | `adapter.pipeline()` | Create a pipeline for batching commands. Call exec() to run. |
+| `ping` | `adapter.ping()` | Ping the Redis server. Returns 'PONG' if healthy. |
+| `info` | `adapter.info([section])` | Get Redis server info. Optional section filter. |
+| `dbsize` | `adapter.dbsize()` | Get the number of keys in the current database. |
+| `incr` | `adapter.incr(key)` | Increment a numeric key by 1. Returns the new value. |
+| `decr` | `adapter.decr(key)` | Decrement a numeric key by 1. Returns the new value. |
+| `raw` | `adapter.raw(command, ...args)` | Execute a raw Redis command. Command must be a non-empty string. |
+| `close` | `adapter.close()` | Close the Redis connection. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `url` | string | `—` | Redis connection URL: redis://user:pass@host:6379/0. |
+| `host` | string | `'127.0.0.1'` | Redis server hostname. Must be a non-empty string. |
+| `port` | number | `6379` | Redis server port. Must be an integer between 1 and 65535. |
+| `password` | string | `—` | Redis password (AUTH). Must be a string if provided. |
+| `db` | number | `0` | Redis database index. Must be an integer between 0 and 15. |
+| `prefix` | string | `'zh:'` | Key prefix for namespacing all keys. |
+| `maxRetries` | number | `3` | Max connection retry attempts. |
+| `lazyConnect` | boolean | `false` | Defer connection until first operation. |
+| `connectTimeout` | number | `10000` | Connection timeout in ms. Must be a non-negative number. |
+| `tls` | object | `—` | TLS options for secure connections (Upstash, AWS ElastiCache). |
+
+
+```js
+const { Database, Model, TYPES } = require('zero-http')
+
+const db = Database.connect('redis', {
+	host: process.env.REDIS_HOST || '127.0.0.1',
+	port: Number(process.env.REDIS_PORT) || 6379,
+	password: process.env.REDIS_PASS,
+	prefix: 'myapp:',
+})
+
+// Key-Value operations
+await db.adapter.set('session:abc', { userId: 42 }, 3600) // TTL: 1 hour
+const session = await db.adapter.get('session:abc')
+await db.adapter.del('session:abc')
+
+// Hash operations
+await db.adapter.hset('user:1', 'name', 'Alice')
+const name = await db.adapter.hget('user:1', 'name')
+const all = await db.adapter.hgetall('user:1')
+
+// Lists
+await db.adapter.rpush('queue:jobs', 'task1', 'task2')
+const items = await db.adapter.lrange('queue:jobs', 0, -1)
+const next = await db.adapter.lpop('queue:jobs')
+
+// Sets
+await db.adapter.sadd('tags', 'node', 'redis', 'orm')
+const members = await db.adapter.smembers('tags')
+const isMember = await db.adapter.sismember('tags', 'node') // true
+
+// Sorted Sets
+await db.adapter.zadd('leaderboard', 100, 'alice')
+await db.adapter.zadd('leaderboard', 200, 'bob')
+const top = await db.adapter.zrange('leaderboard', 0, -1)
+
+// Pub/Sub
+const unsub = await db.adapter.subscribe('events', (msg) => {
+	console.log('Received:', msg)
+})
+await db.adapter.publish('events', 'hello world')
+
+// Pipeline (batched commands)
+const pipe = db.adapter.pipeline()
+pipe.set('a', '1')
+pipe.set('b', '2')
+pipe.get('a')
+await pipe.exec()
+
+// Health check
+const pong = await db.adapter.ping() // 'PONG'
+```
+
+
+> **Tip:** Redis adapter requires the ioredis package — install with: npm install ioredis.
+> **Tip:** Use prefix to namespace keys — avoids collisions when sharing a Redis instance.
+> **Tip:** set() with a TTL is perfect for sessions, rate limiting, and temporary data.
+> **Tip:** Pipeline batches multiple commands into a single round-trip — much faster than individual calls.
+> **Tip:** Pub/Sub uses a separate connection internally — subscribing won't block your main client.
+> **Tip:** The ORM CRUD layer (Model.create, find, etc.) works on top of Redis hashes + sorted sets.
+> **Tip:** Use url for hosted Redis (Upstash, Redis Cloud, AWS ElastiCache).
+> **Tip:** ping() is ideal for health check endpoints behind load balancers.
+
+
 ### Memory Adapter
 
 Zero-dependency in-memory adapter — perfect for tests, prototyping, and ephemeral applications. All data lives in JavaScript Maps and arrays. Supports full CRUD, query builder, and utility methods for introspection, export/import, and cloning.
@@ -2006,599 +2747,298 @@ await db.adapter.flush()
 > **Tip:** For more performance, switch to SQLite — it handles concurrent access much better.
 
 
-### Model
+### Migrator
 
-The ORM base class — extend it to define your data models. Supports typed schemas with validation, timestamps, soft deletes, lifecycle hooks, hidden fields, reusable scopes, relationships (hasMany, hasOne, belongsTo, belongsToMany), and a full suite of CRUD operations.
+Versioned migration framework for the ORM. Define up/down migrations, track execution in batches, rollback safely, check status, and perform fresh resets. Migrations are stored in a _migrations tracking table within the same database.
 
 #### Methods
 
 | Method | Signature | Description |
 |---|---|---|
-| `create` | `Model.create(data)` | Insert a new record. Runs validation and beforeCreate/afterCreate hooks. Returns Promise<Model>. |
-| `createMany` | `Model.createMany([data, ...])` | Insert multiple records. Returns Promise<Model[]>. |
-| `find` | `Model.find([conditions])` | Find all records matching conditions. Returns Promise<Model[]>. |
-| `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
-| `findById` | `Model.findById(id)` | Find by primary key. Returns Promise<Model\|null>. |
-| `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
-| `exists` | `Model.exists([conditions])` | Check if any matching records exist. Returns Promise<boolean>. |
-| `upsert` | `Model.upsert(conditions, data)` | Insert or update. Finds by conditions, creates with merged data if not found, updates if found. Returns Promise<{ instance, created }>. |
-| `updateWhere` | `Model.updateWhere(conditions, data)` | Update all matching records. Returns Promise<number> (affected count). |
-| `deleteWhere` | `Model.deleteWhere(conditions)` | Delete all matching records (respects softDelete). Returns Promise<number>. |
-| `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
-| `query` | `Model.query()` | Start a fluent Query builder. See ORM → Query. |
-| `scope` | `Model.scope(name, [...args])` | Start a query with a named scope applied. Returns Query. |
-| `save` | `instance.save()` | Insert (if new) or update dirty fields (if persisted). Returns Promise<Model>. |
-| `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
-| `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
-| `restore` | `instance.restore()` | Restore a soft-deleted instance (sets deletedAt to null). |
-| `reload` | `instance.reload()` | Re-fetch the instance from the database. Returns Promise<Model>. |
-| `toJSON` | `instance.toJSON()` | Return a plain object, excluding fields listed in static hidden. |
-| `load` | `instance.load(relationName)` | Eagerly load a relationship. Sets instance[relationName]. Returns Promise. |
-| `increment` | `instance.increment(field, [by])` | Increment a numeric field by amount (default 1). Saves immediately. |
-| `decrement` | `instance.decrement(field, [by])` | Decrement a numeric field by amount (default 1). Saves immediately. |
-| `hasMany` | `Model.hasMany(Related, foreignKey, [localKey])` | Define a one-to-many relationship. |
-| `hasOne` | `Model.hasOne(Related, foreignKey, [localKey])` | Define a one-to-one relationship. |
-| `belongsTo` | `Model.belongsTo(Related, foreignKey, [otherKey])` | Define an inverse belongs-to relationship. |
-| `belongsToMany` | `Model.belongsToMany(Related, opts)` | Define a many-to-many relationship through a junction table. Options: { through, foreignKey, otherKey, localKey, relatedKey }. |
-| `first` | `Model.first([conditions])` | Find the first record. Returns Promise<Model\|null>. |
-| `last` | `Model.last([conditions])` | Find the last record (by PK descending). Returns Promise<Model\|null>. |
-| `all` | `Model.all([conditions])` | Get all records (alias for find). Returns Promise<Model[]>. |
-| `paginate` | `Model.paginate(page, [perPage], [conditions])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
-| `chunk` | `Model.chunk(size, fn, [conditions])` | Process all records in batches. fn(batch, batchIndex) — supports async. |
-| `random` | `Model.random([conditions])` | Get a random record. Returns Promise<Model\|null>. |
-| `pluck` | `Model.pluck(field, [conditions])` | Pluck values for a single column. Returns Promise<Array>. |
+| `add` | `migrator.add({ name, up, down })` | Add a migration definition. name must be unique and contain only letters, digits, underscores, hyphens, and dots. up/down are async functions receiving db. |
+| `addAll` | `migrator.addAll(migrations)` | Add multiple migration definitions at once. |
+| `migrate` | `migrator.migrate()` | Run all pending migrations. Returns { migrated: string[], batch: number }. |
+| `rollback` | `migrator.rollback()` | Rollback the last batch. Returns { rolledBack: string[], batch: number }. |
+| `rollbackAll` | `migrator.rollbackAll()` | Rollback all batches in reverse order. |
+| `reset` | `migrator.reset()` | Rollback all, then re-run all. Returns { rolledBack, migrated, batch }. |
+| `fresh` | `migrator.fresh()` | Drop ALL tables, then re-run all migrations from scratch. |
+| `status` | `migrator.status()` | Get current status: { executed: [], pending: [], lastBatch }. |
+| `hasPending` | `migrator.hasPending()` | Returns true if there are pending migrations. |
+| `list` | `migrator.list()` | Get registered migration names. |
+| `defineMigration` | `defineMigration(name, up, down)` | Helper factory — creates a { name, up, down } migration object. Validates name characters and that up/down are functions. |
 
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `table` | string | `—` | Database table name (required). |
-| `schema` | object | `—` | Column definitions with type, required, default, unique, primaryKey, autoIncrement, enum, min, max, minLength, maxLength, match, guarded, references, check, index, compositeKey, compositeUnique, compositeIndex. |
-| `timestamps` | boolean | `false` | Auto-manage createdAt and updatedAt columns. |
-| `softDelete` | boolean | `false` | Mark records as deleted (deletedAt) instead of removing them. Use .restore() to undelete. |
-| `hooks` | object | `{}` | Lifecycle hooks: beforeCreate, afterCreate, beforeUpdate, afterUpdate, beforeDelete, afterDelete. |
-| `hidden` | string[] | `[]` | Fields excluded from toJSON() output. Use for passwords, tokens, internal IDs. |
-| `scopes` | object | `{}` | Named reusable query conditions. Each scope is a function: (query, ...args) => query.where(...). |
+| `table` | string | `'_migrations'` | Name of the migration tracking table. |
 
 
 ```js
-const { Model, TYPES } = require('zero-http')
+const { Database, Migrator, defineMigration, TYPES } = require('zero-http')
 
+const db = Database.connect('memory')
+const migrator = new Migrator(db)
+
+// Define migrations inline
+migrator.add({
+	name: '001_create_users',
+	async up(db) {
+		await db.adapter.createTable('users', {
+			id:   { type: 'integer', primaryKey: true, autoIncrement: true },
+			name: { type: 'string', required: true },
+			email: { type: 'string', unique: true },
+		});
+	},
+	async down(db) {
+		await db.adapter.dropTable('users');
+	}
+})
+
+// Or use the defineMigration helper
+migrator.add(defineMigration('002_add_role',
+	async (db) => {
+		await db.addColumn('users', 'role', { type: TYPES.STRING, default: 'user' });
+	},
+	async (db) => {
+		await db.dropColumn('users', 'role');
+	}
+))
+
+// Run them
+const { migrated, batch } = await migrator.migrate()
+console.log(`Ran ${migrated.length} migrations in batch ${batch}`)
+
+// Check status
+const { executed, pending, lastBatch } = await migrator.status()
+
+// Rollback last batch
+const { rolledBack } = await migrator.rollback()
+
+// Reset — rollback all then re-run
+await migrator.reset()
+
+// Fresh — drop everything and re-migrate
+await migrator.fresh()
+```
+
+
+> **Tip:** Migration names should be ordered (001_, 002_) — they run in registration order.
+> **Tip:** Each migrate() call creates a new batch — rollback() undoes the last batch only.
+> **Tip:** rollbackAll() reverses all batches — useful for tearing down test databases.
+> **Tip:** fresh() is destructive — it drops ALL tables including non-migrated ones.
+> **Tip:** status() shows which migrations have run and which are pending — great for deploy checks.
+> **Tip:** hasPending() is perfect for startup checks — block the server until migrations are current.
+> **Tip:** The _migrations tracking table is auto-created on first use.
+> **Tip:** defineMigration() is a convenience — it just returns { name, up, down }.
+
+
+### QueryCache
+
+In-memory LRU query cache with TTL support. Attach to a Database instance to cache query results automatically. Supports manual get/set, model-level invalidation, remember pattern, and optional Redis backend for distributed caching.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `get` | `cache.get(key)` | Get a cached value. Returns undefined on miss or expiry. |
+| `set` | `cache.set(key, value, [ttl])` | Set a cache entry with optional TTL in seconds. |
+| `delete` | `cache.delete(key)` | Delete a specific cache entry. |
+| `has` | `cache.has(key)` | Check if a key exists and is not expired. |
+| `invalidate` | `cache.invalidate(table)` | Remove all cache entries containing the table name. |
+| `flush` | `cache.flush()` | Clear the entire cache and reset stats. |
+| `stats` | `cache.stats()` | Get hit/miss statistics: { size, hits, misses, hitRate, maxEntries }. |
+| `prune` | `cache.prune()` | Remove expired entries (garbage collection). |
+| `remember` | `cache.remember(key, fn, [ttl])` | Get cached value or compute and cache the result. |
+| `wrap` | `cache.wrap(descriptor, executor, [ttl])` | Wrap a query execution with caching. Used internally by Query.cache(). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxEntries` | number | `1000` | Maximum cache entries (minimum 1). LRU eviction when full. |
+| `defaultTTL` | number | `60` | Default TTL in seconds (minimum 0, 0 = no expiry). |
+| `prefix` | string | `'qc:'` | Key prefix for cache namespacing. |
+| `redis` | object | `—` | Redis adapter instance for distributed caching. |
+
+
+```js
+const { Database, QueryCache } = require('zero-http')
+
+const db = Database.connect('memory')
+const cache = new QueryCache({
+	maxEntries: 500,
+	defaultTTL: 60,  // 60 seconds
+})
+
+// Manual cache operations
+cache.set('config', { theme: 'dark', lang: 'en' }, 300)
+const config = cache.get('config')
+cache.delete('config')
+
+// Remember pattern — compute on miss, return from cache on hit
+const users = await cache.remember('active-users', async () => {
+	return await User.find({ active: true })
+}, 120)
+
+// Check if cached
+if (cache.has('active-users')) {
+	console.log('Cache hit!')
+}
+
+// Invalidate all user-related caches
+cache.invalidate('users')
+
+// Stats
+const { size, hits, misses, hitRate } = cache.stats()
+console.log(`Hit rate: ${(hitRate * 100).toFixed(1)}%`)
+
+// Garbage collection
+const pruned = cache.prune()
+
+// Clear everything
+cache.flush()
+```
+
+
+> **Tip:** LRU eviction removes the least-recently-used entry when maxEntries is reached.
+> **Tip:** remember() is the most common pattern — avoids cache stampedes with a single call.
+> **Tip:** invalidate('users') removes ALL cache entries containing 'users' in the key — perfect after writes.
+> **Tip:** stats() returns hitRate as a 0–1 float — multiply by 100 for a percentage.
+> **Tip:** prune() removes expired entries proactively — useful for memory-constrained environments.
+> **Tip:** Pass a Redis adapter instance as options.redis for distributed caching across processes.
+> **Tip:** flush() also resets hit/miss counters — useful for testing.
+
+
+### Seeder & Factory
+
+Database seeding utilities — structured data population for development and testing. Seeder defines what to seed, Factory generates records with fake data, and Fake provides built-in data generators. SeederRunner orchestrates execution.
+
+#### undefined
+
+| Method | Signature | Description |
+|---|---|---|
+| `define` | `factory.define(definition)` | Define default field generators. Values can be static or functions. |
+| `count` | `factory.count(n)` | Set how many records to create. Must be a positive integer (≥ 1). |
+| `state` | `factory.state(name, overrides)` | Define a named variation (e.g. 'admin'). |
+| `withState` | `factory.withState(name)` | Apply a named state to the next create/make call. |
+| `afterCreating` | `factory.afterCreating(fn)` | Register an after-create callback: async (record, index) => {}. |
+| `make` | `factory.make([overrides])` | Build records without persisting. Returns object or array. |
+| `create` | `factory.create([overrides])` | Create records and persist to database. Returns object or array. |
+
+
+#### undefined
+
+| Method | Signature | Description |
+|---|---|---|
+| `firstName` | `Fake.firstName()` | Random first name. |
+| `lastName` | `Fake.lastName()` | Random last name. |
+| `fullName` | `Fake.fullName()` | Random full name (first + last). |
+| `email` | `Fake.email()` | Random email address. |
+| `username` | `Fake.username()` | Random username. |
+| `uuid` | `Fake.uuid()` | Random UUID v4. |
+| `integer` | `Fake.integer([min], [max])` | Random integer between min and max (inclusive). |
+| `float` | `Fake.float([min], [max], [decimals])` | Random float with configurable decimal places. |
+| `boolean` | `Fake.boolean()` | Random true/false. |
+| `date` | `Fake.date([start], [end])` | Random Date between start and end. |
+| `dateString` | `Fake.dateString([start], [end])` | Random ISO date string. |
+| `paragraph` | `Fake.paragraph([sentences])` | Random paragraph (default 3 sentences). |
+| `sentence` | `Fake.sentence([wordCount])` | Random sentence (5–15 words). |
+| `word` | `Fake.word()` | Random word. |
+| `phone` | `Fake.phone()` | Random phone number. |
+| `color` | `Fake.color()` | Random hex color. |
+| `url` | `Fake.url()` | Random URL. |
+| `ip` | `Fake.ip()` | Random IP address. |
+| `pick` | `Fake.pick(array)` | Random element from an array. |
+| `pickMany` | `Fake.pickMany(array, n)` | N random elements (no duplicates). |
+| `json` | `Fake.json()` | Random JSON-safe object. |
+
+
+#### undefined
+
+| Method | Signature | Description |
+|---|---|---|
+| `run` | `runner.run(...seeders)` | Run one or more Seeder classes. Returns names of seeders that ran. |
+| `call` | `runner.call(SeederClass)` | Run a single seeder. |
+| `fresh` | `runner.fresh(...seeders)` | Truncate all tables, then run seeders. |
+
+
+```js
+const { Database, Model, TYPES, Seeder, SeederRunner, Factory, Fake } = require('zero-http')
+
+// --- Model ---
 class User extends Model {
 	static table = 'users'
-	static timestamps = true
-	static softDelete = true
-	static hidden = ['password', 'resetToken']
-	static scopes = {
-		active: (q) => q.where('active', true),
-		role: (q, role) => q.where('role', role),
-		recent: (q) => q.orderBy('createdAt', 'desc').limit(10)
-	}
 	static schema = {
-		id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
-		name:     { type: TYPES.STRING, required: true, minLength: 2 },
-		email:    { type: TYPES.STRING, required: true, unique: true },
-		password: { type: TYPES.STRING, guarded: true },
-		role:     { type: TYPES.STRING, enum: ['user', 'admin'], default: 'user' },
-		logins:   { type: TYPES.INTEGER, default: 0 },
-		active:   { type: TYPES.BOOLEAN, default: true }
-	}
-	static hooks = {
-		beforeCreate: (data) => { data.email = data.email.toLowerCase() }
+		id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+		name:  { type: TYPES.STRING, required: true },
+		email: { type: TYPES.STRING, required: true },
+		role:  { type: TYPES.STRING, default: 'user' },
 	}
 }
 
-// Static shortcuts — no query builder needed
-const first = await User.first({ role: 'admin' })  // first admin
-const last  = await User.last()                     // last user by PK
-const all   = await User.all({ active: true })      // alias for find()
-const pick  = await User.random()                   // random user
-const names = await User.pluck('name')              // ['Alice','Bob',...]
-
-// Pagination with rich metadata
-const page = await User.paginate(2, 10, { active: true })
-// { data: [...], total: 42, page: 2, perPage: 10, pages: 5, hasNext: true, hasPrev: true }
-
-// Batch processing — never loads all records at once
-await User.chunk(100, async (batch, i) => {
-	console.log(`Processing batch ${i}: ${batch.length} users`)
+// --- Factory with Fake data ---
+const userFactory = new Factory(User)
+userFactory.define({
+	name:  () => Fake.fullName(),
+	email: () => Fake.email(),
+	role:  'user',
 })
-
-// Scoped queries
-const activeAdmins = await User.scope('active')
-const recentAdmins = await User.scope('role', 'admin')
-
-// Upsert — insert or update
-const { instance, created } = await User.upsert(
-	{ email: 'alice@example.com' },
-	{ name: 'Alice', role: 'admin' }
-)
-
-// Increment/decrement
-const user = await User.findById(1)
-await user.increment('logins')      // logins + 1
-await user.decrement('logins', 5)   // logins - 5
-
-// toJSON respects hidden — no password leak
-console.log(user.toJSON())
-```
-
-
-> **Tip:** Model.first/last/all/random/pluck are shortcuts — they build queries internally so you don't have to.
-> **Tip:** Model.paginate() returns metadata (total, pages, hasNext, hasPrev) — perfect for REST API pagination endpoints.
-> **Tip:** Model.chunk() processes large tables in batches — avoids loading millions of records into memory at once.
-> **Tip:** static hidden = ['password'] prevents accidental password leaks in API responses.
-> **Tip:** Scopes are the most powerful feature for DRY queries — define once, reuse everywhere.
-> **Tip:** upsert() is atomic find-or-create-or-update — avoids race conditions in concurrent environments.
-> **Tip:** increment/decrement save immediately — no need to call instance.save() after.
-> **Tip:** guarded: true on a schema field prevents it from being set via mass-assignment (create/update with object).
-> **Tip:** Hooks are great for data normalization (lowercase emails) and audit logging.
-> **Tip:** belongsToMany requires a junction table name and the foreign keys for both sides.
-
-
-### Query
-
-Fluent query builder returned by Model.query(). All filter/sort/limit methods are chainable. Execute with .exec(), .first(), .count(), .exists(), .pluck(), or aggregates (sum/avg/min/max). Also thenable — you can await the query directly without calling .exec().
-
-#### Selection
-
-| Method | Signature | Description |
-|---|---|---|
-| `select` | `select(...fields)` | Select specific columns. Chainable. |
-| `distinct` | `distinct()` | Return unique rows only. Chainable. |
-
-
-#### Filtering
-
-| Method | Signature | Description |
-|---|---|---|
-| `where` | `where(field, [op], value)` | Add a WHERE condition. Supports object form, (field, value), or (field, op, value). Operators: =, !=, >, <, >=, <=, LIKE, IN, NOT IN, BETWEEN, IS NULL, IS NOT NULL. |
-| `orWhere` | `orWhere(field, [op], value)` | Add an OR WHERE condition. Chainable. |
-| `whereNull` | `whereNull(field)` | WHERE field IS NULL. Chainable. |
-| `whereNotNull` | `whereNotNull(field)` | WHERE field IS NOT NULL. Chainable. |
-| `whereIn` | `whereIn(field, values)` | WHERE field IN (...values). Chainable. |
-| `whereNotIn` | `whereNotIn(field, values)` | WHERE field NOT IN (...values). Chainable. |
-| `whereBetween` | `whereBetween(field, low, high)` | WHERE field BETWEEN low AND high. Chainable. |
-| `whereNotBetween` | `whereNotBetween(field, low, high)` | WHERE field NOT BETWEEN low AND high. Chainable. |
-| `whereLike` | `whereLike(field, pattern)` | WHERE field LIKE pattern (% and _ wildcards). Chainable. |
-| `whereRaw` | `whereRaw(sql, ...params)` | Inject raw SQL WHERE clause (SQL adapters only). Parameterized. Chainable. |
-| `withDeleted` | `withDeleted()` | Include soft-deleted records in results. Chainable. |
-| `scope` | `scope(name, [...args])` | Apply a named scope from the model's static scopes. Chainable. |
-
-
-#### Ordering & Pagination
-
-| Method | Signature | Description |
-|---|---|---|
-| `orderBy` | `orderBy(field, [dir])` | Sort results. dir: 'asc' (default) or 'desc'. Chainable. |
-| `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). Chainable. |
-| `limit` | `limit(n)` | Maximum number of results. Chainable. |
-| `offset` | `offset(n)` | Skip n records. Chainable. |
-| `page` | `page(pageNum, [perPage])` | Pagination helper. 1-indexed. perPage defaults to 20. Chainable. |
-| `paginate` | `paginate(page, [perPage])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
-
-
-#### Grouping & Joins
-
-| Method | Signature | Description |
-|---|---|---|
-| `groupBy` | `groupBy(...fields)` | Group results by columns. Chainable. |
-| `having` | `having(field, [op], value)` | Add a HAVING condition (use with groupBy). Chainable. |
-| `join` | `join(table, localKey, foreignKey)` | INNER JOIN. Chainable. |
-| `leftJoin` | `leftJoin(table, localKey, foreignKey)` | LEFT JOIN. Chainable. |
-| `rightJoin` | `rightJoin(table, localKey, foreignKey)` | RIGHT JOIN. Chainable. |
-
-
-#### Execution
-
-| Method | Signature | Description |
-|---|---|---|
-| `exec` | `exec()` | Execute the query. Returns Promise<Model[]>. |
-| `first` | `first()` | Execute and return the first result. Returns Promise<Model\|null>. |
-| `last` | `last()` | Execute and return the last result. Returns Promise<Model\|null>. |
-| `count` | `count()` | Execute and return the count. Returns Promise<number>. |
-| `exists` | `exists()` | Returns Promise<boolean> — true if any matching records exist. |
-| `pluck` | `pluck(field)` | Returns Promise<Array> of values for a single column. |
-
-
-#### Aggregates
-
-| Method | Signature | Description |
-|---|---|---|
-| `sum` | `sum(field)` | Returns Promise<number> — sum of a numeric column. |
-| `avg` | `avg(field)` | Returns Promise<number> — average of a numeric column. |
-| `min` | `min(field)` | Returns Promise<*> — minimum value of a column. |
-| `max` | `max(field)` | Returns Promise<*> — maximum value of a column. |
-
-
-#### Functional Transforms
-
-| Method | Signature | Description |
-|---|---|---|
-| `each` | `each(fn)` | Execute and iterate each result. fn(item, index) — supports async. |
-| `map` | `map(fn)` | Execute, transform each result. Returns Promise<Array>. |
-| `filter` | `filter(fn)` | Execute, post-filter results in JS. Returns Promise<Model[]>. |
-| `reduce` | `reduce(fn, initial)` | Execute and reduce results to a single value. |
-| `chunk` | `chunk(size, fn)` | Process results in batches. Calls fn(batch, batchIndex) for each chunk. |
-
-
-#### Conditional & Debugging
-
-| Method | Signature | Description |
-|---|---|---|
-| `when` | `when(condition, fn)` | Conditionally apply query logic if condition is truthy. Chainable. |
-| `unless` | `unless(condition, fn)` | Conditionally apply query logic if condition is falsy. Chainable. |
-| `tap` | `tap(fn)` | Inspect the query for debugging without breaking the chain. Chainable. |
-
-
-#### LINQ Aliases
-
-| Method | Signature | Description |
-|---|---|---|
-| `take` | `take(n)` | Alias for limit() — LINQ naming. Chainable. |
-| `skip` | `skip(n)` | Alias for offset() — LINQ naming. Chainable. |
-| `toArray` | `toArray()` | Alias for exec() — returns Promise<Model[]>. |
-| `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). Chainable. |
-| `orderByDescending` | `orderByDescending(field)` | C# alias for orderByDesc(). Chainable. |
-| `firstOrDefault` | `firstOrDefault()` | Alias for first() — returns null on empty (JS default). |
-| `lastOrDefault` | `lastOrDefault()` | Alias for last() — returns null on empty. |
-| `average` | `average(field)` | Alias for avg() — C# naming. |
-| `aggregate` | `aggregate(fn, seed)` | Alias for reduce() — C# Aggregate naming. |
-
-
-#### LINQ Element Operators
-
-| Method | Signature | Description |
-|---|---|---|
-| `single` | `single()` | Returns the only element. Throws if count !== 1. |
-| `singleOrDefault` | `singleOrDefault()` | Returns the only element or null. Throws if more than one. |
-| `elementAt` | `elementAt(index)` | Get element at 0-based index. Throws if out of range. |
-| `elementAtOrDefault` | `elementAtOrDefault(index)` | Get element at index, or null if out of range. |
-| `defaultIfEmpty` | `defaultIfEmpty(value)` | Returns results, or [value] if the sequence is empty. |
-
-
-#### LINQ Quantifiers
-
-| Method | Signature | Description |
-|---|---|---|
-| `any` | `any(predicate?)` | True if any elements match. Without predicate, same as exists(). |
-| `all` | `all(predicate)` | True if all elements satisfy the predicate. |
-| `contains` | `contains(field, value)` | True if any record has the given value for a column. |
-| `sequenceEqual` | `sequenceEqual(other, compareFn?)` | True if both sequences have the same elements in the same order. |
-
-
-#### LINQ Ordering
-
-| Method | Signature | Description |
-|---|---|---|
-| `thenBy` | `thenBy(field)` | Add secondary ascending sort. Chainable. |
-| `thenByDescending` | `thenByDescending(field)` | Add secondary descending sort. Chainable. |
-
-
-#### LINQ Set Operations
-
-| Method | Signature | Description |
-|---|---|---|
-| `concat` | `concat(other)` | Append results from another query or array. |
-| `union` | `union(other, keyFn?)` | Distinct union of two result sets. |
-| `intersect` | `intersect(other, keyFn?)` | Elements common to both result sets. |
-| `except` | `except(other, keyFn?)` | Elements in this set but not in other. |
-
-
-#### LINQ Projection
-
-| Method | Signature | Description |
-|---|---|---|
-| `selectMany` | `selectMany(fn)` | FlatMap — project each element to an array and flatten. |
-| `zip` | `zip(other, fn)` | Combine two result sets element-wise using fn(a, b). |
-| `toDictionary` | `toDictionary(keyFn, valueFn?)` | Convert results to a Map keyed by selector. Throws on duplicate keys. |
-| `toLookup` | `toLookup(keyFn)` | Group results into a Map of arrays keyed by selector. |
-
-
-#### LINQ Partitioning
-
-| Method | Signature | Description |
-|---|---|---|
-| `takeWhile` | `takeWhile(predicate)` | Take elements while predicate returns true. |
-| `skipWhile` | `skipWhile(predicate)` | Skip elements while predicate returns true, then return the rest. |
-
-
-#### LINQ Transforms
-
-| Method | Signature | Description |
-|---|---|---|
-| `reverse` | `reverse()` | Reverse the result order. |
-| `append` | `append(...items)` | Append items to the end of results. |
-| `prepend` | `prepend(...items)` | Prepend items to the beginning of results. |
-| `distinctBy` | `distinctBy(keyFn)` | Distinct results by a key selector. |
-
-
-#### LINQ Aggregate Selectors
-
-| Method | Signature | Description |
-|---|---|---|
-| `minBy` | `minBy(fn)` | Element with the minimum value from a selector. |
-| `maxBy` | `maxBy(fn)` | Element with the maximum value from a selector. |
-| `sumBy` | `sumBy(fn)` | Sum using a value selector function. |
-| `averageBy` | `averageBy(fn)` | Average using a value selector function. |
-| `countBy` | `countBy(keyFn)` | Count elements per group, returns Map<key, count>. |
-
-
-```js
-// Filtering with negation
-const results = await User.query()
-	.whereNotIn('role', ['banned', 'suspended'])
-	.whereNotBetween('age', 0, 12)
-	.whereLike('email', '%@gmail.com')
-	.orderBy('name')
-	.exec()
-
-// Scoped queries (chainable)
-const activeAdmins = await User.query()
-	.scope('active')
-	.scope('role', 'admin')
-	.orderBy('name')
-	.exec()
-
-// Aggregates
-const avgAge = await User.query().avg('age')
-const revenue = await Order.query().where('status', 'paid').sum('total')
-const maxPrice = await Product.query().max('price')
-const count = await User.query().where('role', 'admin').count()
-
-// LINQ-style aliases
-const top5 = await User.query().orderByDesc('score').take(5)
-const page3 = await User.query().skip(40).take(20)
-const oldest = await User.query().orderBy('age').last()
-
-// LINQ element operators
-const onlyAdmin = await User.query().where('email', 'admin@co.com').single()
-const third = await User.query().orderBy('id').elementAt(2)
-const fallback = await User.query().where('role', 'owner').defaultIfEmpty({ name: 'N/A' })
-
-// LINQ quantifiers
-const hasAdmins = await User.query().where('role', 'admin').any()
-const allAdults = await User.query().all(u => u.age >= 18)
-const hasAlice = await User.query().contains('name', 'Alice')
-
-// LINQ ordering with secondary sorts
-const sorted = await User.query()
-	.orderBy('role').thenByDescending('score').toArray()
-
-// LINQ set operations
-const admins = User.query().where('role', 'admin')
-const seniors = User.query().where('age', '>=', 50)
-const both = await admins.intersect(seniors, u => u.id)
-const onlyAdmins = await admins.except(seniors, u => u.id)
-
-// LINQ projection
-const tags = await Post.query().selectMany(p => p.tags)
-const byRole = await User.query().toLookup(u => u.role)
-const idMap = await User.query().toDictionary(u => u.id)
-
-// LINQ partitioning
-const while18 = await User.query().orderBy('age').takeWhile(u => u.age < 21)
-const after18 = await User.query().orderBy('age').skipWhile(u => u.age < 18)
-
-// LINQ aggregate selectors
-const youngest = await User.query().minBy(u => u.age)
-const topScorer = await User.query().maxBy(u => u.score)
-const totalScore = await User.query().sumBy(u => u.score)
-const roleCounts = await User.query().countBy(u => u.role)
-
-// Conditional query building (perfect for API endpoints)
-const users = await User.query()
-	.when(req.query.role, q => q.where('role', req.query.role))
-	.when(req.query.minAge, q => q.where('age', '>=', req.query.minAge))
-	.unless(req.query.showAll, q => q.limit(50))
-	.tap(q => console.log('Query:', q.build()))
-
-// Rich pagination with metadata
-const result = await User.query()
-	.where('active', true)
-	.paginate(2, 10)
-// { data: [...], total: 53, page: 2, perPage: 10,
-//   pages: 6, hasNext: true, hasPrev: true }
-
-// Batch processing for large datasets
-await User.query().chunk(100, async (batch, i) => {
-	console.log(`Batch ${i}: ${batch.length} users`)
-	for (const u of batch) await u.update({ migrated: true })
-})
-
-// Functional transforms
-const names = await User.query().map(u => u.name)
-const filteredAdmins = await User.query().filter(u => u.role === 'admin')
-const totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)
-```
-
-
-> **Tip:** Queries are thenable — 'await User.query().where(...)' works without calling .exec().
-> **Tip:** take() and skip() are LINQ aliases for limit() and offset() — use whichever feels natural.
-> **Tip:** single() vs first(): single() throws if there isn't exactly one result — use it for unique lookups.
-> **Tip:** any()/all() accept optional predicates for post-execution checks, or use any() without args like exists().
-> **Tip:** thenBy()/thenByDescending() add secondary sorts — chain after orderBy() for multi-column ordering.
-> **Tip:** Set operations (union/intersect/except) accept a keyFn for custom equality — defaults to JSON comparison.
-> **Tip:** toDictionary() throws on duplicate keys — use toLookup() when keys aren't unique.
-> **Tip:** takeWhile()/skipWhile() operate on ordered results — always pair with orderBy() for deterministic output.
-> **Tip:** minBy()/maxBy() return the full element, not just the value — great for 'find the user with highest score'.
-> **Tip:** countBy() returns a Map — perfect for quick grouping like countBy(u => u.role).
-> **Tip:** when() is a game-changer for API endpoints — conditionally apply filters based on request params.
-> **Tip:** tap() is perfect for debugging — inspect the query state without breaking the chain.
-> **Tip:** paginate() returns everything you need for pagination UI: total, pages, hasNext, hasPrev.
-> **Tip:** chunk() processes large datasets in batches — no memory explosion on million-row tables.
-> **Tip:** map/filter/reduce work like Array methods but on query results — great for transformations.
-
-
-### Schema DDL
-
-Advanced schema options for DDL generation. Define foreign keys, CHECK constraints, indexes, composite primary keys, composite unique constraints, and composite indexes directly in your schema — the ORM generates the correct DDL for every adapter. Sync ordering is automatic: tables with foreign key references are created after their targets.
-
-#### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `references` | object | `—` | Foreign key: { table, column, onDelete, onUpdate }. Generates REFERENCES clause in SQL. onDelete/onUpdate accept CASCADE, SET NULL, RESTRICT, NO ACTION. |
-| `check` | string | `—` | SQL CHECK constraint expression. e.g. '"price" > 0'. Applied inline on the column. |
-| `index` | boolean\|string | `false` | Create a single-column index. true = auto-named, string = custom index name. e.g. index: 'idx_users_email'. |
-| `compositeKey` | boolean | `false` | Mark as part of a composite primary key. Set primaryKey: true and compositeKey: true on each column. |
-| `compositeUnique` | string | `—` | Group columns into a composite UNIQUE constraint. Columns with the same string value form one constraint. |
-| `compositeIndex` | string | `—` | Group columns into a composite index. Columns with the same string value form one multi-column index. |
-| `guarded` | boolean | `false` | Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance. |
-
-
-```js
-const { Database, Model, TYPES } = require('zero-http')
-
-// Foreign Keys — CASCADE delete from parent removes children
-class Post extends Model {
-	static table = 'posts'
-	static schema = {
-		id:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
-		title:    { type: TYPES.STRING, required: true, index: true },
-		authorId: {
-			type: TYPES.INTEGER, required: true,
-			references: { table: 'users', column: 'id', onDelete: 'CASCADE' }
-		},
-		status: { type: TYPES.STRING, check: '"status" IN (\'draft\', \'published\', \'archived\')' },
+userFactory.state('admin', { role: 'admin' })
+
+// Build without persisting
+const data = userFactory.count(5).make()
+
+// Create and persist
+const users = await userFactory.count(10).create()
+const admins = await userFactory.count(3).withState('admin').create()
+
+// --- Seeder class ---
+class UserSeeder extends Seeder {
+	async run(db) {
+		const factory = new Factory(User)
+		factory.define({
+			name:  () => Fake.fullName(),
+			email: () => Fake.email(),
+		})
+		await factory.count(50).create()
 	}
 }
 
-// Composite Primary Key — junction table for many-to-many
-class Enrollment extends Model {
-	static table = 'enrollments'
-	static schema = {
-		studentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
-			references: { table: 'students', column: 'id', onDelete: 'CASCADE' } },
-		courseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,
-			references: { table: 'courses', column: 'id', onDelete: 'CASCADE' } },
-		grade: { type: TYPES.STRING },
-		enrolledAt: { type: TYPES.DATETIME },
-	}
-}
+// --- SeederRunner ---
+const db = Database.connect('memory')
+db.register(User)
+await db.sync()
 
-// Composite Unique + Composite Index
-class UserRole extends Model {
-	static table = 'user_roles'
-	static schema = {
-		id:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
-		userId: { type: TYPES.INTEGER, compositeUnique: 'user_role',
-			compositeIndex: 'user_lookup' },
-		role:   { type: TYPES.STRING, compositeUnique: 'user_role' },
-		orgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },
-	}
-}
+const runner = new SeederRunner(db)
+await runner.run(UserSeeder)
 
-// Migrations — evolve your schema after deployment
-const db = Database.connect('sqlite', { filename: 'app.db' })
+// Fresh — truncate all then re-seed
+await runner.fresh(UserSeeder)
 
-// Add a column
-await db.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' })
-
-// Create an index
-await db.createIndex('users', ['email'], { name: 'idx_email', unique: true })
-
-// Rename a column
-await db.renameColumn('users', 'bio', 'biography')
-
-// Check if table/column exists before migrating
-if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
-	await db.addColumn('users', 'avatar', { type: TYPES.STRING })
-}
-
-// Introspect existing schema
-const info = await db.describeTable('users')
-console.log(info)
+// --- Fake data generators ---
+console.log(Fake.fullName())   // 'Alice Johnson'
+console.log(Fake.email())      // 'bob.smith42@example.com'
+console.log(Fake.uuid())       // 'a1b2c3d4-e5f6-4789-...'
+console.log(Fake.integer(1, 100))  // 42
+console.log(Fake.sentence())   // 'Lorem ipsum dolor sit amet.'
+console.log(Fake.phone())      // '(555) 123-4567'
+console.log(Fake.color())      // '#3a7f2b'
+console.log(Fake.ip())         // '192.168.1.42'
+console.log(Fake.pick(['a', 'b', 'c']))  // 'b'
 ```
 
 
-> **Tip:** references generates real FK constraints in SQL — enforced at the database level, not just app level.
-> **Tip:** db.sync() automatically creates referenced tables first (topological ordering).
-> **Tip:** compositeKey: true creates a multi-column PRIMARY KEY — perfect for junction tables.
-> **Tip:** compositeUnique groups columns into a single UNIQUE constraint — e.g. (userId, role) must be unique together.
-> **Tip:** compositeIndex groups columns into a single multi-column index — speeds up queries filtering on both columns.
-> **Tip:** check constraints are raw SQL expressions — use double-quoted column names for portability.
-> **Tip:** Migration methods (addColumn, dropColumn, renameColumn) work on all adapters including memory.
-> **Tip:** hasTable/hasColumn are essential before running migrations — check before you change.
-> **Tip:** describeTable returns adapter-specific column metadata — columns, types, defaults, and PK flags.
-> **Tip:** The memory adapter enforces unique and compositeUnique constraints at insert time — throws on duplicates.
-> **Tip:** MongoDB adapter uses JSON Schema validation and unique indexes from schema definitions.
-
-
-### TYPES
-
-Column type constants for defining model schemas. Each type maps to the appropriate native type in the target database adapter.
-
-#### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `STRING` | const | `'string'` | Variable-length string (VARCHAR). |
-| `INTEGER` | const | `'integer'` | Whole number (INT). |
-| `FLOAT` | const | `'float'` | Floating-point number (REAL/DOUBLE). |
-| `BOOLEAN` | const | `'boolean'` | True/false (BOOLEAN/TINYINT). |
-| `DATE` | const | `'date'` | Date without time. |
-| `DATETIME` | const | `'datetime'` | Date with time (TIMESTAMP). |
-| `JSON` | const | `'json'` | JSON column (auto-serialize/deserialize). PostgreSQL maps to JSONB. |
-| `TEXT` | const | `'text'` | Large text field (TEXT/CLOB). |
-| `BLOB` | const | `'blob'` | Binary data (BLOB/BYTEA). |
-| `UUID` | const | `'uuid'` | UUID string. Can auto-generate with default: () => crypto.randomUUID(). |
-| `BIGINT` | const | `'bigint'` | 64-bit integer (BIGINT). |
-| `SMALLINT` | const | `'smallint'` | 16-bit integer (SMALLINT). |
-| `TINYINT` | const | `'tinyint'` | 8-bit integer (TINYINT in MySQL, SMALLINT in PG). |
-| `DECIMAL` | const | `'decimal'` | Fixed-precision number. Use precision/scale in schema: { precision: 10, scale: 2 }. |
-| `DOUBLE` | const | `'double'` | Double-precision float (DOUBLE / DOUBLE PRECISION). |
-| `REAL` | const | `'real'` | Single-precision float (REAL). |
-| `CHAR` | const | `'char'` | Fixed-length string. Use length in schema: { length: 10 }. |
-| `BINARY` | const | `'binary'` | Fixed-length binary. Use length in schema. |
-| `VARBINARY` | const | `'varbinary'` | Variable-length binary. Use length in schema. |
-| `TIMESTAMP` | const | `'timestamp'` | Timestamp with time zone (TIMESTAMPTZ in PG). |
-| `TIME` | const | `'time'` | Time without date. |
-| `ENUM` | const | `'enum'` | MySQL ENUM. Define values: { enum: ['admin', 'user', 'guest'] }. |
-| `SET` | const | `'set'` | MySQL SET (multi-value). Define values: { values: ['read', 'write', 'delete'] }. |
-| `MEDIUMTEXT` | const | `'mediumtext'` | MySQL medium text (16 MB max). |
-| `LONGTEXT` | const | `'longtext'` | MySQL long text (4 GB max). |
-| `MEDIUMBLOB` | const | `'mediumblob'` | MySQL medium blob (16 MB max). |
-| `LONGBLOB` | const | `'longblob'` | MySQL long blob (4 GB max). |
-| `YEAR` | const | `'year'` | MySQL YEAR type (4-digit year). |
-| `SERIAL` | const | `'serial'` | PostgreSQL auto-incrementing integer. |
-| `BIGSERIAL` | const | `'bigserial'` | PostgreSQL auto-incrementing 64-bit integer. |
-| `JSONB` | const | `'jsonb'` | PostgreSQL binary JSON (indexable, faster queries). |
-| `INTERVAL` | const | `'interval'` | PostgreSQL time interval. |
-| `INET` | const | `'inet'` | PostgreSQL IPv4/IPv6 address. |
-| `CIDR` | const | `'cidr'` | PostgreSQL CIDR network address. |
-| `MACADDR` | const | `'macaddr'` | PostgreSQL MAC address. |
-| `MONEY` | const | `'money'` | PostgreSQL money type. |
-| `XML` | const | `'xml'` | PostgreSQL XML type. |
-| `CITEXT` | const | `'citext'` | PostgreSQL case-insensitive text (requires extension). |
-| `ARRAY` | const | `'array'` | PostgreSQL array. Use arrayOf in schema: { arrayOf: 'TEXT' }. |
-| `NUMERIC` | const | `'numeric'` | SQLite NUMERIC affinity. Maps to REAL/INTEGER based on value. |
-
-
-```js
-const { TYPES } = require('zero-http')
-
-static schema = {
-	id:        { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
-	uuid:      { type: TYPES.UUID, default: () => crypto.randomUUID() },
-	name:      { type: TYPES.STRING, required: true, minLength: 2, maxLength: 100 },
-	bio:       { type: TYPES.TEXT },
-	age:       { type: TYPES.INTEGER, min: 0, max: 150 },
-	score:     { type: TYPES.FLOAT, default: 0.0 },
-	active:    { type: TYPES.BOOLEAN, default: true },
-	birthday:  { type: TYPES.DATE },
-	loginAt:   { type: TYPES.DATETIME },
-	settings:  { type: TYPES.JSON, default: {} },
-	avatar:    { type: TYPES.BLOB },
-	price:     { type: TYPES.DECIMAL, precision: 10, scale: 2 },
-	role:      { type: TYPES.ENUM, enum: ['admin', 'user', 'guest'] },
-	perms:     { type: TYPES.SET, values: ['read', 'write', 'delete'] },
-	tags:      { type: TYPES.ARRAY, arrayOf: 'TEXT' },
-	ip:        { type: TYPES.INET },
-	code:      { type: TYPES.CHAR, length: 6 }
-}
-```
+> **Tip:** Factory.make() returns a single object when count is 1, an array when count > 1.
+> **Tip:** Factory.create() persists to the database — make() just builds plain objects.
+> **Tip:** Use state() + withState() for variations: factory.state('admin', { role: 'admin' }).
+> **Tip:** afterCreating() runs after each record is persisted — perfect for creating related records.
+> **Tip:** Fake works with zero dependencies — no need for faker.js or similar libraries.
+> **Tip:** Fake.pick() and Fake.pickMany() are great for selecting from enums or option lists.
+> **Tip:** SeederRunner.fresh() clears all data before seeding — ideal for resetting test databases.
+> **Tip:** Extend Seeder and implement run(db) — SeederRunner instantiates and executes them for you.
 
 
 
@@ -2953,11 +3393,19 @@ Specialized error classes for framework-specific failures — database errors, c
 | `MiddlewareError` | `new MiddlewareError([message], [opts])` | 500 — Middleware failure. opts: { middleware, details }. Thrown when a middleware function fails unexpectedly. |
 | `RoutingError` | `new RoutingError([message], [opts])` | 500 — Routing failure. opts: { path, method, details }. Thrown when route resolution fails. |
 | `TimeoutError` | `new TimeoutError([message], [opts])` | 408 — Operation timed out. opts: { timeout, details }. Thrown when a request exceeds the allowed time. |
+| `ConnectionError` | `new ConnectionError([message], [opts])` | 500 — Database connection failure. Extends DatabaseError. opts: { adapter, attempt, maxRetries, host, port }. |
+| `MigrationError` | `new MigrationError([message], [opts])` | 500 — Migration execution failure. Extends DatabaseError. opts: { migration, direction, batch }. |
+| `TransactionError` | `new TransactionError([message], [opts])` | 500 — Transaction commit/rollback failure. Extends DatabaseError. opts: { phase }. phase: 'begin', 'commit', or 'rollback'. |
+| `QueryError` | `new QueryError([message], [opts])` | 500 — Query execution failure. Extends DatabaseError. opts: { sql, params, table }. |
+| `AdapterError` | `new AdapterError([message], [opts])` | 500 — Adapter-level issue (driver missing, unsupported op). Extends DatabaseError. opts: { adapter, operation }. |
+| `CacheError` | `new CacheError([message], [opts])` | 500 — Caching layer failure. opts: { operation, key }. |
 
 
 ```js
 const { DatabaseError, ConfigurationError, MiddlewareError,
-	RoutingError, TimeoutError, isHttpError } = require('zero-http')
+	RoutingError, TimeoutError, ConnectionError, MigrationError,
+	TransactionError, QueryError, AdapterError, CacheError,
+	isHttpError } = require('zero-http')
 
 // Database error with context
 app.get('/users', async (req, res) => {
@@ -2973,29 +3421,55 @@ app.get('/users', async (req, res) => {
 	}
 })
 
-// Configuration error
-if (!process.env.DATABASE_URL) {
-	throw new ConfigurationError('DATABASE_URL is required', {
-		setting: 'DATABASE_URL'
-	})
-}
+// Connection error with retry context
+throw new ConnectionError('Redis connection refused', {
+	adapter: 'redis',
+	attempt: 3,
+	maxRetries: 5,
+	host: '127.0.0.1',
+	port: 6379
+})
 
-// Middleware error
-const safeMiddleware = (req, res, next) => {
-	try {
-		// middleware logic
-		next()
-	} catch (err) {
-		next(new MiddlewareError('Auth middleware failed', {
-			middleware: 'auth',
-			details: { originalError: err.message }
-		}))
-	}
-}
+// Migration error
+throw new MigrationError('Column already exists', {
+	migration: '003_add_avatar',
+	direction: 'up',
+	batch: 2
+})
+
+// Transaction error
+throw new TransactionError('Deadlock detected', {
+	phase: 'commit'
+})
+
+// Query error with SQL context
+throw new QueryError('Syntax error near FROM', {
+	sql: 'SELECT * FORM users',
+	params: [],
+	table: 'users'
+})
+
+// Adapter error
+throw new AdapterError('ioredis not installed', {
+	adapter: 'redis',
+	operation: 'connect'
+})
+
+// Cache error
+throw new CacheError('Serialization failed', {
+	operation: 'set',
+	key: 'users:active'
+})
 
 // Differentiate error types in error handler
 app.onError((err, req, res, next) => {
-	if (err instanceof DatabaseError) {
+	if (err instanceof ConnectionError) {
+		console.error('Connection failed:', err.host, err.port, `attempt ${err.attempt}/${err.maxRetries}`)
+		res.status(503).json({ error: 'Database unavailable' })
+	} else if (err instanceof MigrationError) {
+		console.error('Migration failed:', err.migration, err.direction)
+		res.status(500).json({ error: 'Migration error' })
+	} else if (err instanceof DatabaseError) {
 		console.error('DB Error:', err.adapter, err.query)
 		res.status(500).json({ error: 'Database unavailable' })
 	} else if (err instanceof TimeoutError) {
@@ -3015,6 +3489,12 @@ app.onError((err, req, res, next) => {
 > **Tip:** MiddlewareError.middleware identifies which middleware failed — useful for debugging middleware chains.
 > **Tip:** RoutingError carries .path and .method — helpful for diagnosing route conflicts.
 > **Tip:** TimeoutError carries .timeout (in ms) — the limit that was exceeded.
+> **Tip:** ConnectionError extends DatabaseError — adds .attempt, .maxRetries, .host, .port for retry tracking.
+> **Tip:** MigrationError extends DatabaseError — .migration, .direction ('up'/'down'), .batch identify the failure.
+> **Tip:** TransactionError extends DatabaseError — .phase tells you if it failed on begin, commit, or rollback.
+> **Tip:** QueryError extends DatabaseError — .sql, .params, .table give full query context for debugging.
+> **Tip:** AdapterError extends DatabaseError — .operation identifies what the adapter was trying to do.
+> **Tip:** CacheError carries .operation and .key — pinpoints exactly which cache operation failed.
 > **Tip:** ORM model validation now throws ValidationError (422) instead of plain Error — catch it with instanceof.
 > **Tip:** Use instanceof checks in app.onError() to handle different failure categories with different responses.
 

@@ -22,7 +22,7 @@ const errorHandler = require('./lib/middleware/errorHandler');
 const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
-const { Database, Model, TYPES, Query, validateFKAction, validateCheck } = require('./lib/orm');
+const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake } = require('./lib/orm');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
 const { version } = require('./package.json');
@@ -94,6 +94,23 @@ module.exports = {
     validateFKAction,
     /** @see module:orm/schema */
     validateCheck,
+    // ORM: Migration framework
+    /** @see module:orm/migrate */
+    Migrator,
+    /** @see module:orm/migrate */
+    defineMigration,
+    // ORM: Query caching
+    /** @see module:orm/cache */
+    QueryCache,
+    // ORM: Seeding
+    /** @see module:orm/seed */
+    Seeder,
+    /** @see module:orm/seed */
+    SeederRunner,
+    /** @see module:orm/seed */
+    Factory,
+    /** @see module:orm/seed */
+    Fake,
     // Error handling & debugging
     /** @see module:errors */
     HttpError: errors.HttpError,
@@ -118,6 +135,13 @@ module.exports = {
     MiddlewareError: errors.MiddlewareError,
     RoutingError: errors.RoutingError,
     TimeoutError: errors.TimeoutError,
+    // ORM-specific errors
+    ConnectionError: errors.ConnectionError,
+    MigrationError: errors.MigrationError,
+    TransactionError: errors.TransactionError,
+    QueryError: errors.QueryError,
+    AdapterError: errors.AdapterError,
+    CacheError: errors.CacheError,
     createError: errors.createError,
     isHttpError: errors.isHttpError,
     /** @see module:debug */

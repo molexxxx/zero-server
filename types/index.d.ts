@@ -37,7 +37,10 @@ export { Env, EnvFieldDef, EnvSchema, EnvLoadOptions, env } from './env';
 export {
     TYPES, SchemaColumnDef, validateValue, validateFKAction, validateCheck,
     Query, Model, ModelHooks, FindOrCreateResult, PaginatedResult,
-    Database, AdapterType,
+    Database, AdapterType, RetryOptions,
+    Migrator, MigrationDefinition, MigrateResult, RollbackResult, MigrationStatus, defineMigration,
+    QueryCache, QueryCacheOptions, CacheStats,
+    Seeder, SeederRunner, Factory, Fake,
 } from './orm';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
 export { validate as schemaValidate } from './orm';
@@ -52,6 +55,12 @@ export {
     MiddlewareError, MiddlewareErrorOptions,
     RoutingError, RoutingErrorOptions,
     TimeoutError, TimeoutErrorOptions,
+    ConnectionError, ConnectionErrorOptions,
+    MigrationError, MigrationErrorOptions,
+    TransactionError, TransactionErrorOptions,
+    QueryError, QueryErrorOptions,
+    AdapterError, AdapterErrorOptions,
+    CacheError, CacheErrorOptions,
     createError, isHttpError,
     ErrorHandlerOptions, errorHandler,
     Debug, DebugLogger, DebugLevels, debug,
@@ -72,6 +81,7 @@ import { fetch } from './fetch';
 import { Env } from './env';
 import { Database, Model, Query } from './orm';
 import { TYPES, validateFKAction, validateCheck } from './orm';
+import { Migrator, QueryCache, Seeder, SeederRunner, Factory, Fake, defineMigration } from './orm';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -79,6 +89,7 @@ import {
     TooManyRequestsError, InternalError, NotImplementedError,
     BadGatewayError, ServiceUnavailableError,
     DatabaseError, ConfigurationError, MiddlewareError, RoutingError, TimeoutError,
+    ConnectionError, MigrationError, TransactionError, QueryError, AdapterError, CacheError,
     createError, isHttpError, errorHandler, debug,
 } from './errors';
 
@@ -134,10 +145,25 @@ declare const zeroServer: {
     MiddlewareError: typeof MiddlewareError;
     RoutingError: typeof RoutingError;
     TimeoutError: typeof TimeoutError;
+    // ORM-specific errors
+    ConnectionError: typeof ConnectionError;
+    MigrationError: typeof MigrationError;
+    TransactionError: typeof TransactionError;
+    QueryError: typeof QueryError;
+    AdapterError: typeof AdapterError;
+    CacheError: typeof CacheError;
     createError: typeof createError;
     isHttpError: typeof isHttpError;
     errorHandler: typeof errorHandler;
     debug: typeof debug;
+    // ORM enterprise features
+    Migrator: typeof Migrator;
+    defineMigration: typeof defineMigration;
+    QueryCache: typeof QueryCache;
+    Seeder: typeof Seeder;
+    SeederRunner: typeof SeederRunner;
+    Factory: typeof Factory;
+    Fake: typeof Fake;
     // classes
     WebSocketConnection: WebSocketConnection;
     WebSocketPool: {

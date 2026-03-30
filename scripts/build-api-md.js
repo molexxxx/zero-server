@@ -47,7 +47,10 @@ const {
   helmet, timeout, requestId, cookieParser,
   csrf, validate, errorHandler,
   env, Database, Model, TYPES, Query,
+  Migrator, defineMigration, QueryCache,
+  Seeder, SeederRunner, Factory, Fake,
   HttpError, NotFoundError, BadRequestError, ValidationError, createError, isHttpError,
+  ConnectionError, MigrationError, TransactionError, QueryError, AdapterError, CacheError,
   debug, version,
   WebSocketConnection, WebSocketPool, SSEStream
 } = require('zero-http')
@@ -79,6 +82,13 @@ const {
 | \`Model\` | class | Base model class for defining database entities |
 | \`TYPES\` | enum | Column type constants for model schemas |
 | \`Query\` | class | Fluent query builder |
+| \`Migrator\` | class | Versioned migration framework |
+| \`defineMigration\` | function | Migration definition helper |
+| \`QueryCache\` | class | In-memory LRU query cache with TTL |
+| \`Seeder\` | class | Base seeder class for data population |
+| \`SeederRunner\` | class | Seeder orchestration runner |
+| \`Factory\` | class | Model record factory for testing |
+| \`Fake\` | class | Built-in fake data generator |
 | \`HttpError\` | class | Base HTTP error class with status code |
 | \`BadRequestError\` | class | 400 error |
 | \`UnauthorizedError\` | class | 401 error |
@@ -96,6 +106,12 @@ const {
 | \`BadGatewayError\` | class | 502 error |
 | \`ServiceUnavailableError\` | class | 503 error |
 | \`DatabaseError\` | class | Database operation error |
+| \`ConnectionError\` | class | Database connection error |
+| \`MigrationError\` | class | Migration execution error |
+| \`TransactionError\` | class | Transaction error |
+| \`QueryError\` | class | Query execution error |
+| \`AdapterError\` | class | Adapter-level error |
+| \`CacheError\` | class | Cache operation error |
 | \`ConfigurationError\` | class | Configuration/setup error |
 | \`MiddlewareError\` | class | Middleware pipeline error |
 | \`RoutingError\` | class | Routing resolution error |

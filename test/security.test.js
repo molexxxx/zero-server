@@ -680,3 +680,333 @@ describe('Security — SQLite Adapter Pragma Escaping', () => {
         db.close();
     });
 });
+
+// ===========================================================
+//  Redis Adapter — Input Validation Guards
+// ===========================================================
+describe('Security — Redis Adapter Input Validation', () => {
+    const RedisAdapter = (() => {
+        try { return require('../lib/orm/adapters/redis'); } catch { return null; }
+    })();
+
+    // Build a mock adapter without going through the constructor
+    // (constructor needs ioredis — we're testing validation methods)
+    function makeMock() {
+        const adapter = Object.create(RedisAdapter.prototype);
+        adapter._prefix = 'test:';
+        adapter._schemas = new Map();
+        adapter._indexes = new Map();
+        adapter._subscribers = new Map();
+        adapter._client = {};
+        adapter._subClient = null;
+        return adapter;
+    }
+
+    const skipIf = !RedisAdapter;
+
+    it('_validateKey rejects empty string', () => {
+        if (skipIf) return;
+        const a = makeMock();
+        expect(() => a._validateKey('')).toThrow('non-empty string');
+    });
+
+    it('_validateKey rejects non-string values', () => {
+        if (skipIf) return;
+        const a = makeMock();
+        expect(() => a._validateKey(123)).toThrow('non-empty string');
+        expect(() => a._validateKey(null)).toThrow('non-empty string');
+        expect(() => a._validateKey(undefined)).toThrow('non-empty string');
+    });
+
+    it('_validateKey rejects strings with control characters', () => {
+        if (skipIf) return;
+        const a = makeMock();
+        expect(() => a._validateKey('key\x00name')).toThrow('control characters');
+        expect(() => a._validateKey('key\nnewline')).toThrow('control characters');
+        expect(() => a._validateKey('key\ttab')).toThrow('control characters');
+        expect(() => a._validateKey('key\rreturn')).toThrow('control characters');
+    });
+
+    it('_validateKey accepts valid keys', () => {
+        if (skipIf) return;
+        const a = makeMock();
+        expect(() => a._validateKey('users')).not.toThrow();
+        expect(() => a._validateKey('cache:item:42')).not.toThrow();
+        expect(() => a._validateKey('my-key_v2.data')).not.toThrow();
+    });
+
+    it('_validateKey uses custom label in error message', () => {
+        if (skipIf) return;
+        const a = makeMock();
+        expect(() => a._validateKey('', 'channel')).toThrow('channel');
+    });
+
+    it('get() rejects keys with control characters', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.get('bad\x00key')).rejects.toThrow('control characters');
+    });
+
+    it('set() rejects empty key', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.set('', 'value')).rejects.toThrow('non-empty string');
+    });
+
+    it('del() rejects key with null byte', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.del('key\x00')).rejects.toThrow('control characters');
+    });
+
+    it('subscribe() rejects non-function callback', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.subscribe('chan', 'not-a-function')).rejects.toThrow('function');
+    });
+
+    it('subscribe() rejects channel with control chars', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.subscribe('ch\x00an', () => {})).rejects.toThrow('control characters');
+    });
+
+    it('raw() rejects non-string command', async () => {
+        if (skipIf) return;
+        const a = makeMock();
+        await expect(a.raw(123)).rejects.toThrow('non-empty string');
+        await expect(a.raw('')).rejects.toThrow('non-empty string');
+    });
+});
+
+// ===========================================================
+//  ReDoS-Safe LIKE Matcher (Memory & Redis Adapters)
+// ===========================================================
+describe('Security — ReDoS-Safe LIKE Matcher', () => {
+    const MemoryAdapter = require('../lib/orm/adapters/memory');
+    const { Database, TYPES } = require('../');
+
+    it('matches simple % wildcard', async () => {
+        const db = Database.connect('memory');
+        await db.adapter.createTable('like_test', {
+            id: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: TYPES.STRING },
+        });
+        await db.adapter.insert('like_test', { name: 'Alice' });
+        await db.adapter.insert('like_test', { name: 'Bob' });
+        await db.adapter.insert('like_test', { name: 'Alicia' });
+
+        const r = await db.adapter.execute({
+            action: 'select', table: 'like_test',
+            where: [{ field: 'name', op: 'LIKE', value: 'Ali%', logic: 'AND' }],
+        });
+        expect(r.length).toBe(2);
+        expect(r.map(x => x.name).sort()).toEqual(['Alice', 'Alicia']);
+    });
+
+    it('matches _ single char wildcard', async () => {
+        const db = Database.connect('memory');
+        await db.adapter.createTable('like_underscore', {
+            id: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            code: { type: TYPES.STRING },
+        });
+        await db.adapter.insert('like_underscore', { code: 'A1' });
+        await db.adapter.insert('like_underscore', { code: 'AB' });
+        await db.adapter.insert('like_underscore', { code: 'ABC' });
+
+        const r = await db.adapter.execute({
+            action: 'select', table: 'like_underscore',
+            where: [{ field: 'code', op: 'LIKE', value: 'A_', logic: 'AND' }],
+        });
+        expect(r.length).toBe(2);
+        expect(r.map(x => x.code).sort()).toEqual(['A1', 'AB']);
+    });
+
+    it('does NOT exhibit exponential backtracking on pathological patterns', () => {
+        // This pattern would cause catastrophic backtracking with regex:
+        // %a%a%a%a%a%a%a%a%a%a%b  matched against "aaaaaaaaaa"
+        // With regex: /^.*a.*a.*a.*a.*a.*a.*a.*a.*a.*a.*b$/i  → exponential
+        // With DP: O(n*m) → instant
+        const _likeSafe = (() => {
+            // Extract the function from the module file directly
+            const src = require('fs').readFileSync(
+                require('path').join(__dirname, '..', 'lib', 'orm', 'adapters', 'memory.js'), 'utf8'
+            );
+            const match = src.match(/function _likeSafe[\s\S]+?^}/m);
+            if (!match) throw new Error('Could not extract _likeSafe');
+            return new Function('return ' + match[0])();
+        })();
+
+        const input = 'a'.repeat(30);
+        const pattern = '%a'.repeat(15) + '%b';
+
+        const start = Date.now();
+        const result = _likeSafe(input, pattern);
+        const elapsed = Date.now() - start;
+
+        expect(result).toBe(false);
+        // With regex, this would take minutes/hours. With DP, <100ms.
+        expect(elapsed).toBeLessThan(500);
+    });
+
+    it('LIKE is case-insensitive', async () => {
+        const db = Database.connect('memory');
+        await db.adapter.createTable('like_case', {
+            id: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: TYPES.STRING },
+        });
+        await db.adapter.insert('like_case', { name: 'Alice' });
+        await db.adapter.insert('like_case', { name: 'ALICE' });
+
+        const r = await db.adapter.execute({
+            action: 'select', table: 'like_case',
+            where: [{ field: 'name', op: 'LIKE', value: 'alice', logic: 'AND' }],
+        });
+        expect(r.length).toBe(2);
+    });
+});
+
+// ===========================================================
+//  Migrator — Name Validation Guards
+// ===========================================================
+describe('Security — Migrator Name Validation', () => {
+    const { Database, Migrator, defineMigration } = require('../');
+
+    it('add() rejects empty name', () => {
+        const db = Database.connect('memory');
+        const m = new Migrator(db);
+        expect(() => m.add({ name: '', up: () => {}, down: () => {} })).toThrow('must have a name');
+    });
+
+    it('add() rejects non-string name', () => {
+        const db = Database.connect('memory');
+        const m = new Migrator(db);
+        expect(() => m.add({ name: 123, up: () => {}, down: () => {} })).toThrow('must have a name');
+    });
+
+    it('add() rejects names with spaces', () => {
+        const db = Database.connect('memory');
+        const m = new Migrator(db);
+        expect(() => m.add({ name: 'bad name', up: () => {}, down: () => {} })).toThrow('invalid characters');
+    });
+
+    it('add() rejects names with special characters', () => {
+        const db = Database.connect('memory');
+        const m = new Migrator(db);
+        expect(() => m.add({ name: 'drop;table', up: () => {}, down: () => {} })).toThrow('invalid characters');
+        expect(() => m.add({ name: "name'or 1=1", up: () => {}, down: () => {} })).toThrow('invalid characters');
+        expect(() => m.add({ name: 'path/../traversal', up: () => {}, down: () => {} })).toThrow('invalid characters');
+    });
+
+    it('add() accepts valid migration names', () => {
+        const db = Database.connect('memory');
+        const m = new Migrator(db);
+        expect(() => m.add({ name: '001_create_users', up: () => {}, down: () => {} })).not.toThrow();
+        expect(() => m.add({ name: 'v2.0-add-index', up: () => {}, down: () => {} })).not.toThrow();
+        expect(() => m.add({ name: 'CamelCase123', up: () => {}, down: () => {} })).not.toThrow();
+    });
+
+    it('defineMigration() rejects names with special characters', () => {
+        expect(() => defineMigration('bad name', () => {}, () => {})).toThrow('invalid characters');
+        expect(() => defineMigration('drop;table', () => {}, () => {})).toThrow('invalid characters');
+    });
+
+    it('defineMigration() rejects missing name', () => {
+        expect(() => defineMigration('', () => {}, () => {})).toThrow('name is required');
+        expect(() => defineMigration(null, () => {}, () => {})).toThrow('name is required');
+    });
+
+    it('defineMigration() rejects non-function up/down', () => {
+        expect(() => defineMigration('valid_name', 'not-fn', () => {})).toThrow('up must be a function');
+        expect(() => defineMigration('valid_name', () => {}, 'not-fn')).toThrow('down must be a function');
+    });
+
+    it('defineMigration() accepts valid inputs', () => {
+        const result = defineMigration('001_users', async () => {}, async () => {});
+        expect(result).toEqual({ name: '001_users', up: expect.any(Function), down: expect.any(Function) });
+    });
+});
+
+// ===========================================================
+//  QueryCache — Bounds Validation
+// ===========================================================
+describe('Security — QueryCache Bounds Validation', () => {
+    const { QueryCache } = require('../');
+
+    it('maxEntries is clamped to at least 1', () => {
+        const c = new QueryCache({ maxEntries: 0 });
+        expect(c._maxEntries).toBe(1);
+        const c2 = new QueryCache({ maxEntries: -10 });
+        expect(c2._maxEntries).toBe(1);
+    });
+
+    it('defaultTTL is clamped to at least 0', () => {
+        const c = new QueryCache({ defaultTTL: -5 });
+        expect(c._defaultTTL).toBe(0);
+    });
+
+    it('negative TTL in set() is clamped to 0', () => {
+        const c = new QueryCache({ defaultTTL: 0 });
+        c.set('key', 'val', -100);
+        // Should still be retrievable (TTL 0 = no expiry)
+        expect(c.get('key')).toBe('val');
+    });
+
+    it('NaN TTL in set() is treated as 0', () => {
+        const c = new QueryCache({ defaultTTL: 0 });
+        c.set('key', 'val', NaN);
+        expect(c.get('key')).toBe('val');
+    });
+
+    it('NaN maxEntries defaults to 1', () => {
+        const c = new QueryCache({ maxEntries: NaN });
+        expect(c._maxEntries).toBe(1);
+    });
+});
+
+// ===========================================================
+//  Factory — Count Validation
+// ===========================================================
+describe('Security — Factory Count Validation', () => {
+    const { Factory, Model, TYPES, Database } = require('../');
+
+    class TestModel extends Model {
+        static table = 'factory_test';
+        static schema = {
+            id: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: TYPES.STRING },
+        };
+    }
+
+    it('rejects count of 0', () => {
+        const f = new Factory(TestModel);
+        expect(() => f.count(0)).toThrow('positive integer');
+    });
+
+    it('rejects negative count', () => {
+        const f = new Factory(TestModel);
+        expect(() => f.count(-5)).toThrow('positive integer');
+    });
+
+    it('rejects NaN count', () => {
+        const f = new Factory(TestModel);
+        expect(() => f.count(NaN)).toThrow('positive integer');
+    });
+
+    it('rejects Infinity count', () => {
+        const f = new Factory(TestModel);
+        expect(() => f.count(Infinity)).toThrow('positive integer');
+    });
+
+    it('floors fractional counts', () => {
+        const f = new Factory(TestModel);
+        f.count(3.9);
+        expect(f._count).toBe(3);
+    });
+
+    it('accepts valid positive integer', () => {
+        const f = new Factory(TestModel);
+        f.count(10);
+        expect(f._count).toBe(10);
+    });
+});

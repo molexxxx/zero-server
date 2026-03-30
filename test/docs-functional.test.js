@@ -2690,3 +2690,404 @@ describe('Docs — Error Handling: debug', () => {
 		}).not.toThrow();
 	});
 });
+
+// ============================================================
+//  23. ORM — Migrator Framework
+// ============================================================
+
+describe('Docs — ORM: Migrator Framework', () => {
+	const { Database, Model, TYPES, Migrator, defineMigration } = require('../');
+
+	let db;
+
+	beforeEach(async () => {
+		db = Database.connect('memory');
+	});
+	afterEach(() => db.close());
+
+	it('Migrator runs up migrations and tracks batches', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({
+			name: '001_create_posts',
+			async up(db) {
+				await db.adapter.createTable('posts', {
+					id:    { type: 'integer', primaryKey: true, autoIncrement: true },
+					title: { type: 'string', required: true },
+				});
+			},
+			async down(db) {
+				await db.adapter.dropTable('posts');
+			},
+		});
+
+		const { migrated, batch } = await migrator.migrate();
+		expect(migrated).toEqual(['001_create_posts']);
+		expect(batch).toBe(1);
+		expect(await db.adapter.hasTable('posts')).toBe(true);
+	});
+
+	it('Migrator.rollback undoes the last batch', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({
+			name: '001_create_items',
+			async up(db) {
+				await db.adapter.createTable('items', { id: { type: 'integer', primaryKey: true } });
+			},
+			async down(db) {
+				await db.adapter.dropTable('items');
+			},
+		});
+		await migrator.migrate();
+		expect(await db.adapter.hasTable('items')).toBe(true);
+
+		const { rolledBack } = await migrator.rollback();
+		expect(rolledBack).toEqual(['001_create_items']);
+		expect(await db.adapter.hasTable('items')).toBe(false);
+	});
+
+	it('Migrator.status reports executed and pending', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({ name: '001', async up() {}, async down() {} });
+		migrator.add({ name: '002', async up() {}, async down() {} });
+		await migrator.migrate();
+		migrator.add({ name: '003', async up() {}, async down() {} });
+
+		const { executed, pending, lastBatch } = await migrator.status();
+		expect(executed).toHaveLength(2);
+		expect(pending).toEqual(['003']);
+		expect(lastBatch).toBe(1);
+	});
+
+	it('Migrator.hasPending checks for unrun migrations', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({ name: 'test', async up() {}, async down() {} });
+		expect(await migrator.hasPending()).toBe(true);
+		await migrator.migrate();
+		expect(await migrator.hasPending()).toBe(false);
+	});
+
+	it('Migrator.reset rollbacks all then re-runs', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({ name: '001', async up() {}, async down() {} });
+		await migrator.migrate();
+
+		const { rolledBack, migrated } = await migrator.reset();
+		expect(rolledBack).toContain('001');
+		expect(migrated).toContain('001');
+	});
+
+	it('Migrator.fresh drops everything and re-migrates', async () => {
+		const migrator = new Migrator(db);
+		migrator.add({
+			name: '001_create_fresh',
+			async up(db) {
+				await db.adapter.createTable('fresh_tbl', { id: { type: 'integer', primaryKey: true } });
+			},
+			async down(db) {
+				await db.adapter.dropTable('fresh_tbl');
+			},
+		});
+		await migrator.migrate();
+		const { migrated, batch } = await migrator.fresh();
+		expect(migrated).toContain('001_create_fresh');
+		expect(batch).toBe(1);
+	});
+
+	it('defineMigration creates a valid migration object', () => {
+		const m = defineMigration('test_migration', async () => {}, async () => {});
+		expect(m.name).toBe('test_migration');
+		expect(typeof m.up).toBe('function');
+		expect(typeof m.down).toBe('function');
+	});
+
+	it('Migrator batches multiple migrations together', async () => {
+		const migrator = new Migrator(db);
+		migrator.addAll([
+			{ name: '001', async up() {}, async down() {} },
+			{ name: '002', async up() {}, async down() {} },
+		]);
+
+		const { migrated, batch } = await migrator.migrate();
+		expect(migrated).toHaveLength(2);
+		expect(batch).toBe(1);
+
+		// Add more and run again — should create batch 2
+		migrator.add({ name: '003', async up() {}, async down() {} });
+		const r2 = await migrator.migrate();
+		expect(r2.batch).toBe(2);
+	});
+});
+
+// ============================================================
+//  24. ORM — QueryCache
+// ============================================================
+
+describe('Docs — ORM: QueryCache', () => {
+	const { QueryCache } = require('../');
+
+	it('set/get/delete/has lifecycle', () => {
+		const cache = new QueryCache({ maxEntries: 100, defaultTTL: 60 });
+		cache.set('config', { theme: 'dark', lang: 'en' }, 300);
+		expect(cache.get('config')).toEqual({ theme: 'dark', lang: 'en' });
+		expect(cache.has('config')).toBe(true);
+		cache.delete('config');
+		expect(cache.has('config')).toBe(false);
+		expect(cache.get('config')).toBeUndefined();
+	});
+
+	it('remember pattern computes on miss, caches on hit', async () => {
+		const cache = new QueryCache({ defaultTTL: 60 });
+		let calls = 0;
+		const compute = async () => { calls++; return [1, 2, 3]; };
+
+		const v1 = await cache.remember('users', compute, 60);
+		expect(v1).toEqual([1, 2, 3]);
+		expect(calls).toBe(1);
+
+		const v2 = await cache.remember('users', compute, 60);
+		expect(v2).toEqual([1, 2, 3]);
+		expect(calls).toBe(1);
+	});
+
+	it('invalidate removes entries by table name', () => {
+		const cache = new QueryCache({ maxEntries: 100, defaultTTL: 60 });
+		cache.set('users|all', [1]);
+		cache.set('users|active', [2]);
+		cache.set('posts|all', [3]);
+		const removed = cache.invalidate('users');
+		expect(removed).toBe(2);
+		expect(cache.has('posts|all')).toBe(true);
+	});
+
+	it('stats tracks hits and misses', () => {
+		const cache = new QueryCache({ maxEntries: 100, defaultTTL: 60 });
+		cache.set('x', 1);
+		cache.get('x');    // hit
+		cache.get('y');    // miss
+		cache.get('z');    // miss
+		const s = cache.stats();
+		expect(s.hits).toBe(1);
+		expect(s.misses).toBe(2);
+		expect(s.hitRate).toBeCloseTo(1 / 3);
+		expect(s.size).toBe(1);
+	});
+
+	it('flush clears everything and resets stats', () => {
+		const cache = new QueryCache();
+		cache.set('a', 1);
+		cache.set('b', 2);
+		cache.get('a');
+		const count = cache.flush();
+		expect(count).toBe(2);
+		expect(cache.stats().size).toBe(0);
+		expect(cache.stats().hits).toBe(0);
+	});
+
+	it('LRU eviction when maxEntries exceeded', () => {
+		const cache = new QueryCache({ maxEntries: 2, defaultTTL: 60 });
+		cache.set('a', 1);
+		cache.set('b', 2);
+		cache.set('c', 3); // evicts 'a'
+		expect(cache.has('a')).toBe(false);
+		expect(cache.get('b')).toBe(2);
+		expect(cache.get('c')).toBe(3);
+	});
+
+	it('prune removes expired entries', async () => {
+		const cache = new QueryCache({ defaultTTL: 0.05 });
+		cache.set('x', 1);
+		cache.set('y', 2);
+		cache.set('keep', 3, 600);
+		await new Promise(r => setTimeout(r, 80));
+		const pruned = cache.prune();
+		expect(pruned).toBe(2);
+		expect(cache.has('keep')).toBe(true);
+	});
+
+	it('wrap caches query results by descriptor', async () => {
+		const cache = new QueryCache({ defaultTTL: 60 });
+		const desc = { table: 'users', action: 'select', where: [] };
+		let exec = 0;
+		const r1 = await cache.wrap(desc, async () => { exec++; return [{ id: 1 }]; }, 30);
+		const r2 = await cache.wrap(desc, async () => { exec++; return []; }, 30);
+		expect(r1).toEqual([{ id: 1 }]);
+		expect(r2).toEqual([{ id: 1 }]);
+		expect(exec).toBe(1);
+	});
+});
+
+// ============================================================
+//  25. ORM — Seeder, Factory & Fake
+// ============================================================
+
+describe('Docs — ORM: Seeder, Factory & Fake', () => {
+	const { Database, Model, TYPES, Seeder, SeederRunner, Factory, Fake } = require('../');
+
+	let db;
+
+	class SeedUser extends Model {
+		static table  = 'seed_users';
+		static schema = {
+			id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+			name:  { type: TYPES.STRING, required: true },
+			email: { type: TYPES.STRING, required: true },
+			role:  { type: TYPES.STRING, default: 'user' },
+		};
+	}
+
+	beforeEach(async () => {
+		db = Database.connect('memory');
+		db.register(SeedUser);
+		await db.sync();
+	});
+	afterEach(() => db.close());
+
+	it('Factory.define + make builds data without persisting', () => {
+		const factory = new Factory(SeedUser);
+		factory.define({
+			name:  () => Fake.fullName(),
+			email: () => Fake.email(),
+			role:  'user',
+		});
+		const users = factory.count(5).make();
+		expect(users).toHaveLength(5);
+		expect(users[0].name).toBeDefined();
+		expect(users[0].email).toContain('@');
+	});
+
+	it('Factory.create persists records to database', async () => {
+		const factory = new Factory(SeedUser);
+		factory.define({ name: () => Fake.fullName(), email: () => Fake.email() });
+		const user = await factory.create();
+		expect(user.id).toBeDefined();
+		const found = await SeedUser.findById(user.id);
+		expect(found.name).toBe(user.name);
+	});
+
+	it('Factory.state + withState applies variations', async () => {
+		const factory = new Factory(SeedUser);
+		factory.define({ name: () => Fake.fullName(), email: () => Fake.email(), role: 'user' });
+		factory.state('admin', { role: 'admin' });
+		const admin = await factory.withState('admin').create();
+		expect(admin.role).toBe('admin');
+	});
+
+	it('Seeder + SeederRunner workflow', async () => {
+		class UserSeeder extends Seeder {
+			async run(db) {
+				const factory = new Factory(SeedUser);
+				factory.define({ name: () => Fake.fullName(), email: () => Fake.email() });
+				await factory.count(10).create();
+			}
+		}
+
+		const runner = new SeederRunner(db);
+		const names = await runner.run(UserSeeder);
+		expect(names).toEqual(['UserSeeder']);
+		const all = await SeedUser.find();
+		expect(all.length).toBe(10);
+	});
+
+	it('SeederRunner.fresh clears data before seeding', async () => {
+		await SeedUser.create({ name: 'Existing', email: 'existing@t.com' });
+		class FreshSeeder extends Seeder {
+			async run() { await SeedUser.create({ name: 'NewOnly', email: 'new@t.com' }); }
+		}
+		const runner = new SeederRunner(db);
+		await runner.fresh(FreshSeeder);
+		const all = await SeedUser.find();
+		expect(all.every(u => u.name === 'NewOnly')).toBe(true);
+	});
+
+	it('Fake generators produce valid data', () => {
+		expect(Fake.fullName()).toContain(' ');
+		expect(Fake.email()).toContain('@');
+		expect(Fake.uuid()).toMatch(/^[0-9a-f-]{36}$/i);
+		expect(Fake.integer(1, 10)).toBeGreaterThanOrEqual(1);
+		expect(Fake.integer(1, 10)).toBeLessThanOrEqual(10);
+		expect(typeof Fake.boolean()).toBe('boolean');
+		expect(Fake.phone()).toMatch(/^\(\d{3}\) \d{3}-\d{4}$/);
+		expect(Fake.color()).toMatch(/^#[0-9a-f]{6}$/);
+		expect(Fake.ip()).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+		expect(Fake.url()).toMatch(/^https:\/\//);
+		expect(Fake.sentence().endsWith('.')).toBe(true);
+	});
+});
+
+// ============================================================
+//  26. Error Handling — ORM Error Classes
+// ============================================================
+
+describe('Docs — Error Handling: ORM Error Classes', () => {
+	const {
+		ConnectionError, MigrationError, TransactionError,
+		QueryError, AdapterError, CacheError,
+		DatabaseError, HttpError, isHttpError,
+	} = require('../');
+
+	it('ConnectionError carries retry context', () => {
+		const err = new ConnectionError('Redis refused', {
+			adapter: 'redis', attempt: 3, maxRetries: 5, host: '127.0.0.1', port: 6379,
+		});
+		expect(err).toBeInstanceOf(DatabaseError);
+		expect(err).toBeInstanceOf(HttpError);
+		expect(err.statusCode).toBe(500);
+		expect(err.code).toBe('CONNECTION_ERROR');
+		expect(err.attempt).toBe(3);
+		expect(err.maxRetries).toBe(5);
+		expect(err.host).toBe('127.0.0.1');
+		expect(err.port).toBe(6379);
+	});
+
+	it('MigrationError carries migration context', () => {
+		const err = new MigrationError('Column exists', {
+			migration: '003_avatar', direction: 'up', batch: 2,
+		});
+		expect(err.code).toBe('MIGRATION_ERROR');
+		expect(err.migration).toBe('003_avatar');
+		expect(err.direction).toBe('up');
+		expect(err.batch).toBe(2);
+	});
+
+	it('TransactionError carries phase', () => {
+		const err = new TransactionError('Deadlock', { phase: 'commit' });
+		expect(err.code).toBe('TRANSACTION_ERROR');
+		expect(err.phase).toBe('commit');
+	});
+
+	it('QueryError carries SQL context', () => {
+		const err = new QueryError('Syntax error', { sql: 'BAD SQL', params: [1], table: 'users' });
+		expect(err.code).toBe('QUERY_ERROR');
+		expect(err.sql).toBe('BAD SQL');
+		expect(err.params).toEqual([1]);
+		expect(err.table).toBe('users');
+	});
+
+	it('AdapterError carries adapter/operation', () => {
+		const err = new AdapterError('Not installed', { adapter: 'redis', operation: 'connect' });
+		expect(err.code).toBe('ADAPTER_ERROR');
+		expect(err.operation).toBe('connect');
+	});
+
+	it('CacheError carries operation/key', () => {
+		const err = new CacheError('Serialization failed', { operation: 'set', key: 'users' });
+		expect(err.code).toBe('CACHE_ERROR');
+		expect(err.operation).toBe('set');
+		expect(err.key).toBe('users');
+	});
+
+	it('all ORM errors work with isHttpError and toJSON', () => {
+		const errors = [
+			new ConnectionError(), new MigrationError(),
+			new TransactionError(), new QueryError(),
+			new AdapterError(), new CacheError(),
+		];
+		for (const err of errors) {
+			expect(isHttpError(err)).toBe(true);
+			const json = err.toJSON();
+			expect(json.statusCode).toBe(500);
+			expect(json.code).toBeDefined();
+			expect(json.error).toBeDefined();
+		}
+	});
+});
