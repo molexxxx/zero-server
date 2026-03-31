@@ -71,13 +71,13 @@ function buildSunburst(segments, centerPct, centerLabel, size)
 
     let paths = '';
     // background tracks
-    paths += `<circle cx="${C}" cy="${C}" r="100" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="28"/>`;
+    paths += `<circle cx="${C}" cy="${C}" r="100" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="28" class="sb-track-outer"/>`;
     // inner background: 4 quarter-arcs with the same gap as the data arcs so
     // the track itself shows the separator rather than just the page background
     const innerBgGap = 6;
     for (let q = 0; q < 4; q++) {
         const ba0 = q * 90 + innerBgGap / 2, ba1 = (q + 1) * 90 - innerBgGap / 2;
-        paths += arc(55, ba0, ba1, 'rgba(255,255,255,0.04)', 14, { cap: 'butt' });
+        paths += arc(55, ba0, ba1, 'rgba(255,255,255,0.12)', 14, { cap: 'butt', cls: 'sb-track-inner' });
     }
     // tick marks
     for (let d = 0; d < 360; d += 30) {

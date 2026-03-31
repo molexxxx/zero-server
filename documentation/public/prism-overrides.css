@@ -77,4 +77,4 @@ code.inline, :not(pre) > code:not(.method-name):not(.signature) { background: rg
 [data-theme="light"] .token.function { color: #1a7de0 !important; }
 [data-theme="light"] .token.regex, [data-theme="light"] .token.important { color: #b45309 !important; }
 [data-theme="light"] .token.variable { color: #b45309 !important; }
-[data-theme="light"] code.inline, [data-theme="light"] :not(pre) > code:not(.method-name):not(.signature) { background: rgba(0,0,0,0.06) !important; color: #1e2028 !important; }
+[data-theme="light"] code.inline, [data-theme="light"] :not(pre) > code:not(.method-name):not(.signature):not(.tip-ref):not(.tip-val) { background: rgba(0,0,0,0.06) !important; color: #1e2028 !important; }
