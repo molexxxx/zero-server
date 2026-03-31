@@ -117,7 +117,7 @@ const testsBadge   = `[![Tests](${badges.tests.url})](https://github.com/tonywie
 const covBadge     = `[![Coverage](${badges.coverage.url})](https://github.com/tonywied17/zero-http)`;
 
 // Replace or insert the test/coverage badge lines
-const badgeRowRe = /\[!\[Tests\].*?\n\[!\[Coverage\].*?\n/;
+const badgeRowRe = /\[!\[Tests\][^\n]*\r?\n\[!\[Coverage\][^\n]*\r?\n/
 const newBadgeRow = `${testsBadge}\n${covBadge}\n`;
 
 if (badgeRowRe.test(readme)) {
@@ -125,7 +125,7 @@ if (badgeRowRe.test(readme)) {
 } else {
     // Insert after the Dependencies badge line
     readme = readme.replace(
-        /(\[!\[Dependencies\].*?\n)/,
+        /([^\n]*\[!\[Dependencies\][^\n]*\r?\n)/,
         `$1${testsBadge}\n${covBadge}\n`
     );
 }
