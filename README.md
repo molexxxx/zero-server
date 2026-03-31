@@ -10,8 +10,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-2325%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-http/actions)
-[![Coverage](https://img.shields.io/badge/coverage-72.18%25-yellowgreen.svg)](https://github.com/tonywied17/zero-http)
+[![Tests](https://img.shields.io/badge/tests-3234%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-http/actions)
+[![Coverage](https://img.shields.io/badge/coverage-91.6%25-brightgreen.svg)](https://github.com/tonywied17/zero-http)
 
 > **Zero-dependency backend framework for Node.js — full-featured routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, response compression, and a built-in HTTP client.**
 
