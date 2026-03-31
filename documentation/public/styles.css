@@ -944,6 +944,10 @@ code.signature{color:#9fe6a0;background:rgba(159,230,160,0.06);padding:2px 7px;b
 [data-theme="light"] .search-result-icon{background:rgba(79,91,213,0.08)}
 [data-theme="light"] .search-trigger{border-color:rgba(0,0,0,0.08);background:rgba(0,0,0,0.03);color:var(--muted)}
 [data-theme="light"] .search-trigger:hover{border-color:rgba(79,91,213,0.3);color:var(--text);background:rgba(0,0,0,0.04)}
+@media(max-width:640px){
+	[data-theme="light"] .search-trigger{background:rgba(79,91,213,0.10);border-color:rgba(79,91,213,0.22);color:var(--accent)}
+	[data-theme="light"] .search-trigger:hover{background:rgba(79,91,213,0.18);border-color:rgba(79,91,213,0.38)}
+}
 [data-theme="light"] .search-trigger-kbd,[data-theme="light"] .toc-search-kbd{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.04);color:var(--muted)}
 [data-theme="light"] .toc-search-trigger{border-color:rgba(0,0,0,0.08);background:rgba(0,0,0,0.02);color:var(--muted)}
 [data-theme="light"] .fab-top{background:var(--panel);border-color:rgba(0,0,0,0.08);box-shadow:0 4px 16px rgba(0,0,0,0.1)}

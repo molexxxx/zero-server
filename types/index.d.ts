@@ -179,4 +179,4 @@ declare const zeroServer: {
     version: string;
 };
 
-export = zeroServer;
+export default zeroServer;
