@@ -1141,9 +1141,14 @@ button.site-badge{cursor:pointer;border:none;background:none;padding:0;font-fami
 [data-theme="light"] .bm-group-head td{background:rgba(0,0,0,0.02)}
 [data-theme="light"] .sb-stat{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.06)}
 [data-theme="light"] .sb-stat-dim{border-left-color:rgba(0,0,0,0.12)}
+[data-theme="light"] .sb-stat-green{border-left-color:#3fb950}
+[data-theme="light"] .sb-stat-red{border-left-color:#f85149}
+[data-theme="light"] .sb-stat-blue{border-left-color:#58a6ff}
+[data-theme="light"] .sb-stat-yellow{border-left-color:#d29922}
 [data-theme="light"] .sb-dist-track{background:rgba(0,0,0,0.04)}
 [data-theme="light"] .sb-sunburst line{stroke:rgba(0,0,0,0.08)}
-[data-theme="light"] .sb-sunburst circle[stroke="rgba(255,255,255,0.04)"]{stroke:rgba(0,0,0,0.05)}
+[data-theme="light"] .sb-track-outer{stroke:rgba(0,0,0,0.08) !important}
+[data-theme="light"] .sb-track-inner{stroke:rgba(0,0,0,0.10) !important}
 [data-theme="light"] .sb-legend{background:rgba(255,255,255,0.75);border-color:rgba(0,0,0,0.1)}
 [data-theme="light"] .tm-rate-track{background:rgba(0,0,0,0.06)}
 [data-theme="light"] .tm-bar-track{background:rgba(0,0,0,0.06)}
