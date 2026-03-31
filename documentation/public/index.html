@@ -12,34 +12,53 @@
 	<meta name="author" content="Anthony Wiedman" />
 	<link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
 
-	<link rel="stylesheet" href="/styles.css" />
-	<link rel="stylesheet" href="/vendor/prism-okaidia.css" />
-	<link rel="stylesheet" href="/vendor/prism-toolbar.css" />
-	<link rel="stylesheet" href="/prism-overrides.css" />
+	<!-- Open Graph -->
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="zero-http — Zero-dependency backend framework for Node.js" />
+	<meta property="og:description" content="Full-featured routing, built-in ORM, WebSocket, SSE, security middleware, body parsers, compression, and HTTP client — all with zero dependencies." />
+	<meta property="og:image" content="https://z-http.com/icons/og-image.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:url" content="https://z-http.com" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="zero-http" />
+	<meta name="twitter:description" content="Zero-dependency backend framework for Node.js" />
+	<meta name="twitter:image" content="https://z-http.com/icons/og-image.png" />
 
-	<script src="/vendor/prism.min.js" defer></script>
-	<script src="/vendor/prism-json.min.js" defer></script>
-	<script src="/vendor/prism-javascript.min.js" defer></script>
-	<script src="/vendor/prism-copy-to-clipboard.min.js" defer></script>
-	<script src="/vendor/prism-toolbar.min.js" defer></script>
+	<link rel="stylesheet" href="/styles.css?v=mne0t2b1" />
+	<link rel="stylesheet" href="/vendor/prism-okaidia.css?v=mne0t2b1" />
+	<link rel="stylesheet" href="/vendor/prism-toolbar.css?v=mne0t2b1" />
+	<link rel="stylesheet" href="/prism-overrides.css?v=mne0t2b1" />
 
-	<script src="/scripts/helpers.js" defer></script>
-	<script src="/scripts/background.js" defer></script>
-	<script src="/scripts/hero-canvas.js" defer></script>
-	<script src="/scripts/data-canvas.js" defer></script>
-	<script src="/scripts/rt-canvas.js" defer></script>
-	<script src="/scripts/custom-select.js" defer></script>
-	<script src="/scripts/uploads.js" defer></script>
-	<script src="/scripts/playground.js" defer></script>
-	<script src="/scripts/proxy.js" defer></script>
-	<script src="/scripts/data-sections.js" defer></script>
-	<script src="/scripts/search.js" defer></script>
-	<script src="/scripts/ui.js" defer></script>
-	<script src="/scripts/app.js" defer></script>
+	<script src="/vendor/prism.min.js?v=mne0t2b1" defer></script>
+	<script src="/vendor/prism-json.min.js?v=mne0t2b1" defer></script>
+	<script src="/vendor/prism-javascript.min.js?v=mne0t2b1" defer></script>
+	<script src="/vendor/prism-copy-to-clipboard.min.js?v=mne0t2b1" defer></script>
+	<script src="/vendor/prism-toolbar.min.js?v=mne0t2b1" defer></script>
+
+	<script src="/scripts/helpers.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/background.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/hero-canvas.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/data-canvas.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/rt-canvas.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/custom-select.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/charts.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/badges.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/modals.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/uploads.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/playground.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/proxy.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/data-sections.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/search.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/ui.js?v=mne0t2b1" defer></script>
+	<script src="/scripts/app.js?v=mne0t2b1" defer></script>
 
 	<!-- Prevent theme flash: apply saved or OS-preferred theme before paint -->
 	<script>
 	(function(){
+		/* Disable browser scroll restoration to prevent mobile browsers from
+		   randomly restoring a stale scroll position on fresh navigation. */
+		if('scrollRestoration' in history) history.scrollRestoration='manual';
 		var t=localStorage.getItem('zero-theme');
 		if(!t){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}
 		document.documentElement.setAttribute('data-theme',t);
@@ -71,6 +90,28 @@
 					API.md
 				</a>
 			</div>
+		</div>
+	</div>
+
+	<!-- Tests Detail Modal -->
+	<div class="badge-modal-overlay" id="tests-modal" aria-hidden="true">
+		<div class="badge-modal">
+			<div class="badge-modal-header">
+				<h3>Test Results</h3>
+				<button class="badge-modal-close" aria-label="Close">&times;</button>
+			</div>
+			<div class="badge-modal-body" id="tests-modal-body"></div>
+		</div>
+	</div>
+
+	<!-- Coverage Detail Modal -->
+	<div class="badge-modal-overlay" id="coverage-modal" aria-hidden="true">
+		<div class="badge-modal">
+			<div class="badge-modal-header">
+				<h3>Coverage Report</h3>
+				<button class="badge-modal-close" aria-label="Close">&times;</button>
+			</div>
+			<div class="badge-modal-body" id="coverage-modal-body"></div>
 		</div>
 	</div>
 
@@ -206,6 +247,7 @@
 			<div class="card docs-card">
 
 				<div class="bento-section" id="features">
+					<div class="badge-strip" id="badgeStrip"></div>
 					<div class="bento-grid">
 						<!-- Always-visible cards (DOM order = mobile order: featured first) -->
 						<div class="bento-card bento-wide bento-main bento-hero" style="--i:0;--desktop-order:1">
@@ -441,95 +483,107 @@
 
 			<div class="card upload-card constrained">
 				<div class="card-head">
-					<h3 id="upload-testing">Upload multipart data</h3>
-					<div class="small muted">Drag, drop or pick a file</div>
+					<h3 id="upload-testing">File Uploads</h3>
+					<div class="small muted">Multipart streaming with progress, thumbnails & trash management</div>
 				</div>
+
+				<!-- Upload zone -->
 				<form id="uploadForm" class="uploadForm" enctype="multipart/form-data">
-					<div class="fileDrop" id="fileDrop">
+					<div class="upload-zone" id="fileDrop">
 						<input id="fileInput" name="file" type="file" class="fileInput" />
-						<div class="fileDrop-inner">Drop files here or <label for="fileInput" class="linkish">choose
-								file</label></div>
+						<div class="upload-zone-icon">
+							<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+								<polyline points="17 8 12 3 7 8"/>
+								<line x1="12" y1="3" x2="12" y2="15"/>
+							</svg>
+						</div>
+						<div class="upload-zone-text">
+							<span class="upload-zone-primary">Drop files here or <label for="fileInput" class="upload-zone-link">browse</label></span>
+							<span class="upload-zone-hint">Supports any file type</span>
+						</div>
 					</div>
-					<input name="desc" class="textInput" placeholder="Description (optional)" />
-
-					<div class="upload-button-wrap">
+					<div class="upload-actions-row">
 						<button type="submit" class="btn primary">Upload</button>
+						<progress id="uploadProgress" value="0" max="100" class="upload-progress"></progress>
 					</div>
-
-					<div id="uploadResult" class="result mono"></div>
-
-					<div class="controls">
-
-						<div class="left-controls">
-
-							<button id="delAllBtn" type="button" class="btn warn">Delete All</button>
-							<button id="delKeepBtn" type="button" class="btn">Delete (keep 1)</button>
-						</div>
-						<div class="right-controls">
-							<label class="selectWrap">
-								<select id="sortSelect">
-									<option value="mtime">Newest</option>
-									<option value="name">Name</option>
-									<option value="size">Size</option>
-								</select>
-								<select id="sortOrder" title="Sort order" aria-label="Sort order">
-									<option value="desc">Desc</option>
-									<option value="asc">Asc</option>
-								</select>
-							</label>
-							<div class="pager"><button id="prevPage" type="button">◀</button><span
-									id="pageInfo" class="pageInfo">1 / 1</span><button id="nextPage" type="button">▶</button></div>
-						</div>
-					</div>
-					<progress id="uploadProgress" value="0" max="100" style="display:none"></progress>
 				</form>
 
-				<div class="files-wrap combined-files" style="margin-top:18px">
-					<div class="files-column">
-						<div class="card files-card">
-							<div class="card-head">
-								<h3>Uploaded Files</h3>
-								<div class="small muted">Thumbnails and metadata</div>
-							</div>
-							<div id="uploadsList" class="file-grid">(loading...)</div>
-						</div>
+				<!-- Server response -->
+				<details class="acc upload-response-acc" id="uploadResponseAcc">
+					<summary><span class="acc-title">Server Response</span></summary>
+					<div class="acc-body">
+						<div id="uploadResult" class="result mono"></div>
 					</div>
+				</details>
 
-					<div class="trash-column">
-						<div class="card trash-card">
-							<div class="card-head">
-								<h3>Trash</h3>
-							</div>
-							<div id="trashList" class="file-grid muted">(loading...)</div>
-							<div style="margin-top:12px"><button id="emptyTrashBtn" type="button" class="btn">Empty
-									Trash</button></div>
+				<!-- File management toolbar -->
+				<div class="upload-toolbar">
+					<div class="upload-toolbar-left">
+						<button id="delAllBtn" type="button" class="btn warn small">Delete All</button>
+						<button id="delKeepBtn" type="button" class="btn ghost small">Delete (keep 1)</button>
+					</div>
+					<div class="upload-toolbar-right">
+						<select id="sortSelect" class="textInput" style="min-width:80px">
+							<option value="mtime">Newest</option>
+							<option value="name">Name</option>
+							<option value="size">Size</option>
+						</select>
+						<select id="sortOrder" class="textInput" title="Sort order" aria-label="Sort order" style="min-width:60px">
+							<option value="desc">Desc</option>
+							<option value="asc">Asc</option>
+						</select>
+						<div class="pager">
+							<button id="prevPage" type="button">◀</button>
+							<span id="pageInfo" class="pageInfo">1 / 1</span>
+							<button id="nextPage" type="button">▶</button>
 						</div>
 					</div>
+				</div>
+
+				<!-- Uploaded files grid -->
+				<div class="upload-files-section">
+					<h4 class="upload-section-title">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+						Files
+					</h4>
+					<div id="uploadsList" class="upload-file-grid"></div>
+				</div>
+
+				<!-- Trash section -->
+				<div class="upload-trash-section">
+					<h4 class="upload-section-title upload-trash-title">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+						Trash
+						<button id="emptyTrashBtn" type="button" class="btn warn small" style="margin-left:auto">Empty Trash</button>
+					</h4>
+					<div id="trashList" class="upload-file-grid"></div>
 				</div>
 			</div>
 			<div class="card play-card constrained">
 				<div class="card-head">
 					<h3 id="parser-tests">Quick parser tests</h3>
+					<div class="small muted">Test each built-in body parser by sending data directly to the server.</div>
 				</div>
 				<div class="card-body">
 					<div class="playgrid">
-						<form id="jsonPlay" class="play">
-							<label>JSON (raw)
-								<textarea name="json" class="textInput">{"foo":"bar"}</textarea>
-							</label>
-							<button class="btn">Send JSON</button>
+						<form id="jsonPlay" class="play parser-card">
+							<div class="parser-card-title">JSON <code>application/json</code></div>
+							<p class="parser-card-desc">Parses JSON request bodies via <code>json()</code>. Supports size limits, strict mode, gzip decompression, verify callbacks, and <code>req.rawBody</code> for signature verification.</p>
+							<textarea name="json" class="textInput" rows="3">{"foo":"bar"}</textarea>
+							<button class="btn primary">Send JSON</button>
 						</form>
-						<form id="urlPlay" class="play">
-							<label>URL-encoded (body)
-								<textarea name="url" class="textInput">foo=bar&amp;baz=qux</textarea>
-							</label>
-							<button class="btn">Send urlencoded</button>
+						<form id="urlPlay" class="play parser-card">
+							<div class="parser-card-title">URL-Encoded <code>application/x-www-form-urlencoded</code></div>
+							<p class="parser-card-desc">Parses form submissions via <code>urlencoded()</code>. Supports nested objects, <code>parameterLimit</code>, <code>depth</code> limits, and verify callbacks.</p>
+							<textarea name="url" class="textInput" rows="3">foo=bar&amp;baz=qux</textarea>
+							<button class="btn primary">Send urlencoded</button>
 						</form>
-						<form id="textPlay" class="play">
-							<label>Text (raw)
-								<textarea name="txt" class="textInput">hello world</textarea>
-							</label>
-							<button class="btn">Send text</button>
+						<form id="textPlay" class="play parser-card">
+							<div class="parser-card-title">Plain Text <code>text/plain</code></div>
+							<p class="parser-card-desc">Parses raw text bodies via <code>text()</code>. Auto-detects charset, supports verify callbacks and gzip decompression.</p>
+							<textarea name="txt" class="textInput" rows="3">hello world</textarea>
+							<button class="btn primary">Send text</button>
 						</form>
 					</div>
 					<pre id="playResult" class="result mono" style="margin-top:12px"></pre>
@@ -539,15 +593,19 @@
 			<div class="card proxy-card constrained">
 				<div class="card-head">
 					<h3 id="proxy-test">Proxy Test</h3>
+					<div class="small muted">Fetch any external URL through the built-in server proxy.</div>
 				</div>
 				<div class="card-body">
 					<form id="proxyForm" class="play">
-						<label>External URL to proxy
+						<label style="margin-bottom:4px">External URL to proxy</label>
+						<div class="proxy-input-row">
 							<input id="proxyUrl" name="proxyUrl" class="textInput" type="url"
-								placeholder="https://download.samplelib.com/mp4/sample-5s.mp4" required
-								style="width:100%" />
-						</label>
-						<button class="btn">Proxy Fetch</button>
+								placeholder="https://download.samplelib.com/mp4/sample-5s.mp4" required />
+							<div class="proxy-btn-row">
+								<button type="button" id="proxyRandomBtn" class="btn primary" title="Try a random resource">Random</button>
+								<button type="submit" class="btn primary">Proxy Fetch</button>
+							</div>
+						</div>
 					</form>
 					<pre id="proxyResult" class="result mono" style="margin-top:12px"></pre>
 				</div>
@@ -561,12 +619,14 @@
 				<div class="card-body">
 					<div class="playgrid" style="grid-template-columns:1fr">
 						<div class="play" id="wsChat">
-							<div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
+							<div class="ws-top-row">
 								<label style="flex:1">Name
 									<input id="wsName" class="textInput" placeholder="anon" value="" />
 								</label>
-								<button id="wsConnectBtn" class="btn primary" type="button">Connect</button>
-								<button id="wsDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
+								<div class="conn-btn-pair">
+									<button id="wsConnectBtn" class="btn primary" type="button">Connect</button>
+									<button id="wsDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
+								</div>
 							</div>
 							<div id="wsMessages" class="result mono" style="min-height:120px;max-height:260px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap"></div>
 							<div style="display:flex;gap:8px">
@@ -586,10 +646,12 @@
 				<div class="card-body">
 					<div class="playgrid" style="grid-template-columns:1fr">
 						<div class="play" id="sseViewer">
-							<div style="display:flex;gap:8px;align-items:end;margin-bottom:8px">
-								<button id="sseConnectBtn" class="btn primary" type="button">Connect</button>
-								<button id="sseDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
-								<span id="sseStatus" class="small muted" style="margin-left:8px">Disconnected</span>
+							<div class="sse-top-row">
+								<div class="conn-btn-pair">
+									<button id="sseConnectBtn" class="btn primary" type="button">Connect</button>
+									<button id="sseDisconnectBtn" class="btn warn" type="button" disabled>Disconnect</button>
+								</div>
+								<span id="sseStatus" class="small muted">Disconnected</span>
 							</div>
 							<div id="sseMessages" class="result mono" style="min-height:120px;max-height:260px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap"></div>
 							<div style="display:flex;gap:8px;align-items:end">
@@ -667,7 +729,7 @@
 					</div>
 
 					<details class="acc" open>
-						<summary><span class="summary-arrow">›</span><span class="acc-title">Authors</span></summary>
+						<summary><span class="acc-title">Authors</span></summary>
 						<div class="acc-body">
 							<form id="authorForm" class="blog-toolbar">
 								<label style="flex:2;min-width:120px">Name
@@ -693,7 +755,7 @@
 					</details>
 
 					<details class="acc" open>
-						<summary><span class="summary-arrow">›</span><span class="acc-title">Posts</span></summary>
+						<summary><span class="acc-title">Posts</span></summary>
 						<div class="acc-body">
 							<form id="postForm" class="blog-toolbar">
 								<label>Author
@@ -717,12 +779,12 @@
 										<option value="archived">Archived</option>
 									</select>
 								</label>
-								<button type="submit" class="btn primary">Add Post</button>
 							</form>
 							<div id="postBodyWrap" style="margin-bottom:8px">
 								<label>Body
 									<textarea id="postBody" class="textInput" rows="2" placeholder="Post content…"></textarea>
 								</label>
+								<button type="submit" form="postForm" class="btn primary" style="margin-top:8px">Add Post</button>
 							</div>
 
 							<div class="blog-toolbar" style="margin-bottom:8px">

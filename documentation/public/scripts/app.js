@@ -1,13 +1,17 @@
 /**
- * app.js  (entry point)
- * Single DOMContentLoaded handler that bootstraps every documentation feature.
- * Each section is initialised by calling into the module that owns it:
+ * app.js  (boot file)
+ * Lean entry point — wires together all documentation modules.
  *
+ * Module load order (all <script defer>):
  *   helpers.js        → DOM selectors, formatters, Prism helpers
+ *   charts.js         → svgRing, barColor, buildSunburst
+ *   badges.js         → initBadges()
+ *   modals.js         → openBadgeModal, renderTestsModal, renderCoverageModal
  *   uploads.js        → initUploads()
  *   playground.js     → initPlayground()
  *   proxy.js          → initProxy()
- *   data-sections.js  → loadApiReference(), loadOptions(), loadExamples()
+ *   data-sections.js  → loadDocs()
+ *   app.js            → this file (boot)
  */
 
 document.addEventListener('DOMContentLoaded', () =>
@@ -37,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () =>
     initPlayground();
     initProxy();
 
+    /* Mark app as ready so scroll-into-view helpers only fire after init */
+    setTimeout(() => { window._appReady = true; }, 2000);
+
     /* Copy-to-clipboard for info banner */
     const copyBtn = document.getElementById('cloneCopyBtn');
     const copySource = document.getElementById('cloneCmd');
@@ -55,10 +62,6 @@ document.addEventListener('DOMContentLoaded', () =>
     /* Data-driven documentation sections */
     loadDocs().catch(() => {});
 
-    /* Fetch and display package version */
-    fetch('/api/version').then(r => r.json()).then(d =>
-    {
-        const badge = document.getElementById('version-badge');
-        if (badge && d.version) badge.textContent = 'v' + d.version;
-    }).catch(() => {});
+    /* Badge strip + version badge + modal wiring */
+    initBadges();
 });

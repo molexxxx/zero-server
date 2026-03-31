@@ -16,7 +16,7 @@ function mountUploadRoutes(app)
     app.use('/uploads', serveStatic(uploadsDir));
 
     // Upload & CRUD
-    app.post('/upload', multipart({ maxFileSize: 5 * 1024 * 1024, dir: uploadsDir }), uploadsController.upload(uploadsDir));
+    app.post('/upload', multipart({ maxFileSize: 50 * 1024 * 1024, dir: uploadsDir }), uploadsController.upload(uploadsDir));
     app.delete('/uploads/:name', uploadsController.deleteUpload(uploadsDir));
     app.delete('/uploads',       uploadsController.deleteAllUploads(uploadsDir));
     app.post('/uploads/:name/restore', uploadsController.restoreUpload(uploadsDir));
