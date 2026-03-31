@@ -37,7 +37,7 @@
         emitters.length = 0;
         rings.length = 0;
 
-        /* Place 4 broadcast sources evenly across the card width
+        /* Place 4 broadcast sources randomly across the card
            with varied sizes: 1 big, 1 medium, 2 small */
         const sizes = [
             { r: 3.2, maxR: 32, label: 'big' },
@@ -51,12 +51,20 @@
             const tmp = sizes[i]; sizes[i] = sizes[j]; sizes[j] = tmp;
         }
         const count = sizes.length;
-        const pad = 25;
-        const slotW = (w - pad * 2) / count;
+        const pad = 30;
+        const minDist = 40; /* minimum distance between emitters */
+        const placed = [];
         for (let i = 0; i < count; i++) {
+            let x, y, attempts = 0;
+            do {
+                x = pad + Math.random() * (w - pad * 2);
+                y = pad + Math.random() * (h - pad * 2);
+                attempts++;
+            } while (attempts < 60 && placed.some(p => Math.hypot(p.x - x, p.y - y) < minDist));
+            placed.push({ x, y });
             emitters.push({
-                x: pad + slotW * (i + 0.5) + (Math.random() - 0.5) * slotW * 0.3,
-                y: pad + Math.random() * (h - pad * 2),
+                x,
+                y,
                 hue: 230 + Math.random() * 40, /* blue-to-purple like hero orbs */
                 timer: Math.floor(Math.random() * 120),
                 interval: 180 + Math.floor(Math.random() * 120),

@@ -18,6 +18,52 @@ function initProxy()
     const proxyResult = $('#proxyResult');
     if (!proxyForm) return;
 
+    /* Random resource URLs for quick testing */
+    const SAMPLE_URLS = [
+        'https://download.samplelib.com/mp4/sample-5s.mp4',
+        'https://download.samplelib.com/mp3/sample-3s.mp3',
+        'https://picsum.photos/400/300',
+        'https://picsum.photos/600/400',
+        'https://picsum.photos/300/300',
+        'https://httpbin.org/json',
+        'https://httpbin.org/html',
+        'https://httpbin.org/xml',
+        'https://httpbin.org/image/png',
+        'https://httpbin.org/image/jpeg',
+        'https://httpbin.org/image/svg',
+        'https://httpbin.org/robots.txt',
+        'https://httpbin.org/uuid',
+        'https://httpbin.org/user-agent',
+        'https://httpbin.org/headers',
+        'https://httpbin.org/ip',
+        'https://jsonplaceholder.typicode.com/posts/1',
+        'https://jsonplaceholder.typicode.com/users',
+        'https://jsonplaceholder.typicode.com/comments?postId=1',
+        'https://jsonplaceholder.typicode.com/albums/1/photos',
+        'https://catfact.ninja/fact',
+        'https://api.github.com/zen',
+        'https://dog.ceo/api/breeds/image/random',
+        'https://official-joke-api.appspot.com/random_joke',
+        'https://uselessfacts.jsph.pl/api/v2/facts/random?language=en',
+        'https://www.boredapi.com/api/activity',
+        'https://api.adviceslip.com/advice',
+        'https://placeholder.co/400x300/png'
+    ];
+
+    const randomBtn = $('#proxyRandomBtn');
+    if (randomBtn)
+    {
+        randomBtn.addEventListener('click', () =>
+        {
+            const urlInput = $('#proxyUrl');
+            if (urlInput)
+            {
+                urlInput.value = SAMPLE_URLS[Math.floor(Math.random() * SAMPLE_URLS.length)];
+                proxyForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
+    }
+
     on(proxyForm, 'submit', async (e) =>
     {
         e.preventDefault();

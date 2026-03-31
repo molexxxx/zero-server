@@ -53,6 +53,24 @@ function showCopyToast(text)
     window._copyToastTimer = setTimeout(() => toast.classList.remove('visible'), 2000);
 }
 
+/**
+ * Format tip text with inline colour badges for code references.
+ * Escapes HTML first, then annotates recognisable patterns.
+ */
+function formatTipText(text)
+{
+    let html = escapeHtml(text);
+    /* Quoted strings: 'value' */
+    html = html.replace(/'([^']+)'/g, '<code class="tip-val">\'$1\'</code>');
+    /* Function / method calls: word() or dotted.path(args) */
+    html = html.replace(/\b([a-zA-Z][\w.]*)\(([^)]*)\)/g, '<code class="tip-ref">$1($2)</code>');
+    /* Object properties: req.xxx, res.xxx, app.xxx (without trailing parens) */
+    html = html.replace(/\b(req|res|app)\.([\w.]+)\b(?![(<])/g, '<code class="tip-ref">$1.$2</code>');
+    /* Boolean / special values */
+    html = html.replace(/\b(true|false|null)\b/g, '<code class="tip-val">$1</code>');
+    return html;
+}
+
 /* -- Rendering helpers ------------------------------------------------------- */
 
 function sectionSlug(sectionName)
@@ -196,7 +214,7 @@ function renderDocItem(item, section)
         for (const tip of item.tips)
         {
             const li = document.createElement('li');
-            li.textContent = tip;
+            li.innerHTML = formatTipText(tip);
             ul.appendChild(li);
         }
         tipsDiv.appendChild(ul);
@@ -331,9 +349,22 @@ async function loadDocs()
 
         container.innerHTML = '';
 
-        for (const section of sections)
+        for (let si = 0; si < sections.length; si++)
         {
-            container.appendChild(renderSection(section));
+            const sectionEl = renderSection(sections[si]);
+
+            /* Auto-open first 2 items of the first section BEFORE DOM insertion
+               so no toggle event fires and the browser doesn't scroll-reveal. */
+            if (si === 0 && !location.hash)
+            {
+                const items = sectionEl.querySelectorAll('details.acc');
+                for (let i = 0; i < Math.min(2, items.length); i++)
+                {
+                    items[i].open = true;
+                }
+            }
+
+            container.appendChild(sectionEl);
         }
 
         try { highlightAllPre(); } catch (e) { }
@@ -353,18 +384,6 @@ async function loadDocs()
                 if (details) details.open = !details.open;
             });
         });
-
-        /* Auto-open Installation & Quickstart on first load */
-        const firstSection = sections[0];
-        if (firstSection && Array.isArray(firstSection.items))
-        {
-            for (let i = 0; i < Math.min(2, firstSection.items.length); i++)
-            {
-                const id = itemSlug(firstSection.section, firstSection.items[i].name);
-                const el = document.getElementById(id);
-                if (el) el.open = true;
-            }
-        }
 
         /* Handle initial URL hash — content didn't exist when the browser first tried.
          * Use generous delay to let Prism highlighting and content-visibility settle. */
@@ -386,10 +405,10 @@ async function loadDocs()
 
                 requestAnimationFrame(() => {
                     setTimeout(() => {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        target.scrollIntoView({ behavior: 'instant', block: 'start' });
                         /* Re-verify after layout settles */
                         setTimeout(() => {
-                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            target.scrollIntoView({ behavior: 'instant', block: 'start' });
                             setTimeout(() => lazySections.forEach(s => s.style.contentVisibility = ''), 800);
                         }, 400);
                     }, 150);

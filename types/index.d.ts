@@ -159,7 +159,7 @@ declare const zeroServer: {
     isHttpError: typeof isHttpError;
     errorHandler: typeof errorHandler;
     debug: typeof debug;
-    // ORM enterprise features
+    // ORM Extended 0.6.0 features
     Migrator: typeof Migrator;
     defineMigration: typeof defineMigration;
     QueryCache: typeof QueryCache;

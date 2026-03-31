@@ -67,9 +67,7 @@ function initPlayground()
             body: txt,
         });
         const text = await r.text();
-        playResult.innerHTML = `<pre class="code"><code>${escapeHtml(text)}</code></pre>`;
-        try { highlightAllPre(); } catch (e) { }
-        if (window.innerWidth <= 640) playResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showJsonResult(playResult, { received: text });
     });
 
     /* --- WebSocket Chat --- */
