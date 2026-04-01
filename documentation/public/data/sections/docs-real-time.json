@@ -217,6 +217,151 @@
 							"methodParams": []
 						}
 					]
+				},
+				{
+					"group": "Connection Properties",
+					"methods": [
+						{
+							"method": "id",
+							"signature": "ws.id",
+							"description": "Unique connection identifier.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "readyState",
+							"signature": "ws.readyState",
+							"description": "Current WebSocket ready state (0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "protocol",
+							"signature": "ws.protocol",
+							"description": "The negotiated sub-protocol string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "extensions",
+							"signature": "ws.extensions",
+							"description": "The requested extensions string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "headers",
+							"signature": "ws.headers",
+							"description": "Request headers from the upgrade handshake.",
+							"methodReturns": {
+								"type": "IncomingHttpHeaders",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "ip",
+							"signature": "ws.ip",
+							"description": "Remote IP address of the connected client.",
+							"methodReturns": {
+								"type": "string | null",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "query",
+							"signature": "ws.query",
+							"description": "Parsed query parameters from the upgrade URL.",
+							"methodReturns": {
+								"type": "Record<string, string>",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "url",
+							"signature": "ws.url",
+							"description": "The full upgrade URL.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "secure",
+							"signature": "ws.secure",
+							"description": "Whether the connection is over TLS.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "maxPayload",
+							"signature": "ws.maxPayload",
+							"description": "Maximum incoming payload size in bytes.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "connectedAt",
+							"signature": "ws.connectedAt",
+							"description": "Timestamp (ms since epoch) when the connection was opened.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "data",
+							"signature": "ws.data",
+							"description": "Arbitrary user-data store for attaching custom data to the connection.",
+							"methodReturns": {
+								"type": "Record<string, any>",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "bufferedAmount",
+							"signature": "ws.bufferedAmount",
+							"description": "Number of bytes waiting in the send buffer (readonly).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "uptime",
+							"signature": "ws.uptime",
+							"description": "Milliseconds since the connection was opened (readonly).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						}
+					]
 				}
 			]
 		},
@@ -596,10 +741,70 @@
 			"example": "const { createApp } = require('zero-http')\nconst app = createApp()\n\napp.get('/events', (req, res) => {\n\tconst sse = res.sse({\n\t\tretry: 5000,\n\t\tautoId: true,\n\t\tkeepAlive: 30000\n\t})\n\n\tsse.send('connected')\n\n\tconst iv = setInterval(() => {\n\t\tsse.event('tick', { time: Date.now() })\n\t}, 1000)\n\n\tsse.on('close', () => {\n\t\tclearInterval(iv)\n\t\tconsole.log('client disconnected')\n\t})\n})\n\n// Browser:\n// const es = new EventSource('/events')\n// es.addEventListener('tick', e => console.log(JSON.parse(e.data)))",
 			"tips": [
 				"SSE is automatically excluded from response compression.",
-				"Use keepAlive to prevent proxy/load-balancer timeouts on idle connections.",
-				"Properties: connected, eventCount, bytesSent, connectedAt, uptime, lastEventId, data (user store)."
+				"Use keepAlive to prevent proxy/load-balancer timeouts on idle connections."
 			],
 			"methodGroups": [
+				{
+					"group": "Properties",
+					"methods": [
+						{
+							"method": "connected",
+							"signature": "sse.connected",
+							"description": "Whether the stream is still open.",
+							"methodReturns": { "type": "boolean", "description": "true while the underlying response is writable; false after close() or client disconnect." },
+							"methodParams": []
+						},
+						{
+							"method": "lastEventId",
+							"signature": "sse.lastEventId",
+							"description": "The Last-Event-ID from client reconnection.",
+							"methodReturns": { "type": "string | null", "description": "The id sent by the browser in the Last-Event-ID header, or null on the first connection." },
+							"methodParams": []
+						},
+						{
+							"method": "eventCount",
+							"signature": "sse.eventCount",
+							"description": "Total events sent on this stream.",
+							"methodReturns": { "type": "number", "description": "Cumulative count of events dispatched via send(), sendJSON(), or event()." },
+							"methodParams": []
+						},
+						{
+							"method": "bytesSent",
+							"signature": "sse.bytesSent",
+							"description": "Total bytes written to the stream.",
+							"methodReturns": { "type": "number", "description": "Total byte count written to the HTTP response since the stream was opened." },
+							"methodParams": []
+						},
+						{
+							"method": "connectedAt",
+							"signature": "sse.connectedAt",
+							"description": "Timestamp (ms) when the stream was opened.",
+							"methodReturns": { "type": "number", "description": "Unix epoch timestamp in milliseconds from Date.now() at stream creation." },
+							"methodParams": []
+						},
+						{
+							"method": "uptime",
+							"signature": "sse.uptime",
+							"description": "Milliseconds since the stream was opened.",
+							"methodReturns": { "type": "number", "description": "Computed as Date.now() - connectedAt each time the property is read." },
+							"methodParams": []
+						},
+						{
+							"method": "secure",
+							"signature": "sse.secure",
+							"description": "Whether the connection is over TLS.",
+							"methodReturns": { "type": "boolean", "description": "true when the stream was opened on an HTTPS connection." },
+							"methodParams": []
+						},
+						{
+							"method": "data",
+							"signature": "sse.data",
+							"description": "Arbitrary user-data store for attaching custom properties.",
+							"methodReturns": { "type": "Record<string, any>", "description": "A plain object you can use to store per-connection state such as user id or session info." },
+							"methodParams": []
+						}
+					]
+				},
 				{
 					"group": "Writing",
 					"methods": [
@@ -761,6 +966,86 @@
 									"type": "function",
 									"required": "Yes",
 									"notes": "Callback invoked when the event fires."
+								}
+							]
+						},
+						{
+							"method": "once",
+							"signature": "sse.once(event, handler)",
+							"description": "Listen for an event once, then auto-remove the handler.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"close\"` | `\"error\"`."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "Callback invoked once when the event fires."
+								}
+							]
+						},
+						{
+							"method": "off",
+							"signature": "sse.off(event, handler)",
+							"description": "Remove a specific event listener.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Event name to unsubscribe from."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "The previously registered callback to remove."
+								}
+							]
+						},
+						{
+							"method": "removeAllListeners",
+							"signature": "sse.removeAllListeners(event?)",
+							"description": "Remove all listeners for a given event, or all events if omitted.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "No",
+									"notes": "Event name. If omitted, removes all listeners for all events."
+								}
+							]
+						},
+						{
+							"method": "listenerCount",
+							"signature": "sse.listenerCount(event)",
+							"description": "Return the number of listeners registered for the given event.",
+							"methodReturns": {
+								"type": "number",
+								"description": "Number of listeners."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Event name to count listeners for."
 								}
 							]
 						}

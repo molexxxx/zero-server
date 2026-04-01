@@ -85,35 +85,35 @@
 					"methods": [
 						{
 							"method": "jsonCookie",
-							"signature": "cookieParser.jsonCookie(value)",
-							"description": "Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(value).",
+							"signature": "cookieParser.jsonCookie(val)",
+							"description": "Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(val).",
 							"methodReturns": {
-								"type": "object | string",
-								"description": "Parsed JSON if the value starts with \"j:\", otherwise the raw string."
+								"type": "string",
+								"description": "JSON cookie string prefixed with 'j:'."
 							},
 							"methodParams": [
 								{
-									"param": "value",
-									"type": "string",
+									"param": "val",
+									"type": "any",
 									"required": "Yes",
-									"notes": "Cookie string — returns parsed object if it begins with `j:`, otherwise `null`."
+									"notes": "Value to serialize (object, array, etc.)."
 								}
 							]
 						},
 						{
 							"method": "parseJSON",
 							"signature": "cookieParser.parseJSON(str)",
-							"description": "Parse a JSON cookie string (j: prefix). Returns parsed value or original string.",
+							"description": "Parse a JSON cookie string (j: prefix). Returns parsed value or original string if not a valid JSON cookie.",
 							"methodReturns": {
-								"type": "object | null",
-								"description": "Parsed JSON object, or null on failure."
+								"type": "any",
+								"description": "Parsed value if string starts with 'j:', otherwise the original string."
 							},
 							"methodParams": [
 								{
 									"param": "str",
 									"type": "string",
 									"required": "Yes",
-									"notes": "Raw string to attempt JSON parsing on. Returns the parsed value or the original string."
+									"notes": "JSON cookie string to parse. Must start with 'j:' to be treated as JSON."
 								}
 							]
 						}
@@ -180,6 +180,24 @@
 			"description": "Request validation middleware with 11 types and auto-coercion. Validates req.body, req.query, and req.params against a declarative schema. Unknown fields are stripped by default. Returns 422 with structured error messages on failure.",
 			"options": [
 				{
+					"option": "body",
+					"type": "Record<string, ValidationRule>",
+					"default": "—",
+					"notes": "Validation rules for `req.body` fields."
+				},
+				{
+					"option": "query",
+					"type": "Record<string, ValidationRule>",
+					"default": "—",
+					"notes": "Validation rules for `req.query` fields."
+				},
+				{
+					"option": "params",
+					"type": "Record<string, ValidationRule>",
+					"default": "—",
+					"notes": "Validation rules for `req.params` fields."
+				},
+				{
 					"option": "stripUnknown",
 					"type": "boolean",
 					"default": "true",
@@ -190,6 +208,78 @@
 					"type": "function",
 					"default": "—",
 					"notes": "Custom error handler. Default sends 422 JSON."
+				},
+				{
+					"option": "type",
+					"type": "string",
+					"default": "—",
+					"notes": "Rule: Value type with auto-coercion. One of: `string`, `integer`, `number`, `float`, `boolean`, `array`, `json`, `date`, `uuid`, `email`, `url`."
+				},
+				{
+					"option": "required",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Rule: Field must be present in the request."
+				},
+				{
+					"option": "default",
+					"type": "any | () => any",
+					"default": "—",
+					"notes": "Rule: Default value (or factory function) when the field is missing."
+				},
+				{
+					"option": "minLength",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Minimum string length."
+				},
+				{
+					"option": "maxLength",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Maximum string length."
+				},
+				{
+					"option": "min",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Minimum numeric value."
+				},
+				{
+					"option": "max",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Maximum numeric value."
+				},
+				{
+					"option": "match",
+					"type": "RegExp",
+					"default": "—",
+					"notes": "Rule: Regex pattern the value must match."
+				},
+				{
+					"option": "enum",
+					"type": "any[]",
+					"default": "—",
+					"notes": "Rule: Allowed values whitelist."
+				},
+				{
+					"option": "minItems",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Minimum array length (for `type: 'array'`)."
+				},
+				{
+					"option": "maxItems",
+					"type": "number",
+					"default": "—",
+					"notes": "Rule: Maximum array length (for `type: 'array'`)."
+				},
+				{
+					"option": "validate",
+					"type": "(value: any) => string | void",
+					"default": "—",
+					"notes": "Rule: Custom validation function. Return a string to indicate an error."
 				}
 			],
 			"example": "const { createApp, json, validate } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\n// Validate body\napp.post('/users', validate({\n\tbody: {\n\t\tname:  { type: 'string', required: true, minLength: 2, maxLength: 50 },\n\t\temail: { type: 'email', required: true },\n\t\tage:   { type: 'integer', min: 13, max: 120 },\n\t\trole:  { type: 'string', enum: ['user', 'admin'], default: 'user' },\n\t\ttags:  { type: 'array', minItems: 1, maxItems: 5 }\n\t}\n}), (req, res) => {\n\tres.status(201).json(req.body) // sanitized\n})\n\n// Validate query + params\napp.get('/search/:category', validate({\n\tparams: { category: { type: 'string', enum: ['books', 'music', 'films'] } },\n\tquery: {\n\t\tq:     { type: 'string', required: true },\n\t\tpage:  { type: 'integer', min: 1, default: 1 },\n\t\tlimit: { type: 'integer', min: 1, max: 100, default: 20 }\n\t}\n}), (req, res) => {\n\tres.json({ params: req.params, query: req.query })\n})\n// Validation failure → 422 { errors: ['name is required', ...] }",

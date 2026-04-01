@@ -114,20 +114,28 @@ function buildIndex()
                 context: item.description || '',
             });
 
+            if (Array.isArray(item.params))
+            {
+                for (const p of item.params)
+                {
+                    searchIndex.push({
+                        type: 'option',
+                        section: section.section,
+                        sectionIcon: section.icon,
+                        name: p.param || '',
+                        slug,
+                        text: p.param || '',
+                        context: p.notes || '',
+                        parent: item.name + ' › Parameters',
+                    });
+                }
+            }
+
             if (Array.isArray(item.methods))
             {
                 for (const m of item.methods)
                 {
-                    searchIndex.push({
-                        type: 'method',
-                        section: section.section,
-                        sectionIcon: section.icon,
-                        name: m.method || m.signature || '',
-                        slug,
-                        text: (m.method || '') + ' ' + (m.signature || ''),
-                        context: m.description || '',
-                        parent: item.name,
-                    });
+                    _indexMethod(m, section, slug, item.name, '');
                 }
             }
 
@@ -135,19 +143,24 @@ function buildIndex()
             {
                 for (const group of item.methodGroups)
                 {
+                    const groupName = group.group || group.category || 'Methods';
+                    const groupSlug = slug + '--' + slugify(groupName);
+
+                    searchIndex.push({
+                        type: 'group',
+                        section: section.section,
+                        sectionIcon: section.icon,
+                        name: groupName,
+                        slug: groupSlug,
+                        text: groupName,
+                        context: item.name,
+                        parent: item.name,
+                    });
+
                     if (!Array.isArray(group.methods)) continue;
                     for (const m of group.methods)
                     {
-                        searchIndex.push({
-                            type: 'method',
-                            section: section.section,
-                            sectionIcon: section.icon,
-                            name: m.method || m.signature || '',
-                            slug,
-                            text: (m.method || '') + ' ' + (m.signature || ''),
-                            context: m.description || '',
-                            parent: item.name + ' › ' + (group.category || ''),
-                        });
+                        _indexMethod(m, section, slug, item.name, groupName);
                     }
                 }
             }
@@ -169,6 +182,30 @@ function buildIndex()
                 }
             }
 
+            if (Array.isArray(item.optionGroups))
+            {
+                for (const group of item.optionGroups)
+                {
+                    const catName = group.category || 'Options';
+                    if (Array.isArray(group.options))
+                    {
+                        for (const o of group.options)
+                        {
+                            searchIndex.push({
+                                type: 'option',
+                                section: section.section,
+                                sectionIcon: section.icon,
+                                name: o.option || '',
+                                slug,
+                                text: o.option || '',
+                                context: o.notes || '',
+                                parent: item.name + ' › ' + catName,
+                            });
+                        }
+                    }
+                }
+            }
+
             if (Array.isArray(item.tips))
             {
                 for (const tip of item.tips)
@@ -185,6 +222,58 @@ function buildIndex()
                     });
                 }
             }
+        }
+    }
+}
+
+function _indexMethod(m, section, slug, itemName, groupName)
+{
+    const parent = groupName ? itemName + ' › ' + groupName : itemName;
+    const methodName = m.method || m.signature || '';
+    const methodSlug = methodName ? slug + '--' + slugify(methodName) : slug;
+
+    searchIndex.push({
+        type: 'method',
+        section: section.section,
+        sectionIcon: section.icon,
+        name: methodName,
+        slug: methodSlug,
+        text: (m.method || '') + ' ' + (m.signature || ''),
+        context: m.description || '',
+        parent,
+    });
+
+    if (Array.isArray(m.methodOptions))
+    {
+        for (const o of m.methodOptions)
+        {
+            searchIndex.push({
+                type: 'option',
+                section: section.section,
+                sectionIcon: section.icon,
+                name: o.option || '',
+                slug,
+                text: o.option || '',
+                context: o.notes || '',
+                parent: itemName + ' › ' + (m.method || ''),
+            });
+        }
+    }
+
+    if (Array.isArray(m.methodParams))
+    {
+        for (const p of m.methodParams)
+        {
+            searchIndex.push({
+                type: 'option',
+                section: section.section,
+                sectionIcon: section.icon,
+                name: p.param || '',
+                slug,
+                text: p.param || '',
+                context: p.notes || '',
+                parent: itemName + ' › ' + (m.method || ''),
+            });
         }
     }
 }
@@ -308,6 +397,7 @@ function runSearch(query)
         if (!matched) continue;
 
         if (entry.type === 'item') score += 15;
+        else if (entry.type === 'group') score += 12;
         else if (entry.type === 'method') score += 8;
 
         scored.push({ entry, score });
@@ -327,6 +417,7 @@ function runSearch(query)
 const TYPE_ICONS = {
     item: '<svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     method: '<svg viewBox="0 0 16 16" fill="none"><path d="M4 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    group: '<svg viewBox="0 0 16 16" fill="none"><path d="M2 4h5l2 2h5v7H2V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
     option: '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="2"/><path d="M12.9 5A7 7 0 1 1 3 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     tip: '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="4" stroke="currentColor" stroke-width="2"/><path d="M6 10v2a2 2 0 0 0 4 0v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
 };
@@ -443,13 +534,31 @@ function dismissAndNavigate(id)
 
 function navigateToHash(id)
 {
-    const target = document.getElementById(id);
+    let target = document.getElementById(id);
+
+    /* For sub-anchors (item--group or item--method), open the parent item first */
+    if (!target && id.includes('--'))
+    {
+        const parentId = id.split('--')[0];
+        const parentEl = document.getElementById(parentId);
+        if (parentEl)
+        {
+            let d = parentEl.closest('details');
+            while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
+            if (parentEl.tagName === 'DETAILS') parentEl.open = true;
+
+            void document.documentElement.offsetHeight;
+            target = document.getElementById(id);
+        }
+    }
+
     if (!target) return;
 
     let d = target.closest('details');
     while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
 
-    expandTocForId(id);
+    const tocId = id.includes('--') ? id.split('--')[0] : id;
+    expandTocForId(tocId);
 
     document.querySelectorAll('.doc-section,.card.play-card,.card.upload-card,.card.proxy-card')
         .forEach(s => s.style.contentVisibility = 'visible');

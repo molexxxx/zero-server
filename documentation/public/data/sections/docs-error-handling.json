@@ -1437,6 +1437,108 @@
 									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
 								}
 							]
+						},
+						{
+							"method": "trace",
+							"signature": "log.trace(...args)",
+							"description": "Log at trace level (level 0).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
+						},
+						{
+							"method": "debug",
+							"signature": "log.debug(...args)",
+							"description": "Log at debug level (level 1).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
+						},
+						{
+							"method": "info",
+							"signature": "log.info(...args)",
+							"description": "Log at info level (level 2).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
+						},
+						{
+							"method": "warn",
+							"signature": "log.warn(...args)",
+							"description": "Log at warn level (level 3).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
+						},
+						{
+							"method": "error",
+							"signature": "log.error(...args)",
+							"description": "Log at error level (level 4).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
+						},
+						{
+							"method": "fatal",
+							"signature": "log.fatal(...args)",
+							"description": "Log at fatal level (level 5).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log."
+								}
+							]
 						}
 					]
 				},
@@ -1569,6 +1671,143 @@
 							"methodReturns": {
 								"type": "void",
 								"description": "No return value."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "level",
+							"signature": "debug.level(level)",
+							"description": "Set the minimum log level globally.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "level",
+									"type": "string | number",
+									"required": "Yes",
+									"notes": "Level name (`\"trace\"`, `\"debug\"`, `\"info\"`, `\"warn\"`, `\"error\"`, `\"fatal\"`, `\"silent\"`) or numeric value."
+								}
+							]
+						},
+						{
+							"method": "enable",
+							"signature": "debug.enable(patterns)",
+							"description": "Enable/disable namespaces. Same syntax as the `DEBUG` env var.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "patterns",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Comma-separated namespace patterns (e.g. `\"app:*,-app:db\"`)."
+								}
+							]
+						},
+						{
+							"method": "disable",
+							"signature": "debug.disable()",
+							"description": "Disable all debug output.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "json",
+							"signature": "debug.json([on])",
+							"description": "Enable/disable structured JSON output.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Default: `true`."
+								}
+							]
+						},
+						{
+							"method": "timestamps",
+							"signature": "debug.timestamps([on])",
+							"description": "Enable/disable timestamps in log output.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Default: `true`."
+								}
+							]
+						},
+						{
+							"method": "colors",
+							"signature": "debug.colors([on])",
+							"description": "Enable/disable colored output.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Default: `true`."
+								}
+							]
+						},
+						{
+							"method": "output",
+							"signature": "debug.output(stream)",
+							"description": "Set a custom output stream.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "{ write(s: string): void }",
+									"required": "Yes",
+									"notes": "Any writable stream or object with a `write()` method."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Logger Properties",
+					"methods": [
+						{
+							"method": "enabled",
+							"signature": "log.enabled",
+							"description": "Whether this logger is enabled based on current namespace/level settings (readonly).",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "namespace",
+							"signature": "log.namespace",
+							"description": "The namespace this logger was created with (readonly).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
 							},
 							"methodParams": []
 						}

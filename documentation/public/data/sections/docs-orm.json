@@ -164,23 +164,6 @@
 							]
 						},
 						{
-							"method": "disconnect",
-							"signature": "disconnect([cb])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Resolves when the connection is closed cleanly."
-							},
-							"methodParams": [
-								{
-									"param": "cb",
-									"type": "function",
-									"required": "No",
-									"notes": "Optional callback invoked after the connection is released."
-								}
-							]
-						},
-						{
 							"method": "close",
 							"signature": "db.close()",
 							"description": "Close the database connection. Returns Promise.",
@@ -192,8 +175,8 @@
 						},
 						{
 							"method": "ping",
-							"signature": "ping()",
-							"description": "",
+							"signature": "db.ping()",
+							"description": "Ping the database to check connectivity. Resolves true if reachable.",
 							"methodReturns": {
 								"type": "Promise<boolean>",
 								"description": "Resolves true if the database is reachable."
@@ -201,130 +184,115 @@
 							"methodParams": []
 						},
 						{
-							"method": "getAdapter",
-							"signature": "getAdapter()",
-							"description": "",
+							"method": "register",
+							"signature": "db.register(ModelClass)",
+							"description": "Register a Model class with this database instance. The model will use this connection for all queries. Returns the Database instance for chaining.",
 							"methodReturns": {
-								"type": "Adapter",
-								"description": "The underlying adapter instance (e.g. SQLiteAdapter)."
+								"type": "Database",
+								"description": "The Database instance (chainable)."
 							},
-							"methodParams": []
+							"methodParams": [
+								{
+									"param": "ModelClass",
+									"type": "typeof Model",
+									"required": "Yes",
+									"notes": "A class that extends Model."
+								}
+							]
+						},
+						{
+							"method": "registerAll",
+							"signature": "db.registerAll(...models)",
+							"description": "Register multiple Model classes at once. Convenience wrapper around `register()`. Returns the Database instance for chaining.",
+							"methodReturns": {
+								"type": "Database",
+								"description": "The Database instance (chainable)."
+							},
+							"methodParams": [
+								{
+									"param": "...models",
+									"type": "typeof Model[]",
+									"required": "Yes",
+									"notes": "One or more Model classes."
+								}
+							]
+						},
+						{
+							"method": "model",
+							"signature": "db.model(name)",
+							"description": "Retrieve a registered model class by its table name.",
+							"methodReturns": {
+								"type": "typeof Model | undefined",
+								"description": "The registered Model class, or undefined if not found."
+							},
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "The model table name."
+								}
+							]
+						},
+						{
+							"method": "retry",
+							"signature": "db.retry(fn, [options])",
+							"description": "Retry an async function with exponential backoff. Useful for transient database errors (connection drops, deadlocks).",
+							"methodReturns": {
+								"type": "Promise<T>",
+								"description": "The resolved value of fn()."
+							},
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "() => Promise<T>",
+									"required": "Yes",
+									"notes": "Async function to retry on failure."
+								},
+								{
+									"param": "options",
+									"type": "RetryOptions",
+									"required": "No",
+									"notes": "`{ retries, delay, maxDelay, factor, onRetry }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "retries",
+									"type": "number",
+									"default": "3",
+									"notes": "Maximum number of retry attempts."
+								},
+								{
+									"option": "delay",
+									"type": "number",
+									"default": "100",
+									"notes": "Initial delay in ms before the first retry."
+								},
+								{
+									"option": "maxDelay",
+									"type": "number",
+									"default": "5000",
+									"notes": "Maximum delay in ms (caps exponential growth)."
+								},
+								{
+									"option": "factor",
+									"type": "number",
+									"default": "2",
+									"notes": "Exponential backoff multiplier."
+								},
+								{
+									"option": "onRetry",
+									"type": "function",
+									"notes": "Callback `(error, attempt) => void` invoked before each retry."
+								}
+							]
 						}
 					]
 				},
 				{
 					"group": "Query & DDL",
 					"methods": [
-						{
-							"method": "query",
-							"signature": "query(sql, ...params)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<any[]>",
-								"description": "Resolves with the result rows from a raw SQL query."
-							},
-							"methodOptions": [
-								{
-									"option": "sql",
-									"type": "string",
-									"notes": "SQL SELECT statement with `?` or `$n` placeholders."
-								},
-								{
-									"option": "params",
-									"type": "any[]",
-									"notes": "Bound parameter values for each placeholder."
-								},
-								{
-									"option": "model",
-									"type": "typeof Model",
-									"notes": "Optional — results will be hydrated as Model instances."
-								}
-							],
-							"methodParams": [
-								{
-									"param": "sql",
-									"type": "string",
-									"required": "Yes",
-									"notes": "SQL statement with ? placeholders. Never interpolate user input."
-								},
-								{
-									"param": "...params",
-									"type": "any[]",
-									"required": "No",
-									"notes": "Bound parameter values for each ? placeholder."
-								}
-							]
-						},
-						{
-							"method": "execute",
-							"signature": "execute(sql, ...params)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<RunResult>",
-								"description": "Resolves with affected rows and last insert ID."
-							},
-							"methodParams": [
-								{
-									"param": "sql",
-									"type": "string",
-									"required": "Yes",
-									"notes": "SQL statement with ? placeholders. Never interpolate user input."
-								},
-								{
-									"param": "...params",
-									"type": "any[]",
-									"required": "No",
-									"notes": "Bound parameter values for each ? placeholder."
-								}
-							]
-						},
-						{
-							"method": "raw",
-							"signature": "raw(sql, ...params)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<any>",
-								"description": "Executes a raw string and returns the adapter-native result."
-							},
-							"methodParams": [
-								{
-									"param": "sql",
-									"type": "string",
-									"required": "Yes",
-									"notes": "SQL statement with ? placeholders. Never interpolate user input."
-								},
-								{
-									"param": "...params",
-									"type": "any[]",
-									"required": "No",
-									"notes": "Bound parameter values for each ? placeholder."
-								}
-							]
-						},
-						{
-							"method": "schema",
-							"signature": "schema(definition)",
-							"description": "",
-							"methodReturns": {
-								"type": "Schema",
-								"description": "Schema builder for the given table exposing DDL helpers (addColumn, dropColumn, etc.)."
-							},
-							"methodOptions": [
-								{
-									"option": "table",
-									"type": "string",
-									"notes": "Table name to scope the schema builder to."
-								}
-							],
-							"methodParams": [
-								{
-									"param": "definition",
-									"type": "object | function",
-									"required": "Yes",
-									"notes": "Table definition object or a callback that builds from the schema DSL."
-								}
-							]
-						},
 						{
 							"method": "sync",
 							"signature": "db.sync()",
@@ -365,16 +333,6 @@
 					"group": "Transactions",
 					"methods": [
 						{
-							"method": "begin",
-							"signature": "begin()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<Transaction>",
-								"description": "A transaction context with commit(), rollback(), and query() methods."
-							},
-							"methodParams": []
-						},
-						{
 							"method": "transaction",
 							"signature": "db.transaction(fn)",
 							"description": "Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions.",
@@ -390,87 +348,215 @@
 									"notes": "Async callback receiving a transaction context. Throw (or return a rejected promise) to trigger automatic rollback."
 								}
 							]
-						},
-						{
-							"method": "savepoint",
-							"signature": "savepoint(name)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Creates a named savepoint within the current transaction."
-							},
-							"methodParams": [
-								{
-									"param": "name",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Savepoint identifier used in rollback / release calls."
-								}
-							]
-						},
-						{
-							"method": "rollback",
-							"signature": "rollback([name])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Rolls back to the last savepoint or the start of the transaction."
-							},
-							"methodOptions": [
-								{
-									"option": "savepointName",
-									"type": "string",
-									"notes": "Savepoint to roll back to. Omit to roll back the entire transaction."
-								}
-							],
-							"methodParams": [
-								{
-									"param": "name",
-									"type": "string",
-									"required": "No",
-									"notes": "Savepoint name to roll back to. Omit to roll back the entire transaction."
-								}
-							]
-						},
-						{
-							"method": "commit",
-							"signature": "commit()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Commits the current transaction."
-							},
-							"methodParams": []
 						}
 					]
 				},
 				{
-					"group": "Introspection",
+					"group": "Migration",
 					"methods": [
 						{
-							"method": "tables",
-							"signature": "tables([schema])",
-							"description": "",
+							"method": "addColumn",
+							"signature": "addColumn(table, column, opts)",
+							"description": "Adds a new column to an existing table.",
 							"methodReturns": {
-								"type": "Promise<string[]>",
-								"description": "List of table names in the connected database."
+								"type": "Promise<void>",
+								"description": "Resolves when the column has been added."
 							},
 							"methodParams": [
 								{
-									"param": "schema",
+									"param": "table",
 									"type": "string",
-									"required": "No",
-									"notes": "PostgreSQL only — schema to list tables from (default: `\"public\"`)."
+									"required": "Yes",
+									"notes": "Table to alter."
+								},
+								{
+									"param": "column",
+									"type": "string",
+									"required": "Yes",
+									"notes": "New column name."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Column definition — same schema options as `Database.schema()`."
 								}
 							]
 						},
 						{
-							"method": "columns",
-							"signature": "columns(table)",
-							"description": "",
+							"method": "dropColumn",
+							"signature": "dropColumn(table, column)",
+							"description": "Drops a column from an existing table.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the column has been removed."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table to alter."
+								},
+								{
+									"param": "column",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Column name to drop."
+								}
+							]
+						},
+						{
+							"method": "renameColumn",
+							"signature": "renameColumn(table, from, to)",
+							"description": "Renames a column in an existing table.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the column has been renamed."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table to alter."
+								},
+								{
+									"param": "from",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Current column name."
+								},
+								{
+									"param": "to",
+									"type": "string",
+									"required": "Yes",
+									"notes": "New column name."
+								}
+							]
+						},
+						{
+							"method": "renameTable",
+							"signature": "renameTable(from, to)",
+							"description": "Renames an existing table.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the table has been renamed."
+							},
+							"methodParams": [
+								{
+									"param": "from",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Current table name."
+								},
+								{
+									"param": "to",
+									"type": "string",
+									"required": "Yes",
+									"notes": "New table name."
+								}
+							]
+						},
+						{
+							"method": "createIndex",
+							"signature": "createIndex(table, columns, opts)",
+							"description": "Creates an index on one or more columns.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the index has been created."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table to index."
+								},
+								{
+									"param": "columns",
+									"type": "string | string[]",
+									"required": "Yes",
+									"notes": "Column name(s) to include in the index."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ unique: true, name: string }`."
+								}
+							]
+						},
+						{
+							"method": "dropIndex",
+							"signature": "dropIndex(table, name)",
+							"description": "Drops a named index from a table.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the index has been dropped."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table the index belongs to."
+								},
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Index name to drop."
+								}
+							]
+						},
+						{
+							"method": "hasTable",
+							"signature": "hasTable(table)",
+							"description": "Checks whether a table exists in the database.",
+							"methodReturns": {
+								"type": "Promise<boolean>",
+								"description": "true if the table exists, false otherwise."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table name to check."
+								}
+							]
+						},
+						{
+							"method": "hasColumn",
+							"signature": "hasColumn(table, column)",
+							"description": "Checks whether a column exists on a table.",
+							"methodReturns": {
+								"type": "Promise<boolean>",
+								"description": "true if the column exists."
+							},
+							"methodParams": [
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table to inspect."
+								},
+								{
+									"param": "column",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Column name to check."
+								}
+							]
+						},
+						{
+							"method": "describeTable",
+							"signature": "describeTable(table)",
+							"description": "Returns full column metadata for a table.",
 							"methodReturns": {
 								"type": "Promise<ColumnInfo[]>",
-								"description": "Column definitions for the given table."
+								"description": "Array of column definitions with name, type, nullable, default, primaryKey."
 							},
 							"methodParams": [
 								{
@@ -482,315 +568,160 @@
 							]
 						},
 						{
-							"method": "indexes",
-							"signature": "indexes(table)",
-							"description": "",
+							"method": "addForeignKey",
+							"signature": "addForeignKey(table, column, refTable, refColumn, opts)",
+							"description": "Adds a foreign key constraint to an existing column.",
 							"methodReturns": {
-								"type": "Promise<IndexInfo[]>",
-								"description": "Index definitions for the given table."
+								"type": "Promise<void>",
+								"description": "Resolves when the constraint has been added."
 							},
 							"methodParams": [
 								{
 									"param": "table",
 									"type": "string",
 									"required": "Yes",
-									"notes": "Table name to inspect."
-								}
-							]
-						},
-						{
-							"method": "dialect",
-							"signature": "dialect",
-							"description": "",
-							"methodReturns": {
-								"type": "string",
-								"description": "The SQL dialect name, e.g. \"sqlite\", \"mysql\", \"postgres\"."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "version",
-							"signature": "version",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<string>",
-								"description": "Resolves with the database engine version string."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "status",
-							"signature": "status",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<object>",
-								"description": "Pool status metrics: { size, idle, pending }."
-							},
-							"methodParams": []
-						}
-					]
-				},
-				{
-					"group": "Config",
-					"methods": [
-						{
-							"method": "configure",
-							"signature": "configure(opts)",
-							"description": "",
-							"methodReturns": {
-								"type": "Database",
-								"description": "Returns the database instance for chaining."
-							},
-							"methodOptions": [
-								{
-									"option": "logging",
-									"type": "boolean",
-									"default": false,
-									"notes": "Enable SQL query logging to stdout."
+									"notes": "Table that owns the FK."
 								},
 								{
-									"option": "logSlowMs",
-									"type": "number",
-									"default": "0",
-									"notes": "Log queries that take longer than this many milliseconds. 0 = disabled."
-								},
-								{
-									"option": "pool",
-									"type": "object",
-									"default": "{}",
-									"notes": "Connection pool settings: `{ min, max, idle, acquire }` (adapter-dependent)."
-								},
-								{
-									"option": "timezone",
+									"param": "column",
 									"type": "string",
-									"default": "\"UTC\"",
-									"notes": "Default timezone for date/time handling."
+									"required": "Yes",
+									"notes": "Column that holds the FK."
 								},
 								{
-									"option": "charset",
+									"param": "refTable",
 									"type": "string",
-									"default": "\"utf8mb4\"",
-									"notes": "Default character set (MySQL/MariaDB)."
-								}
-							],
-							"methodParams": [
+									"required": "Yes",
+									"notes": "Referenced table."
+								},
+								{
+									"param": "refColumn",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Referenced column (usually primary key)."
+								},
 								{
 									"param": "opts",
 									"type": "object",
-									"required": "Yes",
-									"notes": "Configuration object — keys include pool, logger, debug, timeout, timezone, etc."
+									"required": "No",
+									"notes": "Options — `{ onDelete, onUpdate }` (e.g. `\"CASCADE\"`)."
 								}
-							]
-						},
-						{
-							"method": "getConfig",
-							"signature": "getConfig()",
-							"description": "",
-							"methodReturns": {
-								"type": "object",
-								"description": "The current adapter configuration object."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "setConfig",
-							"signature": "setConfig(key, value)",
-							"description": "",
-							"methodReturns": {
-								"type": "Database",
-								"description": "Returns the database instance for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "key",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Configuration key, e.g. \"pool.max\", \"logger\", \"debug\"."
-								},
-								{
-									"param": "value",
-									"type": "any",
-									"required": "Yes",
-									"notes": "New value for the key."
-								}
-							]
-						},
-						{
-							"method": "logger",
-							"signature": "logger(fn)",
-							"description": "",
-							"methodReturns": {
-								"type": "Logger",
-								"description": "The Logger instance currently attached to this database."
-							},
-							"methodOptions": [
-								{
-									"option": "loggerInstance",
-									"type": "Logger",
-									"notes": "Custom logger with `.log()`, `.warn()`, `.error()` methods (e.g. `debug(\"db:sql\")`)."
-								}
-							],
-							"methodParams": [
-								{
-									"param": "fn",
-									"type": "function",
-									"required": "Yes",
-									"notes": "(query: string, duration: number) => void — receives every executed SQL and its duration."
-								}
-							]
-						},
-						{
-							"method": "debug",
-							"signature": "debug(enabled)",
-							"description": "",
-							"methodReturns": {
-								"type": "Database",
-								"description": "Returns the database instance with debug mode toggled."
-							},
-							"methodParams": [
-								{
-									"param": "enabled",
-									"type": "boolean",
-									"required": "Yes",
-									"notes": "true to log every SQL statement to the configured logger."
-								}
-							]
-						},
-						{
-							"method": "pool",
-							"signature": "pool(opts)",
-							"description": "",
-							"methodReturns": {
-								"type": "PoolStatus",
-								"description": "Snapshot of the connection pool: `{ size, idle, pending, acquired }`."
-							},
-							"methodParams": [
-								{
-									"param": "opts",
-									"type": "object",
-									"required": "Yes",
-									"notes": "Pool options — { min, max, idleTimeout, acquireTimeout }."
-								}
-							]
-						}
-					]
-				},
-				{
-					"group": "Migration",
-					"methods": [
-						{
-							"method": "addColumn",
-							"signature": "addColumn(table, column, opts)",
-							"description": "Adds a new column to an existing table.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the column has been added." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table to alter." },
-								{ "param": "column", "type": "string", "required": "Yes", "notes": "New column name." },
-								{ "param": "opts", "type": "object", "required": "Yes", "notes": "Column definition — same schema options as `Database.schema()`." }
-							]
-						},
-						{
-							"method": "dropColumn",
-							"signature": "dropColumn(table, column)",
-							"description": "Drops a column from an existing table.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the column has been removed." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table to alter." },
-								{ "param": "column", "type": "string", "required": "Yes", "notes": "Column name to drop." }
-							]
-						},
-						{
-							"method": "renameColumn",
-							"signature": "renameColumn(table, from, to)",
-							"description": "Renames a column in an existing table.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the column has been renamed." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table to alter." },
-								{ "param": "from", "type": "string", "required": "Yes", "notes": "Current column name." },
-								{ "param": "to", "type": "string", "required": "Yes", "notes": "New column name." }
-							]
-						},
-						{
-							"method": "renameTable",
-							"signature": "renameTable(from, to)",
-							"description": "Renames an existing table.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the table has been renamed." },
-							"methodParams": [
-								{ "param": "from", "type": "string", "required": "Yes", "notes": "Current table name." },
-								{ "param": "to", "type": "string", "required": "Yes", "notes": "New table name." }
-							]
-						},
-						{
-							"method": "createIndex",
-							"signature": "createIndex(table, columns, opts)",
-							"description": "Creates an index on one or more columns.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the index has been created." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table to index." },
-								{ "param": "columns", "type": "string | string[]", "required": "Yes", "notes": "Column name(s) to include in the index." },
-								{ "param": "opts", "type": "object", "required": "No", "notes": "Options — `{ unique: true, name: string }`." }
-							]
-						},
-						{
-							"method": "dropIndex",
-							"signature": "dropIndex(table, name)",
-							"description": "Drops a named index from a table.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the index has been dropped." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table the index belongs to." },
-								{ "param": "name", "type": "string", "required": "Yes", "notes": "Index name to drop." }
-							]
-						},
-						{
-							"method": "hasTable",
-							"signature": "hasTable(table)",
-							"description": "Checks whether a table exists in the database.",
-							"methodReturns": { "type": "Promise<boolean>", "description": "true if the table exists, false otherwise." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table name to check." }
-							]
-						},
-						{
-							"method": "hasColumn",
-							"signature": "hasColumn(table, column)",
-							"description": "Checks whether a column exists on a table.",
-							"methodReturns": { "type": "Promise<boolean>", "description": "true if the column exists." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table to inspect." },
-								{ "param": "column", "type": "string", "required": "Yes", "notes": "Column name to check." }
-							]
-						},
-						{
-							"method": "describeTable",
-							"signature": "describeTable(table)",
-							"description": "Returns full column metadata for a table.",
-							"methodReturns": { "type": "Promise<ColumnInfo[]>", "description": "Array of column definitions with name, type, nullable, default, primaryKey." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table name to describe." }
-							]
-						},
-						{
-							"method": "addForeignKey",
-							"signature": "addForeignKey(table, column, refTable, refColumn, opts)",
-							"description": "Adds a foreign key constraint to an existing column.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the constraint has been added." },
-							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table that owns the FK." },
-								{ "param": "column", "type": "string", "required": "Yes", "notes": "Column that holds the FK." },
-								{ "param": "refTable", "type": "string", "required": "Yes", "notes": "Referenced table." },
-								{ "param": "refColumn", "type": "string", "required": "Yes", "notes": "Referenced column (usually primary key)." },
-								{ "param": "opts", "type": "object", "required": "No", "notes": "Options — `{ onDelete, onUpdate }` (e.g. `\"CASCADE\"`)." }
 							]
 						},
 						{
 							"method": "dropForeignKey",
 							"signature": "dropForeignKey(table, constraintName)",
 							"description": "Drops a named foreign key constraint.",
-							"methodReturns": { "type": "Promise<void>", "description": "Resolves when the constraint has been removed." },
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when the constraint has been removed."
+							},
 							"methodParams": [
-								{ "param": "table", "type": "string", "required": "Yes", "notes": "Table owning the constraint." },
-								{ "param": "constraintName", "type": "string", "required": "Yes", "notes": "Constraint name to drop." }
+								{
+									"param": "table",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Table owning the constraint."
+								},
+								{
+									"param": "constraintName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Constraint name to drop."
+								}
 							]
+						}
+					]
+				},
+				{
+					"group": "Performance & Scalability",
+					"methods": [
+						{
+							"method": "enableProfiling",
+							"signature": "db.enableProfiling([options])",
+							"description": "Enable query profiling on this database instance. Returns a QueryProfiler that records execution times, detects slow queries, and flags N+1 patterns.",
+							"methodReturns": {
+								"type": "QueryProfiler",
+								"description": "The attached profiler instance."
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "QueryProfilerOptions",
+									"required": "No",
+									"notes": "Profiler configuration. See QueryProfiler options."
+								}
+							]
+						},
+						{
+							"method": "connectWithReplicas",
+							"signature": "Database.connectWithReplicas(type, primaryOpts, replicaConfigs, [options])",
+							"description": "Static factory that creates a Database with read replicas. Write operations go to the primary; read operations are distributed across replicas using the configured strategy.",
+							"methodReturns": {
+								"type": "Database",
+								"description": "A Database instance with replica support."
+							},
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "AdapterType",
+									"required": "Yes",
+									"notes": "Adapter type for all connections."
+								},
+								{
+									"param": "primaryOpts",
+									"type": "AdapterOptions",
+									"required": "Yes",
+									"notes": "Connection options for the primary (read-write) database."
+								},
+								{
+									"param": "replicaConfigs",
+									"type": "AdapterOptions[]",
+									"required": "Yes",
+									"notes": "Array of connection options, one per read replica."
+								},
+								{
+									"param": "options",
+									"type": "ReplicaManagerOptions",
+									"required": "No",
+									"notes": "`{ strategy, stickyWrite, stickyWindow }`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Instance Properties",
+					"methods": [
+						{
+							"method": "adapter",
+							"signature": "database.adapter",
+							"description": "The underlying database adapter instance. Type depends on the adapter used during connect().",
+							"methodReturns": {
+								"type": "any",
+								"description": "The adapter instance (SqliteAdapter, MySqlAdapter, etc.)."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "profiler",
+							"signature": "database.profiler",
+							"description": "The attached query profiler, or null if profiling is not enabled. Set via enableProfiling().",
+							"methodReturns": {
+								"type": "QueryProfiler | null",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "replicas",
+							"signature": "database.replicas",
+							"description": "The attached replica manager, or null if replicas are not configured. Set via connectWithReplicas().",
+							"methodReturns": {
+								"type": "ReplicaManager | null",
+								"description": ""
+							},
+							"methodParams": []
 						}
 					]
 				}
@@ -874,23 +805,6 @@
 									"type": "object",
 									"required": "No",
 									"notes": "Filter conditions. Keys are column names; values are exact matches or operator objects like `{ gt: 18 }`."
-								}
-							]
-						},
-						{
-							"method": "findAll",
-							"signature": "findAll([conditions])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<Model[]>",
-								"description": "Resolves with all matching records."
-							},
-							"methodParams": [
-								{
-									"param": "conditions",
-									"type": "object",
-									"required": "No",
-									"notes": "Optional filter conditions. Returns all records when omitted."
 								}
 							]
 						},
@@ -986,29 +900,6 @@
 							]
 						},
 						{
-							"method": "updateAll",
-							"signature": "updateAll(conditions, data)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<number>",
-								"description": "Resolves with the number of affected rows."
-							},
-							"methodParams": [
-								{
-									"param": "conditions",
-									"type": "object",
-									"required": "Yes",
-									"notes": "Records matching these conditions will be updated."
-								},
-								{
-									"param": "data",
-									"type": "object",
-									"required": "Yes",
-									"notes": "Fields and their new values."
-								}
-							]
-						},
-						{
 							"method": "delete",
 							"signature": "instance.delete()",
 							"description": "Delete the instance (soft or hard depending on softDelete setting).",
@@ -1017,23 +908,6 @@
 								"description": "Deletes the matching record."
 							},
 							"methodParams": []
-						},
-						{
-							"method": "deleteAll",
-							"signature": "deleteAll([conditions])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<number>",
-								"description": "Resolves with the number of deleted rows."
-							},
-							"methodParams": [
-								{
-									"param": "conditions",
-									"type": "object",
-									"required": "No",
-									"notes": "Filter conditions. Deletes ALL rows when omitted — use with care."
-								}
-							]
 						},
 						{
 							"method": "count",
@@ -1091,120 +965,84 @@
 									"notes": "Fields to set on create or update."
 								}
 							]
-						}
-					]
-				},
-				{
-					"group": "Schema & Inspect",
-					"methods": [
-						{
-							"method": "schema",
-							"signature": "schema",
-							"description": "",
-							"methodReturns": {
-								"type": "SchemaDefinition",
-								"description": "The schema object used to define columns and constraints."
-							},
-							"methodParams": []
 						},
 						{
-							"method": "columns",
-							"signature": "columns",
-							"description": "",
+							"method": "findById",
+							"signature": "Model.findById(id)",
+							"description": "Find a single record by its primary key value.",
 							"methodReturns": {
-								"type": "string[]",
-								"description": "Array of column names for this model."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "tableName",
-							"signature": "tableName",
-							"description": "",
-							"methodReturns": {
-								"type": "string",
-								"description": "The database table name derived from the model class."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "primaryKey",
-							"signature": "primaryKey",
-							"description": "",
-							"methodReturns": {
-								"type": "string",
-								"description": "Name of the primary key column (default \"id\")."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "fields",
-							"signature": "fields",
-							"description": "",
-							"methodReturns": {
-								"type": "FieldMap",
-								"description": "Map of field name → field definition including type, default, validations."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "relations",
-							"signature": "relations",
-							"description": "",
-							"methodReturns": {
-								"type": "object",
-								"description": "All defined associations — `{ hasMany, hasOne, belongsTo, belongsToMany }` — as an object keyed by relation name."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "validate",
-							"signature": "validate(data)",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<ValidationResult>",
-								"description": "Runs all schema validators and resolves with errors if any."
+								"type": "Promise<Model | null>",
+								"description": "The found instance, or null."
 							},
 							"methodParams": [
 								{
-									"param": "data",
-									"type": "object",
+									"param": "id",
+									"type": "any",
 									"required": "Yes",
-									"notes": "Attribute object to validate against the model's defined schema rules."
+									"notes": "Primary key value."
 								}
 							]
 						},
 						{
-							"method": "cast",
-							"signature": "cast(data)",
-							"description": "",
+							"method": "updateWhere",
+							"signature": "Model.updateWhere(conditions, data)",
+							"description": "Update all records matching conditions. Returns the number of affected rows.",
 							"methodReturns": {
-								"type": "object",
-								"description": "Returns a plain object with values cast to their schema types."
+								"type": "Promise<number>",
+								"description": "Number of updated records."
 							},
 							"methodParams": [
+								{
+									"param": "conditions",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Filter criteria."
+								},
 								{
 									"param": "data",
 									"type": "object",
 									"required": "Yes",
-									"notes": "Raw attribute object to coerce to the correct column types."
+									"notes": "Fields to update."
 								}
 							]
 						},
 						{
-							"method": "hydrate",
-							"signature": "hydrate(rows)",
-							"description": "",
+							"method": "deleteWhere",
+							"signature": "Model.deleteWhere(conditions)",
+							"description": "Delete all records matching conditions. Returns the number of deleted rows.",
 							"methodReturns": {
-								"type": "Model",
-								"description": "Creates a model instance from a plain object without persisting."
+								"type": "Promise<number>",
+								"description": "Number of deleted records."
 							},
 							"methodParams": [
 								{
-									"param": "rows",
-									"type": "object[]",
+									"param": "conditions",
+									"type": "object",
 									"required": "Yes",
-									"notes": "Array of raw database row objects to wrap as model instances."
+									"notes": "Filter criteria."
+								}
+							]
+						},
+						{
+							"method": "scope",
+							"signature": "Model.scope(name, ...args)",
+							"description": "Start a fluent Query builder with a named scope applied. Scopes are reusable query conditions defined in `static scopes`.",
+							"methodReturns": {
+								"type": "Query",
+								"description": "A new Query instance with the scope applied."
+							},
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Scope name defined in `static scopes`."
+								},
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "No",
+									"notes": "Extra arguments forwarded to the scope function."
 								}
 							]
 						}
@@ -1222,120 +1060,6 @@
 								"description": "Returns the query builder for chaining."
 							},
 							"methodParams": []
-						},
-						{
-							"method": "where",
-							"signature": "where(field, [value])",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "field",
-									"type": "string | object",
-									"required": "Yes",
-									"notes": "Column or conditions object."
-								},
-								{
-									"param": "value",
-									"type": "any",
-									"required": "No",
-									"notes": "Comparison value (uses = by default)."
-								}
-							]
-						},
-						{
-							"method": "select",
-							"signature": "select(...fields)",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "...fields",
-									"type": "string[]",
-									"required": "Yes",
-									"notes": "Columns to include in the result."
-								}
-							]
-						},
-						{
-							"method": "include",
-							"signature": "include(relation)",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "relation",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Relation name to eager-load, e.g. \"posts\", \"profile.avatar\"."
-								}
-							]
-						},
-						{
-							"method": "orderBy",
-							"signature": "orderBy(field, [dir])",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "field",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Column to sort by."
-								},
-								{
-									"param": "dir",
-									"type": "\"asc\" | \"desc\"",
-									"required": "No",
-									"notes": "Sort direction (default: \"asc\")."
-								}
-							]
-						},
-						{
-							"method": "limit",
-							"signature": "limit(n)",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "n",
-									"type": "number",
-									"required": "Yes",
-									"notes": "Max rows to return."
-								}
-							]
-						},
-						{
-							"method": "offset",
-							"signature": "offset(n)",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "n",
-									"type": "number",
-									"required": "Yes",
-									"notes": "Rows to skip."
-								}
-							]
 						},
 						{
 							"method": "paginate",
@@ -1366,16 +1090,6 @@
 					"group": "Soft Delete",
 					"methods": [
 						{
-							"method": "softDelete",
-							"signature": "softDelete()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Marks record as deleted without removing it from the database."
-							},
-							"methodParams": []
-						},
-						{
 							"method": "restore",
 							"signature": "instance.restore()",
 							"description": "Restore a soft-deleted instance (sets deletedAt to null).",
@@ -1384,175 +1098,396 @@
 								"description": "Restores a soft-deleted record."
 							},
 							"methodParams": []
-						},
-						{
-							"method": "withTrashed",
-							"signature": "withTrashed()",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "onlyTrashed",
-							"signature": "onlyTrashed()",
-							"description": "",
-							"methodReturns": {
-								"type": "QueryBuilder",
-								"description": "Returns the query builder for chaining."
-							},
-							"methodParams": []
 						}
 					]
 				},
 				{
-					"group": "Lifecycle Hooks",
+					"group": "LINQ-Inspired Shortcuts",
 					"methods": [
 						{
-							"method": "beforeCreate",
-							"signature": "beforeCreate(fn)",
-							"description": "",
+							"method": "first",
+							"signature": "Model.first([conditions])",
+							"description": "Find the first record matching optional conditions.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called with the new instance just before it is inserted into the database. Mutations to `instance` are persisted."
+								"type": "Promise<Model | null>",
+								"description": "The first matching instance, or null."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance before the create operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
-									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
 						},
 						{
-							"method": "afterCreate",
-							"signature": "afterCreate(fn)",
-							"description": "",
+							"method": "last",
+							"signature": "Model.last([conditions])",
+							"description": "Find the last record matching optional conditions.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called with the created instance immediately after a successful INSERT."
+								"type": "Promise<Model | null>",
+								"description": "The last matching instance, or null."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance after the create operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
-									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
 						},
 						{
-							"method": "beforeUpdate",
-							"signature": "beforeUpdate(fn)",
-							"description": "",
+							"method": "all",
+							"signature": "Model.all([conditions])",
+							"description": "Get all records matching optional conditions. Alias for `find()`.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called with the instance before UPDATE is executed. Useful for timestamps or validation."
+								"type": "Promise<Model[]>",
+								"description": "Array of model instances."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance before the update operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
-									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
 						},
 						{
-							"method": "afterUpdate",
-							"signature": "afterUpdate(fn)",
-							"description": "",
+							"method": "chunk",
+							"signature": "Model.chunk(size, fn, [conditions])",
+							"description": "Process all matching records in batches. Calls `fn(batch, index)` for each chunk.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called after UPDATE completes successfully."
+								"type": "Promise<void>",
+								"description": "Resolves when all chunks have been processed."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance after the update operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
+									"param": "size",
+									"type": "number",
 									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"notes": "Number of records per batch."
+								},
+								{
+									"param": "fn",
+									"type": "(batch, index) => void | Promise<void>",
+									"required": "Yes",
+									"notes": "Callback invoked with each batch and its 0-based index."
+								},
+								{
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
 						},
 						{
-							"method": "beforeDelete",
-							"signature": "beforeDelete(fn)",
-							"description": "",
+							"method": "random",
+							"signature": "Model.random([conditions])",
+							"description": "Get a random record matching optional conditions.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called before DELETE is executed. Throw to abort the deletion."
+								"type": "Promise<Model | null>",
+								"description": "A random matching instance, or null."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance before the delete operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
-									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
 						},
 						{
-							"method": "afterDelete",
-							"signature": "afterDelete(fn)",
-							"description": "",
+							"method": "pluck",
+							"signature": "Model.pluck(field, [conditions])",
+							"description": "Get an array of values for a single column from all matching records.",
 							"methodReturns": {
-								"type": "void | Promise<void>",
-								"description": "Called after the row is deleted from the database."
+								"type": "Promise<any[]>",
+								"description": "Array of column values."
 							},
-							"methodOptions": [
-								{
-									"option": "instance",
-									"type": "Model",
-									"notes": "The model instance after the delete operation. Mutate properties to affect the persisted values."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(instance: Model) => void | Promise<void>",
+									"param": "field",
+									"type": "string",
 									"required": "Yes",
-									"notes": "Hook callback. Throw to abort the operation."
+									"notes": "Column name to extract."
+								},
+								{
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "Optional filter criteria."
 								}
 							]
+						}
+					]
+				},
+				{
+					"group": "Instance Methods",
+					"methods": [
+						{
+							"method": "save",
+							"signature": "instance.save()",
+							"description": "Persist the instance. Inserts a new record if unpersisted, or updates only dirty (changed) fields if already saved.",
+							"methodReturns": {
+								"type": "Promise<Model>",
+								"description": "The saved instance."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "reload",
+							"signature": "instance.reload()",
+							"description": "Reload the instance from the database, discarding any unsaved local changes.",
+							"methodReturns": {
+								"type": "Promise<Model>",
+								"description": "The refreshed instance."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "toJSON",
+							"signature": "instance.toJSON()",
+							"description": "Return a plain object representation of the instance. Fields listed in `static hidden` are excluded.",
+							"methodReturns": {
+								"type": "object",
+								"description": "Plain object with model data."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "load",
+							"signature": "instance.load(relationName)",
+							"description": "Lazy-load a named relationship. The relation must be defined via `hasMany`, `hasOne`, `belongsTo`, or `belongsToMany`.",
+							"methodReturns": {
+								"type": "Promise<Model | Model[] | null>",
+								"description": "The related model(s), or null."
+							},
+							"methodParams": [
+								{
+									"param": "relationName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Name of the relationship to load."
+								}
+							]
+						},
+						{
+							"method": "increment",
+							"signature": "instance.increment(field, [by])",
+							"description": "Atomically increment a numeric field. Saves the change to the database immediately.",
+							"methodReturns": {
+								"type": "Promise<Model>",
+								"description": "The updated instance."
+							},
+							"methodParams": [
+								{
+									"param": "field",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Name of the numeric field."
+								},
+								{
+									"param": "by",
+									"type": "number",
+									"required": "No",
+									"notes": "Amount to increment. Default: `1`."
+								}
+							]
+						},
+						{
+							"method": "decrement",
+							"signature": "instance.decrement(field, [by])",
+							"description": "Atomically decrement a numeric field. Saves the change to the database immediately.",
+							"methodReturns": {
+								"type": "Promise<Model>",
+								"description": "The updated instance."
+							},
+							"methodParams": [
+								{
+									"param": "field",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Name of the numeric field."
+								},
+								{
+									"param": "by",
+									"type": "number",
+									"required": "No",
+									"notes": "Amount to decrement. Default: `1`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Relationships",
+					"methods": [
+						{
+							"method": "hasMany",
+							"signature": "Model.hasMany(RelatedModel, foreignKey, [localKey])",
+							"description": "Define a one-to-many relationship. The related model's `foreignKey` references this model's primary key (or `localKey`).",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "RelatedModel",
+									"type": "typeof Model",
+									"required": "Yes",
+									"notes": "The related Model class."
+								},
+								{
+									"param": "foreignKey",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Column on the related table that references this model."
+								},
+								{
+									"param": "localKey",
+									"type": "string",
+									"required": "No",
+									"notes": "Column on this model. Defaults to primary key."
+								}
+							]
+						},
+						{
+							"method": "hasOne",
+							"signature": "Model.hasOne(RelatedModel, foreignKey, [localKey])",
+							"description": "Define a one-to-one relationship. Like `hasMany` but `load()` returns a single instance.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "RelatedModel",
+									"type": "typeof Model",
+									"required": "Yes",
+									"notes": "The related Model class."
+								},
+								{
+									"param": "foreignKey",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Column on the related table."
+								},
+								{
+									"param": "localKey",
+									"type": "string",
+									"required": "No",
+									"notes": "Column on this model. Defaults to primary key."
+								}
+							]
+						},
+						{
+							"method": "belongsTo",
+							"signature": "Model.belongsTo(RelatedModel, foreignKey, [otherKey])",
+							"description": "Define an inverse one-to-one/many relationship. This model holds the foreign key.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "RelatedModel",
+									"type": "typeof Model",
+									"required": "Yes",
+									"notes": "The parent Model class."
+								},
+								{
+									"param": "foreignKey",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Column on THIS table that references the related model."
+								},
+								{
+									"param": "otherKey",
+									"type": "string",
+									"required": "No",
+									"notes": "Column on the related table. Defaults to its primary key."
+								}
+							]
+						},
+						{
+							"method": "belongsToMany",
+							"signature": "Model.belongsToMany(RelatedModel, options)",
+							"description": "Define a many-to-many relationship through a junction (pivot) table.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "RelatedModel",
+									"type": "typeof Model",
+									"required": "Yes",
+									"notes": "The related Model class."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "Yes",
+									"notes": "`{ through, foreignKey, otherKey, localKey?, relatedKey? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "through",
+									"type": "string",
+									"notes": "Junction table name."
+								},
+								{
+									"option": "foreignKey",
+									"type": "string",
+									"notes": "Column in the junction table referencing this model."
+								},
+								{
+									"option": "otherKey",
+									"type": "string",
+									"notes": "Column in the junction table referencing the related model."
+								},
+								{
+									"option": "localKey",
+									"type": "string",
+									"notes": "Optional local key on this model. Defaults to primary key."
+								},
+								{
+									"option": "relatedKey",
+									"type": "string",
+									"notes": "Optional key on the related model. Defaults to primary key."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Schema & Lifecycle",
+					"methods": [
+						{
+							"method": "sync",
+							"signature": "Model.sync()",
+							"description": "Create or sync the model's table in the database. Idempotent — safe to call multiple times.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "drop",
+							"signature": "Model.drop()",
+							"description": "Drop the model's table from the database.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							},
+							"methodParams": []
 						}
 					]
 				}
@@ -1603,6 +1538,121 @@
 					"type": "boolean",
 					"default": "false",
 					"notes": "Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance."
+				},
+				{
+					"option": "type",
+					"type": "TYPES.*",
+					"notes": "Column data type (e.g. `TYPES.STRING`, `TYPES.INTEGER`). Required."
+				},
+				{
+					"option": "required",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Field must be provided on create. Throws validation error if missing."
+				},
+				{
+					"option": "default",
+					"type": "any | () => any",
+					"notes": "Default value, or a factory function. Called on each `create()` if the field is omitted."
+				},
+				{
+					"option": "nullable",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Allow null values in the column."
+				},
+				{
+					"option": "primaryKey",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Mark this column as the primary key."
+				},
+				{
+					"option": "autoIncrement",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Auto-increment on insert (integer primary keys)."
+				},
+				{
+					"option": "unique",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Add a UNIQUE constraint on this column."
+				},
+				{
+					"option": "minLength",
+					"type": "number",
+					"notes": "Minimum string length. Validated before insert/update."
+				},
+				{
+					"option": "maxLength",
+					"type": "number",
+					"notes": "Maximum string length. Validated before insert/update."
+				},
+				{
+					"option": "min",
+					"type": "number",
+					"notes": "Minimum numeric value."
+				},
+				{
+					"option": "max",
+					"type": "number",
+					"notes": "Maximum numeric value."
+				},
+				{
+					"option": "match",
+					"type": "RegExp",
+					"notes": "Pattern constraint for string values."
+				},
+				{
+					"option": "enum",
+					"type": "string[]",
+					"notes": "Allowed values for string/ENUM type."
+				},
+				{
+					"option": "values",
+					"type": "string[]",
+					"notes": "Allowed values for SET type."
+				},
+				{
+					"option": "precision",
+					"type": "number",
+					"notes": "Total digit count for DECIMAL types."
+				},
+				{
+					"option": "scale",
+					"type": "number",
+					"notes": "Digits after the decimal point for DECIMAL types."
+				},
+				{
+					"option": "length",
+					"type": "number",
+					"notes": "Fixed width for CHAR, BINARY, VARBINARY types."
+				},
+				{
+					"option": "unsigned",
+					"type": "boolean",
+					"notes": "MySQL: mark column as unsigned (no negative values)."
+				},
+				{
+					"option": "charset",
+					"type": "string",
+					"notes": "MySQL/PG: column-level character set."
+				},
+				{
+					"option": "collation",
+					"type": "string",
+					"notes": "MySQL/PG: column-level collation."
+				},
+				{
+					"option": "comment",
+					"type": "string",
+					"notes": "MySQL/PG: column comment stored in database metadata."
+				},
+				{
+					"option": "arrayOf",
+					"type": "string",
+					"notes": "PostgreSQL: element type for ARRAY columns (e.g. `\"text\"`, `\"integer\"`)."
 				}
 			],
 			"example": "const { Database, Model, TYPES } = require('zero-http')\n\n// Foreign Keys — CASCADE delete from parent removes children\nclass Post extends Model {\n\tstatic table = 'posts'\n\tstatic schema = {\n\t\tid:       { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\t\ttitle:    { type: TYPES.STRING, required: true, index: true },\n\t\tauthorId: {\n\t\t\ttype: TYPES.INTEGER, required: true,\n\t\t\treferences: { table: 'users', column: 'id', onDelete: 'CASCADE' }\n\t\t},\n\t\tstatus: { type: TYPES.STRING, check: '\"status\" IN (\\'draft\\', \\'published\\', \\'archived\\')' },\n\t}\n}\n\n// Composite Primary Key — junction table for many-to-many\nclass Enrollment extends Model {\n\tstatic table = 'enrollments'\n\tstatic schema = {\n\t\tstudentId: { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,\n\t\t\treferences: { table: 'students', column: 'id', onDelete: 'CASCADE' } },\n\t\tcourseId:  { type: TYPES.INTEGER, primaryKey: true, compositeKey: true,\n\t\t\treferences: { table: 'courses', column: 'id', onDelete: 'CASCADE' } },\n\t\tgrade: { type: TYPES.STRING },\n\t\tenrolledAt: { type: TYPES.DATETIME },\n\t}\n}\n\n// Composite Unique + Composite Index\nclass UserRole extends Model {\n\tstatic table = 'user_roles'\n\tstatic schema = {\n\t\tid:     { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n\t\tuserId: { type: TYPES.INTEGER, compositeUnique: 'user_role',\n\t\t\tcompositeIndex: 'user_lookup' },\n\t\trole:   { type: TYPES.STRING, compositeUnique: 'user_role' },\n\t\torgId:  { type: TYPES.INTEGER, compositeIndex: 'user_lookup' },\n\t}\n}\n\n// Migrations — evolve your schema after deployment\nconst db = Database.connect('sqlite', { filename: 'app.db' })\n\n// Add a column\nawait db.addColumn('users', 'bio', { type: TYPES.TEXT, default: '' })\n\n// Create an index\nawait db.createIndex('users', ['email'], { name: 'idx_email', unique: true })\n\n// Rename a column\nawait db.renameColumn('users', 'bio', 'biography')\n\n// Check if table/column exists before migrating\nif (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {\n\tawait db.addColumn('users', 'avatar', { type: TYPES.STRING })\n}\n\n// Introspect existing schema\nconst info = await db.describeTable('users')\nconsole.log(info)",
@@ -3588,6 +3638,21 @@
 							]
 						}
 					]
+				},
+				{
+					"group": "Execution",
+					"methods": [
+						{
+							"method": "build",
+							"signature": "query.build()",
+							"description": "Build and return the adapter-agnostic query descriptor without executing it. Useful for inspection, caching keys, or passing to `QueryCache.wrap()`.",
+							"methodReturns": {
+								"type": "object",
+								"description": "The internal query descriptor."
+							},
+							"methodParams": []
+						}
+					]
 				}
 			],
 			"example": "// Filtering with negation\nconst results = await User.query()\n\t.whereNotIn('role', ['banned', 'suspended'])\n\t.whereNotBetween('age', 0, 12)\n\t.whereLike('email', '%@gmail.com')\n\t.orderBy('name')\n\t.exec()\n\n// Scoped queries (chainable)\nconst activeAdmins = await User.query()\n\t.scope('active')\n\t.scope('role', 'admin')\n\t.orderBy('name')\n\t.exec()\n\n// Aggregates\nconst avgAge = await User.query().avg('age')\nconst revenue = await Order.query().where('status', 'paid').sum('total')\nconst maxPrice = await Product.query().max('price')\nconst count = await User.query().where('role', 'admin').count()\n\n// LINQ-style aliases\nconst top5 = await User.query().orderByDesc('score').take(5)\nconst page3 = await User.query().skip(40).take(20)\nconst oldest = await User.query().orderBy('age').last()\n\n// LINQ element operators\nconst onlyAdmin = await User.query().where('email', 'admin@co.com').single()\nconst third = await User.query().orderBy('id').elementAt(2)\nconst fallback = await User.query().where('role', 'owner').defaultIfEmpty({ name: 'N/A' })\n\n// LINQ quantifiers\nconst hasAdmins = await User.query().where('role', 'admin').any()\nconst allAdults = await User.query().all(u => u.age >= 18)\nconst hasAlice = await User.query().contains('name', 'Alice')\n\n// LINQ ordering with secondary sorts\nconst sorted = await User.query()\n\t.orderBy('role').thenByDescending('score').toArray()\n\n// LINQ set operations\nconst admins = User.query().where('role', 'admin')\nconst seniors = User.query().where('age', '>=', 50)\nconst both = await admins.intersect(seniors, u => u.id)\nconst onlyAdmins = await admins.except(seniors, u => u.id)\n\n// LINQ projection\nconst tags = await Post.query().selectMany(p => p.tags)\nconst byRole = await User.query().toLookup(u => u.role)\nconst idMap = await User.query().toDictionary(u => u.id)\n\n// LINQ partitioning\nconst while18 = await User.query().orderBy('age').takeWhile(u => u.age < 21)\nconst after18 = await User.query().orderBy('age').skipWhile(u => u.age < 18)\n\n// LINQ aggregate selectors\nconst youngest = await User.query().minBy(u => u.age)\nconst topScorer = await User.query().maxBy(u => u.score)\nconst totalScore = await User.query().sumBy(u => u.score)\nconst roleCounts = await User.query().countBy(u => u.role)\n\n// Conditional query building (perfect for API endpoints)\nconst users = await User.query()\n\t.when(req.query.role, q => q.where('role', req.query.role))\n\t.when(req.query.minAge, q => q.where('age', '>=', req.query.minAge))\n\t.unless(req.query.showAll, q => q.limit(50))\n\t.tap(q => console.log('Query:', q.build()))\n\n// Rich pagination with metadata\nconst result = await User.query()\n\t.where('active', true)\n\t.paginate(2, 10)\n// { data: [...], total: 53, page: 2, perPage: 10,\n//   pages: 6, hasNext: true, hasPrev: true }\n\n// Batch processing for large datasets\nawait User.query().chunk(100, async (batch, i) => {\n\tconsole.log(`Batch ${i}: ${batch.length} users`)\n\tfor (const u of batch) await u.update({ migrated: true })\n})\n\n// Functional transforms\nconst names = await User.query().map(u => u.name)\nconst filteredAdmins = await User.query().filter(u => u.role === 'admin')\nconst totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)",
@@ -3636,6 +3701,18 @@
 					"type": "boolean",
 					"default": "true",
 					"notes": "Auto-create parent directories for the database file."
+				},
+				{
+					"option": "verbose",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Log all executed SQL statements to the console."
+				},
+				{
+					"option": "pragmas",
+					"type": "object",
+					"default": "production defaults",
+					"notes": "SQLite PRAGMA overrides. All keys below are set inside this object."
 				},
 				{
 					"option": "pragmas.journal_mode",
@@ -8082,6 +8159,24 @@
 					"type": "string",
 					"default": "'_migrations'",
 					"notes": "Name of the migration tracking table."
+				},
+				{
+					"option": "name",
+					"type": "string",
+					"default": "—",
+					"notes": "Unique migration name. Only letters, digits, underscores, hyphens, and dots are allowed."
+				},
+				{
+					"option": "up",
+					"type": "(db: Database) => Promise<void>",
+					"default": "—",
+					"notes": "Function to apply the migration. Receives the Database instance."
+				},
+				{
+					"option": "down",
+					"type": "(db: Database) => Promise<void>",
+					"default": "—",
+					"notes": "Function to reverse the migration. Receives the Database instance."
 				}
 			],
 			"example": "const { Database, Migrator, defineMigration, TYPES } = require('zero-http')\n\nconst db = Database.connect('memory')\nconst migrator = new Migrator(db)\n\n// Define migrations inline\nmigrator.add({\n\tname: '001_create_users',\n\tasync up(db) {\n\t\tawait db.adapter.createTable('users', {\n\t\t\tid:   { type: 'integer', primaryKey: true, autoIncrement: true },\n\t\t\tname: { type: 'string', required: true },\n\t\t\temail: { type: 'string', unique: true },\n\t\t});\n\t},\n\tasync down(db) {\n\t\tawait db.adapter.dropTable('users');\n\t}\n})\n\n// Or use the defineMigration helper\nmigrator.add(defineMigration('002_add_role',\n\tasync (db) => {\n\t\tawait db.addColumn('users', 'role', { type: TYPES.STRING, default: 'user' });\n\t},\n\tasync (db) => {\n\t\tawait db.dropColumn('users', 'role');\n\t}\n))\n\n// Run them\nconst { migrated, batch } = await migrator.migrate()\nconsole.log(`Ran ${migrated.length} migrations in batch ${batch}`)\n\n// Check status\nconst { executed, pending, lastBatch } = await migrator.status()\n\n// Rollback last batch\nconst { rolledBack } = await migrator.rollback()\n\n// Reset — rollback all then re-run\nawait migrator.reset()\n\n// Fresh — drop everything and re-migrate\nawait migrator.fresh()",
@@ -8099,50 +8194,6 @@
 				{
 					"group": "Migration Control",
 					"methods": [
-						{
-							"method": "up",
-							"signature": "up([steps])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<MigrationResult[]>",
-								"description": "Runs the next pending migration."
-							},
-							"methodParams": [
-								{
-									"param": "steps",
-									"type": "number",
-									"required": "No",
-									"notes": "Number of migration steps to run. Defaults to 1."
-								}
-							]
-						},
-						{
-							"method": "down",
-							"signature": "down([steps])",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<MigrationResult[]>",
-								"description": "Reverses the last applied migration."
-							},
-							"methodParams": [
-								{
-									"param": "steps",
-									"type": "number",
-									"required": "No",
-									"notes": "Number of migration steps to run. Defaults to 1."
-								}
-							]
-						},
-						{
-							"method": "latest",
-							"signature": "latest()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<MigrationResult[]>",
-								"description": "Applies all pending migrations."
-							},
-							"methodParams": []
-						},
 						{
 							"method": "rollback",
 							"signature": "migrator.rollback()",
@@ -8191,91 +8242,76 @@
 							"methodParams": []
 						},
 						{
-							"method": "create",
-							"signature": "create(name)",
-							"description": "",
+							"method": "add",
+							"signature": "migrator.add(migration)",
+							"description": "Add a single migration definition. Returns the Migrator for chaining.",
 							"methodReturns": {
-								"type": "void",
-								"description": "Creates a new timestamped migration file in the migrations directory."
+								"type": "Migrator",
+								"description": "The Migrator instance."
 							},
-							"methodOptions": [
-								{
-									"option": "name",
-									"type": "string",
-									"notes": "Migration name — used to generate the filename (e.g. `\"add_users_table\"` → `\"20240101_add_users_table.js\"`)."
-								},
-								{
-									"option": "dir",
-									"type": "string",
-									"default": "\"./migrations\"",
-									"notes": "Directory where the file is written."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "name",
-									"type": "string",
+									"param": "migration",
+									"type": "MigrationDefinition",
 									"required": "Yes",
-									"notes": "Migration name, e.g. \"create_users_table\". Generates a timestamped file."
+									"notes": "Object with `name`, `up(db)`, and `down(db)` functions."
 								}
 							]
 						},
 						{
-							"method": "run",
-							"signature": "run(file)",
-							"description": "",
+							"method": "addAll",
+							"signature": "migrator.addAll(migrations)",
+							"description": "Add multiple migration definitions at once. Returns the Migrator for chaining.",
 							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Runs all pending migrations in timestamp order."
+								"type": "Migrator",
+								"description": "The Migrator instance."
 							},
-							"methodOptions": [
-								{
-									"option": "step",
-									"type": "number",
-									"notes": "Limit the number of migrations to run (default: run all pending)."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "file",
-									"type": "string",
+									"param": "migrations",
+									"type": "MigrationDefinition[]",
 									"required": "Yes",
-									"notes": "Specific migration filename or path to execute."
+									"notes": "Array of migration definitions."
 								}
 							]
 						},
 						{
-							"method": "undo",
-							"signature": "undo([file])",
-							"description": "",
+							"method": "migrate",
+							"signature": "migrator.migrate()",
+							"description": "Run all pending migrations. Returns info about what was migrated.",
 							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Reverts previously applied migrations."
+								"type": "Promise<MigrateResult>",
+								"description": "`{ migrated: string[], batch: number }`."
 							},
-							"methodOptions": [
-								{
-									"option": "step",
-									"type": "number",
-									"default": "1",
-									"notes": "Number of migrations to roll back."
-								}
-							],
-							"methodParams": [
-								{
-									"param": "file",
-									"type": "string",
-									"required": "No",
-									"notes": "Migration file to revert. Omit to undo the last ran migration."
-								}
-							]
+							"methodParams": []
 						},
 						{
-							"method": "pending",
-							"signature": "pending()",
-							"description": "",
+							"method": "rollbackAll",
+							"signature": "migrator.rollbackAll()",
+							"description": "Rollback ALL executed migrations (not just the last batch).",
 							"methodReturns": {
-								"type": "Promise<string[]>",
-								"description": "Names of migrations that have not yet been applied."
+								"type": "Promise<{ rolledBack: string[] }>",
+								"description": "Names of rolled-back migrations."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "fresh",
+							"signature": "migrator.fresh()",
+							"description": "Drop everything and re-run all migrations from scratch. Destructive — intended for development.",
+							"methodReturns": {
+								"type": "Promise<MigrateResult>",
+								"description": "`{ migrated: string[], batch: number }`."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "hasPending",
+							"signature": "migrator.hasPending()",
+							"description": "Check whether there are any pending (unexecuted) migrations.",
+							"methodReturns": {
+								"type": "Promise<boolean>",
+								"description": "`true` if migrations remain to be run."
 							},
 							"methodParams": []
 						}
@@ -8407,16 +8443,6 @@
 							]
 						},
 						{
-							"method": "clear",
-							"signature": "clear()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<void>",
-								"description": "Removes all entries from the cache."
-							},
-							"methodParams": []
-						},
-						{
 							"method": "wrap",
 							"signature": "cache.wrap(descriptor, executor, [ttl])",
 							"description": "Wrap a query execution with caching. Used internally by Query.cache().",
@@ -8473,16 +8499,6 @@
 							"methodParams": []
 						},
 						{
-							"method": "keys",
-							"signature": "keys()",
-							"description": "",
-							"methodReturns": {
-								"type": "Promise<string[]>",
-								"description": "All currently cached keys."
-							},
-							"methodParams": []
-						},
-						{
 							"method": "flush",
 							"signature": "cache.flush()",
 							"description": "Clear the entire cache and reset stats.",
@@ -8491,6 +8507,101 @@
 								"description": "Alias for clear(). Empties the cache."
 							},
 							"methodParams": []
+						},
+						{
+							"method": "remember",
+							"signature": "cache.remember(key, fn, [ttl])",
+							"description": "Get a cached value by key, or compute it by calling `fn()` and cache the result. This is a read-through cache pattern — if the key exists, the cached value is returned immediately; otherwise `fn()` is awaited, the result is stored, and then returned.",
+							"methodReturns": {
+								"type": "Promise<T>",
+								"description": "The cached or freshly computed value."
+							},
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cache key to look up."
+								},
+								{
+									"param": "fn",
+									"type": "() => Promise<T>",
+									"required": "Yes",
+									"notes": "Async factory function called when the key is missing or expired."
+								},
+								{
+									"param": "ttl",
+									"type": "number",
+									"required": "No",
+									"notes": "Time-to-live in milliseconds. Falls back to `defaultTTL` from constructor options."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Static Methods",
+					"methods": [
+						{
+							"method": "keyFromDescriptor",
+							"signature": "QueryCache.keyFromDescriptor()",
+							"description": "Generate a deterministic cache key from a query descriptor object. Used internally by wrap() but available for custom cache key generation.",
+							"methodReturns": {
+								"type": "string",
+								"description": "A deterministic string key derived from the descriptor."
+							},
+							"methodParams": [
+								{
+									"param": "descriptor",
+									"type": "Record<string, any>",
+									"required": "Yes",
+									"notes": "Query descriptor object (e.g. from query.build())."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Instance Methods",
+					"methods": [
+						{
+							"method": "prune",
+							"signature": "queryCache.prune()",
+							"description": "Remove all expired entries from the cache. Returns the number of entries removed.",
+							"methodReturns": {
+								"type": "number",
+								"description": "Number of expired entries that were removed."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "remember",
+							"signature": "queryCache.remember()",
+							"description": "Get a cached value by key, or compute it by calling fn() and cache the result. If the key exists, the cached value is returned; otherwise fn() is awaited, stored, and returned.",
+							"methodReturns": {
+								"type": "Promise<T>",
+								"description": "The cached or freshly computed value."
+							},
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cache key to look up."
+								},
+								{
+									"param": "fn",
+									"type": "() => Promise<T>",
+									"required": "Yes",
+									"notes": "Async factory function called when the key is missing or expired."
+								},
+								{
+									"param": "ttl",
+									"type": "number",
+									"required": "No",
+									"notes": "Time-to-live in seconds. Falls back to defaultTTL from constructor options."
+								}
+							]
 						}
 					]
 				}
@@ -8954,6 +9065,825 @@
 								"description": "Randomly generated plain object with 3–5 mixed-type keys."
 							},
 							"methodParams": []
+						},
+						{
+							"method": "seed",
+							"signature": "Fake.seed([value])",
+							"description": "Set a deterministic seed for reproducible fake data. Pass `null` to reset to Math.random.",
+							"methodReturns": {
+								"type": "number | null",
+								"description": "The active seed value."
+							},
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number | string | null",
+									"required": "No",
+									"notes": "Seed value. Omit or pass `null` to reset."
+								}
+							]
+						},
+						{
+							"method": "getSeed",
+							"signature": "Fake.getSeed()",
+							"description": "Return the active seed, or `null` if using Math.random.",
+							"methodReturns": {
+								"type": "number | null",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "unique",
+							"signature": "Fake.unique(fn, [options])",
+							"description": "Generate a unique value by calling `fn()` until an unseen result is returned for the given namespace key.",
+							"methodReturns": {
+								"type": "T",
+								"description": "A unique generated value."
+							},
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "() => T",
+									"required": "Yes",
+									"notes": "Generator function."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ key?, maxAttempts? }`."
+								}
+							]
+						},
+						{
+							"method": "resetUnique",
+							"signature": "Fake.resetUnique([key])",
+							"description": "Clear uniqueness tracking for a key, or all keys if omitted.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "No",
+									"notes": "Namespace key. Omit to clear all."
+								}
+							]
+						},
+						{
+							"method": "uniqueCount",
+							"signature": "Fake.uniqueCount(key)",
+							"description": "Count how many unique values have been generated for a key.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Namespace key."
+								}
+							]
+						},
+						{
+							"method": "middleName",
+							"signature": "Fake.middleName([options])",
+							"description": "Generate a random middle name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ sex?, locale?, unique? }`."
+								}
+							]
+						},
+						{
+							"method": "namePrefix",
+							"signature": "Fake.namePrefix([options])",
+							"description": "Generate a random name prefix (Mr., Ms., Dr., etc.).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ sex? }`."
+								}
+							]
+						},
+						{
+							"method": "nameSuffix",
+							"signature": "Fake.nameSuffix()",
+							"description": "Generate a random name suffix (Jr., Sr., III, etc.).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "locales",
+							"signature": "Fake.locales()",
+							"description": "List all supported locale codes for name/phone generation.",
+							"methodReturns": {
+								"type": "string[]",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "phoneCodes",
+							"signature": "Fake.phoneCodes()",
+							"description": "Return all supported phone country codes.",
+							"methodReturns": {
+								"type": "string[]",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "domainName",
+							"signature": "Fake.domainName([options])",
+							"description": "Generate a random domain name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ tld? }`."
+								}
+							]
+						},
+						{
+							"method": "ipv6",
+							"signature": "Fake.ipv6()",
+							"description": "Generate a random IPv6 address.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "mac",
+							"signature": "Fake.mac([options])",
+							"description": "Generate a random MAC address.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ separator?, realisticOUI? }`."
+								}
+							]
+						},
+						{
+							"method": "port",
+							"signature": "Fake.port([options])",
+							"description": "Generate a random port number.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ range?: \"all\" | \"registered\" | \"dynamic\" }`."
+								}
+							]
+						},
+						{
+							"method": "httpMethod",
+							"signature": "Fake.httpMethod([options])",
+							"description": "Generate a random HTTP method.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ methods? }` — custom list to pick from."
+								}
+							]
+						},
+						{
+							"method": "userAgent",
+							"signature": "Fake.userAgent()",
+							"description": "Generate a random User-Agent string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "password",
+							"signature": "Fake.password([options])",
+							"description": "Generate a random password.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ length?, uppercase?, lowercase?, digits?, special?, prefix? }`."
+								}
+							]
+						},
+						{
+							"method": "numericString",
+							"signature": "Fake.numericString([length], [options])",
+							"description": "Generate a fixed-length numeric string (e.g. ZIP codes, PINs, credit card numbers).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "length",
+									"type": "number",
+									"required": "No",
+									"notes": "String length."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ leadingZeros?, separator?, groupSize? }`."
+								}
+							]
+						},
+						{
+							"method": "alphanumeric",
+							"signature": "Fake.alphanumeric([length], [options])",
+							"description": "Generate a random alphanumeric string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "length",
+									"type": "number",
+									"required": "No",
+									"notes": "String length."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ uppercase? }`."
+								}
+							]
+						},
+						{
+							"method": "alpha",
+							"signature": "Fake.alpha([length], [options])",
+							"description": "Generate a random alphabetic string (no digits).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "length",
+									"type": "number",
+									"required": "No",
+									"notes": "String length."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ uppercase? }`."
+								}
+							]
+						},
+						{
+							"method": "datePast",
+							"signature": "Fake.datePast([options])",
+							"description": "Generate a random date in the past.",
+							"methodReturns": {
+								"type": "Date",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ years? }` — how far back. Default: 1 year."
+								}
+							]
+						},
+						{
+							"method": "dateFuture",
+							"signature": "Fake.dateFuture([options])",
+							"description": "Generate a random date in the future.",
+							"methodReturns": {
+								"type": "Date",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ years? }` — how far forward. Default: 1 year."
+								}
+							]
+						},
+						{
+							"method": "words",
+							"signature": "Fake.words([n])",
+							"description": "Generate `n` random words (space-separated).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "n",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of words. Default: 3."
+								}
+							]
+						},
+						{
+							"method": "hackerPhrase",
+							"signature": "Fake.hackerPhrase()",
+							"description": "Generate a hacker-style phrase.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "slug",
+							"signature": "Fake.slug([wordCount])",
+							"description": "Generate a URL-safe slug.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "wordCount",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of words."
+								}
+							]
+						},
+						{
+							"method": "hashtag",
+							"signature": "Fake.hashtag()",
+							"description": "Generate a random hashtag.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "jobTitle",
+							"signature": "Fake.jobTitle([options])",
+							"description": "Generate a random job title.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ full? }` — include descriptor + area."
+								}
+							]
+						},
+						{
+							"method": "jobArea",
+							"signature": "Fake.jobArea()",
+							"description": "Generate a random job area/department.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "jobType",
+							"signature": "Fake.jobType()",
+							"description": "Generate a random job type (e.g. Engineer, Designer).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "jobDescriptor",
+							"signature": "Fake.jobDescriptor()",
+							"description": "Generate a random job descriptor (e.g. Senior, Lead).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "bio",
+							"signature": "Fake.bio([options])",
+							"description": "Generate a random biography string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ style?: \"short\" | \"medium\" | \"long\" }`."
+								}
+							]
+						},
+						{
+							"method": "zodiacSign",
+							"signature": "Fake.zodiacSign()",
+							"description": "Generate a random zodiac sign.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "gender",
+							"signature": "Fake.gender([options])",
+							"description": "Generate a random gender.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ binary? }` — restrict to male/female."
+								}
+							]
+						},
+						{
+							"method": "bloodType",
+							"signature": "Fake.bloodType()",
+							"description": "Generate a random blood type.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "city",
+							"signature": "Fake.city([options])",
+							"description": "Generate a random city name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ country? }`."
+								}
+							]
+						},
+						{
+							"method": "country",
+							"signature": "Fake.country([options])",
+							"description": "Generate a random country name or code.",
+							"methodReturns": {
+								"type": "string | { name, code }",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ codeOnly?, full? }`."
+								}
+							]
+						},
+						{
+							"method": "state",
+							"signature": "Fake.state([options])",
+							"description": "Generate a random US state.",
+							"methodReturns": {
+								"type": "string | { name, abbr }",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ abbr?, full? }`."
+								}
+							]
+						},
+						{
+							"method": "zipCode",
+							"signature": "Fake.zipCode([options])",
+							"description": "Generate a random ZIP/postal code.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ countryCode? }`."
+								}
+							]
+						},
+						{
+							"method": "latitude",
+							"signature": "Fake.latitude([options])",
+							"description": "Generate a random latitude.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ min?, max?, decimals? }`."
+								}
+							]
+						},
+						{
+							"method": "longitude",
+							"signature": "Fake.longitude([options])",
+							"description": "Generate a random longitude.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ min?, max?, decimals? }`."
+								}
+							]
+						},
+						{
+							"method": "coordinates",
+							"signature": "Fake.coordinates()",
+							"description": "Generate random latitude/longitude coordinates.",
+							"methodReturns": {
+								"type": "{ latitude, longitude }",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "timezone",
+							"signature": "Fake.timezone()",
+							"description": "Generate a random timezone string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "streetName",
+							"signature": "Fake.streetName()",
+							"description": "Generate a random street name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "address",
+							"signature": "Fake.address([options])",
+							"description": "Generate a full address string or structured address object.",
+							"methodReturns": {
+								"type": "string | FakeAddressObject",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ countryCode?, format?: \"string\" | \"object\" }`."
+								}
+							]
+						},
+						{
+							"method": "productName",
+							"signature": "Fake.productName([options])",
+							"description": "Generate a random product name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ withMaterial? }`."
+								}
+							]
+						},
+						{
+							"method": "category",
+							"signature": "Fake.category()",
+							"description": "Generate a random product category.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "department",
+							"signature": "Fake.department()",
+							"description": "Generate a random department name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "company",
+							"signature": "Fake.company([options])",
+							"description": "Generate a random company name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ suffix? }` — include Inc., Ltd., etc."
+								}
+							]
+						},
+						{
+							"method": "price",
+							"signature": "Fake.price([options])",
+							"description": "Generate a random price string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ min?, max?, symbol? }`."
+								}
+							]
+						},
+						{
+							"method": "industry",
+							"signature": "Fake.industry()",
+							"description": "Generate a random industry name.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "catchPhrase",
+							"signature": "Fake.catchPhrase()",
+							"description": "Generate a random business catch phrase.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "rgb",
+							"signature": "Fake.rgb([options])",
+							"description": "Generate a random RGB color.",
+							"methodReturns": {
+								"type": "string | number[] | { r, g, b }",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ format?: \"css\" | \"array\" | \"object\" }`."
+								}
+							]
+						},
+						{
+							"method": "hsl",
+							"signature": "Fake.hsl([options])",
+							"description": "Generate a random HSL color.",
+							"methodReturns": {
+								"type": "string | number[] | { h, s, l }",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ format?: \"css\" | \"array\" | \"object\" }`."
+								}
+							]
+						},
+						{
+							"method": "shuffle",
+							"signature": "Fake.shuffle(arr)",
+							"description": "Shuffle an array in-place using Fisher-Yates algorithm.",
+							"methodReturns": {
+								"type": "T[]",
+								"description": "The shuffled array."
+							},
+							"methodParams": [
+								{
+									"param": "arr",
+									"type": "T[]",
+									"required": "Yes",
+									"notes": "Array to shuffle."
+								}
+							]
+						},
+						{
+							"method": "enumValue",
+							"signature": "Fake.enumValue(values)",
+							"description": "Pick a random value from an array. Identical to `pick` but named for enum-like usage.",
+							"methodReturns": {
+								"type": "T",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "values",
+									"type": "T[]",
+									"required": "Yes",
+									"notes": "Array of possible values."
+								}
+							]
 						}
 					]
 				},
@@ -9108,43 +10038,6 @@
 					"group": "Profiler",
 					"methods": [
 						{
-							"method": "enable",
-							"signature": "enable([opts])",
-							"description": "",
-							"methodReturns": {
-								"type": "void",
-								"description": "Starts capturing query timings."
-							},
-							"methodParams": [
-								{
-									"param": "opts",
-									"type": "object",
-									"required": "No",
-									"notes": "{ slowThreshold: number } — flag queries slower than N ms."
-								}
-							]
-						},
-						{
-							"method": "disable",
-							"signature": "disable()",
-							"description": "",
-							"methodReturns": {
-								"type": "void",
-								"description": "Stops capturing query timings."
-							},
-							"methodParams": []
-						},
-						{
-							"method": "getStats",
-							"signature": "getStats()",
-							"description": "",
-							"methodReturns": {
-								"type": "ProfilerStats",
-								"description": "{ totalQueries, totalTime, slowQueries, byModel }."
-							},
-							"methodParams": []
-						},
-						{
 							"method": "reset",
 							"signature": "profiler.reset()",
 							"description": "Clear all profiling state — queries, counters, and N+1 detections.",
@@ -9155,65 +10048,68 @@
 							"methodParams": []
 						},
 						{
-							"method": "onQuery",
-							"signature": "onQuery(fn)",
-							"description": "",
+							"method": "record",
+							"signature": "profiler.record(entry)",
+							"description": "Record a query execution. Called automatically when profiling is enabled; useful for manual recording.",
 							"methodReturns": {
 								"type": "void",
-								"description": "Registers a listener called on every captured query."
+								"description": ""
 							},
 							"methodParams": [
 								{
-									"param": "fn",
-									"type": "(query: QueryEvent) => void",
-									"required": "Yes",
-									"notes": "Listener invoked after each query is executed with timing and SQL info."
-								}
-							]
-						},
-						{
-							"method": "offQuery",
-							"signature": "offQuery(fn)",
-							"description": "",
-							"methodReturns": {
-								"type": "void",
-								"description": "Removes a query listener."
-							},
-							"methodParams": [
-								{
-									"param": "fn",
-									"type": "function",
-									"required": "Yes",
-									"notes": "Previously registered listener to remove."
-								}
-							]
-						},
-						{
-							"method": "report",
-							"signature": "report([opts])",
-							"description": "",
-							"methodReturns": {
-								"type": "string",
-								"description": "Returns a formatted string summary of the profiled queries."
-							},
-							"methodParams": [
-								{
-									"param": "opts",
+									"param": "entry",
 									"type": "object",
-									"required": "No",
-									"notes": "{ topN: number } — limit the report to the N slowest queries."
+									"required": "Yes",
+									"notes": "`{ table: string, action: string, duration: number }`."
 								}
 							]
 						},
 						{
-							"method": "clear",
-							"signature": "clear()",
-							"description": "",
+							"method": "metrics",
+							"signature": "profiler.metrics()",
+							"description": "Get aggregate profiling metrics: total queries, average latency, queries/sec, slow query count, and N+1 detection count.",
 							"methodReturns": {
-								"type": "void",
-								"description": "Alias for reset()."
+								"type": "ProfilerMetrics",
+								"description": "`{ totalQueries, totalTime, avgLatency, queriesPerSecond, slowQueries, n1Detections }`."
 							},
 							"methodParams": []
+						},
+						{
+							"method": "slowQueries",
+							"signature": "profiler.slowQueries()",
+							"description": "Get all queries from history that exceeded the slow threshold.",
+							"methodReturns": {
+								"type": "ProfiledQuery[]",
+								"description": "Array of `{ table, action, duration, timestamp }`."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "n1Detections",
+							"signature": "profiler.n1Detections()",
+							"description": "Get all detected N+1 query patterns.",
+							"methodReturns": {
+								"type": "N1Detection[]",
+								"description": "Array of `{ table, count, timestamp, message }`."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "getQueries",
+							"signature": "profiler.getQueries([options])",
+							"description": "Get filtered query history.",
+							"methodReturns": {
+								"type": "ProfiledQuery[]",
+								"description": "Filtered array of profiled queries."
+							},
+							"methodParams": [
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "`{ table?, action?, minDuration? }` — all optional filters."
+								}
+							]
 						}
 					]
 				}
@@ -9377,6 +10273,146 @@
 				"Use onReplica() in queries to explicitly route a specific query to a read replica.",
 				"strategy must be 'round-robin' or 'random' — invalid values throw immediately.",
 				"If all replicas are unhealthy, reads automatically fall back to the primary."
+			],
+			"methodGroups": [
+				{
+					"group": "Replica Management",
+					"methods": [
+						{
+							"method": "setPrimary",
+							"signature": "manager.setPrimary(adapter)",
+							"description": "Set the primary (read-write) adapter.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "adapter",
+									"type": "any",
+									"required": "Yes",
+									"notes": "The primary adapter instance."
+								}
+							]
+						},
+						{
+							"method": "addReplica",
+							"signature": "manager.addReplica(adapter)",
+							"description": "Add a read replica adapter to the pool.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "adapter",
+									"type": "any",
+									"required": "Yes",
+									"notes": "A replica adapter instance."
+								}
+							]
+						},
+						{
+							"method": "getReadAdapter",
+							"signature": "manager.getReadAdapter()",
+							"description": "Get an adapter for read operations. Respects the configured strategy (round-robin/random), health status, and sticky-write window.",
+							"methodReturns": {
+								"type": "any",
+								"description": "A healthy replica adapter, or the primary if no replicas are available."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "getWriteAdapter",
+							"signature": "manager.getWriteAdapter()",
+							"description": "Get the primary adapter for write operations. Updates the sticky-write timestamp if `stickyWrite` is enabled.",
+							"methodReturns": {
+								"type": "any",
+								"description": "The primary adapter."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "markUnhealthy",
+							"signature": "manager.markUnhealthy(adapter)",
+							"description": "Mark a replica as unhealthy. It will be excluded from read routing until marked healthy again.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "adapter",
+									"type": "any",
+									"required": "Yes",
+									"notes": "The adapter to mark."
+								}
+							]
+						},
+						{
+							"method": "markHealthy",
+							"signature": "manager.markHealthy(adapter)",
+							"description": "Mark a previously unhealthy replica as healthy, returning it to the read pool.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "adapter",
+									"type": "any",
+									"required": "Yes",
+									"notes": "The adapter to re-enable."
+								}
+							]
+						},
+						{
+							"method": "healthCheck",
+							"signature": "manager.healthCheck()",
+							"description": "Run a health check on all replicas. Pings each adapter and updates its health status.",
+							"methodReturns": {
+								"type": "Promise<HealthCheckResult[]>",
+								"description": "Array of `{ healthy: boolean, lastChecked: number }` per replica."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "getAllAdapters",
+							"signature": "manager.getAllAdapters()",
+							"description": "Get all adapters (primary + all replicas).",
+							"methodReturns": {
+								"type": "any[]",
+								"description": "Array of all adapter instances."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "closeAll",
+							"signature": "manager.closeAll()",
+							"description": "Close all adapter connections (primary and all replicas).",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							},
+							"methodParams": []
+						}
+					]
+				},
+				{
+					"group": "Instance Properties",
+					"methods": [
+						{
+							"method": "replicaCount",
+							"signature": "replicaManager.replicaCount",
+							"description": "The number of registered read replicas.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						}
+					]
+				}
 			]
 		}
 	]

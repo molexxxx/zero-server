@@ -488,8 +488,11 @@ describe('Documentation Examples', () => {
             const missing = [];
             for (const methodDef of getAllMethods(routerItem)) {
                 const name = methodDef.method;
-                if (typeof router[name] !== 'function') {
-                    missing.push(name);
+                const isProperty = methodDef.signature && !methodDef.signature.includes('(');
+                if (isProperty) {
+                    if (!(name in router)) missing.push(name);
+                } else {
+                    if (typeof router[name] !== 'function') missing.push(name);
                 }
             }
             if (missing.length > 0) {

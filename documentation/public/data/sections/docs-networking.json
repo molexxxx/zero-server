@@ -170,6 +170,11 @@
 					"type": "string | Buffer",
 					"default": "—",
 					"notes": "TLS: client private key."
+				},
+				{
+					"option": "agent",
+					"type": "http.Agent | https.Agent",
+					"notes": "Custom HTTP(S) agent for connection pooling or proxy support."
 				}
 			],
 			"example": "const { fetch } = require('zero-http')\n\nasync function download(url) {\n\tconst controller = new AbortController()\n\tsetTimeout(() => controller.abort(), 10000)\n\n\tconst res = await fetch(url, {\n\t\ttimeout: 5000,\n\t\tsignal: controller.signal,\n\t\trejectUnauthorized: false,  // accept self-signed certs\n\t\tonDownloadProgress: ({ loaded, total }) =>\n\t\t\tconsole.log(`${loaded}/${total || '?'} bytes`)\n\t})\n\n\tconsole.log(res.ok, res.status, res.secure, res.url)\n\tconst data = await res.json()\n\treturn data\n}\n\ndownload('https://jsonplaceholder.typicode.com/todos/1')\n\t.then(console.log)",
@@ -177,6 +182,130 @@
 				"Object bodies are auto-serialized to JSON and Content-Type is set automatically.",
 				"Use rejectUnauthorized: false only for development — never in production.",
 				"Timeout and AbortSignal can be used together — whichever fires first cancels the request."
+			],
+			"methodGroups": [
+				{
+					"group": "Response Object",
+					"methods": [
+						{
+							"method": "status",
+							"signature": "response.status",
+							"description": "HTTP status code (e.g. `200`, `404`).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "statusText",
+							"signature": "response.statusText",
+							"description": "HTTP status reason phrase (e.g. `\"OK\"`, `\"Not Found\"`).",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "ok",
+							"signature": "response.ok",
+							"description": "`true` if status is 200-299.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "secure",
+							"signature": "response.secure",
+							"description": "`true` if the response came over HTTPS.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "url",
+							"signature": "response.url",
+							"description": "The final URL after any redirects.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "headers",
+							"signature": "response.headers",
+							"description": "Response headers object with `get(name)` method and `raw` property.",
+							"methodReturns": {
+								"type": "FetchHeaders",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "get",
+							"signature": "response.headers.get(name)",
+							"description": "Get a response header value by name.",
+							"methodReturns": {
+								"type": "string | undefined",
+								"description": "The header value, or undefined if not present."
+							},
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header name (case-insensitive)."
+								}
+							]
+						},
+						{
+							"method": "raw",
+							"signature": "response.headers.raw",
+							"description": "Raw headers as a plain object. Multi-value headers are arrays.",
+							"methodReturns": {
+								"type": "Record<string, string | string[]>",
+								"description": "The raw response header map."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "text",
+							"signature": "response.text()",
+							"description": "Read the body as a UTF-8 string.",
+							"methodReturns": {
+								"type": "Promise<string>",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "json",
+							"signature": "response.json()",
+							"description": "Read the body and parse as JSON.",
+							"methodReturns": {
+								"type": "Promise<any>",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "arrayBuffer",
+							"signature": "response.arrayBuffer()",
+							"description": "Read the body as a Buffer.",
+							"methodReturns": {
+								"type": "Promise<Buffer>",
+								"description": ""
+							},
+							"methodParams": []
+						}
+					]
+				}
 			]
 		}
 	]

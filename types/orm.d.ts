@@ -55,6 +55,8 @@ export interface SchemaColumnDef {
     compositeKey?: boolean;
     /** Composite unique constraint group name (or true for default group). */
     compositeUnique?: string | boolean;
+    /** Composite index group name (or true for default group). */
+    compositeIndex?: string | boolean;
 }
 
 export const TYPES: {
@@ -1235,6 +1237,8 @@ export interface QueryProfilerOptions {
     n1Window?: number;
     /** Callback on N+1 detection. */
     onN1?: (info: N1Detection) => void;
+    /** Maximum N+1 detection history entries (default: 100). */
+    maxN1History?: number;
 }
 
 export interface ProfiledQuery {

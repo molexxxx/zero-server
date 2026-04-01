@@ -11,6 +11,13 @@ export interface WebSocketOptions {
 
 export type WebSocketHandler = (ws: WebSocketConnection, req: IncomingMessage) => void;
 
+export declare const WebSocketReadyState: {
+    readonly CONNECTING: 0;
+    readonly OPEN: 1;
+    readonly CLOSING: 2;
+    readonly CLOSED: 3;
+};
+
 export interface WebSocketConnection {
     /** Unique connection identifier. */
     id: string;

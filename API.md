@@ -325,6 +325,7 @@ Creates an application instance — the central object for registering middlewar
 | `chain` | `chain(path)` | Start a route chain for a single path. Returns { get, post, put, delete, ... }. |
 | `routes` | `routes()` | Return the full route table for introspection/debugging. |
 | `onError` | `onError(handler)` | Register a global error handler: (err, req, res, next) => {}. |
+| `route` | `app.route(method, path, ...handlers)` | Register a route with a specific HTTP method string. Lower-level alternative to `app.get()`, `app.post()`, etc. |
 
 
 #### App Settings
@@ -337,6 +338,8 @@ Creates an application instance — the central object for registering middlewar
 | `enabled` | `enabled(key)` | Check if a setting is truthy. |
 | `disabled` | `disabled(key)` | Check if a setting is falsy. |
 | `locals` | `locals` | A plain object for storing application-wide data. Merged into req.locals on each request. |
+| `router` | `app.router` | The internal RouterInstance. Useful for advanced inspection or mounting child routers. |
+| `middlewares` | `app.middlewares` | The middleware stack array. Read-only introspection of registered middleware. |
 
 
 #### Server Lifecycle
@@ -411,6 +414,9 @@ Creates a standalone modular router instance for organizing routes into sub-apps
 |---|---|---|
 | `route` | `route(path)` | Create a route chain: router.route('/items').get(fn).post(fn). |
 | `inspect` | `inspect()` | Return the route table for this router. |
+| `add` | `router.add(method, path, handlers, [options])` | Low-level route registration. Prefer `router.get()`, `router.post()`, etc. for convenience. |
+| `handle` | `router.handle(req, res)` | Match the request against registered routes and invoke the first matching handler chain. Called internally by the framework. |
+| `routes` | `router.routes` | Array of all registered route entries. |
 
 
 ```js
@@ -466,7 +472,6 @@ The request object wraps Node's IncomingMessage with Express-compatible properti
 | `get` | `req.get(name)` | Get a request header (case-insensitive). |
 | `is` | `req.is(type)` | Check if Content-Type matches (e.g. req.is('json')). |
 | `accepts` | `req.accepts(...types)` | Content negotiation — which types the client accepts. |
-| `type` | `type` |  |
 
 
 #### Route Data
@@ -476,6 +481,7 @@ The request object wraps Node's IncomingMessage with Express-compatible properti
 | `params` | `req.params` | Route parameters from path segments (e.g. /:id). |
 | `query` | `req.query` | Parsed query-string key/value pairs. |
 | `body` | `req.body` | Request body (populated by body-parsing middleware). |
+| `rawBody` | `req.rawBody` | Raw request body as a Buffer, set by body-parsing middleware before parsing. Useful for webhook signature verification (e.g. Stripe, GitHub). |
 
 
 #### Auth & Cookies
@@ -509,6 +515,16 @@ The request object wraps Node's IncomingMessage with Express-compatible properti
 | `id` | `req.id` | Unique request ID (set by requestId middleware). |
 | `range` | `req.range(size)` | Parse the Range header. Returns object or -1/-2. |
 | `raw` | `req.raw` | The original Node IncomingMessage. |
+
+
+#### Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `timedOut` | `req.timedOut` | Whether the request timed out. Set to `true` by the timeout middleware when the deadline is exceeded. |
+| `app` | `req.app` | Reference to the parent App instance. |
+| `csrfToken` | `req.csrfToken` | CSRF token string. Populated by the csrf middleware for inclusion in forms or response headers. |
+| `secrets` | `req.secrets` | Array of all signing secrets. Populated by cookieParser when multiple secrets are provided. |
 
 
 > **Tip:** req.query is always an object — even if no query string is present, it defaults to {}.
@@ -571,6 +587,7 @@ The response object wraps Node's ServerResponse with chainable methods for setti
 | `headersSent` | `res.headersSent` | true if headers have already been sent. |
 | `locals` | `res.locals` | Request-scoped data store. |
 | `raw` | `res.raw` | The original Node ServerResponse. |
+| `app` | `res.app` | Reference to the parent App instance. |
 
 
 #### Options
@@ -889,6 +906,7 @@ Response compression middleware. Auto-negotiates the best encoding (brotli > gzi
 | `threshold` | number | `1024` | Minimum body size in bytes to compress. |
 | `level` | number | `-1 (zlib default)` | Compression level. |
 | `filter` | function | `—` | Return false to skip compression: (req, res) => boolean. |
+| `encoding` | string \| string[] | `—` | Force specific encoding(s) instead of auto-detecting from `Accept-Encoding`. E.g. `"gzip"` or `["gzip", "deflate"]`. |
 
 
 ```js
@@ -1154,8 +1172,8 @@ Cookie parsing middleware with timing-safe HMAC-SHA256 signature verification, J
 
 | Method | Signature | Description |
 |---|---|---|
-| `jsonCookie` | `cookieParser.jsonCookie(value)` | Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(value). |
-| `parseJSON` | `cookieParser.parseJSON(str)` | Parse a JSON cookie string (j: prefix). Returns parsed value or original string. |
+| `jsonCookie` | `cookieParser.jsonCookie(val)` | Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(val). |
+| `parseJSON` | `cookieParser.parseJSON(str)` | Parse a JSON cookie string (j: prefix). Returns parsed value or original string if not a valid JSON cookie. |
 
 
 #### Options
@@ -1281,8 +1299,23 @@ Request validation middleware with 11 types and auto-coercion. Validates req.bod
 
 | Option | Type | Default | Description |
 |---|---|---|---|
+| `body` | Record<string, ValidationRule> | `—` | Validation rules for `req.body` fields. |
+| `query` | Record<string, ValidationRule> | `—` | Validation rules for `req.query` fields. |
+| `params` | Record<string, ValidationRule> | `—` | Validation rules for `req.params` fields. |
 | `stripUnknown` | boolean | `true` | Remove fields not defined in the schema. |
 | `onError` | function | `—` | Custom error handler. Default sends 422 JSON. |
+| `type` | string | `—` | Rule: Value type with auto-coercion. One of: `string`, `integer`, `number`, `float`, `boolean`, `array`, `json`, `date`, `uuid`, `email`, `url`. |
+| `required` | boolean | `false` | Rule: Field must be present in the request. |
+| `default` | any \| () => any | `—` | Rule: Default value (or factory function) when the field is missing. |
+| `minLength` | number | `—` | Rule: Minimum string length. |
+| `maxLength` | number | `—` | Rule: Maximum string length. |
+| `min` | number | `—` | Rule: Minimum numeric value. |
+| `max` | number | `—` | Rule: Maximum numeric value. |
+| `match` | RegExp | `—` | Rule: Regex pattern the value must match. |
+| `enum` | any[] | `—` | Rule: Allowed values whitelist. |
+| `minItems` | number | `—` | Rule: Minimum array length (for `type: 'array'`). |
+| `maxItems` | number | `—` | Rule: Maximum array length (for `type: 'array'`). |
+| `validate` | (value: any) => string \| void | `—` | Rule: Custom validation function. Return a string to indicate an error. |
 
 
 ```js
@@ -1455,6 +1488,14 @@ The env.load() schema supports 9 typed field definitions with validation constra
 
 | Option | Type | Default | Description |
 |---|---|---|---|
+| `type` | string | `—` | Value type for coercion: 'string' \| 'number' \| 'integer' \| 'boolean' \| 'port' \| 'array' \| 'json' \| 'url' \| 'enum'. |
+| `required` | boolean | `false` | If true, throws when the field is missing and has no default. |
+| `default` | any \| () => any | `—` | Default value used when field is missing. Can be a function called lazily. |
+| `min` | number | `—` | Minimum value (number/integer) or minimum length (string). |
+| `max` | number | `—` | Maximum value (number/integer) or maximum length (string). |
+| `match` | RegExp | `—` | Pattern that string values must match. |
+| `separator` | string | `','` | Delimiter for array type. Items are trimmed and empties removed. |
+| `values` | string[] | `—` | Allowed values for enum type. Throws with list of allowed values on mismatch. |
 | `string` | type | `—` | Basic string. Supports min (min length), max (max length), match (RegExp pattern). |
 | `number` | type | `—` | Floating-point number. Supports min, max range validation. |
 | `integer` | type | `—` | Whole number (parseInt). Supports min, max range validation. |
@@ -1517,20 +1558,18 @@ The ORM entry point. Connect to a database using one of 7 built-in adapters (mem
 | Method | Signature | Description |
 |---|---|---|
 | `connect` | `Database.connect(type, [opts])` | Static factory method. Creates a Database instance with the specified adapter. Validates credentials for network adapters. Returns the Database instance. |
-| `disconnect` | `disconnect([cb])` |  |
 | `close` | `db.close()` | Close the database connection. Returns Promise. |
-| `ping` | `ping()` |  |
-| `getAdapter` | `getAdapter()` |  |
+| `ping` | `db.ping()` | Ping the database to check connectivity. Resolves true if reachable. |
+| `register` | `db.register(ModelClass)` | Register a Model class with this database instance. The model will use this connection for all queries. Returns the Database instance for chaining. |
+| `registerAll` | `db.registerAll(...models)` | Register multiple Model classes at once. Convenience wrapper around `register()`. Returns the Database instance for chaining. |
+| `model` | `db.model(name)` | Retrieve a registered model class by its table name. |
+| `retry` | `db.retry(fn, [options])` | Retry an async function with exponential backoff. Useful for transient database errors (connection drops, deadlocks). |
 
 
 #### Query & DDL
 
 | Method | Signature | Description |
 |---|---|---|
-| `query` | `query(sql, ...params)` |  |
-| `execute` | `execute(sql, ...params)` |  |
-| `raw` | `raw(sql, ...params)` |  |
-| `schema` | `schema(definition)` |  |
 | `sync` | `db.sync()` | Create tables for all registered models. Returns Promise. |
 | `drop` | `db.drop()` | Drop tables for all registered models. Returns Promise. |
 
@@ -1539,35 +1578,7 @@ The ORM entry point. Connect to a database using one of 7 built-in adapters (mem
 
 | Method | Signature | Description |
 |---|---|---|
-| `begin` | `begin()` |  |
 | `transaction` | `db.transaction(fn)` | Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions. |
-| `savepoint` | `savepoint(name)` |  |
-| `rollback` | `rollback([name])` |  |
-| `commit` | `commit()` |  |
-
-
-#### Introspection
-
-| Method | Signature | Description |
-|---|---|---|
-| `tables` | `tables([schema])` |  |
-| `columns` | `columns(table)` |  |
-| `indexes` | `indexes(table)` |  |
-| `dialect` | `dialect` |  |
-| `version` | `version` |  |
-| `status` | `status` |  |
-
-
-#### Config
-
-| Method | Signature | Description |
-|---|---|---|
-| `configure` | `configure(opts)` |  |
-| `getConfig` | `getConfig()` |  |
-| `setConfig` | `setConfig(key, value)` |  |
-| `logger` | `logger(fn)` |  |
-| `debug` | `debug(enabled)` |  |
-| `pool` | `pool(opts)` |  |
 
 
 #### Migration
@@ -1585,6 +1596,23 @@ The ORM entry point. Connect to a database using one of 7 built-in adapters (mem
 | `describeTable` | `describeTable(table)` | Returns full column metadata for a table. |
 | `addForeignKey` | `addForeignKey(table, column, refTable, refColumn, opts)` | Adds a foreign key constraint to an existing column. |
 | `dropForeignKey` | `dropForeignKey(table, constraintName)` | Drops a named foreign key constraint. |
+
+
+#### Performance & Scalability
+
+| Method | Signature | Description |
+|---|---|---|
+| `enableProfiling` | `db.enableProfiling([options])` | Enable query profiling on this database instance. Returns a QueryProfiler that records execution times, detects slow queries, and flags N+1 patterns. |
+| `connectWithReplicas` | `Database.connectWithReplicas(type, primaryOpts, replicaConfigs, [options])` | Static factory that creates a Database with read replicas. Write operations go to the primary; read operations are distributed across replicas using the configured strategy. |
+
+
+#### Instance Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `adapter` | `database.adapter` | The underlying database adapter instance. Type depends on the adapter used during connect(). |
+| `profiler` | `database.profiler` | The attached query profiler, or null if profiling is not enabled. Set via enableProfiling(). |
+| `replicas` | `database.replicas` | The attached replica manager, or null if replicas are not configured. Set via connectWithReplicas(). |
 
 
 #### Options
@@ -1666,33 +1694,19 @@ The ORM base class — extend it to define your data models. Supports typed sche
 | Method | Signature | Description |
 |---|---|---|
 | `find` | `Model.find([conditions])` | Find all records matching conditions. Returns Promise<Model[]>. |
-| `findAll` | `findAll([conditions])` |  |
 | `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
 | `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
 | `create` | `Model.create(data)` | Insert a new record. Runs validation and beforeCreate/afterCreate hooks. Returns Promise<Model>. |
 | `createMany` | `Model.createMany([data, ...])` | Insert multiple records. Returns Promise<Model[]>. |
 | `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
-| `updateAll` | `updateAll(conditions, data)` |  |
 | `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
-| `deleteAll` | `deleteAll([conditions])` |  |
 | `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
 | `exists` | `Model.exists([conditions])` | Check if any matching records exist. Returns Promise<boolean>. |
 | `upsert` | `Model.upsert(conditions, data)` | Insert or update. Finds by conditions, creates with merged data if not found, updates if found. Returns Promise<{ instance, created }>. |
-
-
-#### Schema & Inspect
-
-| Method | Signature | Description |
-|---|---|---|
-| `schema` | `schema` |  |
-| `columns` | `columns` |  |
-| `tableName` | `tableName` |  |
-| `primaryKey` | `primaryKey` |  |
-| `fields` | `fields` |  |
-| `relations` | `relations` |  |
-| `validate` | `validate(data)` |  |
-| `cast` | `cast(data)` |  |
-| `hydrate` | `hydrate(rows)` |  |
+| `findById` | `Model.findById(id)` | Find a single record by its primary key value. |
+| `updateWhere` | `Model.updateWhere(conditions, data)` | Update all records matching conditions. Returns the number of affected rows. |
+| `deleteWhere` | `Model.deleteWhere(conditions)` | Delete all records matching conditions. Returns the number of deleted rows. |
+| `scope` | `Model.scope(name, ...args)` | Start a fluent Query builder with a named scope applied. Scopes are reusable query conditions defined in `static scopes`. |
 
 
 #### Query Builder
@@ -1700,12 +1714,6 @@ The ORM base class — extend it to define your data models. Supports typed sche
 | Method | Signature | Description |
 |---|---|---|
 | `query` | `Model.query()` | Start a fluent Query builder. See ORM → Query. |
-| `where` | `where(field, [value])` |  |
-| `select` | `select(...fields)` |  |
-| `include` | `include(relation)` |  |
-| `orderBy` | `orderBy(field, [dir])` |  |
-| `limit` | `limit(n)` |  |
-| `offset` | `offset(n)` |  |
 | `paginate` | `Model.paginate(page, [perPage], [conditions])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
 
 
@@ -1713,22 +1721,49 @@ The ORM base class — extend it to define your data models. Supports typed sche
 
 | Method | Signature | Description |
 |---|---|---|
-| `softDelete` | `softDelete()` |  |
 | `restore` | `instance.restore()` | Restore a soft-deleted instance (sets deletedAt to null). |
-| `withTrashed` | `withTrashed()` |  |
-| `onlyTrashed` | `onlyTrashed()` |  |
 
 
-#### Lifecycle Hooks
+#### LINQ-Inspired Shortcuts
 
 | Method | Signature | Description |
 |---|---|---|
-| `beforeCreate` | `beforeCreate(fn)` |  |
-| `afterCreate` | `afterCreate(fn)` |  |
-| `beforeUpdate` | `beforeUpdate(fn)` |  |
-| `afterUpdate` | `afterUpdate(fn)` |  |
-| `beforeDelete` | `beforeDelete(fn)` |  |
-| `afterDelete` | `afterDelete(fn)` |  |
+| `first` | `Model.first([conditions])` | Find the first record matching optional conditions. |
+| `last` | `Model.last([conditions])` | Find the last record matching optional conditions. |
+| `all` | `Model.all([conditions])` | Get all records matching optional conditions. Alias for `find()`. |
+| `chunk` | `Model.chunk(size, fn, [conditions])` | Process all matching records in batches. Calls `fn(batch, index)` for each chunk. |
+| `random` | `Model.random([conditions])` | Get a random record matching optional conditions. |
+| `pluck` | `Model.pluck(field, [conditions])` | Get an array of values for a single column from all matching records. |
+
+
+#### Instance Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `save` | `instance.save()` | Persist the instance. Inserts a new record if unpersisted, or updates only dirty (changed) fields if already saved. |
+| `reload` | `instance.reload()` | Reload the instance from the database, discarding any unsaved local changes. |
+| `toJSON` | `instance.toJSON()` | Return a plain object representation of the instance. Fields listed in `static hidden` are excluded. |
+| `load` | `instance.load(relationName)` | Lazy-load a named relationship. The relation must be defined via `hasMany`, `hasOne`, `belongsTo`, or `belongsToMany`. |
+| `increment` | `instance.increment(field, [by])` | Atomically increment a numeric field. Saves the change to the database immediately. |
+| `decrement` | `instance.decrement(field, [by])` | Atomically decrement a numeric field. Saves the change to the database immediately. |
+
+
+#### Relationships
+
+| Method | Signature | Description |
+|---|---|---|
+| `hasMany` | `Model.hasMany(RelatedModel, foreignKey, [localKey])` | Define a one-to-many relationship. The related model's `foreignKey` references this model's primary key (or `localKey`). |
+| `hasOne` | `Model.hasOne(RelatedModel, foreignKey, [localKey])` | Define a one-to-one relationship. Like `hasMany` but `load()` returns a single instance. |
+| `belongsTo` | `Model.belongsTo(RelatedModel, foreignKey, [otherKey])` | Define an inverse one-to-one/many relationship. This model holds the foreign key. |
+| `belongsToMany` | `Model.belongsToMany(RelatedModel, options)` | Define a many-to-many relationship through a junction (pivot) table. |
+
+
+#### Schema & Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `sync` | `Model.sync()` | Create or sync the model's table in the database. Idempotent — safe to call multiple times. |
+| `drop` | `Model.drop()` | Drop the model's table from the database. |
 
 
 #### Options
@@ -1834,6 +1869,28 @@ Advanced schema options for DDL generation. Define foreign keys, CHECK constrain
 | `compositeUnique` | string | `—` | Group columns into a composite UNIQUE constraint. Columns with the same string value form one constraint. |
 | `compositeIndex` | string | `—` | Group columns into a composite index. Columns with the same string value form one multi-column index. |
 | `guarded` | boolean | `false` | Prevent mass-assignment of this field via create/update. Must be set explicitly on the instance. |
+| `type` | TYPES.* | `—` | Column data type (e.g. `TYPES.STRING`, `TYPES.INTEGER`). Required. |
+| `required` | boolean | `false` | Field must be provided on create. Throws validation error if missing. |
+| `default` | any \| () => any | `—` | Default value, or a factory function. Called on each `create()` if the field is omitted. |
+| `nullable` | boolean | `false` | Allow null values in the column. |
+| `primaryKey` | boolean | `false` | Mark this column as the primary key. |
+| `autoIncrement` | boolean | `false` | Auto-increment on insert (integer primary keys). |
+| `unique` | boolean | `false` | Add a UNIQUE constraint on this column. |
+| `minLength` | number | `—` | Minimum string length. Validated before insert/update. |
+| `maxLength` | number | `—` | Maximum string length. Validated before insert/update. |
+| `min` | number | `—` | Minimum numeric value. |
+| `max` | number | `—` | Maximum numeric value. |
+| `match` | RegExp | `—` | Pattern constraint for string values. |
+| `enum` | string[] | `—` | Allowed values for string/ENUM type. |
+| `values` | string[] | `—` | Allowed values for SET type. |
+| `precision` | number | `—` | Total digit count for DECIMAL types. |
+| `scale` | number | `—` | Digits after the decimal point for DECIMAL types. |
+| `length` | number | `—` | Fixed width for CHAR, BINARY, VARBINARY types. |
+| `unsigned` | boolean | `—` | MySQL: mark column as unsigned (no negative values). |
+| `charset` | string | `—` | MySQL/PG: column-level character set. |
+| `collation` | string | `—` | MySQL/PG: column-level collation. |
+| `comment` | string | `—` | MySQL/PG: column comment stored in database metadata. |
+| `arrayOf` | string | `—` | PostgreSQL: element type for ARRAY columns (e.g. `"text"`, `"integer"`). |
 
 
 ```js
@@ -2186,6 +2243,13 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 | `explain` | `explain([options])` | Return the execution plan for this query instead of results. Options vary by adapter: { format, analyze, buffers }. |
 
 
+#### Execution
+
+| Method | Signature | Description |
+|---|---|---|
+| `build` | `query.build()` | Build and return the adapter-agnostic query descriptor without executing it. Useful for inspection, caching keys, or passing to `QueryCache.wrap()`. |
+
+
 ```js
 // Filtering with negation
 const results = await User.query()
@@ -2354,6 +2418,8 @@ The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-ba
 | `readonly` | boolean | `false` | Open the database in read-only mode. |
 | `fileMustExist` | boolean | `false` | Throw if the database file does not exist. |
 | `createDir` | boolean | `true` | Auto-create parent directories for the database file. |
+| `verbose` | boolean | `false` | Log all executed SQL statements to the console. |
+| `pragmas` | object | `production defaults` | SQLite PRAGMA overrides. All keys below are set inside this object. |
 | `pragmas.journal_mode` | string | `'WAL'` | WAL mode enables concurrent reads/writes. Options: WAL, DELETE, TRUNCATE, MEMORY, OFF. |
 | `pragmas.foreign_keys` | string | `'ON'` | Enforce foreign key constraints. |
 | `pragmas.busy_timeout` | string | `'5000'` | Milliseconds to wait when the database is locked. |
@@ -3134,17 +3200,16 @@ Versioned migration framework for the ORM. Define up/down migrations, track exec
 
 | Method | Signature | Description |
 |---|---|---|
-| `up` | `up([steps])` |  |
-| `down` | `down([steps])` |  |
-| `latest` | `latest()` |  |
 | `rollback` | `migrator.rollback()` | Rollback the last batch. Returns { rolledBack: string[], batch: number }. |
 | `reset` | `migrator.reset()` | Rollback all, then re-run all. Returns { rolledBack, migrated, batch }. |
 | `status` | `migrator.status()` | Get current status: { executed: [], pending: [], lastBatch }. |
 | `list` | `migrator.list()` | Get registered migration names. |
-| `create` | `create(name)` |  |
-| `run` | `run(file)` |  |
-| `undo` | `undo([file])` |  |
-| `pending` | `pending()` |  |
+| `add` | `migrator.add(migration)` | Add a single migration definition. Returns the Migrator for chaining. |
+| `addAll` | `migrator.addAll(migrations)` | Add multiple migration definitions at once. Returns the Migrator for chaining. |
+| `migrate` | `migrator.migrate()` | Run all pending migrations. Returns info about what was migrated. |
+| `rollbackAll` | `migrator.rollbackAll()` | Rollback ALL executed migrations (not just the last batch). |
+| `fresh` | `migrator.fresh()` | Drop everything and re-run all migrations from scratch. Destructive — intended for development. |
+| `hasPending` | `migrator.hasPending()` | Check whether there are any pending (unexecuted) migrations. |
 
 
 #### Options
@@ -3152,6 +3217,9 @@ Versioned migration framework for the ORM. Define up/down migrations, track exec
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `table` | string | `'_migrations'` | Name of the migration tracking table. |
+| `name` | string | `—` | Unique migration name. Only letters, digits, underscores, hyphens, and dots are allowed. |
+| `up` | (db: Database) => Promise<void> | `—` | Function to apply the migration. Receives the Database instance. |
+| `down` | (db: Database) => Promise<void> | `—` | Function to reverse the migration. Receives the Database instance. |
 
 
 ```js
@@ -3225,12 +3293,26 @@ In-memory LRU query cache with TTL support. Attach to a Database instance to cac
 | `set` | `cache.set(key, value, [ttl])` | Set a cache entry with optional TTL in seconds. |
 | `has` | `cache.has(key)` | Check if a key exists and is not expired. |
 | `delete` | `cache.delete(key)` | Delete a specific cache entry. |
-| `clear` | `clear()` |  |
 | `wrap` | `cache.wrap(descriptor, executor, [ttl])` | Wrap a query execution with caching. Used internally by Query.cache(). |
 | `invalidate` | `cache.invalidate(table)` | Remove all cache entries containing the table name. |
 | `stats` | `cache.stats()` | Get hit/miss statistics: { size, hits, misses, hitRate, maxEntries }. |
-| `keys` | `keys()` |  |
 | `flush` | `cache.flush()` | Clear the entire cache and reset stats. |
+| `remember` | `cache.remember(key, fn, [ttl])` | Get a cached value by key, or compute it by calling `fn()` and cache the result. This is a read-through cache pattern — if the key exists, the cached value is returned immediately; otherwise `fn()` is awaited, the result is stored, and then returned. |
+
+
+#### Static Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `keyFromDescriptor` | `QueryCache.keyFromDescriptor()` | Generate a deterministic cache key from a query descriptor object. Used internally by wrap() but available for custom cache key generation. |
+
+
+#### Instance Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `prune` | `queryCache.prune()` | Remove all expired entries from the cache. Returns the number of entries removed. |
+| `remember` | `queryCache.remember()` | Get a cached value by key, or compute it by calling fn() and cache the result. If the key exists, the cached value is returned; otherwise fn() is awaited, stored, and returned. |
 
 
 #### Options
@@ -3333,6 +3415,61 @@ Database seeding utilities — structured data population for development and te
 | `pick` | `Fake.pick(array)` | Random element from an array. |
 | `pickMany` | `Fake.pickMany(array, n)` | N random elements (no duplicates). |
 | `json` | `Fake.json()` | Random JSON-safe object. |
+| `seed` | `Fake.seed([value])` | Set a deterministic seed for reproducible fake data. Pass `null` to reset to Math.random. |
+| `getSeed` | `Fake.getSeed()` | Return the active seed, or `null` if using Math.random. |
+| `unique` | `Fake.unique(fn, [options])` | Generate a unique value by calling `fn()` until an unseen result is returned for the given namespace key. |
+| `resetUnique` | `Fake.resetUnique([key])` | Clear uniqueness tracking for a key, or all keys if omitted. |
+| `uniqueCount` | `Fake.uniqueCount(key)` | Count how many unique values have been generated for a key. |
+| `middleName` | `Fake.middleName([options])` | Generate a random middle name. |
+| `namePrefix` | `Fake.namePrefix([options])` | Generate a random name prefix (Mr., Ms., Dr., etc.). |
+| `nameSuffix` | `Fake.nameSuffix()` | Generate a random name suffix (Jr., Sr., III, etc.). |
+| `locales` | `Fake.locales()` | List all supported locale codes for name/phone generation. |
+| `phoneCodes` | `Fake.phoneCodes()` | Return all supported phone country codes. |
+| `domainName` | `Fake.domainName([options])` | Generate a random domain name. |
+| `ipv6` | `Fake.ipv6()` | Generate a random IPv6 address. |
+| `mac` | `Fake.mac([options])` | Generate a random MAC address. |
+| `port` | `Fake.port([options])` | Generate a random port number. |
+| `httpMethod` | `Fake.httpMethod([options])` | Generate a random HTTP method. |
+| `userAgent` | `Fake.userAgent()` | Generate a random User-Agent string. |
+| `password` | `Fake.password([options])` | Generate a random password. |
+| `numericString` | `Fake.numericString([length], [options])` | Generate a fixed-length numeric string (e.g. ZIP codes, PINs, credit card numbers). |
+| `alphanumeric` | `Fake.alphanumeric([length], [options])` | Generate a random alphanumeric string. |
+| `alpha` | `Fake.alpha([length], [options])` | Generate a random alphabetic string (no digits). |
+| `datePast` | `Fake.datePast([options])` | Generate a random date in the past. |
+| `dateFuture` | `Fake.dateFuture([options])` | Generate a random date in the future. |
+| `words` | `Fake.words([n])` | Generate `n` random words (space-separated). |
+| `hackerPhrase` | `Fake.hackerPhrase()` | Generate a hacker-style phrase. |
+| `slug` | `Fake.slug([wordCount])` | Generate a URL-safe slug. |
+| `hashtag` | `Fake.hashtag()` | Generate a random hashtag. |
+| `jobTitle` | `Fake.jobTitle([options])` | Generate a random job title. |
+| `jobArea` | `Fake.jobArea()` | Generate a random job area/department. |
+| `jobType` | `Fake.jobType()` | Generate a random job type (e.g. Engineer, Designer). |
+| `jobDescriptor` | `Fake.jobDescriptor()` | Generate a random job descriptor (e.g. Senior, Lead). |
+| `bio` | `Fake.bio([options])` | Generate a random biography string. |
+| `zodiacSign` | `Fake.zodiacSign()` | Generate a random zodiac sign. |
+| `gender` | `Fake.gender([options])` | Generate a random gender. |
+| `bloodType` | `Fake.bloodType()` | Generate a random blood type. |
+| `city` | `Fake.city([options])` | Generate a random city name. |
+| `country` | `Fake.country([options])` | Generate a random country name or code. |
+| `state` | `Fake.state([options])` | Generate a random US state. |
+| `zipCode` | `Fake.zipCode([options])` | Generate a random ZIP/postal code. |
+| `latitude` | `Fake.latitude([options])` | Generate a random latitude. |
+| `longitude` | `Fake.longitude([options])` | Generate a random longitude. |
+| `coordinates` | `Fake.coordinates()` | Generate random latitude/longitude coordinates. |
+| `timezone` | `Fake.timezone()` | Generate a random timezone string. |
+| `streetName` | `Fake.streetName()` | Generate a random street name. |
+| `address` | `Fake.address([options])` | Generate a full address string or structured address object. |
+| `productName` | `Fake.productName([options])` | Generate a random product name. |
+| `category` | `Fake.category()` | Generate a random product category. |
+| `department` | `Fake.department()` | Generate a random department name. |
+| `company` | `Fake.company([options])` | Generate a random company name. |
+| `price` | `Fake.price([options])` | Generate a random price string. |
+| `industry` | `Fake.industry()` | Generate a random industry name. |
+| `catchPhrase` | `Fake.catchPhrase()` | Generate a random business catch phrase. |
+| `rgb` | `Fake.rgb([options])` | Generate a random RGB color. |
+| `hsl` | `Fake.hsl([options])` | Generate a random HSL color. |
+| `shuffle` | `Fake.shuffle(arr)` | Shuffle an array in-place using Fisher-Yates algorithm. |
+| `enumValue` | `Fake.enumValue(values)` | Pick a random value from an array. Identical to `pick` but named for enum-like usage. |
 
 
 #### SeederRunner
@@ -3428,14 +3565,12 @@ Automatic query profiling, slow-query detection, and N+1 pattern identification.
 
 | Method | Signature | Description |
 |---|---|---|
-| `enable` | `enable([opts])` |  |
-| `disable` | `disable()` |  |
-| `getStats` | `getStats()` |  |
 | `reset` | `profiler.reset()` | Clear all profiling state — queries, counters, and N+1 detections. |
-| `onQuery` | `onQuery(fn)` |  |
-| `offQuery` | `offQuery(fn)` |  |
-| `report` | `report([opts])` |  |
-| `clear` | `clear()` |  |
+| `record` | `profiler.record(entry)` | Record a query execution. Called automatically when profiling is enabled; useful for manual recording. |
+| `metrics` | `profiler.metrics()` | Get aggregate profiling metrics: total queries, average latency, queries/sec, slow query count, and N+1 detection count. |
+| `slowQueries` | `profiler.slowQueries()` | Get all queries from history that exceeded the slow threshold. |
+| `n1Detections` | `profiler.n1Detections()` | Get all detected N+1 query patterns. |
+| `getQueries` | `profiler.getQueries([options])` | Get filtered query history. |
 
 
 #### Options
@@ -3523,6 +3658,28 @@ Read replica load balancing for horizontal read scaling. Distributes read querie
 | `markHealthy` | `manager.markHealthy(adapter)` | Mark a previously unhealthy replica as healthy again. |
 | `healthCheck` | `await manager.healthCheck()` | Ping all replicas and automatically mark them healthy or unhealthy based on response. |
 | `status` | `manager.status()` | Return pool status: { primary, total, healthy, unhealthy, strategy }. |
+
+
+#### Replica Management
+
+| Method | Signature | Description |
+|---|---|---|
+| `setPrimary` | `manager.setPrimary(adapter)` | Set the primary (read-write) adapter. |
+| `addReplica` | `manager.addReplica(adapter)` | Add a read replica adapter to the pool. |
+| `getReadAdapter` | `manager.getReadAdapter()` | Get an adapter for read operations. Respects the configured strategy (round-robin/random), health status, and sticky-write window. |
+| `getWriteAdapter` | `manager.getWriteAdapter()` | Get the primary adapter for write operations. Updates the sticky-write timestamp if `stickyWrite` is enabled. |
+| `markUnhealthy` | `manager.markUnhealthy(adapter)` | Mark a replica as unhealthy. It will be excluded from read routing until marked healthy again. |
+| `markHealthy` | `manager.markHealthy(adapter)` | Mark a previously unhealthy replica as healthy, returning it to the read pool. |
+| `healthCheck` | `manager.healthCheck()` | Run a health check on all replicas. Pings each adapter and updates its health status. |
+| `getAllAdapters` | `manager.getAllAdapters()` | Get all adapters (primary + all replicas). |
+| `closeAll` | `manager.closeAll()` | Close all adapter connections (primary and all replicas). |
+
+
+#### Instance Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `replicaCount` | `replicaManager.replicaCount` | The number of registered read replicas. |
 
 
 #### Options
@@ -3613,6 +3770,26 @@ Built-in RFC 6455 WebSocket server. Register handlers with app.ws(path, handler)
 |---|---|---|
 | `close` | `ws.close([code], [reason])` | Graceful close with optional status code and reason. |
 | `terminate` | `ws.terminate()` | Forcefully close the connection. |
+
+
+#### Connection Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `id` | `ws.id` | Unique connection identifier. |
+| `readyState` | `ws.readyState` | Current WebSocket ready state (0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED). |
+| `protocol` | `ws.protocol` | The negotiated sub-protocol string. |
+| `extensions` | `ws.extensions` | The requested extensions string. |
+| `headers` | `ws.headers` | Request headers from the upgrade handshake. |
+| `ip` | `ws.ip` | Remote IP address of the connected client. |
+| `query` | `ws.query` | Parsed query parameters from the upgrade URL. |
+| `url` | `ws.url` | The full upgrade URL. |
+| `secure` | `ws.secure` | Whether the connection is over TLS. |
+| `maxPayload` | `ws.maxPayload` | Maximum incoming payload size in bytes. |
+| `connectedAt` | `ws.connectedAt` | Timestamp (ms since epoch) when the connection was opened. |
+| `data` | `ws.data` | Arbitrary user-data store for attaching custom data to the connection. |
+| `bufferedAmount` | `ws.bufferedAmount` | Number of bytes waiting in the send buffer (readonly). |
+| `uptime` | `ws.uptime` | Milliseconds since the connection was opened (readonly). |
 
 
 #### Options
@@ -3741,6 +3918,20 @@ app.get('/pool/status', (req, res) => res.json({
 
 Push real-time events to browser clients via res.sse(). Returns an SSEStream instance with auto-IDs, named events, keep-alive pings, and graceful disconnect handling. The browser connects with new EventSource(url).
 
+#### Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `connected` | `sse.connected` | Whether the stream is still open. |
+| `lastEventId` | `sse.lastEventId` | The Last-Event-ID from client reconnection. |
+| `eventCount` | `sse.eventCount` | Total events sent on this stream. |
+| `bytesSent` | `sse.bytesSent` | Total bytes written to the stream. |
+| `connectedAt` | `sse.connectedAt` | Timestamp (ms) when the stream was opened. |
+| `uptime` | `sse.uptime` | Milliseconds since the stream was opened. |
+| `secure` | `sse.secure` | Whether the connection is over TLS. |
+| `data` | `sse.data` | Arbitrary user-data store for attaching custom properties. |
+
+
 #### Writing
 
 | Method | Signature | Description |
@@ -3766,6 +3957,10 @@ Push real-time events to browser clients via res.sse(). Returns an SSEStream ins
 | Method | Signature | Description |
 |---|---|---|
 | `on` | `sse.on(event, handler)` | Listen for events: close, error. |
+| `once` | `sse.once(event, handler)` | Listen for an event once, then auto-remove the handler. |
+| `off` | `sse.off(event, handler)` | Remove a specific event listener. |
+| `removeAllListeners` | `sse.removeAllListeners(event?)` | Remove all listeners for a given event, or all events if omitted. |
+| `listenerCount` | `sse.listenerCount(event)` | Return the number of listeners registered for the given event. |
 
 
 #### Options
@@ -3813,7 +4008,6 @@ app.get('/events', (req, res) => {
 
 > **Tip:** SSE is automatically excluded from response compression.
 > **Tip:** Use keepAlive to prevent proxy/load-balancer timeouts on idle connections.
-> **Tip:** Properties: connected, eventCount, bytesSent, connectedAt, uptime, lastEventId, data (user store).
 
 
 
@@ -3838,6 +4032,23 @@ Built-in HTTP/HTTPS client for server-side requests. Returns a Response-like obj
 | `arrayBuffer` | `res.arrayBuffer()` | Read body as ArrayBuffer. Returns Promise<ArrayBuffer>. |
 
 
+#### Response Object
+
+| Method | Signature | Description |
+|---|---|---|
+| `status` | `response.status` | HTTP status code (e.g. `200`, `404`). |
+| `statusText` | `response.statusText` | HTTP status reason phrase (e.g. `"OK"`, `"Not Found"`). |
+| `ok` | `response.ok` | `true` if status is 200-299. |
+| `secure` | `response.secure` | `true` if the response came over HTTPS. |
+| `url` | `response.url` | The final URL after any redirects. |
+| `headers` | `response.headers` | Response headers object with `get(name)` method and `raw` property. |
+| `get` | `response.headers.get(name)` | Get a response header value by name. |
+| `raw` | `response.headers.raw` | Raw headers as a plain object. Multi-value headers are arrays. |
+| `text` | `response.text()` | Read the body as a UTF-8 string. |
+| `json` | `response.json()` | Read the body and parse as JSON. |
+| `arrayBuffer` | `response.arrayBuffer()` | Read the body as a Buffer. |
+
+
 #### Options
 
 | Option | Type | Default | Description |
@@ -3853,6 +4064,7 @@ Built-in HTTP/HTTPS client for server-side requests. Returns a Response-like obj
 | `ca` | string \| Buffer | `—` | TLS: custom CA certificate. |
 | `cert` | string \| Buffer | `—` | TLS: client certificate. |
 | `key` | string \| Buffer | `—` | TLS: client private key. |
+| `agent` | http.Agent \| https.Agent | `—` | Custom HTTP(S) agent for connection pooling or proxy support. |
 
 
 ```js
@@ -4181,6 +4393,12 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 | `log.warn()` | `log.warn(...args)` | Log at warn level. |
 | `log.error()` | `log.error(...args)` | Log at error level. |
 | `log.fatal()` | `log.fatal(...args)` | Log at fatal level (most severe). |
+| `trace` | `log.trace(...args)` | Log at trace level (level 0). |
+| `debug` | `log.debug(...args)` | Log at debug level (level 1). |
+| `info` | `log.info(...args)` | Log at info level (level 2). |
+| `warn` | `log.warn(...args)` | Log at warn level (level 3). |
+| `error` | `log.error(...args)` | Log at error level (level 4). |
+| `fatal` | `log.fatal(...args)` | Log at fatal level (level 5). |
 
 
 #### Configuration
@@ -4195,6 +4413,21 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 | `debug.colors()` | `debug.colors(false)` | Toggle ANSI colors. |
 | `debug.output()` | `debug.output(stream)` | Set custom output stream (default: stderr). |
 | `debug.reset()` | `debug.reset()` | Reset all settings to defaults. |
+| `level` | `debug.level(level)` | Set the minimum log level globally. |
+| `enable` | `debug.enable(patterns)` | Enable/disable namespaces. Same syntax as the `DEBUG` env var. |
+| `disable` | `debug.disable()` | Disable all debug output. |
+| `json` | `debug.json([on])` | Enable/disable structured JSON output. |
+| `timestamps` | `debug.timestamps([on])` | Enable/disable timestamps in log output. |
+| `colors` | `debug.colors([on])` | Enable/disable colored output. |
+| `output` | `debug.output(stream)` | Set a custom output stream. |
+
+
+#### Logger Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `enabled` | `log.enabled` | Whether this logger is enabled based on current namespace/level settings (readonly). |
+| `namespace` | `log.namespace` | The namespace this logger was created with (readonly). |
 
 
 #### Options

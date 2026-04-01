@@ -206,6 +206,54 @@
 			"description": "The env.load() schema supports 9 typed field definitions with validation constraints. Each field can have type, required, default, and type-specific options like min/max, match, separator, and values.",
 			"options": [
 				{
+					"option": "type",
+					"type": "string",
+					"default": "—",
+					"notes": "Value type for coercion: 'string' | 'number' | 'integer' | 'boolean' | 'port' | 'array' | 'json' | 'url' | 'enum'."
+				},
+				{
+					"option": "required",
+					"type": "boolean",
+					"default": "false",
+					"notes": "If true, throws when the field is missing and has no default."
+				},
+				{
+					"option": "default",
+					"type": "any | () => any",
+					"default": "—",
+					"notes": "Default value used when field is missing. Can be a function called lazily."
+				},
+				{
+					"option": "min",
+					"type": "number",
+					"default": "—",
+					"notes": "Minimum value (number/integer) or minimum length (string)."
+				},
+				{
+					"option": "max",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum value (number/integer) or maximum length (string)."
+				},
+				{
+					"option": "match",
+					"type": "RegExp",
+					"default": "—",
+					"notes": "Pattern that string values must match."
+				},
+				{
+					"option": "separator",
+					"type": "string",
+					"default": "','",
+					"notes": "Delimiter for array type. Items are trimmed and empties removed."
+				},
+				{
+					"option": "values",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Allowed values for enum type. Throws with list of allowed values on mismatch."
+				},
+				{
 					"option": "string",
 					"type": "type",
 					"default": "—",

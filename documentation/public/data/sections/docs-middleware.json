@@ -71,6 +71,11 @@
 					"type": "function",
 					"default": "—",
 					"notes": "Return false to skip compression: (req, res) => boolean."
+				},
+				{
+					"option": "encoding",
+					"type": "string | string[]",
+					"notes": "Force specific encoding(s) instead of auto-detecting from `Accept-Encoding`. E.g. `\"gzip\"` or `[\"gzip\", \"deflate\"]`."
 				}
 			],
 			"example": "const { createApp, compress, json } = require('zero-http')\nconst app = createApp()\n\napp.use(compress({ threshold: 512, level: 6 }))\napp.use(json())\n\napp.get('/big', (req, res) => {\n\tres.json({ data: 'x'.repeat(10000) }) // compressed\n})\n\napp.get('/small', (req, res) => {\n\tres.json({ ok: true }) // below threshold — sent raw\n})",

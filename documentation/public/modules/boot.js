@@ -3,30 +3,30 @@
  * Imports all ESM modules, wires late bindings, and boots the app.
  */
 
-/* ── Core ────────────────────────────────────────────────── */
+/* -- Core -------------------------------------------------- */
 
 import { $$, dedentAllPre, highlightAllPre } from './core/helpers.js';
 import { registerScrollHandler, histPushAccordion } from './core/history.js';
 
-/* ── UI ──────────────────────────────────────────────────── */
+/* -- UI ---------------------------------------------------- */
 
 import { initUI, scrollToId, registerLoadDocs } from './ui/shell.js';
 import { initCustomSelects } from './ui/select.js';
 import { initSearch } from './ui/search.js';
 import { initBadges } from './ui/badges.js';
 
-/* ── Canvas ──────────────────────────────────────────────── */
+/* -- Canvas ------------------------------------------------ */
 
 import { initWaves } from './ui/canvas/waves.js';
 import { initHeroCanvas } from './ui/canvas/hero.js';
 import { initNetworkCanvas } from './ui/canvas/network.js';
 import { initSignalsCanvas } from './ui/canvas/signals.js';
 
-/* ── Docs ────────────────────────────────────────────────── */
+/* -- Docs -------------------------------------------------- */
 
 import { loadDocs } from './docs/sections.js';
 
-/* ── Playground ──────────────────────────────────────────── */
+/* -- Playground -------------------------------------------- */
 
 import { initEcho } from './playground/echo.js';
 import { initWsChat } from './playground/websocket.js';
@@ -37,12 +37,12 @@ import { initCookies } from './playground/cookies.js';
 import { initUploads } from './playground/uploads.js';
 import { initProxy } from './playground/proxy.js';
 
-/* ── Late Bindings ───────────────────────────────────────── */
+/* -- Late Bindings ----------------------------------------- */
 
 registerScrollHandler(scrollToId);
 registerLoadDocs(loadDocs);
 
-/* ── Boot ────────────────────────────────────────────────── */
+/* -- Boot -------------------------------------------------- */
 
 function boot()
 {

@@ -209,10 +209,14 @@ document.addEventListener('click', e =>
     if (entry) showMethodOptsModal(entry.sig, entry.type, entry.data);
 });
 
-function buildMethodRow(m)
+function buildMethodRow(m, parentSlug)
 {
     const card = document.createElement('div');
     card.className = 'mm-method-card';
+    if (parentSlug && m.method)
+    {
+        card.id = parentSlug + '--' + slugify(m.method);
+    }
 
     const buttons = [];
 
@@ -391,7 +395,7 @@ function renderDocItem(item, section)
         mlist.className = 'mm-method-list';
         for (const m of item.methods)
         {
-            mlist.appendChild(buildMethodRow(m));
+            mlist.appendChild(buildMethodRow(m, slug));
         }
         body.appendChild(mlist);
     }
@@ -400,16 +404,18 @@ function renderDocItem(item, section)
     {
         for (const group of item.methodGroups)
         {
+            const groupName = group.group || group.category || 'Methods';
             const glabel = document.createElement('div');
             glabel.className = 'mm-group-label';
-            glabel.textContent = group.group || group.category || 'Methods';
+            glabel.id = slug + '--' + slugify(groupName);
+            glabel.textContent = groupName;
             body.appendChild(glabel);
 
             const mlist = document.createElement('div');
             mlist.className = 'mm-method-list';
             for (const m of group.methods)
             {
-                mlist.appendChild(buildMethodRow(m));
+                mlist.appendChild(buildMethodRow(m, slug));
             }
             body.appendChild(mlist);
         }
