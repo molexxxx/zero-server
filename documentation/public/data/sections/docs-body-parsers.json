@@ -1,0 +1,273 @@
+{
+	"section": "Body Parsers",
+	"icon": "parse",
+	"items": [
+		{
+			"name": "json",
+			"description": "Parses JSON request bodies into req.body and stores the raw buffer on req.rawBody for signature verification. Auto-detects charset from the Content-Type header. Supports size limits, strict mode, gzip/deflate/brotli decompression, and a verify callback for webhook signatures.",
+			"options": [
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "'1mb'",
+					"notes": "Maximum body size (e.g. '10kb', '5mb', or bytes as number)."
+				},
+				{
+					"option": "strict",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Reject payloads whose root is not an object or array."
+				},
+				{
+					"option": "reviver",
+					"type": "function",
+					"default": "—",
+					"notes": "JSON.parse reviver function for custom deserialization."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | function",
+					"default": "'application/json'",
+					"notes": "Content-Type(s) to match. Accepts a string, an array of strings, or a function returning boolean. Supports suffix patterns like 'application/*+json' to match vendor types (e.g. application/vnd.api+json)."
+				},
+				{
+					"option": "verify",
+					"type": "function",
+					"default": "—",
+					"notes": "verify(req, res, buf, encoding) — called with the raw Buffer before parsing. Throw an error to reject the request with 403. Ideal for webhook signature verification (e.g. Stripe, GitHub)."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip, deflate, and brotli request bodies automatically. Set to false to reject compressed bodies with 415."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Reject non-HTTPS requests with 403."
+				}
+			],
+			"example": "const { createApp, json } = require('zero-http')\nconst crypto = require('crypto')\nconst app = createApp()\n\n// Basic usage\napp.use(json({ limit: '10kb', strict: true }))\n\n// Webhook signature verification (e.g. Stripe)\napp.post('/webhook', json({\n\ttype: ['application/json', 'application/*+json'],\n\tverify: (req, res, buf) => {\n\t\tconst sig = req.headers['x-signature']\n\t\tconst expected = crypto.createHmac('sha256', process.env.SECRET)\n\t\t\t.update(buf).digest('hex')\n\t\tif (sig !== expected) throw new Error('Invalid signature')\n\t}\n}), (req, res) => {\n\t// req.rawBody contains the original Buffer for verification\n\tres.json({ received: req.body })\n})",
+			"tips": [
+				"With strict: true (default), primitives like '\"hello\"' or '42' are rejected — only {} and [] are allowed.",
+				"req.rawBody is always set to the raw Buffer before JSON.parse — use it for HMAC signature verification.",
+				"Charset is auto-detected from the Content-Type header (e.g. charset=utf-16le). Falls back to utf8.",
+				"The type option accepts arrays: ['application/json', 'application/*+json'] matches both standard and vendor JSON types.",
+				"Compressed bodies (gzip, deflate, brotli) are automatically decompressed. Set inflate: false to reject them with 415."
+			]
+		},
+		{
+			"name": "urlencoded",
+			"description": "Parses URL-encoded form bodies (application/x-www-form-urlencoded) into req.body. Supports nested object parsing, parameter limits for DoS prevention, nesting depth limits, and stores req.rawBody for verification.",
+			"options": [
+				{
+					"option": "extended",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Enable nested bracket parsing (e.g. user[name]=Alice → { user: { name: 'Alice' } })."
+				},
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "'1mb'",
+					"notes": "Maximum body size."
+				},
+				{
+					"option": "parameterLimit",
+					"type": "number",
+					"default": "1000",
+					"notes": "Maximum number of form parameters. Exceeding this returns 413. Prevents DoS via field flooding."
+				},
+				{
+					"option": "depth",
+					"type": "number",
+					"default": "32",
+					"notes": "Maximum nesting depth for bracket syntax (e.g. a[b][c][d]…). Exceeding this returns 400. Prevents deep-nesting DoS."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | function",
+					"default": "'application/x-www-form-urlencoded'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "verify",
+					"type": "function",
+					"default": "—",
+					"notes": "verify(req, res, buf, encoding) — called with the raw Buffer before parsing. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/brotli bodies. Set to false to reject compressed bodies with 415."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Reject non-HTTPS requests with 403."
+				}
+			],
+			"example": "const { createApp, urlencoded } = require('zero-http')\nconst app = createApp()\n\n// Secure form parser with DoS protection\napp.use(urlencoded({\n\textended: true,\n\tparameterLimit: 500,  // max 500 fields\n\tdepth: 10             // max 10 levels of nesting\n}))\n\napp.post('/form', (req, res) => {\n\t// req.rawBody has the raw Buffer for verification workflows\n\tres.json(req.body)\n})",
+			"tips": [
+				"parameterLimit: 1000 (default) protects against field-flooding DoS attacks automatically.",
+				"depth: 32 (default) prevents deeply nested bracket keys like a[b][c][d]… from consuming CPU.",
+				"req.rawBody is set before parsing — use it for signature verification on form submissions."
+			]
+		},
+		{
+			"name": "text",
+			"description": "Reads the raw request body as a string into req.body. Matches Content-Type text/* by default. Auto-detects charset from the Content-Type header, falling back to the encoding option. Stores req.rawBody for verification.",
+			"options": [
+				{
+					"option": "type",
+					"type": "string | string[] | function",
+					"default": "'text/*'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "'1mb'",
+					"notes": "Maximum body size."
+				},
+				{
+					"option": "encoding",
+					"type": "string",
+					"default": "'utf8'",
+					"notes": "Fallback character encoding when Content-Type has no charset parameter."
+				},
+				{
+					"option": "verify",
+					"type": "function",
+					"default": "—",
+					"notes": "verify(req, res, buf, encoding) — called with the raw Buffer before decoding. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/brotli bodies. Set to false to reject compressed bodies with 415."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Reject non-HTTPS requests with 403."
+				}
+			],
+			"example": "const { createApp, text } = require('zero-http')\nconst app = createApp()\n\napp.use(text({ encoding: 'utf8' }))\n\napp.post('/log', (req, res) => {\n\t// Charset is auto-detected from Content-Type (e.g. text/plain; charset=utf-16le)\n\t// req.rawBody contains the raw Buffer\n\tconsole.log(typeof req.body) // 'string'\n\tres.text('Received: ' + req.body)\n})",
+			"tips": [
+				"Charset is auto-detected from the Content-Type header. The encoding option is only used as a fallback.",
+				"req.rawBody is always set to the raw Buffer before string conversion."
+			]
+		},
+		{
+			"name": "raw",
+			"description": "Reads the raw request body as a Buffer into req.body. Also sets req.rawBody. Useful for binary data, webhooks, custom protocols, and signature verification workflows.",
+			"options": [
+				{
+					"option": "type",
+					"type": "string | string[] | function",
+					"default": "'application/octet-stream'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "'1mb'",
+					"notes": "Maximum body size."
+				},
+				{
+					"option": "verify",
+					"type": "function",
+					"default": "—",
+					"notes": "verify(req, res, buf) — called with the raw Buffer before setting req.body. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/brotli bodies. Set to false to reject compressed bodies with 415."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Reject non-HTTPS requests with 403."
+				}
+			],
+			"example": "const { createApp, raw } = require('zero-http')\nconst crypto = require('crypto')\nconst app = createApp()\n\n// Webhook receiver with signature verification\napp.post('/webhook', raw({\n\ttype: 'application/octet-stream',\n\tlimit: '5mb',\n\tverify: (req, res, buf) => {\n\t\tconst sig = req.headers['x-hub-signature-256']\n\t\tconst hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET)\n\t\t\t.update(buf).digest('hex')\n\t\tif (sig !== `sha256=${hmac}`) throw new Error('Bad signature')\n\t}\n}), (req, res) => {\n\tconsole.log(req.rawBody.length) // raw bytes\n\tres.sendStatus(200)\n})",
+			"tips": [
+				"req.rawBody and req.body are both the same Buffer instance for the raw parser.",
+				"Use the verify callback for webhook signature validation before processing the payload."
+			]
+		},
+		{
+			"name": "multipart",
+			"description": "Streams multipart/form-data file uploads to disk and populates req.body with { fields, files }. Supports per-file size limits, file count limits, field count limits, MIME type whitelists, and combined total size limits for upload handling.",
+			"options": [
+				{
+					"option": "dir",
+					"type": "string",
+					"default": "os.tmpdir() + '/zero-http-uploads'",
+					"notes": "Upload directory. Created automatically if it doesn't exist."
+				},
+				{
+					"option": "maxFileSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum size per file in bytes. Rejects oversized files with 413."
+				},
+				{
+					"option": "maxFiles",
+					"type": "number",
+					"default": "10",
+					"notes": "Maximum number of uploaded files. Exceeding this returns 413. Prevents file flooding."
+				},
+				{
+					"option": "maxFields",
+					"type": "number",
+					"default": "1000",
+					"notes": "Maximum number of non-file form fields. Exceeding this returns 413. Prevents field flooding DoS."
+				},
+				{
+					"option": "maxFieldSize",
+					"type": "number",
+					"default": "1048576",
+					"notes": "Maximum size of a single field value in bytes (default 1 MB). Exceeding this returns 413."
+				},
+				{
+					"option": "maxTotalSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum combined size of all uploaded files in bytes. Exceeding this returns 413."
+				},
+				{
+					"option": "allowedMimeTypes",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Whitelist of allowed MIME types for uploaded files (e.g. ['image/png', 'image/jpeg']). Files with non-matching types are rejected with 415."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Reject non-HTTPS requests with 403."
+				}
+			],
+			"example": "const path = require('path')\nconst { createApp, multipart } = require('zero-http')\nconst app = createApp()\n\n// Upload handler with full security controls\napp.post('/upload', multipart({\n\tdir: path.join(__dirname, 'uploads'),\n\tmaxFileSize: 10 * 1024 * 1024,   // 10 MB per file\n\tmaxFiles: 5,                      // max 5 files per request\n\tmaxFields: 20,                    // max 20 form fields\n\tmaxFieldSize: 64 * 1024,          // 64 KB per field value\n\tmaxTotalSize: 50 * 1024 * 1024,   // 50 MB total across all files\n\tallowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf']\n}), (req, res) => {\n\tres.json({\n\t\tfiles: req.body.files,   // [{ originalFilename, storedName, path, contentType, size }]\n\t\tfields: req.body.fields  // { description: 'My photo' }\n\t})\n})",
+			"tips": [
+				"Files are streamed to disk, not buffered in memory — safe for large uploads.",
+				"The upload directory is created automatically if it doesn't exist.",
+				"Each file object contains: originalFilename, storedName, path, contentType, size.",
+				"Use allowedMimeTypes to restrict uploads to specific file types — rejected files return 415.",
+				"maxFiles: 10 (default) prevents file-flooding attacks. Lower it for endpoints that expect a single file.",
+				"maxTotalSize limits the combined size of all uploads in a single request — useful for quota enforcement."
+			]
+		}
+	]
+}

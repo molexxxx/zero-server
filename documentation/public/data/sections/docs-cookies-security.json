@@ -1,0 +1,257 @@
+{
+	"section": "Cookies & Security",
+	"icon": "shield",
+	"items": [
+		{
+			"name": "cookieParser",
+			"description": "Cookie parsing middleware with timing-safe HMAC-SHA256 signature verification, JSON cookie support, secret rotation, and static helper methods. Parses the Cookie header into req.cookies and req.signedCookies. When a secret is provided, signed cookies (s: prefix) are verified using crypto.timingSafeEqual to prevent timing attacks. JSON cookies (j: prefix) are automatically parsed into objects. Exposes req.secret and req.secrets for downstream middleware like res.cookie({ signed: true }) and csrf().",
+			"options": [
+				{
+					"option": "secret",
+					"type": "string | string[]",
+					"default": "—",
+					"notes": "Signing secret. Pass an array for key rotation — newest first. When set, populates req.secret and req.secrets."
+				},
+				{
+					"option": "decode",
+					"type": "boolean",
+					"default": "true",
+					"notes": "URI-decode cookie values."
+				}
+			],
+			"example": "const { createApp, cookieParser, json } = require('zero-http')\nconst app = createApp()\n\n// Basic setup with signing secret\napp.use(cookieParser('super-secret-key'))\napp.use(json())\n\n// Reading cookies\napp.get('/read', (req, res) => {\n\tres.json({\n\t\tcookies: req.cookies,           // { theme: 'dark', prefs: { lang: 'en' } }\n\t\tsigned: req.signedCookies,       // { session: 'abc123' }\n\t\tsecret: req.secret               // available for downstream use\n\t})\n})\n\n// Setting cookies with new features\napp.get('/set', (req, res) => {\n\t// Auto-sign using req.secret\n\tres.cookie('session', 'abc123', { signed: true, httpOnly: true, secure: true })\n\n\t// JSON cookie — objects auto-serialize with j: prefix\n\tres.cookie('prefs', { lang: 'en', theme: 'dark' }, { maxAge: 86400 })\n\n\t// Priority + Partitioned (CHIPS)\n\tres.cookie('important', 'value', { priority: 'High', partitioned: true, secure: true })\n\n\tres.json({ ok: true })\n})\n\n// Secret rotation — verify with old key, sign with new key\napp.use(cookieParser(['new-secret', 'old-secret']))\n\n// Static helpers for manual use\nconst signed = cookieParser.sign('data', 'secret')\nconst value = cookieParser.unsign(signed, ['secret'])  // 'data' or false\nconst parsed = cookieParser.jsonCookie({ a: 1 })        // 'j:{\"a\":1}'",
+			"tips": [
+				"Always use signed cookies for session tokens and sensitive data.",
+				"For key rotation, pass secrets as an array: ['new-key', 'old-key']. Cookies are verified against all secrets but signed with the first.",
+				"Signature verification uses crypto.timingSafeEqual() to prevent timing attacks — never downgrade to string comparison.",
+				"JSON cookies (j: prefix) are auto-parsed — no need to manually JSON.parse cookie values.",
+				"res.cookie() with signed: true requires cookieParser to be configured with a secret. It reads req.secret automatically.",
+				"The partitioned attribute (CHIPS) isolates cookies per top-level site — useful for third-party embedded widgets."
+			],
+			"methodGroups": [
+				{
+					"group": "Signing",
+					"methods": [
+						{
+							"method": "sign",
+							"signature": "cookieParser.sign(value, secret)",
+							"description": "Sign a value with HMAC-SHA256. Returns 's:<value>.<signature>'.",
+							"methodReturns": {
+								"type": "string",
+								"description": "HMAC-signed cookie string as \"value.signature\"."
+							},
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cookie value to sign."
+								},
+								{
+									"param": "secret",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HMAC signing secret."
+								}
+							]
+						},
+						{
+							"method": "unsign",
+							"signature": "cookieParser.unsign(value, secrets)",
+							"description": "Verify and unsign a signed cookie. Tries all provided secrets (rotation support). Returns the original value or false.",
+							"methodReturns": {
+								"type": "string | false",
+								"description": "The original value if the signature is valid, or false."
+							},
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Signed cookie string (including `s:` prefix)."
+								},
+								{
+									"param": "secrets",
+									"type": "string | string[]",
+									"required": "Yes",
+									"notes": "Secret or array of secrets to try (enables rotation)."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Parsing",
+					"methods": [
+						{
+							"method": "jsonCookie",
+							"signature": "cookieParser.jsonCookie(value)",
+							"description": "Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(value).",
+							"methodReturns": {
+								"type": "object | string",
+								"description": "Parsed JSON if the value starts with \"j:\", otherwise the raw string."
+							},
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cookie string — returns parsed object if it begins with `j:`, otherwise `null`."
+								}
+							]
+						},
+						{
+							"method": "parseJSON",
+							"signature": "cookieParser.parseJSON(str)",
+							"description": "Parse a JSON cookie string (j: prefix). Returns parsed value or original string.",
+							"methodReturns": {
+								"type": "object | null",
+								"description": "Parsed JSON object, or null on failure."
+							},
+							"methodParams": [
+								{
+									"param": "str",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Raw string to attempt JSON parsing on. Returns the parsed value or the original string."
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "csrf",
+			"description": "Double-submit cookie CSRF protection. Generates a cryptographically random token, stores it in a cookie, and validates it on state-changing requests. GET, HEAD, and OPTIONS are automatically skipped. Tokens can be sent via header, body (_csrf field), or query parameter.",
+			"options": [
+				{
+					"option": "cookie",
+					"type": "string",
+					"default": "'_csrf'",
+					"notes": "Cookie name for the CSRF token."
+				},
+				{
+					"option": "header",
+					"type": "string",
+					"default": "'x-csrf-token'",
+					"notes": "Request header to check for the token."
+				},
+				{
+					"option": "saltLength",
+					"type": "number",
+					"default": "18",
+					"notes": "Token salt length in bytes."
+				},
+				{
+					"option": "secret",
+					"type": "string",
+					"default": "auto-generated",
+					"notes": "Secret for token generation. Auto-generated if not provided."
+				},
+				{
+					"option": "ignoreMethods",
+					"type": "string[]",
+					"default": "['GET','HEAD','OPTIONS']",
+					"notes": "HTTP methods that skip CSRF validation."
+				},
+				{
+					"option": "ignorePaths",
+					"type": "string[]",
+					"default": "[]",
+					"notes": "URL paths to skip (e.g. webhook endpoints)."
+				},
+				{
+					"option": "onError",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom error handler: (err, req, res, next) => {}."
+				}
+			],
+			"example": "const { createApp, csrf, json, cookieParser } = require('zero-http')\nconst app = createApp()\n\napp.use(cookieParser())\napp.use(json())\napp.use(csrf())\n\n// GET is safe — use it to read the token\napp.get('/api/csrf-token', (req, res) => {\n\tres.json({ token: req.csrfToken })\n})\n\n// POST must include the token\napp.post('/api/transfer', (req, res) => {\n\tres.json({ success: true, amount: req.body.amount })\n})\n\n// Client-side:\n// const { token } = await fetch('/api/csrf-token').then(r => r.json())\n// await fetch('/api/transfer', {\n//   method: 'POST',\n//   headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },\n//   body: JSON.stringify({ amount: 100 })\n// })",
+			"tips": [
+				"cookieParser() must be registered before csrf() even without a signing secret.",
+				"Use ignorePaths for webhook endpoints that receive external POST requests.",
+				"The token is available on req.csrfToken after the middleware runs."
+			]
+		},
+		{
+			"name": "validate",
+			"description": "Request validation middleware with 11 types and auto-coercion. Validates req.body, req.query, and req.params against a declarative schema. Unknown fields are stripped by default. Returns 422 with structured error messages on failure.",
+			"options": [
+				{
+					"option": "stripUnknown",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Remove fields not defined in the schema."
+				},
+				{
+					"option": "onError",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom error handler. Default sends 422 JSON."
+				}
+			],
+			"example": "const { createApp, json, validate } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\n// Validate body\napp.post('/users', validate({\n\tbody: {\n\t\tname:  { type: 'string', required: true, minLength: 2, maxLength: 50 },\n\t\temail: { type: 'email', required: true },\n\t\tage:   { type: 'integer', min: 13, max: 120 },\n\t\trole:  { type: 'string', enum: ['user', 'admin'], default: 'user' },\n\t\ttags:  { type: 'array', minItems: 1, maxItems: 5 }\n\t}\n}), (req, res) => {\n\tres.status(201).json(req.body) // sanitized\n})\n\n// Validate query + params\napp.get('/search/:category', validate({\n\tparams: { category: { type: 'string', enum: ['books', 'music', 'films'] } },\n\tquery: {\n\t\tq:     { type: 'string', required: true },\n\t\tpage:  { type: 'integer', min: 1, default: 1 },\n\t\tlimit: { type: 'integer', min: 1, max: 100, default: 20 }\n\t}\n}), (req, res) => {\n\tres.json({ params: req.params, query: req.query })\n})\n// Validation failure → 422 { errors: ['name is required', ...] }",
+			"tips": [
+				"Supported types: string, integer, number, float, boolean, array, json, date, uuid, email, url.",
+				"Auto-coercion: '42' → 42 (integer), 'true' → true (boolean), etc.",
+				"stripUnknown: true (default) prevents mass-assignment attacks by removing unknown fields.",
+				"Use validate.field() and validate.object() for programmatic validation outside middleware."
+			],
+			"methodGroups": [
+				{
+					"group": "Validation",
+					"methods": [
+						{
+							"method": "validate.field",
+							"signature": "validate.field(value, rules)",
+							"description": "Validate a single value against rules. Returns { valid, errors, value }.",
+							"methodReturns": {
+								"type": "ValidationResult",
+								"description": "Object with { valid: boolean, errors: string[] }."
+							},
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Value to validate."
+								},
+								{
+									"param": "rules",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Rule object, e.g. `{ type: \"string\", min: 2, max: 50, required: true, pattern: /regex/ }`."
+								}
+							]
+						},
+						{
+							"method": "validate.object",
+							"signature": "validate.object(data, schema)",
+							"description": "Validate an object against a schema. Returns { valid, errors, sanitized }.",
+							"methodReturns": {
+								"type": "ValidationResult",
+								"description": "Object with { valid: boolean, errors: { field, message }[] }."
+							},
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Object to validate."
+								},
+								{
+									"param": "schema",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Schema where each key maps to a rule object for the corresponding field."
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

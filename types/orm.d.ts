@@ -998,27 +998,223 @@ export class Factory<T extends typeof Model = typeof Model> {
 
 // --- Fake -----------------------------------------------------------
 
+export interface FakeNameOptions {
+    sex?: 'male' | 'female';
+    locale?: string;
+    unique?: boolean;
+}
+
+export interface FakeFullNameOptions extends FakeNameOptions {
+    prefix?: boolean;
+    middle?: boolean;
+    suffix?: boolean;
+    firstName?: string;
+    lastName?: string;
+}
+
+export interface FakePhoneOptions {
+    /** ISO country code (default: 'US'). */
+    countryCode?: string;
+    /** Format style (default: 'human'). */
+    format?: 'human' | 'national' | 'international';
+    unique?: boolean;
+}
+
+export interface FakeEmailOptions {
+    firstName?: string;
+    lastName?: string;
+    /** Force a specific provider domain. */
+    provider?: string;
+    /** Use only safe example./test. domains. */
+    safe?: boolean;
+    locale?: string;
+    unique?: boolean;
+}
+
+export interface FakeUsernameOptions {
+    firstName?: string;
+    lastName?: string;
+    /** Separator style between name parts. */
+    style?: 'dot' | 'underscore' | 'none' | 'random';
+    /** Append a numeric suffix (default: true). */
+    numbers?: boolean;
+    locale?: string;
+    unique?: boolean;
+}
+
+export interface FakeNumericStringOptions {
+    /** Allow leading zeros (default: true). */
+    leadingZeros?: boolean;
+    /** Grouping separator character (e.g. '-' for credit-card style). */
+    separator?: string;
+    /** Width of each separated group. */
+    groupSize?: number;
+}
+
+export interface FakePasswordOptions {
+    length?: number;
+    uppercase?: boolean;
+    lowercase?: boolean;
+    digits?: boolean;
+    special?: boolean;
+    prefix?: string;
+}
+
+export interface FakePriceOptions {
+    min?: number;
+    max?: number;
+    symbol?: string;
+}
+
+export interface FakeAddressOptions {
+    countryCode?: string;
+    /** 'string' (default) or 'object' to return address parts. */
+    format?: 'string' | 'object';
+}
+
+export interface FakeAddressObject {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+}
+
+export interface FakeMacOptions {
+    separator?: ':' | '-' | '.';
+    realisticOUI?: boolean;
+}
+
+export interface FakeUrlOptions {
+    protocol?: string;
+    appendSlash?: boolean;
+    /** Suppress the word path segment. */
+    noPath?: boolean;
+}
+
+export interface FakeIpOptions {
+    network?: 'any' | 'private-a' | 'private-b' | 'private-c' | 'loopback';
+}
+
+export interface FakeUniqueOptions {
+    /** Namespace key for deduplication tracking. */
+    key?: string;
+    maxAttempts?: number;
+}
+
 export class Fake {
-    static firstName(): string;
-    static lastName(): string;
-    static fullName(): string;
-    static email(): string;
-    static username(): string;
+    // -- RNG / Seeding ------------------------------------------------
+    /** Set a deterministic seed (pass null to reset). */
+    static seed(value?: number | string | null): number | null;
+    /** Return the active seed, or null if using Math.random. */
+    static getSeed(): number | null;
+    /**
+     * Generate a unique value by calling fn() until an unseen result is
+     * returned for the given namespace key.
+     */
+    static unique<T>(fn: () => T, options?: FakeUniqueOptions): T;
+    /** Clear uniqueness tracking for a key, or all keys if omitted. */
+    static resetUnique(key?: string): void;
+    /** Count how many unique values have been generated for a key. */
+    static uniqueCount(key: string): number;
+
+    // -- Names --------------------------------------------------------
+    static firstName(options?: FakeNameOptions): string;
+    static lastName(options?: Pick<FakeNameOptions, 'locale' | 'unique'>): string;
+    /** Default (no options) returns exactly "First Last". */
+    static fullName(options?: FakeFullNameOptions): string;
+    static middleName(options?: FakeNameOptions): string;
+    static namePrefix(options?: Pick<FakeNameOptions, 'sex'>): string;
+    static nameSuffix(): string;
+    /** List of supported locale codes. */
+    static locales(): string[];
+
+    // -- Phone --------------------------------------------------------
+    static phone(options?: FakePhoneOptions): string;
+    /** All supported phone country codes. */
+    static phoneCodes(): string[];
+
+    // -- Internet / Email ---------------------------------------------
+    static email(options?: FakeEmailOptions): string;
+    static username(options?: FakeUsernameOptions): string;
+    static domainName(options?: { tld?: string }): string;
+    static url(options?: FakeUrlOptions): string;
+    static ip(options?: FakeIpOptions): string;
+    static ipv6(): string;
+    static mac(options?: FakeMacOptions): string;
+    static port(options?: { range?: 'all' | 'registered' | 'dynamic' }): number;
+    static httpMethod(options?: { methods?: string[] }): string;
+    static userAgent(): string;
+    static password(options?: FakePasswordOptions): string;
+
+    // -- Numbers ------------------------------------------------------
     static uuid(): string;
     static integer(min?: number, max?: number): number;
     static float(min?: number, max?: number, decimals?: number): number;
     static boolean(): boolean;
+    /** Fixed-length numeric string (e.g. ZIP codes, PINs, credit card numbers). */
+    static numericString(length?: number, options?: FakeNumericStringOptions): string;
+    /** Random alphanumeric string. */
+    static alphanumeric(length?: number, options?: { uppercase?: boolean }): string;
+    /** Random alphabetic string. */
+    static alpha(length?: number, options?: { uppercase?: boolean }): string;
+
+    // -- Dates --------------------------------------------------------
     static date(start?: Date, end?: Date): Date;
     static dateString(start?: Date, end?: Date): string;
+    static datePast(options?: { years?: number }): Date;
+    static dateFuture(options?: { years?: number }): Date;
+
+    // -- Text ---------------------------------------------------------
     static paragraph(sentences?: number): string;
     static sentence(wordCount?: number): string;
-    static word(): string;
-    static phone(): string;
+    static word(options?: { type?: 'lorem' | 'adjective' | 'noun' | 'verb' }): string;
+    static words(n?: number): string;
+    static hackerPhrase(): string;
+    static slug(wordCount?: number): string;
+    static hashtag(): string;
+
+    // -- Person -------------------------------------------------------
+    static jobTitle(options?: { full?: boolean }): string;
+    static jobArea(): string;
+    static jobType(): string;
+    static jobDescriptor(): string;
+    static bio(options?: { style?: 'short' | 'medium' | 'long' }): string;
+    static zodiacSign(): string;
+    static gender(options?: { binary?: boolean }): string;
+    static bloodType(): string;
+
+    // -- Location -----------------------------------------------------
+    static city(options?: { country?: string }): string;
+    static country(options?: { codeOnly?: boolean; full?: boolean }): string | { name: string; code: string };
+    static state(options?: { abbr?: boolean; full?: boolean }): string | { name: string; abbr: string };
+    static zipCode(options?: { countryCode?: string }): string;
+    static latitude(options?: { min?: number; max?: number; decimals?: number }): number;
+    static longitude(options?: { min?: number; max?: number; decimals?: number }): number;
+    static coordinates(): { latitude: number; longitude: number };
+    static timezone(): string;
+    static streetName(): string;
+    static address(options?: FakeAddressOptions): string | FakeAddressObject;
+
+    // -- Commerce -----------------------------------------------------
+    static productName(options?: { withMaterial?: boolean }): string;
+    static category(): string;
+    static department(): string;
+    static company(options?: { suffix?: boolean }): string;
+    static price(options?: FakePriceOptions): string;
+    static industry(): string;
+    static catchPhrase(): string;
+
+    // -- Colour -------------------------------------------------------
     static color(): string;
-    static url(): string;
-    static ip(): string;
+    static rgb(options?: { format?: 'css' | 'array' | 'object' }): string | number[] | { r: number; g: number; b: number };
+    static hsl(options?: { format?: 'css' | 'array' | 'object' }): string | number[] | { h: number; s: number; l: number };
+
+    // -- Helpers ------------------------------------------------------
     static pick<T>(arr: T[]): T;
     static pickMany<T>(arr: T[], n: number): T[];
+    static shuffle<T>(arr: T[]): T[];
+    static enumValue<T>(values: T[]): T;
     static json(): { key: string; value: string; count: number; active: boolean };
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "zero-http",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Zero-dependency backend framework with routing, ORM, WebSocket, SSE, security middleware, and more",
   "main": "index.js",
   "types": "types/index.d.ts",
@@ -16,9 +16,9 @@
     "docs": "node documentation/full-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:api": "node scripts/build-api-md.js",
-    "cache-bust": "node scripts/cache-bust.js",
-    "badges": "node scripts/build-badges.js"
+    "build:api": "node .tools/build-api-md.js",
+    "cache-bust": "node .tools/cache-bust.js",
+    "badges": "node .tools/build-badges.js"
   },
   "keywords": [
     "http",

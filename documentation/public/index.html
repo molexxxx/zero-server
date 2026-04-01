@@ -25,33 +25,10 @@
 	<meta name="twitter:description" content="Zero-dependency backend framework for Node.js" />
 	<meta name="twitter:image" content="https://z-http.com/icons/og-image.png" />
 
-	<link rel="stylesheet" href="/styles.css?v=mne25412" />
-	<link rel="stylesheet" href="/vendor/prism-okaidia.css?v=mne25412" />
-	<link rel="stylesheet" href="/vendor/prism-toolbar.css?v=mne25412" />
-	<link rel="stylesheet" href="/prism-overrides.css?v=mne25412" />
+	<link rel="stylesheet" href="/styles/global.css?v=mnfnpb4u" />
+	<link rel="stylesheet" href="/styles/highlight.css?v=mnfnpb4u" />
 
-	<script src="/vendor/prism.min.js?v=mne25412" defer></script>
-	<script src="/vendor/prism-json.min.js?v=mne25412" defer></script>
-	<script src="/vendor/prism-javascript.min.js?v=mne25412" defer></script>
-	<script src="/vendor/prism-copy-to-clipboard.min.js?v=mne25412" defer></script>
-	<script src="/vendor/prism-toolbar.min.js?v=mne25412" defer></script>
-
-	<script src="/scripts/helpers.js?v=mne25412" defer></script>
-	<script src="/scripts/background.js?v=mne25412" defer></script>
-	<script src="/scripts/hero-canvas.js?v=mne25412" defer></script>
-	<script src="/scripts/data-canvas.js?v=mne25412" defer></script>
-	<script src="/scripts/rt-canvas.js?v=mne25412" defer></script>
-	<script src="/scripts/custom-select.js?v=mne25412" defer></script>
-	<script src="/scripts/charts.js?v=mne25412" defer></script>
-	<script src="/scripts/badges.js?v=mne25412" defer></script>
-	<script src="/scripts/modals.js?v=mne25412" defer></script>
-	<script src="/scripts/uploads.js?v=mne25412" defer></script>
-	<script src="/scripts/playground.js?v=mne25412" defer></script>
-	<script src="/scripts/proxy.js?v=mne25412" defer></script>
-	<script src="/scripts/data-sections.js?v=mne25412" defer></script>
-	<script src="/scripts/search.js?v=mne25412" defer></script>
-	<script src="/scripts/ui.js?v=mne25412" defer></script>
-	<script src="/scripts/app.js?v=mne25412" defer></script>
+	<script type="module" src="/modules/boot.js?v=mnfnpb4u"></script>
 
 	<!-- Prevent theme flash: apply saved or OS-preferred theme before paint -->
 	<script>
@@ -62,8 +39,11 @@
 		var t=localStorage.getItem('zero-theme');
 		if(!t){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}
 		document.documentElement.setAttribute('data-theme',t);
+		/* Safety: reveal after 4s even if scripts fail */
+		setTimeout(function(){document.documentElement.classList.add('app-revealed')},4000);
 	})();
 	</script>
+	<noscript><style>html:not(.app-revealed) body{opacity:1!important}</style></noscript>
 </head>
 
 <body>
@@ -463,9 +443,12 @@
 				</div>
 
 				<!-- Dynamic documentation sections rendered by data-sections.js -->
-				<div id="doc-sections" class="doc-sections-container">
-					<p class="muted" style="padding:20px">Loading documentation…</p>
-				</div>
+					<div id="doc-sections" class="doc-sections-container docs-loading">
+						<div class="docs-skeleton">
+							<div class="docs-skeleton-section"><div class="docs-sk-head"></div><div class="docs-sk-item"></div><div class="docs-sk-item docs-sk-short"></div><div class="docs-sk-item"></div></div>
+							<div class="docs-skeleton-section"><div class="docs-sk-head"></div><div class="docs-sk-item docs-sk-short"></div><div class="docs-sk-item"></div><div class="docs-sk-item docs-sk-short"></div></div>
+							<div class="docs-skeleton-section"><div class="docs-sk-head"></div><div class="docs-sk-item"></div><div class="docs-sk-item"></div></div>
+						</div>
 
 			</div>
 

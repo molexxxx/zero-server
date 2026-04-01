@@ -1,0 +1,183 @@
+/* ================================================================
+   zh-highlight — custom syntax highlighting for Zero-HTTP docs
+
+   Palette (6 hues + neutrals):
+     Red      #ff7b72  — keywords (bold, high-contrast)
+     Purple   #d2a8ff  — functions, decorators, regex
+     Blue     #a5d6ff  — strings, template literals
+     Cyan     #79c0ff  — numbers, values, attrs, entities
+     Teal     #56d4dd  — properties, self
+     Orange   #ffa657  — builtins, classes
+     Green    #7ee787  — HTML tag names (used ONLY here)
+     Grey     #546270 / #8b949e — comments, punctuation
+
+   Button colors (NOT used in syntax):
+     Opts     #58a6ff (blue)
+     Params   #3fb950 (green)
+     Returns  #f6c177 (amber)
+   ================================================================ */
+
+/* -- Token colours ------------------------------------------------ */
+
+/* Keywords: if, const, return, export, etc. */
+.zh-kw         { color: #ff7b72; font-weight: 700; }
+
+/* this / super — italic teal */
+.zh-self       { color: #56d4dd; font-style: italic; }
+
+/* Strings */
+.zh-str        { color: #a5d6ff; }
+
+/* Template literals */
+.zh-tpl        { color: #a5d6ff; }
+
+/* Comments */
+.zh-cmt        { color: #546270; font-style: italic; }
+
+/* Numbers */
+.zh-num        { color: #79c0ff; }
+
+/* Built-in values: true, false, null, undefined */
+.zh-val        { color: #79c0ff; font-style: italic; }
+
+/* Regex */
+.zh-rgx        { color: #d2a8ff; }
+
+/* Function calls */
+.zh-fn         { color: #d2a8ff; }
+
+/* Built-in objects: console, document, JSON, etc. */
+.zh-builtin    { color: #ffa657; }
+
+/* Property access */
+.zh-prop       { color: #56d4dd; }
+
+/* Class-like (PascalCase) */
+.zh-cls        { color: #ffa657; }
+
+/* Punctuation / operators */
+.zh-punc       { color: #8b949e; }
+
+/* Decorators / @ events */
+.zh-deco       { color: #d2a8ff; font-style: italic; }
+
+/* Object key / attribute names */
+.zh-attr       { color: #79c0ff; }
+
+/* HTML tag names */
+.zh-tag-name   { color: #7ee787; }
+
+/* HTML entities */
+.zh-ent        { color: #79c0ff; }
+
+/* Bash flags */
+.zh-flag       { color: #8b949e; }
+
+/* -- Code block base -------------------------------------------- */
+
+pre code.zh-highlighted {
+  text-shadow: none;
+}
+
+/* Subtle hover glow on code blocks */
+pre:has(code.zh-highlighted):hover {
+  border-color: rgba(88,101,242,0.15);
+  box-shadow: 0 0 20px rgba(88,101,242,0.04), inset 0 0 30px rgba(88,101,242,0.02);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* -- Copy button ------------------------------------------------ */
+
+.zh-code-wrap {
+  position: relative;
+}
+
+.zh-copy-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(11,13,16,0.85);
+  color: #8b949e;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  z-index: 2;
+  line-height: 1.5;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+@media (max-width: 768px) {
+  .zh-copy-btn { opacity: 1; }
+}
+
+.zh-code-wrap:hover > .zh-copy-btn {
+  opacity: 1;
+}
+
+.zh-copy-btn:hover {
+  background: #30363d;
+  color: #c9d1d9;
+  border-color: #484f58;
+}
+
+.zh-copy-btn:active {
+  background: #484f58;
+}
+
+.zh-copy-btn.zh-copied {
+  color: #3fb950;
+  border-color: rgba(63,185,80,0.3);
+  background: rgba(63,185,80,0.08);
+}
+
+/* -- Light mode ------------------------------------------------- */
+
+[data-theme="light"] .zh-kw       { color: #cf222e; }
+[data-theme="light"] .zh-self     { color: #0e7490; }
+[data-theme="light"] .zh-str      { color: #0a3069; }
+[data-theme="light"] .zh-tpl      { color: #0a3069; }
+[data-theme="light"] .zh-cmt      { color: #6e7781; }
+[data-theme="light"] .zh-num      { color: #0550ae; }
+[data-theme="light"] .zh-val      { color: #0550ae; }
+[data-theme="light"] .zh-rgx      { color: #8250df; }
+[data-theme="light"] .zh-fn       { color: #8250df; }
+[data-theme="light"] .zh-builtin  { color: #953800; }
+[data-theme="light"] .zh-prop     { color: #0e7490; }
+[data-theme="light"] .zh-cls      { color: #953800; }
+[data-theme="light"] .zh-punc     { color: rgba(0,0,0,0.55); }
+[data-theme="light"] .zh-deco     { color: #8250df; }
+[data-theme="light"] .zh-attr     { color: #0550ae; }
+[data-theme="light"] .zh-tag-name { color: #116329; }
+[data-theme="light"] .zh-ent      { color: #1a7de0; }
+[data-theme="light"] .zh-flag     { color: #6b7280; }
+
+[data-theme="light"] pre:has(code.zh-highlighted):hover {
+  border-color: rgba(79,91,213,0.15);
+  box-shadow: 0 0 20px rgba(79,91,213,0.04), inset 0 0 30px rgba(79,91,213,0.02);
+}
+
+[data-theme="light"] .zh-copy-btn {
+  background: rgba(245,246,248,0.9);
+  border-color: rgba(0,0,0,0.1);
+  color: #5c6370;
+}
+
+[data-theme="light"] .zh-copy-btn:hover {
+  background: #e5e7eb;
+  color: #1e2028;
+  border-color: rgba(0,0,0,0.2);
+}
+
+[data-theme="light"] .zh-copy-btn.zh-copied {
+  color: #15803d;
+  border-color: rgba(21,128,61,0.3);
+  background: rgba(21,128,61,0.08);
+}
