@@ -40,7 +40,16 @@ function applyMiddleware(app)
     app.use(json());
     app.use(urlencoded());
     app.use(text());
-    app.use(serveStatic(path.join(__dirname, '..', 'public')));
+    app.use(serveStatic(path.join(__dirname, '..', 'public'), {
+        setHeaders(res, filePath)
+        {
+            const rel = filePath.replace(/\\/g, '/');
+            if (/\/modules\//.test(rel) || /\/data\//.test(rel))
+            {
+                res.raw.setHeader('Cache-Control', 'no-cache');
+            }
+        }
+    }));
 }
 
 module.exports = { applyMiddleware };

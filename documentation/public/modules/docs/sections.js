@@ -557,13 +557,14 @@ export async function loadDocs()
 {
     try
     {
-        const mres = await fetch('/data/docs-manifest.json', { cache: 'no-store' });
+        const _v = window.__v ? `?v=${window.__v}` : '';
+        const mres = await fetch(`/data/docs-manifest.json${_v}`);
         if (!mres.ok) return;
         const manifest = await mres.json();
 
         const results = await Promise.all(
             manifest.map(filename =>
-                fetch(`/data/sections/${filename}`, { cache: 'no-store' })
+                fetch(`/data/sections/${filename}${_v}`)
                     .then(r => r.ok ? r.json() : null)
             )
         );
