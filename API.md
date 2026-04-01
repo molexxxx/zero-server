@@ -1291,8 +1291,8 @@ Request validation middleware with 11 types and auto-coercion. Validates req.bod
 
 | Method | Signature | Description |
 |---|---|---|
-| `validate.field` | `validate.field(value, rules)` | Validate a single value against rules. Returns { valid, errors, value }. |
-| `validate.object` | `validate.object(data, schema)` | Validate an object against a schema. Returns { valid, errors, sanitized }. |
+| `validate.field` | `validate.field(value, rule, field)` | Validate a single value against a rule. Returns { value, error }. |
+| `validate.object` | `validate.object(data, schema, opts?)` | Validate an object against a schema. Returns { sanitized, errors }. |
 
 
 #### Options
@@ -1348,6 +1348,17 @@ app.get('/search/:category', validate({
 	res.json({ params: req.params, query: req.query })
 })
 // Validation failure → 422 { errors: ['name is required', ...] }
+
+// Standalone usage outside middleware
+const { value, error } = validate.field('hello@test.com', { type: 'email', required: true }, 'email')
+console.log(value, error) // 'hello@test.com', null
+
+const { sanitized, errors } = validate.object(
+	{ name: 'Ada', age: '28', hack: 'drop table' },
+	{ name: { type: 'string', required: true }, age: { type: 'integer', min: 0 } }
+)
+console.log(sanitized) // { name: 'Ada', age: 28 }  (hack stripped)
+console.log(errors)    // []
 ```
 
 

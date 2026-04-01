@@ -282,7 +282,7 @@
 					"notes": "Rule: Custom validation function. Return a string to indicate an error."
 				}
 			],
-			"example": "const { createApp, json, validate } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\n// Validate body\napp.post('/users', validate({\n\tbody: {\n\t\tname:  { type: 'string', required: true, minLength: 2, maxLength: 50 },\n\t\temail: { type: 'email', required: true },\n\t\tage:   { type: 'integer', min: 13, max: 120 },\n\t\trole:  { type: 'string', enum: ['user', 'admin'], default: 'user' },\n\t\ttags:  { type: 'array', minItems: 1, maxItems: 5 }\n\t}\n}), (req, res) => {\n\tres.status(201).json(req.body) // sanitized\n})\n\n// Validate query + params\napp.get('/search/:category', validate({\n\tparams: { category: { type: 'string', enum: ['books', 'music', 'films'] } },\n\tquery: {\n\t\tq:     { type: 'string', required: true },\n\t\tpage:  { type: 'integer', min: 1, default: 1 },\n\t\tlimit: { type: 'integer', min: 1, max: 100, default: 20 }\n\t}\n}), (req, res) => {\n\tres.json({ params: req.params, query: req.query })\n})\n// Validation failure → 422 { errors: ['name is required', ...] }",
+			"example": "const { createApp, json, validate } = require('zero-http')\nconst app = createApp()\napp.use(json())\n\n// Validate body\napp.post('/users', validate({\n\tbody: {\n\t\tname:  { type: 'string', required: true, minLength: 2, maxLength: 50 },\n\t\temail: { type: 'email', required: true },\n\t\tage:   { type: 'integer', min: 13, max: 120 },\n\t\trole:  { type: 'string', enum: ['user', 'admin'], default: 'user' },\n\t\ttags:  { type: 'array', minItems: 1, maxItems: 5 }\n\t}\n}), (req, res) => {\n\tres.status(201).json(req.body) // sanitized\n})\n\n// Validate query + params\napp.get('/search/:category', validate({\n\tparams: { category: { type: 'string', enum: ['books', 'music', 'films'] } },\n\tquery: {\n\t\tq:     { type: 'string', required: true },\n\t\tpage:  { type: 'integer', min: 1, default: 1 },\n\t\tlimit: { type: 'integer', min: 1, max: 100, default: 20 }\n\t}\n}), (req, res) => {\n\tres.json({ params: req.params, query: req.query })\n})\n// Validation failure → 422 { errors: ['name is required', ...] }\n\n// Standalone usage outside middleware\nconst { value, error } = validate.field('hello@test.com', { type: 'email', required: true }, 'email')\nconsole.log(value, error) // 'hello@test.com', null\n\nconst { sanitized, errors } = validate.object(\n\t{ name: 'Ada', age: '28', hack: 'drop table' },\n\t{ name: { type: 'string', required: true }, age: { type: 'integer', min: 0 } }\n)\nconsole.log(sanitized) // { name: 'Ada', age: 28 }  (hack stripped)\nconsole.log(errors)    // []",
 			"tips": [
 				"Supported types: string, integer, number, float, boolean, array, json, date, uuid, email, url.",
 				"Auto-coercion: '42' → 42 (integer), 'true' → true (boolean), etc.",
@@ -295,11 +295,11 @@
 					"methods": [
 						{
 							"method": "validate.field",
-							"signature": "validate.field(value, rules)",
-							"description": "Validate a single value against rules. Returns { valid, errors, value }.",
+							"signature": "validate.field(value, rule, field)",
+							"description": "Validate a single value against a rule. Returns { value, error }.",
 							"methodReturns": {
 								"type": "ValidationResult",
-								"description": "Object with { valid: boolean, errors: string[] }."
+								"description": "Object with { value: any, error: string | null }."
 							},
 							"methodParams": [
 								{
@@ -309,20 +309,26 @@
 									"notes": "Value to validate."
 								},
 								{
-									"param": "rules",
+									"param": "rule",
 									"type": "object",
 									"required": "Yes",
-									"notes": "Rule object, e.g. `{ type: \"string\", min: 2, max: 50, required: true, pattern: /regex/ }`."
+									"notes": "Rule object, e.g. `{ type: \"string\", minLength: 2, maxLength: 50, required: true }`."
+								},
+								{
+									"param": "field",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Field name used in error messages."
 								}
 							]
 						},
 						{
 							"method": "validate.object",
-							"signature": "validate.object(data, schema)",
-							"description": "Validate an object against a schema. Returns { valid, errors, sanitized }.",
+							"signature": "validate.object(data, schema, opts?)",
+							"description": "Validate an object against a schema. Returns { sanitized, errors }.",
 							"methodReturns": {
 								"type": "ValidationResult",
-								"description": "Object with { valid: boolean, errors: { field, message }[] }."
+								"description": "Object with { sanitized: object, errors: string[] }."
 							},
 							"methodParams": [
 								{
@@ -336,6 +342,12 @@
 									"type": "object",
 									"required": "Yes",
 									"notes": "Schema where each key maps to a rule object for the corresponding field."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options object. `{ stripUnknown: boolean }` — defaults to true."
 								}
 							]
 						}
