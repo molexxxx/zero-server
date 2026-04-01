@@ -43,7 +43,7 @@ export function formatBytes(n)
 
 export function jsonHtml(obj)
 {
-    return `<pre class="code language-json"><code>${escapeHtml(JSON.stringify(obj, null, 2))}</code></pre>`;
+    return `<pre class="code language-json"><code class="language-json">${escapeHtml(JSON.stringify(obj, null, 2))}</code></pre>`;
 }
 
 export function showJsonResult(container, obj)

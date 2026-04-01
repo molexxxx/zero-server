@@ -14,7 +14,7 @@ export function initBadges()
         return d.version || '';
     }).catch(() => '');
 
-    const badgesP = fetch('/data/badges.json').then(r => r.json()).catch(() => null);
+    const badgesP = fetch(`/data/badges.json${window.__v ? `?v=${window.__v}` : ''}`).then(r => r.json()).catch(() => null);
 
     Promise.allSettled([versionP, badgesP]).then(([vRes, bRes]) =>
     {
