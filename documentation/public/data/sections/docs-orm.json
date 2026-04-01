@@ -996,7 +996,7 @@
 						},
 						{
 							"method": "createMany",
-							"signature": "Model.createMany([data, ...])",
+							"signature": "Model.createMany(data)",
 							"description": "Insert multiple records. Returns Promise<Model[]>.",
 							"methodReturns": {
 								"type": "Promise<Model[]>",
@@ -3032,23 +3032,6 @@
 							"methodParams": []
 						},
 						{
-							"method": "orderByDesc",
-							"signature": "orderByDesc(field)",
-							"description": "Shorthand for orderBy(field, 'desc'). Chainable.",
-							"methodReturns": {
-								"type": "Query",
-								"description": "Returns the current Query instance for chaining."
-							},
-							"methodParams": [
-								{
-									"param": "field",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Column to sort in descending order."
-								}
-							]
-						},
-						{
 							"method": "orderByDescending",
 							"signature": "orderByDescending(field)",
 							"description": "C# alias for orderByDesc(). Chainable.",
@@ -3208,7 +3191,7 @@
 					"methods": [
 						{
 							"method": "any",
-							"signature": "any(predicate?)",
+							"signature": "any([predicate])",
 							"description": "True if any elements match. Without predicate, same as exists().",
 							"methodReturns": {
 								"type": "Promise<boolean>",
@@ -3265,7 +3248,7 @@
 						},
 						{
 							"method": "sequenceEqual",
-							"signature": "sequenceEqual(other, compareFn?)",
+							"signature": "sequenceEqual(other, [compareFn])",
 							"description": "True if both sequences have the same elements in the same order.",
 							"methodReturns": {
 								"type": "Promise<boolean>",
@@ -3349,7 +3332,7 @@
 						},
 						{
 							"method": "union",
-							"signature": "union(other, keyFn?)",
+							"signature": "union(other, [keyFn])",
 							"description": "Distinct union of two result sets.",
 							"methodReturns": {
 								"type": "Promise<Model[]>",
@@ -3372,7 +3355,7 @@
 						},
 						{
 							"method": "intersect",
-							"signature": "intersect(other, keyFn?)",
+							"signature": "intersect(other, [keyFn])",
 							"description": "Elements common to both result sets.",
 							"methodReturns": {
 								"type": "Promise<Model[]>",
@@ -3395,7 +3378,7 @@
 						},
 						{
 							"method": "except",
-							"signature": "except(other, keyFn?)",
+							"signature": "except(other, [keyFn])",
 							"description": "Elements in this set but not in other.",
 							"methodReturns": {
 								"type": "Promise<Model[]>",
@@ -3463,7 +3446,7 @@
 						},
 						{
 							"method": "toDictionary",
-							"signature": "toDictionary(keyFn, valueFn?)",
+							"signature": "toDictionary(keyFn, [valueFn])",
 							"description": "Convert results to a Map keyed by selector. Throws on duplicate keys.",
 							"methodReturns": {
 								"type": "Promise<Record<any, any>>",
@@ -4004,7 +3987,7 @@
 					"methods": [
 						{
 							"method": "pragma",
-							"signature": "adapter.pragma(key)",
+							"signature": "adapter.pragma(name, [value])",
 							"description": "Read a single PRAGMA value (e.g. 'journal_mode' → 'wal').",
 							"methodReturns": {
 								"type": "any",
@@ -4125,13 +4108,6 @@
 								"type": "Promise<string[]>",
 								"description": "Array of table (or collection) names."
 							},
-							"methodOptions": [
-								{
-									"option": "schema",
-									"type": "string",
-									"notes": "PostgreSQL only — schema to list tables from (default: `\"public\"`)."
-								}
-							],
 							"methodParams": []
 						},
 						{
@@ -4794,13 +4770,6 @@
 								"type": "Promise<string[]>",
 								"description": "Array of table (or collection) names."
 							},
-							"methodOptions": [
-								{
-									"option": "schema",
-									"type": "string",
-									"notes": "PostgreSQL only — schema to list tables from (default: `\"public\"`)."
-								}
-							],
 							"methodParams": []
 						},
 						{
@@ -5057,6 +5026,12 @@
 									"type": "string | object",
 									"required": "Yes",
 									"notes": "DDL type string (SQL) e.g. `\"VARCHAR(255) NOT NULL\"`, or a type descriptor (MongoDB)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Placement options — `{ after: 'columnName' }` to position after a specific column."
 								}
 							]
 						},
@@ -5665,6 +5640,12 @@
 									"type": "string",
 									"required": "Yes",
 									"notes": "Table name."
+								},
+								{
+									"param": "schema",
+									"type": "string",
+									"required": "No",
+									"notes": "Schema name (default: `\"public\"`)."
 								}
 							]
 						},
@@ -6412,7 +6393,7 @@
 							},
 							"methodParams": [
 								{
-									"param": "collection",
+									"param": "name",
 									"type": "string",
 									"required": "Yes",
 									"notes": "Collection name."
@@ -6523,6 +6504,12 @@
 									"type": "string",
 									"required": "Yes",
 									"notes": "Collection name."
+								},
+								{
+									"param": "sample",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of documents to sample for schema inference (default: 100)."
 								}
 							]
 						}
@@ -6611,7 +6598,7 @@
 									"notes": "Table/collection name."
 								},
 								{
-									"param": "name",
+									"param": "indexName",
 									"type": "string",
 									"required": "Yes",
 									"notes": "Index name."
@@ -6686,7 +6673,7 @@
 									"notes": "Collection name."
 								},
 								{
-									"param": "col",
+									"param": "field",
 									"type": "string",
 									"required": "Yes",
 									"notes": "New column/field name."
@@ -6727,7 +6714,7 @@
 									"notes": "Table/collection name."
 								},
 								{
-									"param": "col",
+									"param": "field",
 									"type": "string",
 									"required": "Yes",
 									"notes": "Column/field to drop."
@@ -6927,6 +6914,12 @@
 									"type": "string | object",
 									"required": "Yes",
 									"notes": "MongoDB command document or command name string."
+								},
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "No",
+									"notes": "Additional arguments for the Redis command."
 								}
 							]
 						},
@@ -6948,14 +6941,7 @@
 								"type": "Pipeline",
 								"description": "A Redis pipeline. Queue multiple commands then call `.exec()` to flush in one round-trip."
 							},
-							"methodParams": [
-								{
-									"param": "fn",
-									"type": "(pipeline: Pipeline) => void",
-									"required": "Yes",
-									"notes": "Callback that chains commands on the pipeline. All commands are sent in a single round-trip."
-								}
-							]
+							"methodParams": []
 						}
 					]
 				},
@@ -7716,13 +7702,6 @@
 								"type": "Promise<string[]>",
 								"description": "Array of table (or collection) names."
 							},
-							"methodOptions": [
-								{
-									"option": "schema",
-									"type": "string",
-									"notes": "PostgreSQL only — schema to list tables from (default: `\"public\"`)."
-								}
-							],
 							"methodParams": []
 						},
 						{
@@ -8259,13 +8238,6 @@
 								"type": "Promise<string[]>",
 								"description": "Array of table (or collection) names."
 							},
-							"methodOptions": [
-								{
-									"option": "schema",
-									"type": "string",
-									"notes": "PostgreSQL only — schema to list tables from (default: `\"public\"`)."
-								}
-							],
 							"methodParams": []
 						},
 						{
@@ -8338,7 +8310,7 @@
 					"methods": [
 						{
 							"method": "rollback",
-							"signature": "migrator.rollback()",
+							"signature": "migrator.rollback([steps])",
 							"description": "Rollback the last batch. Returns { rolledBack: string[], batch: number }.",
 							"methodReturns": {
 								"type": "Promise<MigrationResult[]>",
@@ -8686,7 +8658,7 @@
 					"methods": [
 						{
 							"method": "keyFromDescriptor",
-							"signature": "QueryCache.keyFromDescriptor()",
+							"signature": "QueryCache.keyFromDescriptor(descriptor)",
 							"description": "Generate a deterministic cache key from a query descriptor object. Used internally by wrap() but available for custom cache key generation.",
 							"methodReturns": {
 								"type": "string",
@@ -8718,7 +8690,7 @@
 						},
 						{
 							"method": "remember",
-							"signature": "queryCache.remember()",
+							"signature": "queryCache.remember(key, fn, [ttl])",
 							"description": "Get a cached value by key, or compute it by calling fn() and cache the result. If the key exists, the cached value is returned; otherwise fn() is awaited, stored, and returned.",
 							"methodReturns": {
 								"type": "Promise<T>",

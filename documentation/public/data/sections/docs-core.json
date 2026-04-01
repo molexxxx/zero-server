@@ -1052,7 +1052,7 @@
 						},
 						{
 							"method": "use",
-							"signature": "use([prefix], handler)",
+							"signature": "use([prefix], ...handlers)",
 							"description": "Mount middleware or a nested router.",
 							"methodReturns": {
 								"type": "Router",

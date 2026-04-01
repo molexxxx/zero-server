@@ -405,7 +405,7 @@ Creates a standalone modular router instance for organizing routes into sub-apps
 | `options` | `options(path, [opts], ...handlers)` | Register an OPTIONS route. |
 | `head` | `head(path, [opts], ...handlers)` | Register a HEAD route. |
 | `all` | `all(path, [opts], ...handlers)` | Register a handler for all HTTP methods. |
-| `use` | `use([prefix], handler)` | Mount middleware or a nested router. |
+| `use` | `use([prefix], ...handlers)` | Mount middleware or a nested router. |
 
 
 #### Utilities
@@ -1697,7 +1697,7 @@ The ORM base class — extend it to define your data models. Supports typed sche
 | `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
 | `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
 | `create` | `Model.create(data)` | Insert a new record. Runs validation and beforeCreate/afterCreate hooks. Returns Promise<Model>. |
-| `createMany` | `Model.createMany([data, ...])` | Insert multiple records. Returns Promise<Model[]>. |
+| `createMany` | `Model.createMany(data)` | Insert multiple records. Returns Promise<Model[]>. |
 | `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
 | `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
 | `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
@@ -2148,7 +2148,6 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 | `take` | `take(n)` | Alias for limit() — LINQ naming. Chainable. |
 | `skip` | `skip(n)` | Alias for offset() — LINQ naming. Chainable. |
 | `toArray` | `toArray()` | Alias for exec() — returns Promise<Model[]>. |
-| `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). Chainable. |
 | `orderByDescending` | `orderByDescending(field)` | C# alias for orderByDesc(). Chainable. |
 | `firstOrDefault` | `firstOrDefault()` | Alias for first() — returns null on empty (JS default). |
 | `lastOrDefault` | `lastOrDefault()` | Alias for last() — returns null on empty. |
@@ -2171,10 +2170,10 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 
 | Method | Signature | Description |
 |---|---|---|
-| `any` | `any(predicate?)` | True if any elements match. Without predicate, same as exists(). |
+| `any` | `any([predicate])` | True if any elements match. Without predicate, same as exists(). |
 | `all` | `all(predicate)` | True if all elements satisfy the predicate. |
 | `contains` | `contains(field, value)` | True if any record has the given value for a column. |
-| `sequenceEqual` | `sequenceEqual(other, compareFn?)` | True if both sequences have the same elements in the same order. |
+| `sequenceEqual` | `sequenceEqual(other, [compareFn])` | True if both sequences have the same elements in the same order. |
 
 
 #### LINQ Ordering
@@ -2190,9 +2189,9 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 | Method | Signature | Description |
 |---|---|---|
 | `concat` | `concat(other)` | Append results from another query or array. |
-| `union` | `union(other, keyFn?)` | Distinct union of two result sets. |
-| `intersect` | `intersect(other, keyFn?)` | Elements common to both result sets. |
-| `except` | `except(other, keyFn?)` | Elements in this set but not in other. |
+| `union` | `union(other, [keyFn])` | Distinct union of two result sets. |
+| `intersect` | `intersect(other, [keyFn])` | Elements common to both result sets. |
+| `except` | `except(other, [keyFn])` | Elements in this set but not in other. |
 
 
 #### LINQ Projection
@@ -2201,7 +2200,7 @@ Fluent query builder returned by Model.query(). All filter/sort/limit methods ar
 |---|---|---|
 | `selectMany` | `selectMany(fn)` | FlatMap — project each element to an array and flatten. |
 | `zip` | `zip(other, fn)` | Combine two result sets element-wise using fn(a, b). |
-| `toDictionary` | `toDictionary(keyFn, valueFn?)` | Convert results to a Map keyed by selector. Throws on duplicate keys. |
+| `toDictionary` | `toDictionary(keyFn, [valueFn])` | Convert results to a Map keyed by selector. Throws on duplicate keys. |
 | `toLookup` | `toLookup(keyFn)` | Group results into a Map of arrays keyed by selector. |
 
 
@@ -2373,7 +2372,7 @@ The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-ba
 
 | Method | Signature | Description |
 |---|---|---|
-| `pragma` | `adapter.pragma(key)` | Read a single PRAGMA value (e.g. 'journal_mode' → 'wal'). |
+| `pragma` | `adapter.pragma(name, [value])` | Read a single PRAGMA value (e.g. 'journal_mode' → 'wal'). |
 | `checkpoint` | `adapter.checkpoint([mode])` | Force a WAL checkpoint. Modes: PASSIVE (default), FULL, RESTART, TRUNCATE. |
 | `integrity` | `adapter.integrity()` | Run PRAGMA integrity_check. Returns 'ok' or a problem description. |
 | `vacuum` | `adapter.vacuum()` | Rebuild the database file, reclaiming unused pages. |
@@ -3200,7 +3199,7 @@ Versioned migration framework for the ORM. Define up/down migrations, track exec
 
 | Method | Signature | Description |
 |---|---|---|
-| `rollback` | `migrator.rollback()` | Rollback the last batch. Returns { rolledBack: string[], batch: number }. |
+| `rollback` | `migrator.rollback([steps])` | Rollback the last batch. Returns { rolledBack: string[], batch: number }. |
 | `reset` | `migrator.reset()` | Rollback all, then re-run all. Returns { rolledBack, migrated, batch }. |
 | `status` | `migrator.status()` | Get current status: { executed: [], pending: [], lastBatch }. |
 | `list` | `migrator.list()` | Get registered migration names. |
@@ -3304,7 +3303,7 @@ In-memory LRU query cache with TTL support. Attach to a Database instance to cac
 
 | Method | Signature | Description |
 |---|---|---|
-| `keyFromDescriptor` | `QueryCache.keyFromDescriptor()` | Generate a deterministic cache key from a query descriptor object. Used internally by wrap() but available for custom cache key generation. |
+| `keyFromDescriptor` | `QueryCache.keyFromDescriptor(descriptor)` | Generate a deterministic cache key from a query descriptor object. Used internally by wrap() but available for custom cache key generation. |
 
 
 #### Instance Methods
@@ -3312,7 +3311,7 @@ In-memory LRU query cache with TTL support. Attach to a Database instance to cac
 | Method | Signature | Description |
 |---|---|---|
 | `prune` | `queryCache.prune()` | Remove all expired entries from the cache. Returns the number of entries removed. |
-| `remember` | `queryCache.remember()` | Get a cached value by key, or compute it by calling fn() and cache the result. If the key exists, the cached value is returned; otherwise fn() is awaited, stored, and returned. |
+| `remember` | `queryCache.remember(key, fn, [ttl])` | Get a cached value by key, or compute it by calling fn() and cache the result. If the key exists, the cached value is returned; otherwise fn() is awaited, stored, and returned. |
 
 
 #### Options
@@ -3959,7 +3958,7 @@ Push real-time events to browser clients via res.sse(). Returns an SSEStream ins
 | `on` | `sse.on(event, handler)` | Listen for events: close, error. |
 | `once` | `sse.once(event, handler)` | Listen for an event once, then auto-remove the handler. |
 | `off` | `sse.off(event, handler)` | Remove a specific event listener. |
-| `removeAllListeners` | `sse.removeAllListeners(event?)` | Remove all listeners for a given event, or all events if omitted. |
+| `removeAllListeners` | `sse.removeAllListeners([event])` | Remove all listeners for a given event, or all events if omitted. |
 | `listenerCount` | `sse.listenerCount(event)` | Return the number of listeners registered for the given event. |
 
 
@@ -4380,7 +4379,7 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 
 | Method | Signature | Description |
 |---|---|---|
-| `debug(namespace)` | `debug('app:routes')` | Create a namespaced logger. Returns a function with level methods. |
+| `debug(namespace)` | `debug(namespace)` | Create a namespaced logger. Returns a function with level methods. |
 | `log()` | `log(...args)` | Log at debug level (default call). Supports %s, %d, %j format specifiers. |
 
 
@@ -4405,21 +4404,14 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 
 | Method | Signature | Description |
 |---|---|---|
-| `debug.level()` | `debug.level('info')` | Set minimum log level globally. Levels: trace, debug, info, warn, error, fatal, silent. |
-| `debug.enable()` | `debug.enable('app:*')` | Enable namespaces by pattern. Same syntax as DEBUG env var. |
-| `debug.disable()` | `debug.disable()(pattern)` | Disable all debug output. |
-| `debug.json()` | `debug.json(true)` | Enable structured JSON output (for log aggregators). |
-| `debug.timestamps()` | `debug.timestamps(false)` | Toggle timestamps. |
-| `debug.colors()` | `debug.colors(false)` | Toggle ANSI colors. |
-| `debug.output()` | `debug.output(stream)` | Set custom output stream (default: stderr). |
-| `debug.reset()` | `debug.reset()` | Reset all settings to defaults. |
-| `level` | `debug.level(level)` | Set the minimum log level globally. |
-| `enable` | `debug.enable(patterns)` | Enable/disable namespaces. Same syntax as the `DEBUG` env var. |
+| `level` | `debug.level(level)` | Set minimum log level globally. Levels: trace, debug, info, warn, error, fatal, silent. |
+| `enable` | `debug.enable(patterns)` | Enable namespaces by pattern. Same syntax as DEBUG env var. |
 | `disable` | `debug.disable()` | Disable all debug output. |
-| `json` | `debug.json([on])` | Enable/disable structured JSON output. |
-| `timestamps` | `debug.timestamps([on])` | Enable/disable timestamps in log output. |
-| `colors` | `debug.colors([on])` | Enable/disable colored output. |
-| `output` | `debug.output(stream)` | Set a custom output stream. |
+| `json` | `debug.json([on])` | Enable structured JSON output (for log aggregators). |
+| `timestamps` | `debug.timestamps([on])` | Toggle timestamps. |
+| `colors` | `debug.colors([on])` | Toggle ANSI colors. |
+| `output` | `debug.output(stream)` | Set custom output stream (default: stderr). |
+| `reset` | `debug.reset()` | Reset all settings to defaults. |
 
 
 #### Logger Properties

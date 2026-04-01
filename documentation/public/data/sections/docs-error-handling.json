@@ -1328,7 +1328,7 @@
 					"methods": [
 						{
 							"method": "debug(namespace)",
-							"signature": "debug('app:routes')",
+							"signature": "debug(namespace)",
 							"description": "Create a namespaced logger. Returns a function with level methods.",
 							"methodReturns": {
 								"type": "Logger",
@@ -1558,8 +1558,8 @@
 					"group": "Configuration",
 					"methods": [
 						{
-							"method": "debug.level()",
-							"signature": "debug.level('info')",
+							"method": "level",
+							"signature": "debug.level(level)",
 							"description": "Set minimum log level globally. Levels: trace, debug, info, warn, error, fatal, silent.",
 							"methodReturns": {
 								"type": "void | string",
@@ -1575,8 +1575,8 @@
 							]
 						},
 						{
-							"method": "debug.enable()",
-							"signature": "debug.enable('app:*')",
+							"method": "enable",
+							"signature": "debug.enable(patterns)",
 							"description": "Enable namespaces by pattern. Same syntax as DEBUG env var.",
 							"methodReturns": {
 								"type": "void",
@@ -1584,7 +1584,7 @@
 							},
 							"methodParams": [
 								{
-									"param": "pattern",
+									"param": "patterns",
 									"type": "string",
 									"required": "Yes",
 									"notes": "Namespace pattern to enable, e.g. `\"app:*\"`. Prefix with `-` to disable."
@@ -1592,25 +1592,18 @@
 							]
 						},
 						{
-							"method": "debug.disable()",
-							"signature": "debug.disable()(pattern)",
+							"method": "disable",
+							"signature": "debug.disable()",
 							"description": "Disable all debug output.",
 							"methodReturns": {
 								"type": "void",
 								"description": "No return value."
 							},
-							"methodParams": [
-								{
-									"param": "pattern",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Namespace pattern to disable. Use * to disable everything."
-								}
-							]
+							"methodParams": []
 						},
 						{
-							"method": "debug.json()",
-							"signature": "debug.json(true)",
+							"method": "json",
+							"signature": "debug.json([on])",
 							"description": "Enable structured JSON output (for log aggregators).",
 							"methodReturns": {
 								"type": "void",
@@ -1618,16 +1611,16 @@
 							},
 							"methodParams": [
 								{
-									"param": "enabled",
+									"param": "on",
 									"type": "boolean",
-									"required": "Yes",
-									"notes": "`true` to format output as pretty-printed JSON."
+									"required": "No",
+									"notes": "Default: `true`."
 								}
 							]
 						},
 						{
-							"method": "debug.timestamps()",
-							"signature": "debug.timestamps(false)",
+							"method": "timestamps",
+							"signature": "debug.timestamps([on])",
 							"description": "Toggle timestamps.",
 							"methodReturns": {
 								"type": "void",
@@ -1635,16 +1628,16 @@
 							},
 							"methodParams": [
 								{
-									"param": "enabled",
+									"param": "on",
 									"type": "boolean",
-									"required": "Yes",
-									"notes": "`false` to remove timestamp prefix from log lines."
+									"required": "No",
+									"notes": "Default: `true`."
 								}
 							]
 						},
 						{
-							"method": "debug.colors()",
-							"signature": "debug.colors(false)",
+							"method": "colors",
+							"signature": "debug.colors([on])",
 							"description": "Toggle ANSI colors.",
 							"methodReturns": {
 								"type": "void",
@@ -1652,15 +1645,15 @@
 							},
 							"methodParams": [
 								{
-									"param": "enabled",
+									"param": "on",
 									"type": "boolean",
-									"required": "Yes",
-									"notes": "`false` to disable ANSI colour codes."
+									"required": "No",
+									"notes": "Default: `true`."
 								}
 							]
 						},
 						{
-							"method": "debug.output()",
+							"method": "output",
 							"signature": "debug.output(stream)",
 							"description": "Set custom output stream (default: stderr).",
 							"methodReturns": {
@@ -1677,7 +1670,7 @@
 							]
 						},
 						{
-							"method": "debug.reset()",
+							"method": "reset",
 							"signature": "debug.reset()",
 							"description": "Reset all settings to defaults.",
 							"methodReturns": {
@@ -1685,118 +1678,6 @@
 								"description": "No return value."
 							},
 							"methodParams": []
-						},
-						{
-							"method": "level",
-							"signature": "debug.level(level)",
-							"description": "Set the minimum log level globally.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "level",
-									"type": "string | number",
-									"required": "Yes",
-									"notes": "Level name (`\"trace\"`, `\"debug\"`, `\"info\"`, `\"warn\"`, `\"error\"`, `\"fatal\"`, `\"silent\"`) or numeric value."
-								}
-							]
-						},
-						{
-							"method": "enable",
-							"signature": "debug.enable(patterns)",
-							"description": "Enable/disable namespaces. Same syntax as the `DEBUG` env var.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "patterns",
-									"type": "string",
-									"required": "Yes",
-									"notes": "Comma-separated namespace patterns (e.g. `\"app:*,-app:db\"`)."
-								}
-							]
-						},
-						{
-							"method": "disable",
-							"signature": "debug.disable()",
-							"description": "Disable all debug output.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": []
-						},
-						{
-							"method": "json",
-							"signature": "debug.json([on])",
-							"description": "Enable/disable structured JSON output.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "on",
-									"type": "boolean",
-									"required": "No",
-									"notes": "Default: `true`."
-								}
-							]
-						},
-						{
-							"method": "timestamps",
-							"signature": "debug.timestamps([on])",
-							"description": "Enable/disable timestamps in log output.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "on",
-									"type": "boolean",
-									"required": "No",
-									"notes": "Default: `true`."
-								}
-							]
-						},
-						{
-							"method": "colors",
-							"signature": "debug.colors([on])",
-							"description": "Enable/disable colored output.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "on",
-									"type": "boolean",
-									"required": "No",
-									"notes": "Default: `true`."
-								}
-							]
-						},
-						{
-							"method": "output",
-							"signature": "debug.output(stream)",
-							"description": "Set a custom output stream.",
-							"methodReturns": {
-								"type": "void",
-								"description": ""
-							},
-							"methodParams": [
-								{
-									"param": "stream",
-									"type": "{ write(s: string): void }",
-									"required": "Yes",
-									"notes": "Any writable stream or object with a `write()` method."
-								}
-							]
 						}
 					]
 				},
