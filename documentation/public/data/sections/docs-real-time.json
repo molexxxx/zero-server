@@ -751,56 +751,80 @@
 							"method": "connected",
 							"signature": "sse.connected",
 							"description": "Whether the stream is still open.",
-							"methodReturns": { "type": "boolean", "description": "true while the underlying response is writable; false after close() or client disconnect." },
+							"methodReturns": {
+								"type": "boolean",
+								"description": "true while the underlying response is writable; false after close() or client disconnect."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "lastEventId",
 							"signature": "sse.lastEventId",
 							"description": "The Last-Event-ID from client reconnection.",
-							"methodReturns": { "type": "string | null", "description": "The id sent by the browser in the Last-Event-ID header, or null on the first connection." },
+							"methodReturns": {
+								"type": "string | null",
+								"description": "The id sent by the browser in the Last-Event-ID header, or null on the first connection."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "eventCount",
 							"signature": "sse.eventCount",
 							"description": "Total events sent on this stream.",
-							"methodReturns": { "type": "number", "description": "Cumulative count of events dispatched via send(), sendJSON(), or event()." },
+							"methodReturns": {
+								"type": "number",
+								"description": "Cumulative count of events dispatched via send(), sendJSON(), or event()."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "bytesSent",
 							"signature": "sse.bytesSent",
 							"description": "Total bytes written to the stream.",
-							"methodReturns": { "type": "number", "description": "Total byte count written to the HTTP response since the stream was opened." },
+							"methodReturns": {
+								"type": "number",
+								"description": "Total byte count written to the HTTP response since the stream was opened."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "connectedAt",
 							"signature": "sse.connectedAt",
 							"description": "Timestamp (ms) when the stream was opened.",
-							"methodReturns": { "type": "number", "description": "Unix epoch timestamp in milliseconds from Date.now() at stream creation." },
+							"methodReturns": {
+								"type": "number",
+								"description": "Unix epoch timestamp in milliseconds from Date.now() at stream creation."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "uptime",
 							"signature": "sse.uptime",
 							"description": "Milliseconds since the stream was opened.",
-							"methodReturns": { "type": "number", "description": "Computed as Date.now() - connectedAt each time the property is read." },
+							"methodReturns": {
+								"type": "number",
+								"description": "Computed as Date.now() - connectedAt each time the property is read."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "secure",
 							"signature": "sse.secure",
 							"description": "Whether the connection is over TLS.",
-							"methodReturns": { "type": "boolean", "description": "true when the stream was opened on an HTTPS connection." },
+							"methodReturns": {
+								"type": "boolean",
+								"description": "true when the stream was opened on an HTTPS connection."
+							},
 							"methodParams": []
 						},
 						{
 							"method": "data",
 							"signature": "sse.data",
 							"description": "Arbitrary user-data store for attaching custom properties.",
-							"methodReturns": { "type": "Record<string, any>", "description": "A plain object you can use to store per-connection state such as user id or session info." },
+							"methodReturns": {
+								"type": "Record<string, any>",
+								"description": "A plain object you can use to store per-connection state such as user id or session info."
+							},
 							"methodParams": []
 						}
 					]
@@ -1017,7 +1041,7 @@
 						},
 						{
 							"method": "removeAllListeners",
-							"signature": "sse.removeAllListeners(event?)",
+							"signature": "sse.removeAllListeners([event])",
 							"description": "Remove all listeners for a given event, or all events if omitted.",
 							"methodReturns": {
 								"type": "SSEStream",
