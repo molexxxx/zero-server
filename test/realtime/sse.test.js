@@ -492,7 +492,7 @@ describe('SSEStream Unit', () => {
 
 describe('SSE comment newline safety', () =>
 {
-    it('escapes newlines in comments to prevent injection', (done) =>
+    it('escapes newlines in comments to prevent injection', () =>
     {
         const app = createApp();
         app.get('/sse', (req, res) =>
@@ -503,20 +503,26 @@ describe('SSE comment newline safety', () =>
             setTimeout(() => stream.close(), 50);
         });
 
-        const server = http.createServer(app.handler);
-        server.listen(0, () =>
+        return new Promise((resolve, reject) =>
         {
-            const port = server.address().port;
-            http.get(`http://localhost:${port}/sse`, (res) =>
+            const server = http.createServer(app.handler);
+            server.listen(0, () =>
             {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () =>
+                const port = server.address().port;
+                http.get(`http://localhost:${port}/sse`, (res) =>
                 {
-                    expect(body).toContain(': line1\n: data: injected');
-                    expect(body).toContain('data: real data');
-                    server.close();
-                    done();
+                    let body = '';
+                    res.on('data', chunk => body += chunk);
+                    res.on('end', () =>
+                    {
+                        try
+                        {
+                            expect(body).toContain(': line1\n: data: injected');
+                            expect(body).toContain('data: real data');
+                            server.close();
+                            resolve();
+                        } catch (e) { server.close(); reject(e); }
+                    });
                 });
             });
         });

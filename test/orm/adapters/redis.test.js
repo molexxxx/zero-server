@@ -1,17 +1,9 @@
-/**
- * Tests for the Redis adapter (using memory mock when ioredis unavailable).
- * Tests all ORM CRUD operations, key-value operations, pub/sub,
- * pipelines, unique constraints, DDL/migration methods, and aggregates.
- */
+/** redis.test.js — Redis adapter tests (memory mock) */
 const path = require('path');
 const { Database, Model, TYPES } = require('../../../lib/orm');
 
 // -- Mock ioredis for testing without a live Redis server --
 
-/**
- * Minimal ioredis mock that stores data in memory.
- * Supports the subset of Redis commands used by the adapter.
- */
 class MockRedis
 {
     constructor()

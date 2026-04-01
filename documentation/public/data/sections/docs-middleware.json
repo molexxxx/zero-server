@@ -1,0 +1,356 @@
+{
+	"section": "Middleware",
+	"icon": "layers",
+	"items": [
+		{
+			"name": "cors",
+			"description": "CORS middleware with automatic preflight handling. Supports exact origins, subdomain matching with dot-prefix syntax, credentials, and configurable allowed methods/headers.",
+			"options": [
+				{
+					"option": "origin",
+					"type": "string | string[]",
+					"default": "'*'",
+					"notes": "Allowed origins. Use '.example.com' for subdomain wildcards."
+				},
+				{
+					"option": "methods",
+					"type": "string",
+					"default": "'GET,POST,PUT,DELETE,PATCH,OPTIONS'",
+					"notes": "Allowed HTTP methods."
+				},
+				{
+					"option": "allowedHeaders",
+					"type": "string",
+					"default": "—",
+					"notes": "Allowed request headers."
+				},
+				{
+					"option": "exposedHeaders",
+					"type": "string",
+					"default": "—",
+					"notes": "Headers exposed to the browser."
+				},
+				{
+					"option": "credentials",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Allow credentials (cookies, auth headers)."
+				},
+				{
+					"option": "maxAge",
+					"type": "number",
+					"default": "—",
+					"notes": "Preflight cache duration in seconds."
+				}
+			],
+			"example": "const { createApp, cors, json } = require('zero-http')\nconst app = createApp()\n\napp.use(cors({\n\torigin: [\n\t\t'https://mysite.com',     // exact match\n\t\t'.mysite.com'             // matches api.mysite.com, www.mysite.com, etc.\n\t],\n\tcredentials: true,\n\tmethods: 'GET,POST,PUT,DELETE'\n}))\napp.use(json())\n\napp.get('/data', (req, res) => res.json({ secure: true }))",
+			"tips": [
+				"Use the dot-prefix '.example.com' to match all subdomains without listing each one.",
+				"When credentials: true, origin cannot be '*' — you must specify explicit origins.",
+				"Preflight OPTIONS requests are handled automatically — no extra route needed."
+			]
+		},
+		{
+			"name": "compress",
+			"description": "Response compression middleware. Auto-negotiates the best encoding (brotli > gzip > deflate) based on the client's Accept-Encoding header. Brotli preferred when available (Node 11.7+). Automatically skips SSE streams.",
+			"options": [
+				{
+					"option": "threshold",
+					"type": "number",
+					"default": "1024",
+					"notes": "Minimum body size in bytes to compress."
+				},
+				{
+					"option": "level",
+					"type": "number",
+					"default": "-1 (zlib default)",
+					"notes": "Compression level."
+				},
+				{
+					"option": "filter",
+					"type": "function",
+					"default": "—",
+					"notes": "Return false to skip compression: (req, res) => boolean."
+				}
+			],
+			"example": "const { createApp, compress, json } = require('zero-http')\nconst app = createApp()\n\napp.use(compress({ threshold: 512, level: 6 }))\napp.use(json())\n\napp.get('/big', (req, res) => {\n\tres.json({ data: 'x'.repeat(10000) }) // compressed\n})\n\napp.get('/small', (req, res) => {\n\tres.json({ ok: true }) // below threshold — sent raw\n})",
+			"tips": [
+				"Brotli typically achieves 15-25% better compression than gzip at similar speeds.",
+				"SSE streams are automatically excluded from compression.",
+				"Set threshold: 0 to compress everything, but very small responses don't benefit."
+			]
+		},
+		{
+			"name": "helmet",
+			"description": "Security headers middleware. Sets Content-Security-Policy, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and 11 more headers. Every header can be individually configured or disabled with false.",
+			"options": [
+				{
+					"option": "contentSecurityPolicy",
+					"type": "object | false",
+					"default": "default policy",
+					"notes": "CSP directives or false to disable."
+				},
+				{
+					"option": "crossOriginEmbedderPolicy",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Set Cross-Origin-Embedder-Policy header (require-corp)."
+				},
+				{
+					"option": "crossOriginOpenerPolicy",
+					"type": "string | false",
+					"default": "'same-origin'",
+					"notes": "Cross-Origin-Opener-Policy value."
+				},
+				{
+					"option": "crossOriginResourcePolicy",
+					"type": "string | false",
+					"default": "'same-origin'",
+					"notes": "Cross-Origin-Resource-Policy value."
+				},
+				{
+					"option": "dnsPrefetchControl",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Set X-DNS-Prefetch-Control: off."
+				},
+				{
+					"option": "frameguard",
+					"type": "string | false",
+					"default": "'deny'",
+					"notes": "'deny', 'sameorigin', or false."
+				},
+				{
+					"option": "hsts",
+					"type": "boolean | false",
+					"default": "true",
+					"notes": "Strict-Transport-Security header."
+				},
+				{
+					"option": "hstsMaxAge",
+					"type": "number",
+					"default": "15552000",
+					"notes": "HSTS max-age in seconds (180 days)."
+				},
+				{
+					"option": "hstsPreload",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Add preload directive to HSTS header."
+				},
+				{
+					"option": "noSniff",
+					"type": "boolean",
+					"default": "true",
+					"notes": "X-Content-Type-Options: nosniff."
+				},
+				{
+					"option": "permittedCrossDomainPolicies",
+					"type": "string | false",
+					"default": "'none'",
+					"notes": "X-Permitted-Cross-Domain-Policies header value."
+				},
+				{
+					"option": "referrerPolicy",
+					"type": "string | false",
+					"default": "'no-referrer'",
+					"notes": "Referrer-Policy header value."
+				},
+				{
+					"option": "hidePoweredBy",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Remove X-Powered-By header."
+				},
+				{
+					"option": "xssFilter",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Legacy X-XSS-Protection header."
+				}
+			],
+			"example": "const { createApp, helmet, json } = require('zero-http')\nconst app = createApp()\n\n// Sensible defaults\napp.use(helmet())\n\n// Custom CSP + disable HSTS\napp.use(helmet({\n\tcontentSecurityPolicy: {\n\t\tdefaultSrc: [\"'self'\"],\n\t\tscriptSrc: [\"'self'\", 'cdn.example.com'],\n\t\timgSrc: [\"'self'\", 'data:', '*.cloudfront.net']\n\t},\n\thsts: false,\n\tframeguard: 'sameorigin'\n}))",
+			"tips": [
+				"helmet() with no options gives you a strong security baseline out of the box.",
+				"Set any header to false to disable it individually.",
+				"CSP headers are critical for preventing XSS — always configure explicitly for production apps."
+			]
+		},
+		{
+			"name": "static",
+			"description": "Serves static files from a directory with automatic Content-Type detection (60+ MIME types), cache headers, dotfile protection, and HTML extension fallback.",
+			"options": [
+				{
+					"option": "index",
+					"type": "string | false",
+					"default": "'index.html'",
+					"notes": "Default file for directory requests. Set false to disable."
+				},
+				{
+					"option": "maxAge",
+					"type": "number",
+					"default": "0",
+					"notes": "Cache-Control max-age in milliseconds."
+				},
+				{
+					"option": "dotfiles",
+					"type": "string",
+					"default": "'ignore'",
+					"notes": "'allow', 'deny', or 'ignore'. Controls access to dotfiles."
+				},
+				{
+					"option": "extensions",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Try these extensions if the file isn't found (e.g. ['html', 'htm'])."
+				},
+				{
+					"option": "setHeaders",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom header setter: (res, filePath) => {}."
+				}
+			],
+			"example": "const path = require('path')\nconst { createApp, static: serveStatic } = require('zero-http')\nconst app = createApp()\n\napp.use(serveStatic(path.join(__dirname, 'public'), {\n\tindex: 'index.html',\n\tmaxAge: 3600000,          // 1 hour\n\tdotfiles: 'ignore',\n\textensions: ['html', 'htm'],\n\tsetHeaders: (res, filePath) => {\n\t\tres.setHeader('X-Served-By', 'zero-http')\n\t}\n}))",
+			"tips": [
+				"'static' is a reserved word in JavaScript — import as: const { static: serveStatic } = require('zero-http').",
+				"Set maxAge to at least 1 hour (3600000ms) in production for cache performance.",
+				"dotfiles: 'deny' returns 403 for requests like /.env or /.git — use in production."
+			]
+		},
+		{
+			"name": "rateLimit",
+			"description": "Per-IP rate limiter middleware. Tracks request counts in a sliding window and returns 429 Too Many Requests when exceeded. Sets X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and Retry-After headers.",
+			"options": [
+				{
+					"option": "windowMs",
+					"type": "number",
+					"default": "60000",
+					"notes": "Time window in milliseconds (default: 1 minute)."
+				},
+				{
+					"option": "max",
+					"type": "number",
+					"default": "100",
+					"notes": "Maximum requests per window per IP."
+				},
+				{
+					"option": "message",
+					"type": "string",
+					"default": "—",
+					"notes": "Custom error message for rate-limited responses."
+				},
+				{
+					"option": "statusCode",
+					"type": "number",
+					"default": "429",
+					"notes": "HTTP status code for rate-limited responses."
+				},
+				{
+					"option": "keyGenerator",
+					"type": "function",
+					"default": "req => req.ip",
+					"notes": "Custom key extraction function for grouping requests."
+				},
+				{
+					"option": "skip",
+					"type": "function",
+					"default": "—",
+					"notes": "(req) => boolean. Return true to skip rate limiting for the request (e.g. whitelisted IPs or admin users)."
+				},
+				{
+					"option": "handler",
+					"type": "function",
+					"default": "—",
+					"notes": "(req, res) => void. Custom handler for rate-limited requests instead of the default JSON error response."
+				}
+			],
+			"example": "const { createApp, json, rateLimit } = require('zero-http')\nconst app = createApp()\n\n// Global: 200 req/min per IP\napp.use(rateLimit({ windowMs: 60000, max: 200 }))\napp.use(json())\n\n// Login: 5 attempts per minute\napp.post('/login', rateLimit({\n\twindowMs: 60000,\n\tmax: 5,\n\tmessage: 'Too many login attempts'\n}), (req, res) => {\n\tres.json({ ok: true })\n})",
+			"tips": [
+				"Apply strict limits to authentication endpoints (5-10 per minute).",
+				"Rate limit headers (X-RateLimit-*) are set automatically for all responses.",
+				"Use keyGenerator to rate-limit by API key instead of IP for authenticated APIs.",
+				"Use skip to bypass rate limiting for trusted clients: skip: (req) => req.ip === '127.0.0.1'.",
+				"Use handler to customize the rate-limited response (e.g. redirect, HTML page, or custom JSON)."
+			]
+		},
+		{
+			"name": "timeout",
+			"description": "Request timeout middleware. If a handler doesn't respond within the specified duration, automatically sends a 408 response and sets req.timedOut to true.",
+			"options": [
+				{
+					"option": "status",
+					"type": "number",
+					"default": "408",
+					"notes": "HTTP status code for timeout responses."
+				},
+				{
+					"option": "message",
+					"type": "string",
+					"default": "'Request Timeout'",
+					"notes": "Error message body."
+				}
+			],
+			"example": "const { createApp, timeout } = require('zero-http')\nconst app = createApp()\n\napp.use(timeout(10000)) // 10s timeout\n\napp.get('/slow', async (req, res) => {\n\tawait new Promise(r => setTimeout(r, 15000))\n\tif (req.timedOut) return // already sent 408\n\tres.json({ data: 'done' })\n})",
+			"tips": [
+				"Always check req.timedOut before responding in long-running handlers.",
+				"Set different timeouts per route by applying timeout() as route middleware.",
+				"30 seconds is a reasonable default for most APIs."
+			]
+		},
+		{
+			"name": "requestId",
+			"description": "Generates a unique request ID (UUID v4 by default) for each request. Sets req.id and adds the ID as a response header for log correlation.",
+			"options": [
+				{
+					"option": "header",
+					"type": "string",
+					"default": "'X-Request-Id'",
+					"notes": "Response header name."
+				},
+				{
+					"option": "generator",
+					"type": "function",
+					"default": "crypto.randomUUID",
+					"notes": "Custom ID generator function."
+				},
+				{
+					"option": "trustProxy",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Trust incoming X-Request-Id from upstream proxies."
+				}
+			],
+			"example": "const { createApp, requestId, logger } = require('zero-http')\nconst app = createApp()\n\napp.use(requestId()) // sets req.id + X-Request-Id header\napp.use(logger())    // logs include the request ID\n\napp.get('/info', (req, res) => {\n\tres.json({ requestId: req.id })\n})",
+			"tips": [
+				"When trustProxy is true, incoming X-Request-Id headers are accepted but truncated to 128 characters to prevent abuse.",
+				"Use a custom generator to create shorter or application-specific IDs (e.g. nanoid, ULID, or prefixed UUIDs)."
+			]
+		},
+		{
+			"name": "logger",
+			"description": "Request logger middleware with response timing. Logs method, URL, status code, and response time in configurable formats with optional colorized output.",
+			"options": [
+				{
+					"option": "format",
+					"type": "string",
+					"default": "'dev'",
+					"notes": "'dev' (verbose), 'short' (compact), or 'tiny' (minimal)."
+				},
+				{
+					"option": "logger",
+					"type": "function",
+					"default": "console.log",
+					"notes": "Custom log function (e.g. write to file)."
+				},
+				{
+					"option": "colors",
+					"type": "boolean",
+					"default": "auto (TTY detection)",
+					"notes": "Colorize output."
+				}
+			],
+			"example": "const fs = require('fs')\nconst { createApp, logger } = require('zero-http')\nconst app = createApp()\n\n// Colorized dev output to stdout\napp.use(logger({ format: 'dev' }))\n\n// Or: append to a log file\napp.use(logger({\n\tformat: 'short',\n\tcolors: false,\n\tlogger: (msg) => fs.appendFileSync('access.log', msg + '\\n')\n}))"
+		}
+	]
+}

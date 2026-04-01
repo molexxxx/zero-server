@@ -1,10 +1,4 @@
-/**
- * Tests for LINQ-inspired Query builder features and Model static shortcuts.
- *
- * Covers: when/unless, tap, chunk, each, map, filter, reduce, paginate,
- *         take/skip, toArray, orderByDesc, last, whereRaw, and
- *         Model.first/last/paginate/chunk/all/random/pluck.
- */
+/** linq.test.js — LINQ-inspired query builder and Model shortcuts */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
 // -- Test Models -----------------------------------------
@@ -1972,4 +1966,4 @@ describe('ORM Query — page helper', () => {
 		expect(results.length).toBe(10);
 		expect(results[0].num).toBe(21);
 	});
-});
+});

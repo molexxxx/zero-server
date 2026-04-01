@@ -1,15 +1,4 @@
-/**
- * Comprehensive ORM DDL & Migration Tests
- * ========================================
- * Tests foreign keys, CHECK constraints, indexes, composite PKs,
- * composite unique, composite indexes, migration methods, schema
- * introspection, topological sync ordering, and memory adapter
- * constraint enforcement.
- *
- * Uses SQLite (in-memory via better-sqlite3) for SQL DDL verification
- * and the Memory adapter for non-SQL constraint tests.
- */
-
+/** schema.test.js — ORM DDL, migration, and schema constraint tests */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
 // --- Helpers ------------------------------------------------------------

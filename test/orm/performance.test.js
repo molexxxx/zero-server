@@ -1,13 +1,4 @@
-/**
- * Phase 2 — Performance & Scalability Tests
- *
- * Covers:
- *   2.1 Prepared Statement Caching
- *   2.2 N+1 Query Prevention
- *   2.3 Read Replicas
- *   2.4 Query Logging & Profiling
- *   2.5 Connection Pool Optimization
- */
+/** performance.test.js — ORM performance and scalability tests */
 const { Database, Model, TYPES, QueryProfiler, ReplicaManager } = require('../../');
 
 // ============================================================

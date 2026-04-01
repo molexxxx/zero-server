@@ -1,0 +1,183 @@
+{
+	"section": "Networking",
+	"icon": "globe",
+	"items": [
+		{
+			"name": "fetch",
+			"description": "Built-in HTTP/HTTPS client for server-side requests. Returns a Response-like object with ok, status, json(), text(), arrayBuffer(). Supports timeouts, abort signals, upload/download progress tracking, automatic JSON body serialization, and custom TLS options for HTTPS URLs.",
+			"methods": [
+				{
+					"method": "ok",
+					"signature": "res.ok",
+					"description": "true if status is 200-299.",
+					"methodReturns": {
+						"type": "boolean",
+						"description": "`true` when `status` is in the range 200–299."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "status",
+					"signature": "res.status",
+					"description": "HTTP status code.",
+					"methodReturns": {
+						"type": "number",
+						"description": "HTTP status code of the response (e.g. `200`, `404`)."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "statusText",
+					"signature": "res.statusText",
+					"description": "HTTP status text.",
+					"methodReturns": {
+						"type": "string",
+						"description": "Status message corresponding to the status code (e.g. `\"OK\"`, `\"Not Found\"`)."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "secure",
+					"signature": "res.secure",
+					"description": "true if the request was over HTTPS.",
+					"methodReturns": {
+						"type": "boolean",
+						"description": "`true` when the response was received over HTTPS."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "url",
+					"signature": "res.url",
+					"description": "Final URL after redirects.",
+					"methodReturns": {
+						"type": "string",
+						"description": "Final URL (after any redirects)."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "headers.get",
+					"signature": "res.headers.get(name)",
+					"description": "Get a response header value.",
+					"methodReturns": {
+						"type": "string | null",
+						"description": "Value of the named header, or `null` if not present."
+					},
+					"methodParams": [
+						{
+							"param": "name",
+							"type": "string",
+							"required": "Yes",
+							"notes": "Header name (case-insensitive), e.g. `\"content-type\"`, `\"x-request-id\"`."
+						}
+					]
+				},
+				{
+					"method": "text",
+					"signature": "res.text()",
+					"description": "Read body as text. Returns Promise<string>.",
+					"methodReturns": {
+						"type": "Promise<string>",
+						"description": "Resolves with the full response body as a UTF-8 string."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "json",
+					"signature": "res.json()",
+					"description": "Read body as parsed JSON. Returns Promise<any>.",
+					"methodReturns": {
+						"type": "Promise<any>",
+						"description": "Resolves with the body parsed as JSON. Throws `SyntaxError` on invalid JSON."
+					},
+					"methodParams": []
+				},
+				{
+					"method": "arrayBuffer",
+					"signature": "res.arrayBuffer()",
+					"description": "Read body as ArrayBuffer. Returns Promise<ArrayBuffer>.",
+					"methodReturns": {
+						"type": "Promise<ArrayBuffer>",
+						"description": "Resolves with the raw response bytes as an `ArrayBuffer`."
+					},
+					"methodParams": []
+				}
+			],
+			"options": [
+				{
+					"option": "method",
+					"type": "string",
+					"default": "'GET'",
+					"notes": "HTTP method."
+				},
+				{
+					"option": "headers",
+					"type": "object",
+					"default": "{}",
+					"notes": "Request headers."
+				},
+				{
+					"option": "body",
+					"type": "string | Buffer | object",
+					"default": "—",
+					"notes": "Request body. Objects are auto-serialized to JSON."
+				},
+				{
+					"option": "timeout",
+					"type": "number",
+					"default": "—",
+					"notes": "Request timeout in milliseconds."
+				},
+				{
+					"option": "signal",
+					"type": "AbortSignal",
+					"default": "—",
+					"notes": "AbortController signal for cancellation."
+				},
+				{
+					"option": "onDownloadProgress",
+					"type": "function",
+					"default": "—",
+					"notes": "Progress callback: ({ loaded, total }) => {}."
+				},
+				{
+					"option": "onUploadProgress",
+					"type": "function",
+					"default": "—",
+					"notes": "Upload progress callback."
+				},
+				{
+					"option": "rejectUnauthorized",
+					"type": "boolean",
+					"default": "true",
+					"notes": "TLS: reject self-signed certs."
+				},
+				{
+					"option": "ca",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "TLS: custom CA certificate."
+				},
+				{
+					"option": "cert",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "TLS: client certificate."
+				},
+				{
+					"option": "key",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "TLS: client private key."
+				}
+			],
+			"example": "const { fetch } = require('zero-http')\n\nasync function download(url) {\n\tconst controller = new AbortController()\n\tsetTimeout(() => controller.abort(), 10000)\n\n\tconst res = await fetch(url, {\n\t\ttimeout: 5000,\n\t\tsignal: controller.signal,\n\t\trejectUnauthorized: false,  // accept self-signed certs\n\t\tonDownloadProgress: ({ loaded, total }) =>\n\t\t\tconsole.log(`${loaded}/${total || '?'} bytes`)\n\t})\n\n\tconsole.log(res.ok, res.status, res.secure, res.url)\n\tconst data = await res.json()\n\treturn data\n}\n\ndownload('https://jsonplaceholder.typicode.com/todos/1')\n\t.then(console.log)",
+			"tips": [
+				"Object bodies are auto-serialized to JSON and Content-Type is set automatically.",
+				"Use rejectUnauthorized: false only for development — never in production.",
+				"Timeout and AbortSignal can be used together — whichever fires first cancels the request."
+			]
+		}
+	]
+}

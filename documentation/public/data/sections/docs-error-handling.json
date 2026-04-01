@@ -1,0 +1,1580 @@
+{
+	"section": "Error Handling",
+	"icon": "alert-triangle",
+	"items": [
+		{
+			"name": "Error Classes",
+			"description": "Built-in HTTP error classes with status codes, machine-readable codes, and optional details. Every error extends HttpError which carries statusCode, code, and details. Throw them in route handlers — the router catches and sends the correct HTTP response automatically.",
+			"example": "const { NotFoundError, ValidationError, createError, isHttpError } = require('zero-http')\n\n// Throw in route handlers — automatically caught!\napp.get('/users/:id', async (req, res) => {\n\tconst user = await User.findById(req.params.id)\n\tif (!user) throw new NotFoundError('User not found')\n\tres.json(user)\n})\n\n// Validation with field-level errors\napp.post('/users', async (req, res) => {\n\tconst errors = {}\n\tif (!req.body.email) errors.email = 'required'\n\tif (!req.body.name) errors.name = 'required'\n\tif (Object.keys(errors).length > 0) {\n\t\tthrow new ValidationError('Invalid input', errors)\n\t\t// Response: { error: 'Invalid input', code: 'VALIDATION_FAILED',\n\t\t//   statusCode: 422, details: { email: 'required', name: 'required' } }\n\t}\n\tres.json(await User.create(req.body))\n})\n\n// Factory — create by status code\nthrow createError(409, 'Duplicate entry', { details: { id: 42 } })\n\n// Custom error code\nthrow new HttpError(503, 'Database offline', { code: 'DB_DOWN' })\n\n// Type checking in error handlers\napp.onError((err, req, res, next) => {\n\tif (isHttpError(err)) {\n\t\tres.status(err.statusCode).json(err.toJSON())\n\t} else {\n\t\tres.status(500).json({ error: 'Unexpected error' })\n\t}\n})",
+			"tips": [
+				"Just throw — the router wraps all handlers in try/catch and catches async rejections too.",
+				"Every error auto-generates a code from the status text: 404 → NOT_FOUND, 422 → UNPROCESSABLE_ENTITY.",
+				"ValidationError.errors stores field-level details — perfect for form validation feedback.",
+				"createError(statusCode) returns the correct typed class: createError(404) returns NotFoundError.",
+				"Use opts.details to attach any structured data (IDs, field names, debug info) to the error.",
+				"isHttpError() works as a TypeScript type guard — narrows the type to HttpError."
+			],
+			"methodGroups": [
+				{
+					"group": "Base Class",
+					"methods": [
+						{
+							"method": "HttpError",
+							"signature": "new HttpError(statusCode, [message], [opts])",
+							"description": "Base class. opts: { code, details }.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "statusCode",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code (e.g. `400`, `404`, `500`)."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "4xx Client Errors",
+					"methods": [
+						{
+							"method": "BadRequestError",
+							"signature": "new BadRequestError([message], [opts])",
+							"description": "400 Bad Request.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "UnauthorizedError",
+							"signature": "new UnauthorizedError([message], [opts])",
+							"description": "401 Unauthorized.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "ForbiddenError",
+							"signature": "new ForbiddenError([message], [opts])",
+							"description": "403 Forbidden.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "NotFoundError",
+							"signature": "new NotFoundError([message], [opts])",
+							"description": "404 Not Found.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "MethodNotAllowedError",
+							"signature": "new MethodNotAllowedError([message], [opts])",
+							"description": "405 Method Not Allowed.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "ConflictError",
+							"signature": "new ConflictError([message], [opts])",
+							"description": "409 Conflict.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "GoneError",
+							"signature": "new GoneError([message], [opts])",
+							"description": "410 Gone.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "PayloadTooLargeError",
+							"signature": "new PayloadTooLargeError([message], [opts])",
+							"description": "413 Payload Too Large.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "UnprocessableEntityError",
+							"signature": "new UnprocessableEntityError([message], [opts])",
+							"description": "422 Unprocessable Entity.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "ValidationError",
+							"signature": "new ValidationError([message], [errors], [opts])",
+							"description": "422 with field-level errors. errors: object or array stored in .errors and .details.",
+							"methodOptions": [
+								{
+									"option": "errors",
+									"type": "object[]",
+									"default": "[]",
+									"notes": "Array of field-level validation errors { field, message }."
+								},
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "errors",
+									"type": "object[]",
+									"required": "No",
+									"notes": "Field-level errors — `[{ field, message, rule }]`."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose, cause, details }`."
+								}
+							]
+						},
+						{
+							"method": "TooManyRequestsError",
+							"signature": "new TooManyRequestsError([message], [opts])",
+							"description": "429 Too Many Requests.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "5xx Server Errors",
+					"methods": [
+						{
+							"method": "InternalError",
+							"signature": "new InternalError([message], [opts])",
+							"description": "500 Internal Server Error.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "NotImplementedError",
+							"signature": "new NotImplementedError([message], [opts])",
+							"description": "501 Not Implemented.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "BadGatewayError",
+							"signature": "new BadGatewayError([message], [opts])",
+							"description": "502 Bad Gateway.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "ServiceUnavailableError",
+							"signature": "new ServiceUnavailableError([message], [opts])",
+							"description": "503 Service Unavailable.",
+							"methodOptions": [
+								{
+									"option": "expose",
+									"type": "boolean",
+									"default": "auto",
+									"notes": "Whether to include the message in response bodies. Defaults to true for 4xx errors."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "{}",
+									"notes": "Extra response headers to attach to the error."
+								},
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original error for error chaining / stack trace context."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "A new error instance inheriting from Error with status, message, and expose properties."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message. Defaults to the standard HTTP status phrase."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ expose: boolean, cause: Error, details: any }`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Utilities",
+					"methods": [
+						{
+							"method": "createError",
+							"signature": "createError(statusCode, [message], [opts])",
+							"description": "Factory — creates the correct error class for any status code.",
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "Create an HttpError with the given status code and optional message/opts."
+							},
+							"methodParams": [
+								{
+									"param": "statusCode",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options passed to the `HttpError` constructor."
+								}
+							]
+						},
+						{
+							"method": "isHttpError",
+							"signature": "isHttpError(err)",
+							"description": "Returns true if err is an HttpError or has a statusCode. Type guard.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": "true if the value is an HttpError instance."
+							},
+							"methodParams": [
+								{
+									"param": "err",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Value to test — returns `true` if it is an `HttpError` instance."
+								}
+							]
+						},
+						{
+							"method": "toJSON",
+							"signature": "err.toJSON()",
+							"description": "Serialize: { error, code, statusCode, details? }.",
+							"methodReturns": {
+								"type": "object",
+								"description": "{ status, message, errors? } — safe serialisable error payload."
+							},
+							"methodParams": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Framework Errors",
+			"description": "Specialized error classes for framework-specific failures — database errors, configuration problems, middleware failures, routing issues, and timeouts. Each carries context-specific properties alongside the standard HttpError fields. These are thrown automatically by the framework internals and can also be used directly in application code.",
+			"example": "const { DatabaseError, ConfigurationError, MiddlewareError,\n\tRoutingError, TimeoutError, ConnectionError, MigrationError,\n\tTransactionError, QueryError, AdapterError, CacheError,\n\tisHttpError } = require('zero-http')\n\n// Database error with context\napp.get('/users', async (req, res) => {\n\ttry {\n\t\tconst users = await User.find()\n\t\tres.json(users)\n\t} catch (err) {\n\t\tthrow new DatabaseError('Failed to fetch users', {\n\t\t\tquery: 'SELECT * FROM users',\n\t\t\tadapter: 'sqlite',\n\t\t\tdetails: { originalError: err.message }\n\t\t})\n\t}\n})\n\n// Connection error with retry context\nthrow new ConnectionError('Redis connection refused', {\n\tadapter: 'redis',\n\tattempt: 3,\n\tmaxRetries: 5,\n\thost: '127.0.0.1',\n\tport: 6379\n})\n\n// Migration error\nthrow new MigrationError('Column already exists', {\n\tmigration: '003_add_avatar',\n\tdirection: 'up',\n\tbatch: 2\n})\n\n// Transaction error\nthrow new TransactionError('Deadlock detected', {\n\tphase: 'commit'\n})\n\n// Query error with SQL context\nthrow new QueryError('Syntax error near FROM', {\n\tsql: 'SELECT * FORM users',\n\tparams: [],\n\ttable: 'users'\n})\n\n// Adapter error\nthrow new AdapterError('ioredis not installed', {\n\tadapter: 'redis',\n\toperation: 'connect'\n})\n\n// Cache error\nthrow new CacheError('Serialization failed', {\n\toperation: 'set',\n\tkey: 'users:active'\n})\n\n// Differentiate error types in error handler\napp.onError((err, req, res, next) => {\n\tif (err instanceof ConnectionError) {\n\t\tconsole.error('Connection failed:', err.host, err.port, `attempt ${err.attempt}/${err.maxRetries}`)\n\t\tres.status(503).json({ error: 'Database unavailable' })\n\t} else if (err instanceof MigrationError) {\n\t\tconsole.error('Migration failed:', err.migration, err.direction)\n\t\tres.status(500).json({ error: 'Migration error' })\n\t} else if (err instanceof DatabaseError) {\n\t\tconsole.error('DB Error:', err.adapter, err.query)\n\t\tres.status(500).json({ error: 'Database unavailable' })\n\t} else if (err instanceof TimeoutError) {\n\t\tres.status(408).json({ error: err.message, timeout: err.timeout })\n\t} else if (isHttpError(err)) {\n\t\tres.status(err.statusCode).json(err.toJSON())\n\t} else {\n\t\tres.status(500).json({ error: 'Internal error' })\n\t}\n})",
+			"tips": [
+				"All framework errors extend HttpError — they work with isHttpError(), toJSON(), and createError().",
+				"DatabaseError carries .query and .adapter — use them in error handlers for debugging and monitoring.",
+				"ConfigurationError.setting tells you which config key is invalid — great for startup validation.",
+				"MiddlewareError.middleware identifies which middleware failed — useful for debugging middleware chains.",
+				"RoutingError carries .path and .method — helpful for diagnosing route conflicts.",
+				"TimeoutError carries .timeout (in ms) — the limit that was exceeded.",
+				"ConnectionError extends DatabaseError — adds .attempt, .maxRetries, .host, .port for retry tracking.",
+				"MigrationError extends DatabaseError — .migration, .direction ('up'/'down'), .batch identify the failure.",
+				"TransactionError extends DatabaseError — .phase tells you if it failed on begin, commit, or rollback.",
+				"QueryError extends DatabaseError — .sql, .params, .table give full query context for debugging.",
+				"AdapterError extends DatabaseError — .operation identifies what the adapter was trying to do.",
+				"CacheError carries .operation and .key — pinpoints exactly which cache operation failed.",
+				"ORM model validation now throws ValidationError (422) instead of plain Error — catch it with instanceof.",
+				"Use instanceof checks in app.onError() to handle different failure categories with different responses."
+			],
+			"methodGroups": [
+				{
+					"group": "Database & Query Errors",
+					"methods": [
+						{
+							"method": "DatabaseError",
+							"signature": "new DatabaseError([message], [opts])",
+							"description": "500 — Database/ORM failure. opts: { query, adapter, details }. Thrown on adapter-level failures.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "DatabaseError",
+								"description": "A new DatabaseError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "QueryError",
+							"signature": "new QueryError([message], [opts])",
+							"description": "500 — Query execution failure. Extends DatabaseError. opts: { sql, params, table }.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "QueryError",
+								"description": "A new QueryError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "MigrationError",
+							"signature": "new MigrationError([message], [opts])",
+							"description": "500 — Migration execution failure. Extends DatabaseError. opts: { migration, direction, batch }.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "MigrationError",
+								"description": "A new MigrationError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "TransactionError",
+							"signature": "new TransactionError([message], [opts])",
+							"description": "500 — Transaction commit/rollback failure. Extends DatabaseError. opts: { phase }. phase: 'begin', 'commit', or 'rollback'.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "TransactionError",
+								"description": "A new TransactionError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "AdapterError",
+							"signature": "new AdapterError([message], [opts])",
+							"description": "500 — Adapter-level issue (driver missing, unsupported op). Extends DatabaseError. opts: { adapter, operation }.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "AdapterError",
+								"description": "A new AdapterError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "CacheError",
+							"signature": "new CacheError([message], [opts])",
+							"description": "500 — Caching layer failure. opts: { operation, key }.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "CacheError",
+								"description": "A new CacheError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "ConnectionError",
+							"signature": "new ConnectionError([message], [opts])",
+							"description": "500 — Database connection failure. Extends DatabaseError. opts: { adapter, attempt, maxRetries, host, port }.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "ConnectionError",
+								"description": "A new ConnectionError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Application Errors",
+					"methods": [
+						{
+							"method": "ConfigurationError",
+							"signature": "new ConfigurationError([message], [opts])",
+							"description": "500 — Invalid configuration. opts: { setting, details }. Thrown when app/adapter config is invalid.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "ConfigurationError",
+								"description": "A new ConfigurationError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "MiddlewareError",
+							"signature": "new MiddlewareError([message], [opts])",
+							"description": "500 — Middleware failure. opts: { middleware, details }. Thrown when a middleware function fails unexpectedly.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "MiddlewareError",
+								"description": "A new MiddlewareError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "RoutingError",
+							"signature": "new RoutingError([message], [opts])",
+							"description": "500 — Routing failure. opts: { path, method, details }. Thrown when route resolution fails.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "RoutingError",
+								"description": "A new RoutingError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						},
+						{
+							"method": "TimeoutError",
+							"signature": "new TimeoutError([message], [opts])",
+							"description": "408 — Operation timed out. opts: { timeout, details }. Thrown when a request exceeds the allowed time.",
+							"methodOptions": [
+								{
+									"option": "cause",
+									"type": "Error",
+									"default": "null",
+									"notes": "Original underlying error for chaining."
+								},
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Optional machine-readable error code."
+								}
+							],
+							"methodReturns": {
+								"type": "TimeoutError",
+								"description": "A new TimeoutError instance inheriting from Error."
+							},
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options — `{ cause: Error, code: string, details: any }`."
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "errorHandler",
+			"description": "Configurable error-handling middleware. Formats error responses based on environment (dev vs production), includes stack traces in dev, hides internal details in production, and supports custom formatters and logging. Use with app.onError().",
+			"methods": [],
+			"options": [
+				{
+					"option": "stack",
+					"type": "boolean",
+					"default": "true (non-production)",
+					"notes": "Include stack traces in responses. Auto-detected from NODE_ENV."
+				},
+				{
+					"option": "log",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Log errors to console."
+				},
+				{
+					"option": "logger",
+					"type": "function",
+					"default": "console.error",
+					"notes": "Custom log function."
+				},
+				{
+					"option": "formatter",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom response formatter: (err, req, isDev) => responseBody."
+				},
+				{
+					"option": "onError",
+					"type": "function",
+					"default": "—",
+					"notes": "Callback on every error: (err, req, res) => void."
+				}
+			],
+			"example": "const { createApp, errorHandler } = require('zero-http')\nconst app = createApp()\n\n// Basic — dev mode with stack traces\napp.onError(errorHandler())\n\n// Production — hide internals\napp.onError(errorHandler({ stack: false }))\n\n// Custom formatter\napp.onError(errorHandler({\n\tformatter: (err, req, isDev) => ({\n\t\tsuccess: false,\n\t\tmessage: err.message,\n\t\t...(isDev && { stack: err.stack })\n\t})\n}))\n\n// Error monitoring callback\napp.onError(errorHandler({\n\tonError: (err, req) => {\n\t\t// Send to Sentry, DataDog, etc.\n\t\terrorTracker.capture(err, { url: req.url, method: req.method })\n\t}\n}))",
+			"tips": [
+				"In production (NODE_ENV=production), 5xx errors show 'Internal Server Error' instead of the real message.",
+				"4xx errors always show the real message — they're client errors, not secrets.",
+				"The formatter option gives you full control over the response shape for your API style.",
+				"onError is perfect for error monitoring (Sentry, DataDog) without changing response format.",
+				"Headers-already-sent errors are silently skipped — no double-response crashes."
+			]
+		},
+		{
+			"name": "debug",
+			"description": "Lightweight namespaced debug logger with levels, colors, and timestamps. Enable via DEBUG env var or programmatically. Each namespace gets a unique color. Supports text and structured JSON output.",
+			"options": [
+				{
+					"option": "DEBUG",
+					"type": "env var",
+					"default": "—",
+					"notes": "Comma-separated namespace patterns. Supports * glob and -prefix to exclude."
+				},
+				{
+					"option": "DEBUG_LEVEL",
+					"type": "env var",
+					"default": "debug",
+					"notes": "Minimum log level: trace, debug, info, warn, error, fatal, silent."
+				}
+			],
+			"example": "const { debug } = require('zero-http')\n\nconst log = debug('app:routes')\nconst dbLog = debug('db:queries')\n\n// Log at different levels\nlog.info('server started on port %d', 3000)\nlog.warn('deprecated endpoint hit: %s', req.url)\nlog.error('request failed', err)\nlog.trace('entering handler for %s %s', req.method, req.url)\n\n// Conditional logging\nif (log.enabled) {\n\tlog('expensive debug data: %j', buildDebugPayload())\n}\n\n// JSON mode for production log aggregators\ndebug.json(true)\ndebug.level('info')\n// Output: {\"timestamp\":\"...\",\"level\":\"INFO\",\"namespace\":\"app:routes\",\"message\":\"server started on port 3000\"}\n\n// Enable specific namespaces\ndebug.enable('app:*,db:*')     // only app and db\ndebug.enable('*,-db:queries')  // everything except db:queries\n\n// Environment variables\n// DEBUG=app:* node server.js\n// DEBUG_LEVEL=warn node server.js",
+			"tips": [
+				"Set DEBUG=* to see all debug output, or DEBUG=app:* to filter by namespace.",
+				"Use debug.json(true) in production for structured JSON logs — pipe to ELK, Datadog, etc.",
+				"Format specifiers: %s (string), %d (number), %j (JSON), %o (object).",
+				"Each namespace gets a unique color — makes it easy to scan logs visually.",
+				"debug.level('warn') filters out trace/debug/info — only show warnings and above.",
+				"log.enabled is a boolean — use it to skip expensive debug payload construction."
+			],
+			"methodGroups": [
+				{
+					"group": "Logger Creation",
+					"methods": [
+						{
+							"method": "debug(namespace)",
+							"signature": "debug('app:routes')",
+							"description": "Create a namespaced logger. Returns a function with level methods.",
+							"methodReturns": {
+								"type": "Logger",
+								"description": "A namespaced child logger.  Emits output only when that namespace is enabled (via `DEBUG` env var or `debug.enable()`)."
+							},
+							"methodParams": [
+								{
+									"param": "namespace",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Dot-separated namespace, e.g. `\"app:routes\"`. Enable output via `DEBUG=app:*` env var."
+								}
+							]
+						},
+						{
+							"method": "log()",
+							"signature": "log(...args)",
+							"description": "Log at debug level (default call). Supports %s, %d, %j format specifiers.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log at the default level. First string argument is a format pattern supporting %s, %d, %o placeholders."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Log Levels",
+					"methods": [
+						{
+							"method": "log.trace()",
+							"signature": "log.trace(...args)",
+							"description": "Log at trace level (most verbose).",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
+								}
+							]
+						},
+						{
+							"method": "log.info()",
+							"signature": "log.info(...args)",
+							"description": "Log at info level.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
+								}
+							]
+						},
+						{
+							"method": "log.warn()",
+							"signature": "log.warn(...args)",
+							"description": "Log at warn level.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
+								}
+							]
+						},
+						{
+							"method": "log.error()",
+							"signature": "log.error(...args)",
+							"description": "Log at error level.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
+								}
+							]
+						},
+						{
+							"method": "log.fatal()",
+							"signature": "log.fatal(...args)",
+							"description": "Log at fatal level (most severe).",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "...args",
+									"type": "any[]",
+									"required": "Yes",
+									"notes": "Values to log. First string argument is the format pattern; supports `%s`, `%d`, `%o` placeholders."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Configuration",
+					"methods": [
+						{
+							"method": "debug.level()",
+							"signature": "debug.level('info')",
+							"description": "Set minimum log level globally. Levels: trace, debug, info, warn, error, fatal, silent.",
+							"methodReturns": {
+								"type": "void | string",
+								"description": "When called with an argument sets the minimum log level.  When called with no arguments returns the current level string."
+							},
+							"methodParams": [
+								{
+									"param": "level",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"trace\"` | `\"debug\"` | `\"info\"` | `\"warn\"` | `\"error\"` | `\"fatal\"`."
+								}
+							]
+						},
+						{
+							"method": "debug.enable()",
+							"signature": "debug.enable('app:*')",
+							"description": "Enable namespaces by pattern. Same syntax as DEBUG env var.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "pattern",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Namespace pattern to enable, e.g. `\"app:*\"`. Prefix with `-` to disable."
+								}
+							]
+						},
+						{
+							"method": "debug.disable()",
+							"signature": "debug.disable()(pattern)",
+							"description": "Disable all debug output.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "pattern",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Namespace pattern to disable. Use * to disable everything."
+								}
+							]
+						},
+						{
+							"method": "debug.json()",
+							"signature": "debug.json(true)",
+							"description": "Enable structured JSON output (for log aggregators).",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "enabled",
+									"type": "boolean",
+									"required": "Yes",
+									"notes": "`true` to format output as pretty-printed JSON."
+								}
+							]
+						},
+						{
+							"method": "debug.timestamps()",
+							"signature": "debug.timestamps(false)",
+							"description": "Toggle timestamps.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "enabled",
+									"type": "boolean",
+									"required": "Yes",
+									"notes": "`false` to remove timestamp prefix from log lines."
+								}
+							]
+						},
+						{
+							"method": "debug.colors()",
+							"signature": "debug.colors(false)",
+							"description": "Toggle ANSI colors.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "enabled",
+									"type": "boolean",
+									"required": "Yes",
+									"notes": "`false` to disable ANSI colour codes."
+								}
+							]
+						},
+						{
+							"method": "debug.output()",
+							"signature": "debug.output(stream)",
+							"description": "Set custom output stream (default: stderr).",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "Writable",
+									"required": "Yes",
+									"notes": "Output stream, e.g. `process.stderr`, `fs.createWriteStream(\"app.log\")`."
+								}
+							]
+						},
+						{
+							"method": "debug.reset()",
+							"signature": "debug.reset()",
+							"description": "Reset all settings to defaults.",
+							"methodReturns": {
+								"type": "void",
+								"description": "No return value."
+							},
+							"methodParams": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

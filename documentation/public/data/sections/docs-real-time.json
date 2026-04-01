@@ -1,0 +1,772 @@
+{
+	"section": "Real-Time",
+	"icon": "zap",
+	"items": [
+		{
+			"name": "WebSocket",
+			"description": "Built-in RFC 6455 WebSocket server. Register handlers with app.ws(path, handler). Each connection receives a WebSocketConnection instance with send/receive, ping/pong, binary support, and event emitter methods. Configure max payload size, ping intervals, and client verification.",
+			"options": [
+				{
+					"option": "maxPayload",
+					"type": "number",
+					"default": "1048576 (1MB)",
+					"notes": "Maximum incoming message size in bytes."
+				},
+				{
+					"option": "pingInterval",
+					"type": "number",
+					"default": "30000",
+					"notes": "Automatic ping interval in ms (0 to disable)."
+				},
+				{
+					"option": "verifyClient",
+					"type": "function",
+					"default": "—",
+					"notes": "Verification function: (req) => boolean. Return false to reject."
+				}
+			],
+			"example": "const { createApp } = require('zero-http')\nconst app = createApp()\n\nconst clients = new Set()\n\napp.ws('/chat', {\n\tmaxPayload: 64 * 1024,\n\tpingInterval: 20000\n}, (ws, req) => {\n\tws.data.name = req.query.name || 'anon'\n\tclients.add(ws)\n\tws.send('Welcome, ' + ws.data.name + '!')\n\n\tws.on('message', msg => {\n\t\tfor (const c of clients) {\n\t\t\tif (c !== ws && c.readyState === 1)\n\t\t\t\tc.send(ws.data.name + ': ' + msg)\n\t\t}\n\t})\n\n\tws.on('close', () => clients.delete(ws))\n})\n\napp.listen(3000)",
+			"tips": [
+				"ws.data is a plain object for storing per-connection user data (name, auth, etc.).",
+				"Check ws.readyState === 1 (OPEN) before sending to avoid errors.",
+				"Use verifyClient to enforce authentication before accepting the upgrade.",
+				"Properties: id, readyState, protocol, extensions, headers, ip, query, url, secure, connectedAt, uptime, bufferedAmount."
+			],
+			"methodGroups": [
+				{
+					"group": "Messaging",
+					"methods": [
+						{
+							"method": "send",
+							"signature": "ws.send(data)",
+							"description": "Send a text or binary message.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Sends the data through the WebSocket connection."
+							},
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "String for text frames; Buffer for binary."
+								}
+							]
+						},
+						{
+							"method": "sendJSON",
+							"signature": "ws.sendJSON(obj)",
+							"description": "Send a JSON-serialized message.",
+							"methodReturns": {
+								"type": "void",
+								"description": "JSON-serializes obj and sends it as a text frame."
+							},
+							"methodParams": [
+								{
+									"param": "obj",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Value serialized to JSON and sent as a text frame."
+								}
+							]
+						},
+						{
+							"method": "ping",
+							"signature": "ws.ping([data])",
+							"description": "Send a ping frame.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Sends a ping control frame to the client."
+							},
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "string | Buffer",
+									"required": "No",
+									"notes": "Optional payload (max 125 bytes)."
+								}
+							]
+						},
+						{
+							"method": "pong",
+							"signature": "ws.pong([data])",
+							"description": "Send a pong frame.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Sends a pong control frame (usually in response to a ping)."
+							},
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "string | Buffer",
+									"required": "No",
+									"notes": "Optional payload to include in the pong."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Events",
+					"methods": [
+						{
+							"method": "on",
+							"signature": "ws.on(event, handler)",
+							"description": "Listen for events: message, close, error, ping, pong, drain.",
+							"methodReturns": {
+								"type": "WebSocket",
+								"description": "Returns the WebSocket for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"message\"` | `\"close\"` | `\"error\"` | `\"ping\"` | `\"pong\"`."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "Callback invoked when the event fires."
+								}
+							]
+						},
+						{
+							"method": "once",
+							"signature": "ws.once(event, handler)",
+							"description": "Listen for an event once.",
+							"methodReturns": {
+								"type": "WebSocket",
+								"description": "Returns the WebSocket for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"message\"` | `\"close\"` | `\"error\"` | `\"ping\"` | `\"pong\"`."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "Callback invoked when the event fires."
+								}
+							]
+						},
+						{
+							"method": "off",
+							"signature": "ws.off(event, handler)",
+							"description": "Remove an event listener.",
+							"methodReturns": {
+								"type": "WebSocket",
+								"description": "Returns the WebSocket for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"message\"` | `\"close\"` | `\"error\"` | `\"ping\"` | `\"pong\"`."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "Callback invoked when the event fires."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Lifecycle",
+					"methods": [
+						{
+							"method": "close",
+							"signature": "ws.close([code], [reason])",
+							"description": "Graceful close with optional status code and reason.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Initiates a clean closing handshake."
+							},
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "No",
+									"notes": "Close code (e.g. `1000` = normal, `1001` = going away). Defaults to `1000`."
+								},
+								{
+									"param": "reason",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable reason (max 123 bytes UTF-8)."
+								}
+							]
+						},
+						{
+							"method": "terminate",
+							"signature": "ws.terminate()",
+							"description": "Forcefully close the connection.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Forcibly destroys the socket without a handshake."
+							},
+							"methodParams": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "WebSocketPool",
+			"description": "Connection and room manager for WebSocket apps. Automatically tracks connections, manages room membership, supports broadcast/targeted messaging, and cleans up on disconnect.",
+			"example": "const { createApp, WebSocketPool } = require('zero-http')\nconst app = createApp()\nconst pool = new WebSocketPool()\n\napp.ws('/chat', (ws, req) => {\n\tconst room = req.query.room || 'general'\n\tpool.add(ws)         // auto-removed on close\n\tpool.join(ws, room)\n\n\tws.data.name = req.query.name || 'anon'\n\tpool.toRoomJSON(room, { type: 'join', user: ws.data.name }, ws)\n\n\tws.on('message', msg => {\n\t\tpool.toRoom(room, ws.data.name + ': ' + msg, ws)\n\t})\n\n\tws.on('close', () => {\n\t\tpool.toRoomJSON(room, { type: 'leave', user: ws.data.name })\n\t})\n})\n\napp.get('/pool/status', (req, res) => res.json({\n\tconnections: pool.size,\n\trooms: pool.rooms,\n\troomSizes: pool.rooms.reduce((o, r) => (o[r] = pool.roomSize(r), o), {})\n}))",
+			"methodGroups": [
+				{
+					"group": "Membership",
+					"methods": [
+						{
+							"method": "add",
+							"signature": "pool.add(ws)",
+							"description": "Add a connection to the pool. Auto-removed on close.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Tracks the connection in the pool."
+							},
+							"methodParams": [
+								{
+									"param": "ws",
+									"type": "WebSocketConnection",
+									"required": "Yes",
+									"notes": "Connection to add."
+								}
+							]
+						},
+						{
+							"method": "remove",
+							"signature": "pool.remove(ws)",
+							"description": "Remove a connection from the pool and all rooms.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Removes the connection from the pool and all its rooms."
+							},
+							"methodParams": [
+								{
+									"param": "ws",
+									"type": "WebSocketConnection",
+									"required": "Yes",
+									"notes": "Connection to remove."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Rooms",
+					"methods": [
+						{
+							"method": "join",
+							"signature": "pool.join(ws, room)",
+							"description": "Join a connection to a named room.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Adds ws to the named room."
+							},
+							"methodParams": [
+								{
+									"param": "ws",
+									"type": "WebSocketConnection",
+									"required": "Yes",
+									"notes": "Connection to join the room."
+								},
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Room identifier."
+								}
+							]
+						},
+						{
+							"method": "leave",
+							"signature": "pool.leave(ws, room)",
+							"description": "Leave a room.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Removes ws from the named room."
+							},
+							"methodParams": [
+								{
+									"param": "ws",
+									"type": "WebSocketConnection",
+									"required": "Yes",
+									"notes": "Connection to leave the room."
+								},
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Room identifier."
+								}
+							]
+						},
+						{
+							"method": "in",
+							"signature": "pool.in(room)",
+							"description": "Get all connections in a room.",
+							"methodReturns": {
+								"type": "Set<WebSocket>",
+								"description": "Set of all connected WebSockets currently in the room."
+							},
+							"methodParams": [
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Room name to query."
+								}
+							]
+						},
+						{
+							"method": "roomsOf",
+							"signature": "pool.roomsOf(ws)",
+							"description": "Get all rooms a connection is in.",
+							"methodReturns": {
+								"type": "Set<string>",
+								"description": "Set of room names the given WebSocket has joined."
+							},
+							"methodParams": [
+								{
+									"param": "ws",
+									"type": "WebSocketConnection",
+									"required": "Yes",
+									"notes": "Connection whose room memberships to retrieve."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Broadcasting",
+					"methods": [
+						{
+							"method": "broadcast",
+							"signature": "pool.broadcast(msg, [exclude])",
+							"description": "Send to all connections.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Sends the message to all connected clients (except excluded)."
+							},
+							"methodParams": [
+								{
+									"param": "msg",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Message to send to all connections."
+								},
+								{
+									"param": "exclude",
+									"type": "WebSocketConnection",
+									"required": "No",
+									"notes": "Connection to skip (the sender)."
+								}
+							]
+						},
+						{
+							"method": "broadcastJSON",
+							"signature": "pool.broadcastJSON(obj, [exclude])",
+							"description": "Send JSON to all connections.",
+							"methodReturns": {
+								"type": "void",
+								"description": "JSON-encodes obj and broadcasts to all clients."
+							},
+							"methodParams": [
+								{
+									"param": "msg",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Object to serialize as JSON and broadcast."
+								},
+								{
+									"param": "exclude",
+									"type": "WebSocketConnection",
+									"required": "No",
+									"notes": "Connection to skip (the sender)."
+								}
+							]
+						},
+						{
+							"method": "toRoom",
+							"signature": "pool.toRoom(room, msg, [exclude])",
+							"description": "Send to all in a room.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Sends msg to all clients in the named room."
+							},
+							"methodParams": [
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Target room name."
+								},
+								{
+									"param": "msg",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Message payload."
+								},
+								{
+									"param": "exclude",
+									"type": "WebSocketConnection",
+									"required": "No",
+									"notes": "Connection to skip."
+								}
+							]
+						},
+						{
+							"method": "toRoomJSON",
+							"signature": "pool.toRoomJSON(room, obj, [exclude])",
+							"description": "Send JSON to all in a room.",
+							"methodReturns": {
+								"type": "void",
+								"description": "JSON-encodes obj and sends to all clients in the named room."
+							},
+							"methodParams": [
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Target room name."
+								},
+								{
+									"param": "obj",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Object to serialize and broadcast."
+								},
+								{
+									"param": "exclude",
+									"type": "WebSocketConnection",
+									"required": "No",
+									"notes": "Connection to skip."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Introspection",
+					"methods": [
+						{
+							"method": "size",
+							"signature": "pool.size",
+							"description": "Total connection count.",
+							"methodReturns": {
+								"type": "number",
+								"description": "Total number of connected clients."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "clients",
+							"signature": "pool.clients",
+							"description": "All connections as an iterable.",
+							"methodReturns": {
+								"type": "Set<WebSocket>",
+								"description": "Live set of all connected WebSocket instances."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "rooms",
+							"signature": "pool.rooms",
+							"description": "Array of all room names.",
+							"methodReturns": {
+								"type": "Map<string, Set<WebSocket>>",
+								"description": "Map of all room names to their member sets."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "roomSize",
+							"signature": "pool.roomSize(room)",
+							"description": "Number of connections in a room.",
+							"methodReturns": {
+								"type": "number",
+								"description": "Number of clients currently in the named room."
+							},
+							"methodParams": [
+								{
+									"param": "room",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Room name to count connections in."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Lifecycle",
+					"methods": [
+						{
+							"method": "closeAll",
+							"signature": "pool.closeAll()",
+							"description": "Close all connections.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Closes every tracked WebSocket connection."
+							},
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "No",
+									"notes": "Close code (default 1000)."
+								},
+								{
+									"param": "reason",
+									"type": "string",
+									"required": "No",
+									"notes": "Reason string (max 123 bytes)."
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "SSE (Server-Sent Events)",
+			"description": "Push real-time events to browser clients via res.sse(). Returns an SSEStream instance with auto-IDs, named events, keep-alive pings, and graceful disconnect handling. The browser connects with new EventSource(url).",
+			"options": [
+				{
+					"option": "status",
+					"type": "number",
+					"default": "200",
+					"notes": "HTTP status code."
+				},
+				{
+					"option": "retry",
+					"type": "number",
+					"default": "—",
+					"notes": "Initial reconnection interval in ms."
+				},
+				{
+					"option": "keepAlive",
+					"type": "number",
+					"default": "0",
+					"notes": "Keep-alive ping interval in ms (0 = disabled)."
+				},
+				{
+					"option": "keepAliveComment",
+					"type": "string",
+					"default": "'ping'",
+					"notes": "Comment text for keep-alive pings."
+				},
+				{
+					"option": "autoId",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Auto-generate incrementing event IDs."
+				},
+				{
+					"option": "startId",
+					"type": "number",
+					"default": "1",
+					"notes": "Starting ID for autoId."
+				},
+				{
+					"option": "pad",
+					"type": "number",
+					"default": "0",
+					"notes": "Pad the response with whitespace for proxy compatibility."
+				},
+				{
+					"option": "headers",
+					"type": "object",
+					"default": "{}",
+					"notes": "Extra response headers."
+				}
+			],
+			"example": "const { createApp } = require('zero-http')\nconst app = createApp()\n\napp.get('/events', (req, res) => {\n\tconst sse = res.sse({\n\t\tretry: 5000,\n\t\tautoId: true,\n\t\tkeepAlive: 30000\n\t})\n\n\tsse.send('connected')\n\n\tconst iv = setInterval(() => {\n\t\tsse.event('tick', { time: Date.now() })\n\t}, 1000)\n\n\tsse.on('close', () => {\n\t\tclearInterval(iv)\n\t\tconsole.log('client disconnected')\n\t})\n})\n\n// Browser:\n// const es = new EventSource('/events')\n// es.addEventListener('tick', e => console.log(JSON.parse(e.data)))",
+			"tips": [
+				"SSE is automatically excluded from response compression.",
+				"Use keepAlive to prevent proxy/load-balancer timeouts on idle connections.",
+				"Properties: connected, eventCount, bytesSent, connectedAt, uptime, lastEventId, data (user store)."
+			],
+			"methodGroups": [
+				{
+					"group": "Writing",
+					"methods": [
+						{
+							"method": "send",
+							"signature": "sse.send(data)",
+							"description": "Send a data-only event.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Text payload sent as a `data:` field."
+								}
+							]
+						},
+						{
+							"method": "sendJSON",
+							"signature": "sse.sendJSON(obj)",
+							"description": "Send a JSON-serialized event.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "obj",
+									"type": "any",
+									"required": "Yes",
+									"notes": "Value JSON-serialized into a `data:` field."
+								}
+							]
+						},
+						{
+							"method": "event",
+							"signature": "sse.event(name, data)",
+							"description": "Send a named event. Browser listens with es.addEventListener(name, ...).",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Event name. The client receives it as `event.type` in the `EventSource` handler."
+								},
+								{
+									"param": "data",
+									"type": "string | any",
+									"required": "Yes",
+									"notes": "Payload. Objects are JSON-stringified."
+								}
+							]
+						},
+						{
+							"method": "comment",
+							"signature": "sse.comment(text)",
+							"description": "Send a comment line (not received by EventSource).",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "text",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Comment text (`: text`). Keeps the connection alive without triggering client listeners."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Control",
+					"methods": [
+						{
+							"method": "retry",
+							"signature": "sse.retry(ms)",
+							"description": "Set the reconnection interval for the client.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "ms",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Reconnect delay sent to the client as a `retry:` field (milliseconds)."
+								}
+							]
+						},
+						{
+							"method": "keepAlive",
+							"signature": "sse.keepAlive(ms)",
+							"description": "Start sending periodic comment pings.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Starts auto-sending keep-alive comments at the given interval."
+							},
+							"methodParams": [
+								{
+									"param": "ms",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Interval in ms for sending `: ping` comments to prevent proxy timeouts."
+								}
+							]
+						},
+						{
+							"method": "flush",
+							"signature": "sse.flush()",
+							"description": "Flush the response stream.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Flushes the write buffer immediately."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "close",
+							"signature": "sse.close()",
+							"description": "Close the SSE stream.",
+							"methodReturns": {
+								"type": "void",
+								"description": "Ends the SSE stream and closes the response."
+							},
+							"methodParams": []
+						}
+					]
+				},
+				{
+					"group": "Events",
+					"methods": [
+						{
+							"method": "on",
+							"signature": "sse.on(event, handler)",
+							"description": "Listen for events: close, error.",
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "Returns the stream for chaining."
+							},
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "string",
+									"required": "Yes",
+									"notes": "`\"close\"` | `\"error\"`."
+								},
+								{
+									"param": "handler",
+									"type": "function",
+									"required": "Yes",
+									"notes": "Callback invoked when the event fires."
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

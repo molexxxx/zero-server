@@ -294,7 +294,7 @@ app.listen(3000)
 
 Creates an application instance — the central object for registering middleware, routes, and settings. Supports set/get, enable/disable, locals, param handlers, groups, chaining, and route introspection.
 
-#### Methods
+#### HTTP Routing
 
 | Method | Signature | Description |
 |---|---|---|
@@ -307,21 +307,45 @@ Creates an application instance — the central object for registering middlewar
 | `options` | `options(path, [opts], ...handlers)` | Register an OPTIONS route handler. |
 | `head` | `head(path, [opts], ...handlers)` | Register a HEAD route handler. |
 | `all` | `all(path, [opts], ...handlers)` | Register a handler for ALL HTTP methods. |
+
+
+#### WebSocket
+
+| Method | Signature | Description |
+|---|---|---|
 | `ws` | `ws(path, [opts], handler)` | Register a WebSocket upgrade handler. See Real-Time → WebSocket. |
+
+
+#### Route Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `param` | `param(name, handler)` | Register a parameter handler that fires when :name appears in a route. |
+| `group` | `group(prefix, [...middleware], fn)` | Group routes under a prefix with shared middleware. |
+| `chain` | `chain(path)` | Start a route chain for a single path. Returns { get, post, put, delete, ... }. |
+| `routes` | `routes()` | Return the full route table for introspection/debugging. |
+| `onError` | `onError(handler)` | Register a global error handler: (err, req, res, next) => {}. |
+
+
+#### App Settings
+
+| Method | Signature | Description |
+|---|---|---|
 | `set` | `set(key, value)` | Set an application setting (also used as get(key) to retrieve). |
 | `enable` | `enable(key)` | Set a boolean setting to true. |
 | `disable` | `disable(key)` | Set a boolean setting to false. |
 | `enabled` | `enabled(key)` | Check if a setting is truthy. |
 | `disabled` | `disabled(key)` | Check if a setting is falsy. |
 | `locals` | `locals` | A plain object for storing application-wide data. Merged into req.locals on each request. |
-| `param` | `param(name, handler)` | Register a parameter handler that fires when :name appears in a route. |
-| `group` | `group(prefix, [...middleware], fn)` | Group routes under a prefix with shared middleware. |
-| `chain` | `chain(path)` | Start a route chain for a single path. Returns { get, post, put, delete, ... }. |
-| `routes` | `routes()` | Return the full route table for introspection/debugging. |
-| `onError` | `onError(handler)` | Register a global error handler: (err, req, res, next) => {}. |
+
+
+#### Server Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
 | `listen` | `listen(port, [tlsOpts], [cb])` | Start the HTTP(S) server. Pass TLS options for HTTPS. |
 | `close` | `close()` | Shut down the server. |
-| `handler` | `handler` | The raw (req, res) handler for use with custom HTTP servers. |
+| `handler` | `handler()` | The raw (req, res) handler for use with custom HTTP servers. |
 
 
 ```js
@@ -366,7 +390,7 @@ app.listen(3000)
 
 Creates a standalone modular router instance for organizing routes into sub-apps. Mount routers with app.use(prefix, router). Supports all the same route methods as createApp, plus route chaining and introspection.
 
-#### Methods
+#### HTTP Routes
 
 | Method | Signature | Description |
 |---|---|---|
@@ -379,6 +403,12 @@ Creates a standalone modular router instance for organizing routes into sub-apps
 | `head` | `head(path, [opts], ...handlers)` | Register a HEAD route. |
 | `all` | `all(path, [opts], ...handlers)` | Register a handler for all HTTP methods. |
 | `use` | `use([prefix], handler)` | Mount middleware or a nested router. |
+
+
+#### Utilities
+
+| Method | Signature | Description |
+|---|---|---|
 | `route` | `route(path)` | Create a route chain: router.route('/items').get(fn).post(fn). |
 | `inspect` | `inspect()` | Return the route table for this router. |
 
@@ -417,35 +447,66 @@ app.listen(3000)
 
 The request object wraps Node's IncomingMessage with Express-compatible properties and helpers. Available as the first argument to every route handler and middleware.
 
-#### Methods
+#### Request Line
 
 | Method | Signature | Description |
 |---|---|---|
 | `method` | `req.method` | HTTP method string ('GET', 'POST', etc.). |
 | `url` | `req.url` | Full URL including query string. |
 | `path` | `req.path` | URL path without query string. |
+| `originalUrl` | `req.originalUrl` | Original URL as received — never rewritten by middleware. |
+| `baseUrl` | `req.baseUrl` | The URL prefix on which the current router was mounted. |
+
+
+#### Headers & Content
+
+| Method | Signature | Description |
+|---|---|---|
 | `headers` | `req.headers` | Lower-cased request headers object. |
-| `query` | `req.query` | Parsed query-string key/value pairs. |
+| `get` | `req.get(name)` | Get a request header (case-insensitive). |
+| `is` | `req.is(type)` | Check if Content-Type matches (e.g. req.is('json')). |
+| `accepts` | `req.accepts(...types)` | Content negotiation — which types the client accepts. |
+| `type` | `type` |  |
+
+
+#### Route Data
+
+| Method | Signature | Description |
+|---|---|---|
 | `params` | `req.params` | Route parameters from path segments (e.g. /:id). |
+| `query` | `req.query` | Parsed query-string key/value pairs. |
 | `body` | `req.body` | Request body (populated by body-parsing middleware). |
+
+
+#### Auth & Cookies
+
+| Method | Signature | Description |
+|---|---|---|
 | `cookies` | `req.cookies` | Parsed cookies (populated by cookieParser). |
 | `signedCookies` | `req.signedCookies` | Verified signed cookies (populated by cookieParser with a secret). |
 | `secret` | `req.secret` | First signing secret (set by cookieParser). Used by res.cookie({ signed: true }). |
+
+
+#### Client Info
+
+| Method | Signature | Description |
+|---|---|---|
 | `ip` | `req.ip` | Remote IP address. |
 | `secure` | `req.secure` | true if the connection is over TLS. |
 | `protocol` | `req.protocol` | 'https' or 'http'. |
 | `hostname` | `req.hostname` | Hostname from the Host header. |
 | `subdomains` | `req.subdomains([offset])` | Array of subdomains (offset defaults to 2). |
-| `originalUrl` | `req.originalUrl` | Original URL as received — never rewritten by middleware. |
-| `baseUrl` | `req.baseUrl` | The URL prefix on which the current router was mounted. |
-| `locals` | `req.locals` | Request-scoped data store (merged from app.locals). |
-| `id` | `req.id` | Unique request ID (set by requestId middleware). |
-| `get` | `req.get(name)` | Get a request header (case-insensitive). |
-| `is` | `req.is(type)` | Check if Content-Type matches (e.g. req.is('json')). |
-| `accepts` | `req.accepts(...types)` | Content negotiation — which types the client accepts. |
+| `xhr` | `req.xhr` | true if X-Requested-With is XMLHttpRequest. |
 | `fresh` | `req.fresh` | true if the client cache is still valid (ETag/Last-Modified). |
 | `stale` | `req.stale` | Inverse of fresh. |
-| `xhr` | `req.xhr` | true if X-Requested-With is XMLHttpRequest. |
+
+
+#### Misc
+
+| Method | Signature | Description |
+|---|---|---|
+| `locals` | `req.locals` | Request-scoped data store (merged from app.locals). |
+| `id` | `req.id` | Unique request ID (set by requestId middleware). |
 | `range` | `req.range(size)` | Parse the Range header. Returns object or -1/-2. |
 | `raw` | `req.raw` | The original Node IncomingMessage. |
 
@@ -459,7 +520,7 @@ The request object wraps Node's IncomingMessage with Express-compatible properti
 
 The response object wraps Node's ServerResponse with chainable methods for setting status codes, headers, cookies, and sending various response types. Available as the second argument to every route handler.
 
-#### Methods
+#### Status & Headers
 
 | Method | Signature | Description |
 |---|---|---|
@@ -469,17 +530,41 @@ The response object wraps Node's ServerResponse with chainable methods for setti
 | `append` | `res.append(name, value)` | Append a value to a header. |
 | `vary` | `res.vary(field)` | Add a field to the Vary header. |
 | `type` | `res.type(ct)` | Set Content-Type. Chainable. |
+
+
+#### Body
+
+| Method | Signature | Description |
+|---|---|---|
 | `send` | `res.send(body)` | Send a response (string, Buffer, object, or null). Auto-sets Content-Type. |
 | `json` | `res.json(obj)` | Send a JSON response with Content-Type: application/json. |
 | `text` | `res.text(str)` | Send a plain text response. |
 | `html` | `res.html(str)` | Send an HTML response. |
 | `sendStatus` | `res.sendStatus(code)` | Send only the status code with its reason phrase as body. |
+
+
+#### Files & Redirects
+
+| Method | Signature | Description |
+|---|---|---|
 | `sendFile` | `res.sendFile(path, [opts], [cb])` | Stream a file as the response with appropriate Content-Type. |
 | `download` | `res.download(path, [filename], [cb])` | Prompt a file download with Content-Disposition header. |
-| `cookie` | `res.cookie(name, value, [opts])` | Set a cookie. Supports signed (auto-sign via req.secret), priority (Low/Medium/High), partitioned (CHIPS), and auto-serializes objects as JSON cookies (j: prefix). Chainable. |
-| `clearCookie` | `res.clearCookie(name, [opts])` | Clear a cookie by setting it to expire. Chainable. |
 | `redirect` | `res.redirect([status], url)` | Send a redirect response. Default status: 302. |
 | `format` | `res.format(types)` | Content negotiation — respond based on Accept header. Keys are MIME types. |
+
+
+#### Cookies
+
+| Method | Signature | Description |
+|---|---|---|
+| `cookie` | `res.cookie(name, value, [opts])` | Set a cookie. Supports signed (auto-sign via req.secret), priority (Low/Medium/High), partitioned (CHIPS), and auto-serializes objects as JSON cookies (j: prefix). Chainable. |
+| `clearCookie` | `res.clearCookie(name, [opts])` | Clear a cookie by setting it to expire. Chainable. |
+
+
+#### Misc
+
+| Method | Signature | Description |
+|---|---|---|
 | `links` | `res.links(links)` | Set the Link header from { rel: url } pairs. Chainable. |
 | `location` | `res.location(url)` | Set the Location header. Chainable. |
 | `sse` | `res.sse([opts])` | Open a Server-Sent Events stream. See Real-Time → SSE. |
@@ -1057,12 +1142,18 @@ app.use(logger({
 
 Cookie parsing middleware with timing-safe HMAC-SHA256 signature verification, JSON cookie support, secret rotation, and static helper methods. Parses the Cookie header into req.cookies and req.signedCookies. When a secret is provided, signed cookies (s: prefix) are verified using crypto.timingSafeEqual to prevent timing attacks. JSON cookies (j: prefix) are automatically parsed into objects. Exposes req.secret and req.secrets for downstream middleware like res.cookie({ signed: true }) and csrf().
 
-#### Methods
+#### Signing
 
 | Method | Signature | Description |
 |---|---|---|
 | `sign` | `cookieParser.sign(value, secret)` | Sign a value with HMAC-SHA256. Returns 's:<value>.<signature>'. |
 | `unsign` | `cookieParser.unsign(value, secrets)` | Verify and unsign a signed cookie. Tries all provided secrets (rotation support). Returns the original value or false. |
+
+
+#### Parsing
+
+| Method | Signature | Description |
+|---|---|---|
 | `jsonCookie` | `cookieParser.jsonCookie(value)` | Serialize a value as a JSON cookie string: 'j:' + JSON.stringify(value). |
 | `parseJSON` | `cookieParser.parseJSON(str)` | Parse a JSON cookie string (j: prefix). Returns parsed value or original string. |
 
@@ -1178,7 +1269,7 @@ app.post('/api/transfer', (req, res) => {
 
 Request validation middleware with 11 types and auto-coercion. Validates req.body, req.query, and req.params against a declarative schema. Unknown fields are stripped by default. Returns 422 with structured error messages on failure.
 
-#### Methods
+#### Validation
 
 | Method | Signature | Description |
 |---|---|---|
@@ -1242,17 +1333,29 @@ app.get('/search/:category', validate({
 
 Typed environment variable system with .env file loading, schema validation, and type coercion. Access variables via proxy (env.PORT), function call (env('PORT')), or method (env.get('PORT')). Supports 9 types: string, number, integer, port, boolean, array, json, url, enum. Loads .env files in precedence order with process.env always winning.
 
-#### Methods
+#### Loading
 
 | Method | Signature | Description |
 |---|---|---|
 | `load` | `env.load(schema, [opts])` | Load and validate environment variables from .env files against a typed schema. Throws on validation failure with all errors. |
+| `parse` | `env.parse(src)` | Parse a .env file string into key-value pairs. Supports comments, quotes, multiline, interpolation, and export prefix. |
+
+
+#### Reading
+
+| Method | Signature | Description |
+|---|---|---|
 | `get` | `env.get(key)` | Get a typed environment variable by key. |
 | `require` | `env.require(key)` | Get a variable or throw if it's not set. Use for critical config. |
 | `has` | `env.has(key)` | Check if a variable is set (not undefined). |
 | `all` | `env.all()` | Get all loaded values as a plain object. |
+
+
+#### Management
+
+| Method | Signature | Description |
+|---|---|---|
 | `reset` | `env.reset()` | Reset the env store. Useful for testing. |
-| `parse` | `env.parse(src)` | Parse a .env file string into key-value pairs. Supports comments, quotes, multiline, interpolation, and export prefix. |
 
 
 #### Options
@@ -1409,35 +1512,79 @@ env.load({
 
 The ORM entry point. Connect to a database using one of 7 built-in adapters (memory, json, sqlite, mysql, postgres, mongo, redis), register your Model classes, and sync schemas. The Database instance manages the connection lifecycle and provides transaction support. All network-facing adapters (mysql, postgres, mongo, redis) validate credentials on connect — invalid host, port, user, or database values throw immediately.
 
-#### Methods
+#### Connection
 
 | Method | Signature | Description |
 |---|---|---|
 | `connect` | `Database.connect(type, [opts])` | Static factory method. Creates a Database instance with the specified adapter. Validates credentials for network adapters. Returns the Database instance. |
-| `register` | `db.register(ModelClass)` | Register a Model class with this database. Chainable. |
-| `registerAll` | `db.registerAll(...models)` | Register multiple Model classes. Chainable. |
+| `disconnect` | `disconnect([cb])` |  |
+| `close` | `db.close()` | Close the database connection. Returns Promise. |
+| `ping` | `ping()` |  |
+| `getAdapter` | `getAdapter()` |  |
+
+
+#### Query & DDL
+
+| Method | Signature | Description |
+|---|---|---|
+| `query` | `query(sql, ...params)` |  |
+| `execute` | `execute(sql, ...params)` |  |
+| `raw` | `raw(sql, ...params)` |  |
+| `schema` | `schema(definition)` |  |
 | `sync` | `db.sync()` | Create tables for all registered models. Returns Promise. |
 | `drop` | `db.drop()` | Drop tables for all registered models. Returns Promise. |
-| `close` | `db.close()` | Close the database connection. Returns Promise. |
-| `model` | `db.model(name)` | Get a registered model by class name. |
+
+
+#### Transactions
+
+| Method | Signature | Description |
+|---|---|---|
+| `begin` | `begin()` |  |
 | `transaction` | `db.transaction(fn)` | Run an async function inside a transaction. Auto-commits on success, rolls back on error. Falls back to direct execution if the adapter doesn't support transactions. |
-| `addColumn` | `db.addColumn(table, column, def)` | Add a column to an existing table. Supports all schema options (type, required, default, references, check). |
-| `dropColumn` | `db.dropColumn(table, column)` | Drop a column from a table. |
-| `renameColumn` | `db.renameColumn(table, old, new)` | Rename a column in a table. |
-| `renameTable` | `db.renameTable(old, new)` | Rename a table. |
-| `createIndex` | `db.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. cols can be a string or string[]. |
-| `dropIndex` | `db.dropIndex(table, name)` | Drop an index by name. |
-| `hasTable` | `db.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
-| `hasColumn` | `db.hasColumn(table, column)` | Check if a column exists on a table. Returns Promise<boolean>. |
-| `describeTable` | `db.describeTable(table)` | Get column info for a table. Returns Promise<Array>. |
-| `addForeignKey` | `db.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint (MySQL/PostgreSQL). opts: { name, onDelete, onUpdate }. |
-| `dropForeignKey` | `db.dropForeignKey(table, name)` | Drop a FK constraint by name (MySQL/PostgreSQL). |
-| `validateFKAction` | `validateFKAction(action)` | Validate a FK action string (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION). Throws on invalid. Used internally by adapters; available for custom DDL. |
-| `validateCheck` | `validateCheck(expr)` | Validate a CHECK constraint expression for SQL injection patterns (blocks semicolons, DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, EXEC). Throws on dangerous input. Used internally by adapters. |
-| `enableProfiling` | `db.enableProfiling([options])` | Attach a QueryProfiler to this database instance. Returns the profiler. Options: { enabled, slowThreshold, maxHistory, onSlow, n1Threshold, n1Window, onN1, maxN1History }. |
-| `connectWithReplicas` | `Database.connectWithReplicas(type, primaryOpts, replicaConfigs, [options])` | Static. Create a Database with a primary adapter and read replicas. replicaConfigs is an array of connection option objects. Options: { strategy, stickyWrite, stickyWindow }. |
-| `profiler` | `db.profiler` | Getter. Returns the attached QueryProfiler instance, or null if profiling is not enabled. |
-| `replicas` | `db.replicas` | Getter. Returns the ReplicaManager instance, or null if no replicas are configured. |
+| `savepoint` | `savepoint(name)` |  |
+| `rollback` | `rollback([name])` |  |
+| `commit` | `commit()` |  |
+
+
+#### Introspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `tables` | `tables([schema])` |  |
+| `columns` | `columns(table)` |  |
+| `indexes` | `indexes(table)` |  |
+| `dialect` | `dialect` |  |
+| `version` | `version` |  |
+| `status` | `status` |  |
+
+
+#### Config
+
+| Method | Signature | Description |
+|---|---|---|
+| `configure` | `configure(opts)` |  |
+| `getConfig` | `getConfig()` |  |
+| `setConfig` | `setConfig(key, value)` |  |
+| `logger` | `logger(fn)` |  |
+| `debug` | `debug(enabled)` |  |
+| `pool` | `pool(opts)` |  |
+
+
+#### Migration
+
+| Method | Signature | Description |
+|---|---|---|
+| `addColumn` | `addColumn(table, column, opts)` | Adds a new column to an existing table. |
+| `dropColumn` | `dropColumn(table, column)` | Drops a column from an existing table. |
+| `renameColumn` | `renameColumn(table, from, to)` | Renames a column in an existing table. |
+| `renameTable` | `renameTable(from, to)` | Renames an existing table. |
+| `createIndex` | `createIndex(table, columns, opts)` | Creates an index on one or more columns. |
+| `dropIndex` | `dropIndex(table, name)` | Drops a named index from a table. |
+| `hasTable` | `hasTable(table)` | Checks whether a table exists in the database. |
+| `hasColumn` | `hasColumn(table, column)` | Checks whether a column exists on a table. |
+| `describeTable` | `describeTable(table)` | Returns full column metadata for a table. |
+| `addForeignKey` | `addForeignKey(table, column, refTable, refColumn, opts)` | Adds a foreign key constraint to an existing column. |
+| `dropForeignKey` | `dropForeignKey(table, constraintName)` | Drops a named foreign key constraint. |
 
 
 #### Options
@@ -1514,43 +1661,74 @@ await db.transaction(async () => {
 
 The ORM base class — extend it to define your data models. Supports typed schemas with validation, timestamps, soft deletes, lifecycle hooks, hidden fields, reusable scopes, relationships (hasMany, hasOne, belongsTo, belongsToMany), and a full suite of CRUD operations.
 
-#### Methods
+#### CRUD
 
 | Method | Signature | Description |
 |---|---|---|
+| `find` | `Model.find([conditions])` | Find all records matching conditions. Returns Promise<Model[]>. |
+| `findAll` | `findAll([conditions])` |  |
+| `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
+| `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
 | `create` | `Model.create(data)` | Insert a new record. Runs validation and beforeCreate/afterCreate hooks. Returns Promise<Model>. |
 | `createMany` | `Model.createMany([data, ...])` | Insert multiple records. Returns Promise<Model[]>. |
-| `find` | `Model.find([conditions])` | Find all records matching conditions. Returns Promise<Model[]>. |
-| `findOne` | `Model.findOne(conditions)` | Find a single record. Returns Promise<Model\|null>. |
-| `findById` | `Model.findById(id)` | Find by primary key. Returns Promise<Model\|null>. |
-| `findOrCreate` | `Model.findOrCreate(conditions, [defaults])` | Find or insert. Returns Promise<{ instance, created }>. |
+| `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
+| `updateAll` | `updateAll(conditions, data)` |  |
+| `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
+| `deleteAll` | `deleteAll([conditions])` |  |
+| `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
 | `exists` | `Model.exists([conditions])` | Check if any matching records exist. Returns Promise<boolean>. |
 | `upsert` | `Model.upsert(conditions, data)` | Insert or update. Finds by conditions, creates with merged data if not found, updates if found. Returns Promise<{ instance, created }>. |
-| `updateWhere` | `Model.updateWhere(conditions, data)` | Update all matching records. Returns Promise<number> (affected count). |
-| `deleteWhere` | `Model.deleteWhere(conditions)` | Delete all matching records (respects softDelete). Returns Promise<number>. |
-| `count` | `Model.count([conditions])` | Count matching records. Returns Promise<number>. |
+
+
+#### Schema & Inspect
+
+| Method | Signature | Description |
+|---|---|---|
+| `schema` | `schema` |  |
+| `columns` | `columns` |  |
+| `tableName` | `tableName` |  |
+| `primaryKey` | `primaryKey` |  |
+| `fields` | `fields` |  |
+| `relations` | `relations` |  |
+| `validate` | `validate(data)` |  |
+| `cast` | `cast(data)` |  |
+| `hydrate` | `hydrate(rows)` |  |
+
+
+#### Query Builder
+
+| Method | Signature | Description |
+|---|---|---|
 | `query` | `Model.query()` | Start a fluent Query builder. See ORM → Query. |
-| `scope` | `Model.scope(name, [...args])` | Start a query with a named scope applied. Returns Query. |
-| `save` | `instance.save()` | Insert (if new) or update dirty fields (if persisted). Returns Promise<Model>. |
-| `update` | `instance.update(data)` | Update specific fields on the instance. Returns Promise<Model>. |
-| `delete` | `instance.delete()` | Delete the instance (soft or hard depending on softDelete setting). |
-| `restore` | `instance.restore()` | Restore a soft-deleted instance (sets deletedAt to null). |
-| `reload` | `instance.reload()` | Re-fetch the instance from the database. Returns Promise<Model>. |
-| `toJSON` | `instance.toJSON()` | Return a plain object, excluding fields listed in static hidden. |
-| `load` | `instance.load(relationName)` | Eagerly load a relationship. Sets instance[relationName]. Returns Promise. |
-| `increment` | `instance.increment(field, [by])` | Increment a numeric field by amount (default 1). Saves immediately. |
-| `decrement` | `instance.decrement(field, [by])` | Decrement a numeric field by amount (default 1). Saves immediately. |
-| `hasMany` | `Model.hasMany(Related, foreignKey, [localKey])` | Define a one-to-many relationship. |
-| `hasOne` | `Model.hasOne(Related, foreignKey, [localKey])` | Define a one-to-one relationship. |
-| `belongsTo` | `Model.belongsTo(Related, foreignKey, [otherKey])` | Define an inverse belongs-to relationship. |
-| `belongsToMany` | `Model.belongsToMany(Related, opts)` | Define a many-to-many relationship through a junction table. Options: { through, foreignKey, otherKey, localKey, relatedKey }. |
-| `first` | `Model.first([conditions])` | Find the first record. Returns Promise<Model\|null>. |
-| `last` | `Model.last([conditions])` | Find the last record (by PK descending). Returns Promise<Model\|null>. |
-| `all` | `Model.all([conditions])` | Get all records (alias for find). Returns Promise<Model[]>. |
+| `where` | `where(field, [value])` |  |
+| `select` | `select(...fields)` |  |
+| `include` | `include(relation)` |  |
+| `orderBy` | `orderBy(field, [dir])` |  |
+| `limit` | `limit(n)` |  |
+| `offset` | `offset(n)` |  |
 | `paginate` | `Model.paginate(page, [perPage], [conditions])` | Rich pagination: returns { data, total, page, perPage, pages, hasNext, hasPrev }. |
-| `chunk` | `Model.chunk(size, fn, [conditions])` | Process all records in batches. fn(batch, batchIndex) — supports async. |
-| `random` | `Model.random([conditions])` | Get a random record. Returns Promise<Model\|null>. |
-| `pluck` | `Model.pluck(field, [conditions])` | Pluck values for a single column. Returns Promise<Array>. |
+
+
+#### Soft Delete
+
+| Method | Signature | Description |
+|---|---|---|
+| `softDelete` | `softDelete()` |  |
+| `restore` | `instance.restore()` | Restore a soft-deleted instance (sets deletedAt to null). |
+| `withTrashed` | `withTrashed()` |  |
+| `onlyTrashed` | `onlyTrashed()` |  |
+
+
+#### Lifecycle Hooks
+
+| Method | Signature | Description |
+|---|---|---|
+| `beforeCreate` | `beforeCreate(fn)` |  |
+| `afterCreate` | `afterCreate(fn)` |  |
+| `beforeUpdate` | `beforeUpdate(fn)` |  |
+| `afterUpdate` | `afterUpdate(fn)` |  |
+| `beforeDelete` | `beforeDelete(fn)` |  |
+| `afterDelete` | `afterDelete(fn)` |  |
 
 
 #### Options
@@ -2118,7 +2296,16 @@ const totalAge = await User.query().reduce((sum, u) => sum + u.age, 0)
 
 The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-based persistence. It auto-creates parent directories, ships with production-tuned PRAGMA defaults (WAL, 64 MB cache, memory-mapped I/O), and exposes utility methods for database maintenance. Ideal for single-server apps, prototyping, and embedded use cases.
 
-#### Methods
+#### Connection & Queries
+
+| Method | Signature | Description |
+|---|---|---|
+| `raw` | `adapter.raw(sql, ...params)` | Execute a raw SQL SELECT query with parameters. |
+| `transaction` | `adapter.transaction(fn)` | Run a function inside a SQLite transaction. Auto-commits or rolls back. |
+| `close` | `adapter.close()` | Close the database connection. |
+
+
+#### Database Info
 
 | Method | Signature | Description |
 |---|---|---|
@@ -2127,27 +2314,36 @@ The SQLite adapter uses better-sqlite3 for synchronous, high-performance file-ba
 | `integrity` | `adapter.integrity()` | Run PRAGMA integrity_check. Returns 'ok' or a problem description. |
 | `vacuum` | `adapter.vacuum()` | Rebuild the database file, reclaiming unused pages. |
 | `fileSize` | `adapter.fileSize()` | Get the database file size in bytes. Returns 0 for in-memory databases. |
+| `compileOptions` | `adapter.compileOptions()` | Get the compile-time options that SQLite was built with. |
+| `cacheStatus` | `adapter.cacheStatus()` | Get prepared statement cache stats: { cached, max }. |
+| `overview` | `adapter.overview()` | Database overview: all tables with row counts, total rows, and file size. |
+| `pageInfo` | `adapter.pageInfo()` | Get page size, page count, and total bytes — helps estimate table overhead. |
+
+
+#### Schema Inspection
+
+| Method | Signature | Description |
+|---|---|---|
 | `tables` | `adapter.tables()` | List all user-created table names. |
-| `raw` | `adapter.raw(sql, ...params)` | Execute a raw SQL SELECT query with parameters. |
-| `transaction` | `adapter.transaction(fn)` | Run a function inside a SQLite transaction. Auto-commits or rolls back. |
-| `close` | `adapter.close()` | Close the database connection. |
 | `columns` | `adapter.columns(table)` | Get column info: cid, name, type, notnull, defaultValue, pk. |
 | `indexes` | `adapter.indexes(table)` | Get indexes: name, unique, and column names for each index. |
 | `foreignKeys` | `adapter.foreignKeys(table)` | Get foreign keys: id, table, from, to, onUpdate, onDelete. |
 | `tableStatus` | `adapter.tableStatus([table])` | Get row count per table. Omit table to get all tables. |
-| `overview` | `adapter.overview()` | Database overview: all tables with row counts, total rows, and file size. |
-| `pageInfo` | `adapter.pageInfo()` | Get page size, page count, and total bytes — helps estimate table overhead. |
-| `compileOptions` | `adapter.compileOptions()` | Get the compile-time options that SQLite was built with. |
-| `cacheStatus` | `adapter.cacheStatus()` | Get prepared statement cache stats: { cached, max }. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns boolean. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns boolean. |
+| `describeTable` | `adapter.describeTable(table)` | Get full table info: { columns, indexes, foreignKeys }. |
+
+
+#### Schema Mutations
+
+| Method | Signature | Description |
+|---|---|---|
 | `addColumn` | `adapter.addColumn(table, col, def)` | Add a column to a table. def supports type, required, default, check, references. |
 | `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column (SQLite 3.35+). |
 | `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column (SQLite 3.25+). |
 | `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
 | `createIndex` | `adapter.createIndex(table, cols, [opts])` | Create an index. opts: { name, unique }. |
 | `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index by name (table is ignored — indexes are schema-scoped in SQLite). |
-| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns boolean. |
-| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns boolean. |
-| `describeTable` | `adapter.describeTable(table)` | Get full table info: { columns, indexes, foreignKeys }. |
 
 
 #### Options
@@ -2224,28 +2420,49 @@ const replica = Database.connect('sqlite', {
 
 MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepared statements, and utility methods for introspection and maintenance. Supports SSL, custom charsets, timezone configuration, pool health monitoring, and built-in debug methods for table status, indexes, foreign keys, and server variables.
 
-#### Methods
+#### Connection & Queries
 
 | Method | Signature | Description |
 |---|---|---|
 | `raw` | `adapter.raw(sql, ...params)` | Execute a raw SQL SELECT query with parameterized inputs. Returns rows. |
 | `exec` | `adapter.exec(sql, ...params)` | Execute a raw statement (INSERT, UPDATE, DDL). Returns { affectedRows, insertId }. |
-| `tables` | `adapter.tables()` | List all tables in the current database. |
-| `columns` | `adapter.columns(table)` | Get column info for a table (Field, Type, Null, Key, Default, Extra). |
-| `databaseSize` | `adapter.databaseSize()` | Get total database size in bytes (data + indexes). |
-| `poolStatus` | `adapter.poolStatus()` | Get pool stats: { total, idle, used, queued }. |
-| `version` | `adapter.version()` | Get MySQL/MariaDB server version string. |
-| `ping` | `adapter.ping()` | Ping the server. Returns true if healthy. |
 | `transaction` | `adapter.transaction(fn)` | Run a function inside a transaction. Receives a connection object. Auto-commits/rollbacks. |
 | `close` | `adapter.close()` | Close the connection pool. |
+| `ping` | `adapter.ping()` | Ping the server. Returns true if healthy. |
+| `poolStatus` | `adapter.poolStatus()` | Get pool stats: { total, idle, used, queued }. |
+
+
+#### Database Info
+
+| Method | Signature | Description |
+|---|---|---|
+| `databaseSize` | `adapter.databaseSize()` | Get total database size in bytes (data + indexes). |
+| `version` | `adapter.version()` | Get MySQL/MariaDB server version string. |
+| `overview` | `adapter.overview()` | Full database overview — all tables with size, rows, and formatted total size. |
+| `variables` | `adapter.variables([filter])` | SHOW VARIABLES — optionally filtered with a LIKE pattern. |
+| `processlist` | `adapter.processlist()` | SHOW PROCESSLIST — active connections: id, user, host, db, command, time, state, info. |
+
+
+#### Schema Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `tables` | `adapter.tables()` | List all tables in the current database. |
+| `columns` | `adapter.columns(table)` | Get column info for a table (Field, Type, Null, Key, Default, Extra). |
 | `tableStatus` | `adapter.tableStatus([table])` | SHOW TABLE STATUS — name, engine, rows, dataLength, indexLength, totalSize, autoIncrement, collation, createTime, updateTime, comment. |
 | `tableSize` | `adapter.tableSize(table)` | Human-readable table size: { rows, dataSize, indexSize, totalSize }. |
 | `indexes` | `adapter.indexes(table)` | SHOW INDEX — name, column, unique, type, cardinality. |
 | `tableCharset` | `adapter.tableCharset(table)` | Get charset and collation of a table. |
 | `foreignKeys` | `adapter.foreignKeys(table)` | Get foreign keys: constraintName, column, referencedTable, referencedColumn, onDelete, onUpdate. |
-| `overview` | `adapter.overview()` | Full database overview — all tables with size, rows, and formatted total size. |
-| `variables` | `adapter.variables([filter])` | SHOW VARIABLES — optionally filtered with a LIKE pattern. |
-| `processlist` | `adapter.processlist()` | SHOW PROCESSLIST — active connections: id, user, host, db, command, time, state, info. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get detailed column info. Returns Promise<Array>. |
+
+
+#### Schema Mutations
+
+| Method | Signature | Description |
+|---|---|---|
 | `alterTable` | `adapter.alterTable(table, opts)` | Alter a table's engine, charset, or collation. opts: { engine, charset, collation }. |
 | `addColumn` | `adapter.addColumn(table, col, def, [opts])` | Add a column. def: schema definition. opts: { after: 'col' } to position after a column. |
 | `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column. |
@@ -2255,9 +2472,6 @@ MySQL / MariaDB adapter using the mysql2 driver with connection pooling, prepare
 | `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index from a table. |
 | `addForeignKey` | `adapter.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint. opts: { name, onDelete, onUpdate }. |
 | `dropForeignKey` | `adapter.dropForeignKey(table, name)` | Drop a FK constraint by name. |
-| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
-| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
-| `describeTable` | `adapter.describeTable(table)` | Get detailed column info. Returns Promise<Array>. |
 
 
 #### Options
@@ -2338,31 +2552,52 @@ await db.adapter.exec(
 
 PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameterized queries, JSONB support, and utility methods for schema introspection, pool monitoring, real-time LISTEN/NOTIFY, and built-in debug methods for table status, indexes, foreign keys, constraints, and server variables.
 
-#### Methods
+#### Connection & Queries
 
 | Method | Signature | Description |
 |---|---|---|
 | `raw` | `adapter.raw(sql, ...params)` | Execute a raw SQL SELECT query with $1-style params. Returns rows. |
 | `exec` | `adapter.exec(sql, ...params)` | Execute a raw statement that doesn't return rows. Returns { rowCount }. |
-| `tables` | `adapter.tables([schema])` | List all tables in a schema (default: 'public'). |
-| `columns` | `adapter.columns(table, [schema])` | Get column info: column_name, data_type, is_nullable, column_default. |
-| `databaseSize` | `adapter.databaseSize()` | Get total database size in bytes. |
-| `tableSize` | `adapter.tableSize(table)` | Get total size of a table including indexes, in bytes. |
-| `poolStatus` | `adapter.poolStatus()` | Get pool stats: { total, idle, waiting }. |
-| `version` | `adapter.version()` | Get PostgreSQL server version string. |
-| `ping` | `adapter.ping()` | Ping the server. Returns true if healthy. |
-| `listen` | `adapter.listen(channel, callback)` | Subscribe to PG LISTEN/NOTIFY. Returns an unlisten function. |
 | `transaction` | `adapter.transaction(fn)` | Run a function inside a transaction. Receives a client. Auto-commits/rollbacks. |
 | `close` | `adapter.close()` | Close the connection pool. |
-| `tableStatus` | `adapter.tableStatus([table])` | pg_stat_user_tables — name, rows, totalSize, dataSize, indexSize, sequentialScans, indexScans, liveTuples, deadTuples, lastVacuum, lastAnalyze. |
-| `tableSizeFormatted` | `adapter.tableSizeFormatted(table)` | Human-readable table size: { rows, dataSize, indexSize, totalSize }. |
-| `indexes` | `adapter.indexes(table)` | Get indexes: name, columns, unique, type, size. |
-| `foreignKeys` | `adapter.foreignKeys(table)` | Get foreign keys: constraintName, column, referencedTable, referencedColumn, onDelete, onUpdate. |
+| `ping` | `adapter.ping()` | Ping the server. Returns true if healthy. |
+| `poolStatus` | `adapter.poolStatus()` | Get pool stats: { total, idle, waiting }. |
+| `listen` | `adapter.listen(channel, callback)` | Subscribe to PG LISTEN/NOTIFY. Returns an unlisten function. |
+
+
+#### Database Info
+
+| Method | Signature | Description |
+|---|---|---|
+| `databaseSize` | `adapter.databaseSize()` | Get total database size in bytes. |
+| `version` | `adapter.version()` | Get PostgreSQL server version string. |
 | `overview` | `adapter.overview()` | Full database overview — all tables with sizes, row counts, and formatted total. |
 | `variables` | `adapter.variables([filter])` | Get pg_settings — optionally filtered with a LIKE pattern. |
 | `processlist` | `adapter.processlist()` | Active backends from pg_stat_activity: pid, user, database, state, query, duration. |
+
+
+#### Schema Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `tables` | `adapter.tables([schema])` | List all tables in a schema (default: 'public'). |
+| `columns` | `adapter.columns(table, [schema])` | Get column info: column_name, data_type, is_nullable, column_default. |
+| `tableStatus` | `adapter.tableStatus([table])` | pg_stat_user_tables — name, rows, totalSize, dataSize, indexSize, sequentialScans, indexScans, liveTuples, deadTuples, lastVacuum, lastAnalyze. |
+| `tableSize` | `adapter.tableSize(table)` | Get total size of a table including indexes, in bytes. |
+| `tableSizeFormatted` | `adapter.tableSizeFormatted(table)` | Human-readable table size: { rows, dataSize, indexSize, totalSize }. |
+| `indexes` | `adapter.indexes(table)` | Get indexes: name, columns, unique, type, size. |
+| `foreignKeys` | `adapter.foreignKeys(table)` | Get foreign keys: constraintName, column, referencedTable, referencedColumn, onDelete, onUpdate. |
 | `constraints` | `adapter.constraints(table)` | Get all table constraints: name, type (PRIMARY KEY, UNIQUE, CHECK, FK, EXCLUSION), definition. |
 | `comments` | `adapter.comments(table)` | Get table comment and column comments: { tableComment, columns: [{ name, comment }] }. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get column info with types, nullable, defaults, and PK flags. |
+
+
+#### Schema Mutations
+
+| Method | Signature | Description |
+|---|---|---|
 | `addColumn` | `adapter.addColumn(table, col, def)` | Add a column. def supports type, required, default, check, references. |
 | `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column. |
 | `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column. |
@@ -2371,9 +2606,6 @@ PostgreSQL adapter using the pg driver with connection pooling, $1/$2 parameteri
 | `dropIndex` | `adapter.dropIndex(table, name)` | Drop an index by name (table is ignored — indexes are schema-scoped in PostgreSQL). |
 | `addForeignKey` | `adapter.addForeignKey(table, col, refTable, refCol, [opts])` | Add a FK constraint. opts: { name, onDelete, onUpdate }. |
 | `dropForeignKey` | `adapter.dropForeignKey(table, name)` | Drop a FK constraint by name. |
-| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
-| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
-| `describeTable` | `adapter.describeTable(table)` | Get column info with types, nullable, defaults, and PK flags. |
 
 
 #### Options
@@ -2462,29 +2694,41 @@ const admins = await db.adapter.raw(
 
 MongoDB adapter using the official mongodb driver with connection pooling, automatic reconnection, index management, and utility methods for collection introspection and database stats. Maps the ORM's relational model to MongoDB documents with auto-increment IDs.
 
-#### Methods
+#### Connection & Queries
 
 | Method | Signature | Description |
 |---|---|---|
 | `raw` | `adapter.raw(command)` | Run a raw MongoDB command document. Returns the command result. |
-| `collections` | `adapter.collections()` | List all collections in the database. |
-| `stats` | `adapter.stats()` | Get database stats: { collections, objects, dataSize, storageSize, indexes, indexSize }. |
-| `collectionStats` | `adapter.collectionStats(name)` | Get stats for a specific collection: { count, size, avgObjSize, storageSize, nindexes }. |
-| `createIndex` | `adapter.createIndex(collection, keys, [opts])` | Create an index. keys: { email: 1 } for ascending. opts: { unique: true }. |
-| `indexes` | `adapter.indexes(collection)` | List all indexes on a collection. |
-| `dropIndex` | `adapter.dropIndex(collection, indexName)` | Drop a specific index by name. |
+| `transaction` | `adapter.transaction(fn)` | Run operations in a transaction (requires replica set). Receives a session object. |
+| `close` | `adapter.close()` | Close the connection. |
 | `ping` | `adapter.ping()` | Ping the MongoDB server. Returns true if healthy. |
 | `version` | `adapter.version()` | Get the MongoDB server version. |
 | `isConnected` | `adapter.isConnected` | Property — true if currently connected. |
-| `transaction` | `adapter.transaction(fn)` | Run operations in a transaction (requires replica set). Receives a session object. |
-| `close` | `adapter.close()` | Close the connection. |
+
+
+#### Collection Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `collections` | `adapter.collections()` | List all collections in the database. |
+| `stats` | `adapter.stats()` | Get database stats: { collections, objects, dataSize, storageSize, indexes, indexSize }. |
+| `collectionStats` | `adapter.collectionStats(name)` | Get stats for a specific collection: { count, size, avgObjSize, storageSize, nindexes }. |
+| `indexes` | `adapter.indexes(collection)` | List all indexes on a collection. |
 | `hasTable` | `adapter.hasTable(collection)` | Check if a collection exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(collection, field)` | Check if a field exists in any document. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(collection, [sample])` | Infer schema by sampling documents. Returns [{ name, types }]. |
+
+
+#### Collection Mutations
+
+| Method | Signature | Description |
+|---|---|---|
+| `createIndex` | `adapter.createIndex(collection, keys, [opts])` | Create an index. keys: { email: 1 } for ascending. opts: { unique: true }. |
+| `dropIndex` | `adapter.dropIndex(collection, indexName)` | Drop a specific index by name. |
 | `renameTable` | `adapter.renameTable(old, new)` | Rename a collection. |
 | `addColumn` | `adapter.addColumn(collection, field, def)` | Add a field to all documents with a default value. |
 | `dropColumn` | `adapter.dropColumn(collection, field)` | Remove a field from all documents. |
 | `renameColumn` | `adapter.renameColumn(collection, old, new)` | Rename a field in all documents. |
-| `hasColumn` | `adapter.hasColumn(collection, field)` | Check if a field exists in any document. Returns Promise<boolean>. |
-| `describeTable` | `adapter.describeTable(collection, [sample])` | Infer schema by sampling documents. Returns [{ name, types }]. |
 
 
 #### Options
@@ -2555,7 +2799,19 @@ console.log(db.adapter.isConnected) // true
 
 Redis adapter using ioredis with key-value operations, hashes, lists, sets, sorted sets, pub/sub, pipelines, TTL management, and full ORM CRUD. Stores table data as Redis hashes with sorted-set indexes for ordering and filtering. Bring-your-own-driver: npm install ioredis.
 
-#### Methods
+#### Connection & Control
+
+| Method | Signature | Description |
+|---|---|---|
+| `ping` | `adapter.ping()` | Ping the Redis server. Returns 'PONG' if healthy. |
+| `info` | `adapter.info([section])` | Get Redis server info. Optional section filter. |
+| `dbsize` | `adapter.dbsize()` | Get the number of keys in the current database. |
+| `raw` | `adapter.raw(command, ...args)` | Execute a raw Redis command. Command must be a non-empty string. |
+| `close` | `adapter.close()` | Close the Redis connection. |
+| `pipeline` | `adapter.pipeline()` | Create a pipeline for batching commands. Call exec() to run. |
+
+
+#### String & Key Operations
 
 | Method | Signature | Description |
 |---|---|---|
@@ -2565,36 +2821,60 @@ Redis adapter using ioredis with key-value operations, hashes, lists, sets, sort
 | `exists` | `adapter.exists(key)` | Check if a key exists. Returns boolean. |
 | `expire` | `adapter.expire(key, seconds)` | Set a TTL on an existing key. Seconds must be ≥ 0. |
 | `ttl` | `adapter.ttl(key)` | Get remaining TTL in seconds (-1 = no expiry, -2 = missing). |
+| `incr` | `adapter.incr(key)` | Increment a numeric key by 1. Returns the new value. |
+| `decr` | `adapter.decr(key)` | Decrement a numeric key by 1. Returns the new value. |
+
+
+#### Hash Operations
+
+| Method | Signature | Description |
+|---|---|---|
 | `hset` | `adapter.hset(key, field, value)` | Set a hash field. |
 | `hget` | `adapter.hget(key, field)` | Get a hash field value. |
 | `hgetall` | `adapter.hgetall(key)` | Get all fields and values in a hash. |
 | `hdel` | `adapter.hdel(key, field)` | Delete a hash field. |
+
+
+#### List Operations
+
+| Method | Signature | Description |
+|---|---|---|
 | `rpush` | `adapter.rpush(key, ...values)` | Append values to a list (right). |
 | `lpush` | `adapter.lpush(key, ...values)` | Prepend values to a list (left). |
 | `lrange` | `adapter.lrange(key, start, stop)` | Get a range of list elements. |
 | `rpop` | `adapter.rpop(key)` | Remove and return the last list element. |
 | `lpop` | `adapter.lpop(key)` | Remove and return the first list element. |
 | `llen` | `adapter.llen(key)` | Get the length of a list. |
+
+
+#### Set Operations
+
+| Method | Signature | Description |
+|---|---|---|
 | `sadd` | `adapter.sadd(key, ...members)` | Add members to a set. |
 | `smembers` | `adapter.smembers(key)` | Get all members of a set. |
 | `sismember` | `adapter.sismember(key, member)` | Check if a value is in a set. Returns boolean. |
 | `srem` | `adapter.srem(key, member)` | Remove a member from a set. |
 | `scard` | `adapter.scard(key)` | Get the number of members in a set. |
+
+
+#### Sorted Set Operations
+
+| Method | Signature | Description |
+|---|---|---|
 | `zadd` | `adapter.zadd(key, score, member)` | Add a member to a sorted set with a score. |
 | `zrange` | `adapter.zrange(key, start, stop)` | Get members in a sorted set by index range. |
 | `zrangebyscore` | `adapter.zrangebyscore(key, min, max)` | Get members by score range. |
 | `zrem` | `adapter.zrem(key, member)` | Remove a member from a sorted set. |
 | `zcard` | `adapter.zcard(key)` | Get the number of members in a sorted set. |
+
+
+#### Pub/Sub
+
+| Method | Signature | Description |
+|---|---|---|
 | `subscribe` | `adapter.subscribe(channel, callback)` | Subscribe to a pub/sub channel. callback must be a function. Returns an unsubscribe function. |
 | `publish` | `adapter.publish(channel, message)` | Publish a message to a channel. Returns number of receivers. |
-| `pipeline` | `adapter.pipeline()` | Create a pipeline for batching commands. Call exec() to run. |
-| `ping` | `adapter.ping()` | Ping the Redis server. Returns 'PONG' if healthy. |
-| `info` | `adapter.info([section])` | Get Redis server info. Optional section filter. |
-| `dbsize` | `adapter.dbsize()` | Get the number of keys in the current database. |
-| `incr` | `adapter.incr(key)` | Increment a numeric key by 1. Returns the new value. |
-| `decr` | `adapter.decr(key)` | Decrement a numeric key by 1. Returns the new value. |
-| `raw` | `adapter.raw(command, ...args)` | Execute a raw Redis command. Command must be a non-empty string. |
-| `close` | `adapter.close()` | Close the Redis connection. |
 
 
 #### Options
@@ -2680,27 +2960,39 @@ const pong = await db.adapter.ping() // 'PONG'
 
 Zero-dependency in-memory adapter — perfect for tests, prototyping, and ephemeral applications. All data lives in JavaScript Maps and arrays. Supports full CRUD, query builder, and utility methods for introspection, export/import, and cloning.
 
-#### Methods
+#### Inspection
 
 | Method | Signature | Description |
 |---|---|---|
 | `tables` | `adapter.tables()` | List all registered table names. |
 | `totalRows` | `adapter.totalRows()` | Count all rows across all tables. |
 | `stats` | `adapter.stats()` | Get memory stats: { tables, totalRows, estimatedBytes }. |
+| `indexes` | `adapter.indexes(table)` | Get tracked indexes: name, columns, unique. |
+| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
+| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
+| `describeTable` | `adapter.describeTable(table)` | Get column info from schema: name, type, nullable, defaultValue, primaryKey. |
+
+
+#### Data Serialization
+
+| Method | Signature | Description |
+|---|---|---|
 | `toJSON` | `adapter.toJSON()` | Export all data as a plain object: { tableName: rows[], ... }. |
 | `fromJSON` | `adapter.fromJSON(data)` | Import data from a plain object. Merges with existing data. |
 | `clone` | `adapter.clone()` | Deep-copy the entire database state into a new MemoryAdapter. |
 | `clear` | `adapter.clear()` | Delete all rows from all tables (tables remain registered). |
+
+
+#### Schema Mutations
+
+| Method | Signature | Description |
+|---|---|---|
 | `addColumn` | `adapter.addColumn(table, col, def)` | Add a column. Sets default value for existing rows. |
 | `dropColumn` | `adapter.dropColumn(table, col)` | Drop a column from all rows. |
 | `renameColumn` | `adapter.renameColumn(table, old, new)` | Rename a column in schema and all rows. |
 | `renameTable` | `adapter.renameTable(old, new)` | Rename a table. |
 | `createIndex` | `adapter.createIndex(table, cols, [opts])` | Track an index in metadata. opts: { name, unique }. |
 | `dropIndex` | `adapter.dropIndex(table, name)` | Remove an index from metadata (table is ignored — searches all tables). |
-| `hasTable` | `adapter.hasTable(table)` | Check if a table exists. Returns Promise<boolean>. |
-| `hasColumn` | `adapter.hasColumn(table, col)` | Check if a column exists. Returns Promise<boolean>. |
-| `describeTable` | `adapter.describeTable(table)` | Get column info from schema: name, type, nullable, defaultValue, primaryKey. |
-| `indexes` | `adapter.indexes(table)` | Get tracked indexes: name, columns, unique. |
 
 
 ```js
@@ -2755,7 +3047,7 @@ const fork = db.adapter.clone()
 
 File-backed database adapter that persists data as JSON files on disk — one file per table. Zero-dependency, extends the Memory adapter with atomic writes, auto-flushing, backup support, and file management. Great for prototyping, small apps, and embedded scenarios.
 
-#### Methods
+#### File Operations
 
 | Method | Signature | Description |
 |---|---|---|
@@ -2765,6 +3057,12 @@ File-backed database adapter that persists data as JSON files on disk — one fi
 | `backup` | `adapter.backup(destDir)` | Copy all JSON files to a target directory. |
 | `directory` | `adapter.directory` | Property — the resolved path where JSON files are stored. |
 | `hasPendingWrites` | `adapter.hasPendingWrites` | Property — true if there are unflushed writes. |
+
+
+#### Inspection
+
+| Method | Signature | Description |
+|---|---|---|
 | `tables` | `adapter.tables()` | List all registered table names (inherited from Memory). |
 | `stats` | `adapter.stats()` | Get stats: { tables, totalRows, estimatedBytes } (inherited from Memory). |
 | `toJSON` | `adapter.toJSON()` | Export all data (inherited from Memory). |
@@ -2832,21 +3130,21 @@ await db.adapter.flush()
 
 Versioned migration framework for the ORM. Define up/down migrations, track execution in batches, rollback safely, check status, and perform fresh resets. Migrations are stored in a _migrations tracking table within the same database.
 
-#### Methods
+#### Migration Control
 
 | Method | Signature | Description |
 |---|---|---|
-| `add` | `migrator.add({ name, up, down })` | Add a migration definition. name must be unique and contain only letters, digits, underscores, hyphens, and dots. up/down are async functions receiving db. |
-| `addAll` | `migrator.addAll(migrations)` | Add multiple migration definitions at once. |
-| `migrate` | `migrator.migrate()` | Run all pending migrations. Returns { migrated: string[], batch: number }. |
+| `up` | `up([steps])` |  |
+| `down` | `down([steps])` |  |
+| `latest` | `latest()` |  |
 | `rollback` | `migrator.rollback()` | Rollback the last batch. Returns { rolledBack: string[], batch: number }. |
-| `rollbackAll` | `migrator.rollbackAll()` | Rollback all batches in reverse order. |
 | `reset` | `migrator.reset()` | Rollback all, then re-run all. Returns { rolledBack, migrated, batch }. |
-| `fresh` | `migrator.fresh()` | Drop ALL tables, then re-run all migrations from scratch. |
 | `status` | `migrator.status()` | Get current status: { executed: [], pending: [], lastBatch }. |
-| `hasPending` | `migrator.hasPending()` | Returns true if there are pending migrations. |
 | `list` | `migrator.list()` | Get registered migration names. |
-| `defineMigration` | `defineMigration(name, up, down)` | Helper factory — creates a { name, up, down } migration object. Validates name characters and that up/down are functions. |
+| `create` | `create(name)` |  |
+| `run` | `run(file)` |  |
+| `undo` | `undo([file])` |  |
+| `pending` | `pending()` |  |
 
 
 #### Options
@@ -2919,20 +3217,20 @@ await migrator.fresh()
 
 In-memory LRU query cache with TTL support. Attach to a Database instance to cache query results automatically. Supports manual get/set, model-level invalidation, remember pattern, and optional Redis backend for distributed caching.
 
-#### Methods
+#### Cache Operations
 
 | Method | Signature | Description |
 |---|---|---|
 | `get` | `cache.get(key)` | Get a cached value. Returns undefined on miss or expiry. |
 | `set` | `cache.set(key, value, [ttl])` | Set a cache entry with optional TTL in seconds. |
-| `delete` | `cache.delete(key)` | Delete a specific cache entry. |
 | `has` | `cache.has(key)` | Check if a key exists and is not expired. |
-| `invalidate` | `cache.invalidate(table)` | Remove all cache entries containing the table name. |
-| `flush` | `cache.flush()` | Clear the entire cache and reset stats. |
-| `stats` | `cache.stats()` | Get hit/miss statistics: { size, hits, misses, hitRate, maxEntries }. |
-| `prune` | `cache.prune()` | Remove expired entries (garbage collection). |
-| `remember` | `cache.remember(key, fn, [ttl])` | Get cached value or compute and cache the result. |
+| `delete` | `cache.delete(key)` | Delete a specific cache entry. |
+| `clear` | `clear()` |  |
 | `wrap` | `cache.wrap(descriptor, executor, [ttl])` | Wrap a query execution with caching. Used internally by Query.cache(). |
+| `invalidate` | `cache.invalidate(table)` | Remove all cache entries containing the table name. |
+| `stats` | `cache.stats()` | Get hit/miss statistics: { size, hits, misses, hitRate, maxEntries }. |
+| `keys` | `keys()` |  |
+| `flush` | `cache.flush()` | Clear the entire cache and reset stats. |
 
 
 #### Options
@@ -2997,7 +3295,7 @@ cache.flush()
 
 Database seeding utilities — structured data population for development and testing. Seeder defines what to seed, Factory generates records with fake data, and Fake provides built-in data generators. SeederRunner orchestrates execution.
 
-#### undefined
+#### Factory
 
 | Method | Signature | Description |
 |---|---|---|
@@ -3010,7 +3308,7 @@ Database seeding utilities — structured data population for development and te
 | `create` | `factory.create([overrides])` | Create records and persist to database. Returns object or array. |
 
 
-#### undefined
+#### Fake
 
 | Method | Signature | Description |
 |---|---|---|
@@ -3037,7 +3335,7 @@ Database seeding utilities — structured data population for development and te
 | `json` | `Fake.json()` | Random JSON-safe object. |
 
 
-#### undefined
+#### SeederRunner
 
 | Method | Signature | Description |
 |---|---|---|
@@ -3126,17 +3424,18 @@ console.log(Fake.pick(['a', 'b', 'c']))  // 'b'
 
 Automatic query profiling, slow-query detection, and N+1 pattern identification. Attach to any Database instance via db.enableProfiling(). Records every query execution with timing, flags queries exceeding a configurable threshold, and detects rapid repeated SELECTs on the same table within a time window. Capped history prevents memory leaks in long-running servers.
 
-#### Methods
+#### Profiler
 
 | Method | Signature | Description |
 |---|---|---|
-| `record` | `profiler.record(entry)` | Record a query execution. Entry: { table, action, duration }. Called automatically by the ORM when profiling is enabled. |
-| `metrics` | `profiler.metrics()` | Return aggregate stats: { totalQueries, totalTime, avgLatency, queriesPerSecond, slowQueries, n1Detections }. |
-| `slowQueries` | `profiler.slowQueries()` | Return all queries from history that exceeded the slow threshold. |
-| `n1Detections` | `profiler.n1Detections()` | Return all N+1 pattern detections: { table, count, timestamp, message }. |
-| `getQueries` | `profiler.getQueries([options])` | Get filtered query history. Options: { table, action, minDuration }. |
+| `enable` | `enable([opts])` |  |
+| `disable` | `disable()` |  |
+| `getStats` | `getStats()` |  |
 | `reset` | `profiler.reset()` | Clear all profiling state — queries, counters, and N+1 detections. |
-| `enabled` | `profiler.enabled` | Getter/setter. Enable or disable profiling at runtime. |
+| `onQuery` | `onQuery(fn)` |  |
+| `offQuery` | `offQuery(fn)` |  |
+| `report` | `report([opts])` |  |
+| `clear` | `clear()` |  |
 
 
 #### Options
@@ -3289,7 +3588,7 @@ await manager.healthCheck()
 
 Built-in RFC 6455 WebSocket server. Register handlers with app.ws(path, handler). Each connection receives a WebSocketConnection instance with send/receive, ping/pong, binary support, and event emitter methods. Configure max payload size, ping intervals, and client verification.
 
-#### Methods
+#### Messaging
 
 | Method | Signature | Description |
 |---|---|---|
@@ -3297,11 +3596,23 @@ Built-in RFC 6455 WebSocket server. Register handlers with app.ws(path, handler)
 | `sendJSON` | `ws.sendJSON(obj)` | Send a JSON-serialized message. |
 | `ping` | `ws.ping([data])` | Send a ping frame. |
 | `pong` | `ws.pong([data])` | Send a pong frame. |
-| `close` | `ws.close([code], [reason])` | Graceful close with optional status code and reason. |
-| `terminate` | `ws.terminate()` | Forcefully close the connection. |
+
+
+#### Events
+
+| Method | Signature | Description |
+|---|---|---|
 | `on` | `ws.on(event, handler)` | Listen for events: message, close, error, ping, pong, drain. |
 | `once` | `ws.once(event, handler)` | Listen for an event once. |
 | `off` | `ws.off(event, handler)` | Remove an event listener. |
+
+
+#### Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `close` | `ws.close([code], [reason])` | Graceful close with optional status code and reason. |
+| `terminate` | `ws.terminate()` | Forcefully close the connection. |
 
 
 #### Options
@@ -3351,25 +3662,49 @@ app.listen(3000)
 
 Connection and room manager for WebSocket apps. Automatically tracks connections, manages room membership, supports broadcast/targeted messaging, and cleans up on disconnect.
 
-#### Methods
+#### Membership
 
 | Method | Signature | Description |
 |---|---|---|
 | `add` | `pool.add(ws)` | Add a connection to the pool. Auto-removed on close. |
 | `remove` | `pool.remove(ws)` | Remove a connection from the pool and all rooms. |
+
+
+#### Rooms
+
+| Method | Signature | Description |
+|---|---|---|
 | `join` | `pool.join(ws, room)` | Join a connection to a named room. |
 | `leave` | `pool.leave(ws, room)` | Leave a room. |
+| `in` | `pool.in(room)` | Get all connections in a room. |
+| `roomsOf` | `pool.roomsOf(ws)` | Get all rooms a connection is in. |
+
+
+#### Broadcasting
+
+| Method | Signature | Description |
+|---|---|---|
 | `broadcast` | `pool.broadcast(msg, [exclude])` | Send to all connections. |
 | `broadcastJSON` | `pool.broadcastJSON(obj, [exclude])` | Send JSON to all connections. |
 | `toRoom` | `pool.toRoom(room, msg, [exclude])` | Send to all in a room. |
 | `toRoomJSON` | `pool.toRoomJSON(room, obj, [exclude])` | Send JSON to all in a room. |
-| `in` | `pool.in(room)` | Get all connections in a room. |
-| `roomsOf` | `pool.roomsOf(ws)` | Get all rooms a connection is in. |
-| `closeAll` | `pool.closeAll()` | Close all connections. |
+
+
+#### Introspection
+
+| Method | Signature | Description |
+|---|---|---|
 | `size` | `pool.size` | Total connection count. |
 | `clients` | `pool.clients` | All connections as an iterable. |
 | `rooms` | `pool.rooms` | Array of all room names. |
 | `roomSize` | `pool.roomSize(room)` | Number of connections in a room. |
+
+
+#### Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `closeAll` | `pool.closeAll()` | Close all connections. |
 
 
 ```js
@@ -3406,7 +3741,7 @@ app.get('/pool/status', (req, res) => res.json({
 
 Push real-time events to browser clients via res.sse(). Returns an SSEStream instance with auto-IDs, named events, keep-alive pings, and graceful disconnect handling. The browser connects with new EventSource(url).
 
-#### Methods
+#### Writing
 
 | Method | Signature | Description |
 |---|---|---|
@@ -3414,10 +3749,22 @@ Push real-time events to browser clients via res.sse(). Returns an SSEStream ins
 | `sendJSON` | `sse.sendJSON(obj)` | Send a JSON-serialized event. |
 | `event` | `sse.event(name, data)` | Send a named event. Browser listens with es.addEventListener(name, ...). |
 | `comment` | `sse.comment(text)` | Send a comment line (not received by EventSource). |
+
+
+#### Control
+
+| Method | Signature | Description |
+|---|---|---|
 | `retry` | `sse.retry(ms)` | Set the reconnection interval for the client. |
 | `keepAlive` | `sse.keepAlive(ms)` | Start sending periodic comment pings. |
 | `flush` | `sse.flush()` | Flush the response stream. |
 | `close` | `sse.close()` | Close the SSE stream. |
+
+
+#### Events
+
+| Method | Signature | Description |
+|---|---|---|
 | `on` | `sse.on(event, handler)` | Listen for events: close, error. |
 
 
@@ -3546,11 +3893,17 @@ download('https://jsonplaceholder.typicode.com/todos/1')
 
 Built-in HTTP error classes with status codes, machine-readable codes, and optional details. Every error extends HttpError which carries statusCode, code, and details. Throw them in route handlers — the router catches and sends the correct HTTP response automatically.
 
-#### Methods
+#### Base Class
 
 | Method | Signature | Description |
 |---|---|---|
 | `HttpError` | `new HttpError(statusCode, [message], [opts])` | Base class. opts: { code, details }. |
+
+
+#### 4xx Client Errors
+
+| Method | Signature | Description |
+|---|---|---|
 | `BadRequestError` | `new BadRequestError([message], [opts])` | 400 Bad Request. |
 | `UnauthorizedError` | `new UnauthorizedError([message], [opts])` | 401 Unauthorized. |
 | `ForbiddenError` | `new ForbiddenError([message], [opts])` | 403 Forbidden. |
@@ -3562,10 +3915,22 @@ Built-in HTTP error classes with status codes, machine-readable codes, and optio
 | `UnprocessableEntityError` | `new UnprocessableEntityError([message], [opts])` | 422 Unprocessable Entity. |
 | `ValidationError` | `new ValidationError([message], [errors], [opts])` | 422 with field-level errors. errors: object or array stored in .errors and .details. |
 | `TooManyRequestsError` | `new TooManyRequestsError([message], [opts])` | 429 Too Many Requests. |
+
+
+#### 5xx Server Errors
+
+| Method | Signature | Description |
+|---|---|---|
 | `InternalError` | `new InternalError([message], [opts])` | 500 Internal Server Error. |
 | `NotImplementedError` | `new NotImplementedError([message], [opts])` | 501 Not Implemented. |
 | `BadGatewayError` | `new BadGatewayError([message], [opts])` | 502 Bad Gateway. |
 | `ServiceUnavailableError` | `new ServiceUnavailableError([message], [opts])` | 503 Service Unavailable. |
+
+
+#### Utilities
+
+| Method | Signature | Description |
+|---|---|---|
 | `createError` | `createError(statusCode, [message], [opts])` | Factory — creates the correct error class for any status code. |
 | `isHttpError` | `isHttpError(err)` | Returns true if err is an HttpError or has a statusCode. Type guard. |
 | `toJSON` | `err.toJSON()` | Serialize: { error, code, statusCode, details? }. |
@@ -3623,21 +3988,27 @@ app.onError((err, req, res, next) => {
 
 Specialized error classes for framework-specific failures — database errors, configuration problems, middleware failures, routing issues, and timeouts. Each carries context-specific properties alongside the standard HttpError fields. These are thrown automatically by the framework internals and can also be used directly in application code.
 
-#### Methods
+#### Database & Query Errors
 
 | Method | Signature | Description |
 |---|---|---|
 | `DatabaseError` | `new DatabaseError([message], [opts])` | 500 — Database/ORM failure. opts: { query, adapter, details }. Thrown on adapter-level failures. |
+| `QueryError` | `new QueryError([message], [opts])` | 500 — Query execution failure. Extends DatabaseError. opts: { sql, params, table }. |
+| `MigrationError` | `new MigrationError([message], [opts])` | 500 — Migration execution failure. Extends DatabaseError. opts: { migration, direction, batch }. |
+| `TransactionError` | `new TransactionError([message], [opts])` | 500 — Transaction commit/rollback failure. Extends DatabaseError. opts: { phase }. phase: 'begin', 'commit', or 'rollback'. |
+| `AdapterError` | `new AdapterError([message], [opts])` | 500 — Adapter-level issue (driver missing, unsupported op). Extends DatabaseError. opts: { adapter, operation }. |
+| `CacheError` | `new CacheError([message], [opts])` | 500 — Caching layer failure. opts: { operation, key }. |
+| `ConnectionError` | `new ConnectionError([message], [opts])` | 500 — Database connection failure. Extends DatabaseError. opts: { adapter, attempt, maxRetries, host, port }. |
+
+
+#### Application Errors
+
+| Method | Signature | Description |
+|---|---|---|
 | `ConfigurationError` | `new ConfigurationError([message], [opts])` | 500 — Invalid configuration. opts: { setting, details }. Thrown when app/adapter config is invalid. |
 | `MiddlewareError` | `new MiddlewareError([message], [opts])` | 500 — Middleware failure. opts: { middleware, details }. Thrown when a middleware function fails unexpectedly. |
 | `RoutingError` | `new RoutingError([message], [opts])` | 500 — Routing failure. opts: { path, method, details }. Thrown when route resolution fails. |
 | `TimeoutError` | `new TimeoutError([message], [opts])` | 408 — Operation timed out. opts: { timeout, details }. Thrown when a request exceeds the allowed time. |
-| `ConnectionError` | `new ConnectionError([message], [opts])` | 500 — Database connection failure. Extends DatabaseError. opts: { adapter, attempt, maxRetries, host, port }. |
-| `MigrationError` | `new MigrationError([message], [opts])` | 500 — Migration execution failure. Extends DatabaseError. opts: { migration, direction, batch }. |
-| `TransactionError` | `new TransactionError([message], [opts])` | 500 — Transaction commit/rollback failure. Extends DatabaseError. opts: { phase }. phase: 'begin', 'commit', or 'rollback'. |
-| `QueryError` | `new QueryError([message], [opts])` | 500 — Query execution failure. Extends DatabaseError. opts: { sql, params, table }. |
-| `AdapterError` | `new AdapterError([message], [opts])` | 500 — Adapter-level issue (driver missing, unsupported op). Extends DatabaseError. opts: { adapter, operation }. |
-| `CacheError` | `new CacheError([message], [opts])` | 500 — Caching layer failure. opts: { operation, key }. |
 
 
 ```js
@@ -3793,20 +4164,32 @@ app.onError(errorHandler({
 
 Lightweight namespaced debug logger with levels, colors, and timestamps. Enable via DEBUG env var or programmatically. Each namespace gets a unique color. Supports text and structured JSON output.
 
-#### Methods
+#### Logger Creation
 
 | Method | Signature | Description |
 |---|---|---|
 | `debug(namespace)` | `debug('app:routes')` | Create a namespaced logger. Returns a function with level methods. |
 | `log()` | `log(...args)` | Log at debug level (default call). Supports %s, %d, %j format specifiers. |
+
+
+#### Log Levels
+
+| Method | Signature | Description |
+|---|---|---|
 | `log.trace()` | `log.trace(...args)` | Log at trace level (most verbose). |
 | `log.info()` | `log.info(...args)` | Log at info level. |
 | `log.warn()` | `log.warn(...args)` | Log at warn level. |
 | `log.error()` | `log.error(...args)` | Log at error level. |
 | `log.fatal()` | `log.fatal(...args)` | Log at fatal level (most severe). |
+
+
+#### Configuration
+
+| Method | Signature | Description |
+|---|---|---|
 | `debug.level()` | `debug.level('info')` | Set minimum log level globally. Levels: trace, debug, info, warn, error, fatal, silent. |
 | `debug.enable()` | `debug.enable('app:*')` | Enable namespaces by pattern. Same syntax as DEBUG env var. |
-| `debug.disable()` | `debug.disable()` | Disable all debug output. |
+| `debug.disable()` | `debug.disable()(pattern)` | Disable all debug output. |
 | `debug.json()` | `debug.json(true)` | Enable structured JSON output (for log aggregators). |
 | `debug.timestamps()` | `debug.timestamps(false)` | Toggle timestamps. |
 | `debug.colors()` | `debug.colors(false)` | Toggle ANSI colors. |
