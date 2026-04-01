@@ -347,7 +347,7 @@ Creates an application instance — the central object for registering middlewar
 | Method | Signature | Description |
 |---|---|---|
 | `listen` | `listen(port, [tlsOpts], [cb])` | Start the HTTP(S) server. Pass TLS options for HTTPS. |
-| `close` | `close()` | Shut down the server. |
+| `close` | `close([cb])` | Shut down the server. |
 | `handler` | `handler()` | The raw (req, res) handler for use with custom HTTP servers. |
 
 
@@ -1570,8 +1570,8 @@ The ORM entry point. Connect to a database using one of 7 built-in adapters (mem
 
 | Method | Signature | Description |
 |---|---|---|
-| `sync` | `db.sync()` | Create tables for all registered models. Returns Promise. |
-| `drop` | `db.drop()` | Drop tables for all registered models. Returns Promise. |
+| `sync` | `db.sync([opts])` | Create tables for all registered models. Returns Promise. |
+| `drop` | `db.drop([tableName])` | Drop tables for all registered models. Returns Promise. |
 
 
 #### Transactions
@@ -3881,7 +3881,7 @@ Connection and room manager for WebSocket apps. Automatically tracks connections
 
 | Method | Signature | Description |
 |---|---|---|
-| `closeAll` | `pool.closeAll()` | Close all connections. |
+| `closeAll` | `pool.closeAll([code], [reason])` | Close all connections. |
 
 
 ```js

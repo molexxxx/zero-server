@@ -129,6 +129,38 @@ function _mmRows(kind, data)
                     metaHtml +
                 `</div>` +
                 (item.notes ? `<p class="mm-row-desc">${escapeHtml(item.notes)}</p>` : '');
+
+            /* -- collapsible sub-options ---------------------- */
+            if (Array.isArray(item._subOptions) && item._subOptions.length)
+            {
+                const details = document.createElement('details');
+                details.className = 'mm-sub-opts';
+                const summary = document.createElement('summary');
+                summary.className = 'mm-sub-opts-toggle';
+                summary.innerHTML = `${BTN_ICONS.opts}<span>${escapeHtml(item.param || item.option || '')} properties</span>`;
+                details.appendChild(summary);
+
+                const subList = document.createElement('div');
+                subList.className = 'mm-sub-opts-list';
+                for (const opt of item._subOptions)
+                {
+                    const sub = document.createElement('div');
+                    sub.className = 'mm-sub-opts-row';
+                    const defHtml = opt.default != null
+                        ? `<span class="mm-row-default">default:&nbsp;<span class="default-val">${escapeHtml(String(opt.default))}</span></span>`
+                        : '';
+                    sub.innerHTML =
+                        `<div class="mm-row-head">` +
+                            `<code class="mm-row-key">${escapeHtml(opt.option || opt.param || '')}</code>` +
+                            (opt.type ? `<span class="type-badge">${escapeHtml(opt.type)}</span>` : '') +
+                            defHtml +
+                        `</div>` +
+                        (opt.notes ? `<p class="mm-row-desc">${escapeHtml(opt.notes)}</p>` : '');
+                    subList.appendChild(sub);
+                }
+                details.appendChild(subList);
+                row.appendChild(details);
+            }
         }
         else
         {
@@ -220,17 +252,54 @@ function buildMethodRow(m, parentSlug)
 
     const buttons = [];
 
-    if (Array.isArray(m.methodOptions) && m.methodOptions.length)
+    /* ── Merge methodOptions into the matching param ──────── */
+    const hasOpts   = Array.isArray(m.methodOptions) && m.methodOptions.length;
+    const hasParams = Array.isArray(m.methodParams) && m.methodParams.length;
+    let mergedParams = hasParams ? m.methodParams.map(p => Object.assign({}, p)) : null;
+    let optsStandalone = false; // true → show legacy opts button
+
+    if (hasOpts && mergedParams)
+    {
+        // Parse sig param names to figure out which options are sub-fields
+        const sig = m.signature || '';
+        const sigMatch = sig.match(/\(([^)]*)\)/);
+        const sigNames = sigMatch
+            ? sigMatch[1].split(',').map(s => s.trim().replace(/^\[/, '').replace(/\]$/, '')).filter(Boolean)
+            : [];
+        const sigSet = new Set(sigNames);
+
+        // Sub-field options are ones whose name is NOT a sig param
+        const subOpts = m.methodOptions.filter(o => !sigSet.has(o.option));
+
+        if (subOpts.length)
+        {
+            // Find the param these belong to (opts-like name or object type)
+            const target = mergedParams.find(p =>
+                /^(opts|options?|config|settings)$/i.test(p.param) ||
+                /opts|options/i.test(p.param)
+            ) || mergedParams.filter(p => p.type && /object/i.test(p.type)).pop();
+
+            if (target) target._subOptions = subOpts;
+            else optsStandalone = true; // no suitable param found
+        }
+        // else: all options are positional → already covered by params, skip opts
+    }
+    else if (hasOpts && !hasParams)
+    {
+        optsStandalone = true;
+    }
+
+    if (optsStandalone)
     {
         const id = 'mm_' + (++_mmCounter);
         _methodMeta[id] = { sig: m.signature || m.method || '', type: 'opts', data: m.methodOptions };
         buttons.push(`<button class="meth-btn meth-btn-opts" data-mm="${id}">${BTN_ICONS.opts}opts</button>`);
     }
 
-    if (Array.isArray(m.methodParams) && m.methodParams.length)
+    if (mergedParams)
     {
         const id = 'mm_' + (++_mmCounter);
-        _methodMeta[id] = { sig: m.signature || m.method || '', type: 'params', data: m.methodParams };
+        _methodMeta[id] = { sig: m.signature || m.method || '', type: 'params', data: mergedParams };
         buttons.push(`<button class="meth-btn meth-btn-params" data-mm="${id}">${BTN_ICONS.params}params</button>`);
     }
 

@@ -295,7 +295,7 @@
 					"methods": [
 						{
 							"method": "sync",
-							"signature": "db.sync()",
+							"signature": "db.sync([opts])",
 							"description": "Create tables for all registered models. Returns Promise.",
 							"methodReturns": {
 								"type": "Promise<void>",
@@ -312,7 +312,7 @@
 						},
 						{
 							"method": "drop",
-							"signature": "db.drop()",
+							"signature": "db.drop([tableName])",
 							"description": "Drop tables for all registered models. Returns Promise.",
 							"methodReturns": {
 								"type": "Promise<void>",
@@ -380,6 +380,35 @@
 									"type": "object",
 									"required": "Yes",
 									"notes": "Column definition — same schema options as `Database.schema()`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "type",
+									"type": "string",
+									"notes": "Column type from the TYPES enum (e.g. `'string'`, `'integer'`)."
+								},
+								{
+									"option": "required",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Adds a `NOT NULL` constraint."
+								},
+								{
+									"option": "unique",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Adds a `UNIQUE` constraint."
+								},
+								{
+									"option": "default",
+									"type": "any",
+									"notes": "Default value for the column."
+								},
+								{
+									"option": "check",
+									"type": "string",
+									"notes": "SQL `CHECK(expr)` constraint."
 								}
 							]
 						},
@@ -484,6 +513,19 @@
 									"type": "object",
 									"required": "No",
 									"notes": "Options — `{ unique: true, name: string }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "name",
+									"type": "string",
+									"notes": "Custom index name. Defaults to `idx_{table}_{columns}`."
+								},
+								{
+									"option": "unique",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Create a `UNIQUE` index."
 								}
 							]
 						},
@@ -606,6 +648,23 @@
 									"required": "No",
 									"notes": "Options — `{ onDelete, onUpdate }` (e.g. `\"CASCADE\"`)."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "name",
+									"type": "string",
+									"notes": "Constraint name. Defaults to `fk_{table}_{column}`."
+								},
+								{
+									"option": "onDelete",
+									"type": "string",
+									"notes": "Foreign key action: `CASCADE`, `SET NULL`, `SET DEFAULT`, `RESTRICT`, `NO ACTION`."
+								},
+								{
+									"option": "onUpdate",
+									"type": "string",
+									"notes": "Foreign key action on update (same allowed values)."
+								}
 							]
 						},
 						{
@@ -651,6 +710,56 @@
 									"required": "No",
 									"notes": "Profiler configuration. See QueryProfiler options."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "enabled",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Enable or disable profiling."
+								},
+								{
+									"option": "slowThreshold",
+									"type": "number",
+									"default": "100",
+									"notes": "Duration in ms above which a query is flagged as slow."
+								},
+								{
+									"option": "maxHistory",
+									"type": "number",
+									"default": "1000",
+									"notes": "Maximum number of recorded query entries."
+								},
+								{
+									"option": "onSlow",
+									"type": "function",
+									"default": "null",
+									"notes": "Callback invoked on slow query: `(entry) => {}`."
+								},
+								{
+									"option": "n1Threshold",
+									"type": "number",
+									"default": "5",
+									"notes": "Minimum rapid same-table SELECTs to flag N+1 (min 2)."
+								},
+								{
+									"option": "n1Window",
+									"type": "number",
+									"default": "100",
+									"notes": "Time window in ms for N+1 detection (min 10)."
+								},
+								{
+									"option": "onN1",
+									"type": "function",
+									"default": "null",
+									"notes": "Callback invoked on N+1 detection: `(info) => {}`."
+								},
+								{
+									"option": "maxN1History",
+									"type": "number",
+									"default": "100",
+									"notes": "Maximum number of stored N+1 detection records."
+								}
 							]
 						},
 						{
@@ -685,6 +794,26 @@
 									"type": "ReplicaManagerOptions",
 									"required": "No",
 									"notes": "`{ strategy, stickyWrite, stickyWindow }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "strategy",
+									"type": "string",
+									"default": "'round-robin'",
+									"notes": "Replica selection strategy: `'round-robin'` or `'random'`."
+								},
+								{
+									"option": "stickyWrite",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Read from primary after a write for `stickyWindow` ms."
+								},
+								{
+									"option": "stickyWindow",
+									"type": "number",
+									"default": "1000",
+									"notes": "Duration in ms to read from primary after a write."
 								}
 							]
 						}
@@ -1080,7 +1209,13 @@
 									"param": "perPage",
 									"type": "number",
 									"required": "No",
-									"notes": "Rows per page (default: 15)."
+									"notes": "Rows per page (default: 20)."
+								},
+								{
+									"param": "conditions",
+									"type": "object",
+									"required": "No",
+									"notes": "WHERE conditions to filter results."
 								}
 							]
 						}
@@ -2360,7 +2495,7 @@
 									"param": "perPage",
 									"type": "number",
 									"required": "No",
-									"notes": "Rows per page (default: 15)."
+									"notes": "Rows per page (default: 20)."
 								}
 							]
 						},
@@ -2372,22 +2507,9 @@
 								"type": "Promise<PaginationResult>",
 								"description": "Resolves with `{ data: Model[], total: number, page: number, perPage: number, lastPage: number }`."
 							},
-							"methodOptions": [
-								{
-									"option": "page",
-									"type": "number",
-									"notes": "1-based page number."
-								},
-								{
-									"option": "perPage",
-									"type": "number",
-									"default": "20",
-									"notes": "Rows per page."
-								}
-							],
 							"methodParams": [
 								{
-									"param": "pageNum",
+									"param": "page",
 									"type": "number",
 									"required": "Yes",
 									"notes": "1-based page number."
@@ -2396,7 +2518,7 @@
 									"param": "perPage",
 									"type": "number",
 									"required": "No",
-									"notes": "Rows per page (default: 15)."
+									"notes": "Rows per page (default: 20)."
 								}
 							]
 						}
@@ -3635,6 +3757,26 @@
 									"required": "No",
 									"notes": "`{ verbose: boolean }` for EXPLAIN VERBOSE (PostgreSQL)."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "analyze",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Include `ANALYZE` in the plan (MySQL 8.0.18+, PostgreSQL)."
+								},
+								{
+									"option": "buffers",
+									"type": "boolean",
+									"default": "false",
+									"notes": "PostgreSQL only. Include buffer usage info."
+								},
+								{
+									"option": "format",
+									"type": "string",
+									"default": "'TEXT'",
+									"notes": "PostgreSQL only. Output format: `'TEXT'`, `'JSON'`, `'XML'`, or `'YAML'`."
+								}
 							]
 						}
 					]
@@ -4092,7 +4234,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								}
@@ -4149,12 +4291,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								},
 								{
-									"option": "definition",
+									"option": "def",
 									"type": "string",
 									"notes": "DDL type string, e.g. `\"VARCHAR(255) NOT NULL DEFAULT ''\"`. For MySQL/PG; SQLite ignores constraints on ALTER ADD."
 								}
@@ -4195,7 +4337,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column to drop."
 								}
@@ -4230,12 +4372,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current column name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New column name."
 								}
@@ -4271,12 +4413,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current table name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New table name."
 								}
@@ -4311,7 +4453,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "columns",
+									"option": "cols",
 									"type": "string | string[]",
 									"notes": "Column(s) to index."
 								},
@@ -4795,7 +4937,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								}
@@ -4887,12 +5029,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								},
 								{
-									"option": "definition",
+									"option": "def",
 									"type": "string",
 									"notes": "DDL type string, e.g. `\"VARCHAR(255) NOT NULL DEFAULT ''\"`. For MySQL/PG; SQLite ignores constraints on ALTER ADD."
 								}
@@ -4933,7 +5075,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column to drop."
 								}
@@ -4968,12 +5110,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current column name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New column name."
 								}
@@ -5009,12 +5151,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current table name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New table name."
 								}
@@ -5049,7 +5191,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "columns",
+									"option": "cols",
 									"type": "string | string[]",
 									"notes": "Column(s) to index."
 								},
@@ -5124,7 +5266,7 @@
 									"notes": "Child table."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "FK column."
 								},
@@ -5134,7 +5276,7 @@
 									"notes": "Referenced (parent) table."
 								},
 								{
-									"option": "refColumn",
+									"option": "refCol",
 									"type": "string",
 									"notes": "Referenced column (usually `id`)."
 								},
@@ -5677,7 +5819,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								}
@@ -5734,12 +5876,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								},
 								{
-									"option": "definition",
+									"option": "def",
 									"type": "string",
 									"notes": "DDL type string, e.g. `\"VARCHAR(255) NOT NULL DEFAULT ''\"`. For MySQL/PG; SQLite ignores constraints on ALTER ADD."
 								}
@@ -5780,7 +5922,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column to drop."
 								}
@@ -5815,12 +5957,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current column name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New column name."
 								}
@@ -5856,12 +5998,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current table name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New table name."
 								}
@@ -5896,7 +6038,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "columns",
+									"option": "cols",
 									"type": "string | string[]",
 									"notes": "Column(s) to index."
 								},
@@ -5971,7 +6113,7 @@
 									"notes": "Child table."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "FK column."
 								},
@@ -5981,7 +6123,7 @@
 									"notes": "Referenced (parent) table."
 								},
 								{
-									"option": "refColumn",
+									"option": "refCol",
 									"type": "string",
 									"notes": "Referenced column (usually `id`)."
 								},
@@ -6159,7 +6301,7 @@
 							},
 							"methodOptions": [
 								{
-									"option": "sql",
+									"option": "command",
 									"type": "string",
 									"notes": "SQL string with `?` placeholders. Never interpolate user input."
 								},
@@ -6287,7 +6429,7 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table to inspect."
 								}
@@ -6311,7 +6453,7 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name to check."
 								}
@@ -6335,12 +6477,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "field",
 									"type": "string",
 									"notes": "Column name."
 								}
@@ -6370,7 +6512,7 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table to describe."
 								}
@@ -6399,14 +6541,14 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
-									"notes": "Table name."
+									"notes": "Collection name."
 								},
 								{
-									"option": "columns",
+									"option": "keys",
 									"type": "string | string[]",
-									"notes": "Column(s) to index."
+									"notes": "Field(s) to index."
 								},
 								{
 									"option": "name",
@@ -6425,10 +6567,10 @@
 									"param": "collection",
 									"type": "string",
 									"required": "Yes",
-									"notes": "Table/collection name."
+									"notes": "Collection name."
 								},
 								{
-									"param": "cols",
+									"param": "keys",
 									"type": "string | string[] | object",
 									"required": "Yes",
 									"notes": "Column(s) to index. Pass an object for compound/partial indexes."
@@ -6451,12 +6593,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name."
 								},
 								{
-									"option": "name",
+									"option": "indexName",
 									"type": "string",
 									"notes": "Index name."
 								}
@@ -6486,12 +6628,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current table name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New table name."
 								}
@@ -6521,17 +6663,17 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "field",
 									"type": "string",
 									"notes": "Column name."
 								},
 								{
-									"option": "definition",
+									"option": "def",
 									"type": "string",
 									"notes": "DDL type string, e.g. `\"VARCHAR(255) NOT NULL DEFAULT ''\"`. For MySQL/PG; SQLite ignores constraints on ALTER ADD."
 								}
@@ -6567,12 +6709,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "field",
 									"type": "string",
 									"notes": "Column to drop."
 								}
@@ -6602,17 +6744,17 @@
 							},
 							"methodOptions": [
 								{
-									"option": "table",
+									"option": "collection",
 									"type": "string",
 									"notes": "Table name."
 								},
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current column name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New column name."
 								}
@@ -6769,12 +6911,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "sql",
+									"option": "command",
 									"type": "string",
 									"notes": "SQL string with `?` placeholders. Never interpolate user input."
 								},
 								{
-									"option": "params",
+									"option": "...args",
 									"type": "any[]",
 									"notes": "Bound parameter values."
 								}
@@ -6857,7 +6999,7 @@
 									"notes": "String value."
 								},
 								{
-									"option": "ttlSeconds",
+									"option": "ttl",
 									"type": "number",
 									"notes": "Optional TTL in seconds (EX)."
 								}
@@ -7652,7 +7794,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								}
@@ -7761,12 +7903,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column name."
 								},
 								{
-									"option": "definition",
+									"option": "def",
 									"type": "string",
 									"notes": "DDL type string, e.g. `\"VARCHAR(255) NOT NULL DEFAULT ''\"`. For MySQL/PG; SQLite ignores constraints on ALTER ADD."
 								}
@@ -7807,7 +7949,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "column",
+									"option": "col",
 									"type": "string",
 									"notes": "Column to drop."
 								}
@@ -7842,12 +7984,12 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current column name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New column name."
 								}
@@ -7883,12 +8025,12 @@
 							},
 							"methodOptions": [
 								{
-									"option": "oldName",
+									"option": "old",
 									"type": "string",
 									"notes": "Current table name."
 								},
 								{
-									"option": "newName",
+									"option": "new",
 									"type": "string",
 									"notes": "New table name."
 								}
@@ -7923,7 +8065,7 @@
 									"notes": "Table name."
 								},
 								{
-									"option": "columns",
+									"option": "cols",
 									"type": "string | string[]",
 									"notes": "Column(s) to index."
 								},
@@ -8849,7 +8991,7 @@
 									"notes": "Maximum value."
 								},
 								{
-									"option": "precision",
+									"option": "decimals",
 									"type": "number",
 									"default": "2",
 									"notes": "Decimal places."
@@ -9114,6 +9256,20 @@
 									"required": "No",
 									"notes": "`{ key?, maxAttempts? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "key",
+									"type": "string",
+									"default": "fn.name",
+									"notes": "Uniqueness namespace key."
+								},
+								{
+									"option": "maxAttempts",
+									"type": "number",
+									"default": "1000",
+									"notes": "Retry limit before throwing."
+								}
 							]
 						},
 						{
@@ -9165,6 +9321,19 @@
 									"required": "No",
 									"notes": "`{ sex?, locale?, unique? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "sex",
+									"type": "string",
+									"notes": "`'male'` or `'female'` — constrain to a sex."
+								},
+								{
+									"option": "locale",
+									"type": "string",
+									"default": "'en'",
+									"notes": "Locale code."
+								}
 							]
 						},
 						{
@@ -9181,6 +9350,13 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ sex? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "sex",
+									"type": "string",
+									"notes": "`'male'`, `'female'`, or `'neutral'`. Random if omitted."
 								}
 							]
 						},
@@ -9229,6 +9405,13 @@
 									"required": "No",
 									"notes": "`{ tld? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "tld",
+									"type": "string",
+									"notes": "Force a specific TLD (otherwise random from pool)."
+								}
 							]
 						},
 						{
@@ -9256,6 +9439,20 @@
 									"required": "No",
 									"notes": "`{ separator?, realisticOUI? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "separator",
+									"type": "string",
+									"default": "':'",
+									"notes": "Octet separator: `':'`, `'-'`, or `''`."
+								},
+								{
+									"option": "realisticOUI",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Use a real vendor OUI prefix."
+								}
 							]
 						},
 						{
@@ -9273,6 +9470,14 @@
 									"required": "No",
 									"notes": "`{ range?: \"all\" | \"registered\" | \"dynamic\" }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "range",
+									"type": "string",
+									"default": "'any'",
+									"notes": "Port range: `'well-known'` (1–1023), `'registered'` (1024–49151), `'dynamic'` (49152–65535), or `'any'`."
+								}
 							]
 						},
 						{
@@ -9289,6 +9494,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ methods? }` — custom list to pick from."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "methods",
+									"type": "string[]",
+									"default": "all standard methods",
+									"notes": "Restrict to specific HTTP methods."
 								}
 							]
 						},
@@ -9317,6 +9530,44 @@
 									"required": "No",
 									"notes": "`{ length?, uppercase?, lowercase?, digits?, special?, prefix? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "length",
+									"type": "number",
+									"default": "16",
+									"notes": "Character count."
+								},
+								{
+									"option": "uppercase",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include uppercase letters."
+								},
+								{
+									"option": "lowercase",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include lowercase letters."
+								},
+								{
+									"option": "digits",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include digits."
+								},
+								{
+									"option": "special",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Include special characters."
+								},
+								{
+									"option": "prefix",
+									"type": "string",
+									"default": "''",
+									"notes": "Prepend a fixed prefix."
+								}
 							]
 						},
 						{
@@ -9339,6 +9590,25 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ leadingZeros?, separator?, groupSize? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "leadingZeros",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Allow leading zeros."
+								},
+								{
+									"option": "separator",
+									"type": "string",
+									"notes": "Insert separator every N digits (e.g. `'-'`)."
+								},
+								{
+									"option": "groupSize",
+									"type": "number",
+									"default": "3",
+									"notes": "Group size when using separator."
 								}
 							]
 						},
@@ -9363,6 +9633,26 @@
 									"required": "No",
 									"notes": "`{ uppercase? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "uppercase",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Use uppercase letters."
+								},
+								{
+									"option": "letters",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include letters."
+								},
+								{
+									"option": "digits",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include digits."
+								}
 							]
 						},
 						{
@@ -9386,6 +9676,20 @@
 									"required": "No",
 									"notes": "`{ uppercase? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "uppercase",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Use uppercase letters."
+								},
+								{
+									"option": "mixed",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Mix upper and lowercase. Takes priority over `uppercase`."
+								}
 							]
 						},
 						{
@@ -9403,6 +9707,14 @@
 									"required": "No",
 									"notes": "`{ years? }` — how far back. Default: 1 year."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "years",
+									"type": "number",
+									"default": "1",
+									"notes": "How many years back the window spans."
+								}
 							]
 						},
 						{
@@ -9419,6 +9731,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ years? }` — how far forward. Default: 1 year."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "years",
+									"type": "number",
+									"default": "1",
+									"notes": "How many years forward the window spans."
 								}
 							]
 						},
@@ -9491,6 +9811,14 @@
 									"required": "No",
 									"notes": "`{ full? }` — include descriptor + area."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "full",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return a pre-built full title instead of a generated one."
+								}
 							]
 						},
 						{
@@ -9538,6 +9866,14 @@
 									"required": "No",
 									"notes": "`{ style?: \"short\" | \"medium\" | \"long\" }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "style",
+									"type": "string",
+									"default": "'phrase'",
+									"notes": "`'full'` returns `adjective + noun + \" | \" + phrase`. `'phrase'` returns a single phrase."
+								}
 							]
 						},
 						{
@@ -9564,6 +9900,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ binary? }` — restrict to male/female."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "binary",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return only `Male` or `Female`."
 								}
 							]
 						},
@@ -9592,6 +9936,13 @@
 									"required": "No",
 									"notes": "`{ country? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "country",
+									"type": "string",
+									"notes": "ISO 3166-1 alpha-2 country code to filter cities."
+								}
 							]
 						},
 						{
@@ -9608,6 +9959,20 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ codeOnly?, full? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "codeOnly",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return ISO code only."
+								},
+								{
+									"option": "full",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return `{ name, code }` object."
 								}
 							]
 						},
@@ -9626,6 +9991,20 @@
 									"required": "No",
 									"notes": "`{ abbr?, full? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "abbr",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return 2-letter abbreviation."
+								},
+								{
+									"option": "full",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Return `{ name, abbr }` object."
+								}
 							]
 						},
 						{
@@ -9642,6 +10021,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ countryCode? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "countryCode",
+									"type": "string",
+									"default": "'US'",
+									"notes": "ISO 3166-1 alpha-2 code. Selects the ZIP pattern."
 								}
 							]
 						},
@@ -9660,6 +10047,26 @@
 									"required": "No",
 									"notes": "`{ min?, max?, decimals? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "min",
+									"type": "number",
+									"default": "-90",
+									"notes": "Minimum latitude."
+								},
+								{
+									"option": "max",
+									"type": "number",
+									"default": "90",
+									"notes": "Maximum latitude."
+								},
+								{
+									"option": "decimals",
+									"type": "number",
+									"default": "6",
+									"notes": "Decimal precision."
+								}
 							]
 						},
 						{
@@ -9676,6 +10083,26 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ min?, max?, decimals? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "min",
+									"type": "number",
+									"default": "-180",
+									"notes": "Minimum longitude."
+								},
+								{
+									"option": "max",
+									"type": "number",
+									"default": "180",
+									"notes": "Maximum longitude."
+								},
+								{
+									"option": "decimals",
+									"type": "number",
+									"default": "6",
+									"notes": "Decimal precision."
 								}
 							]
 						},
@@ -9724,6 +10151,20 @@
 									"required": "No",
 									"notes": "`{ countryCode?, format?: \"string\" | \"object\" }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "countryCode",
+									"type": "string",
+									"default": "'US'",
+									"notes": "ISO 3166-1 alpha-2 code."
+								},
+								{
+									"option": "format",
+									"type": "string",
+									"default": "'string'",
+									"notes": "`'object'` returns `{ streetNumber, streetName, city, state, zipCode, country }`."
+								}
 							]
 						},
 						{
@@ -9740,6 +10181,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ withMaterial? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "withMaterial",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include a material word between adjective and noun."
 								}
 							]
 						},
@@ -9778,6 +10227,14 @@
 									"required": "No",
 									"notes": "`{ suffix? }` — include Inc., Ltd., etc."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "suffix",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Append LLC/Inc./etc. suffix."
+								}
 							]
 						},
 						{
@@ -9794,6 +10251,26 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ min?, max?, symbol? }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "min",
+									"type": "number",
+									"default": "0.99",
+									"notes": "Minimum price."
+								},
+								{
+									"option": "max",
+									"type": "number",
+									"default": "999.99",
+									"notes": "Maximum price."
+								},
+								{
+									"option": "symbol",
+									"type": "string",
+									"default": "''",
+									"notes": "Currency symbol to prepend. When provided, returns `string` instead of `number`."
 								}
 							]
 						},
@@ -9832,6 +10309,14 @@
 									"required": "No",
 									"notes": "`{ format?: \"css\" | \"array\" | \"object\" }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "format",
+									"type": "string",
+									"default": "'css'",
+									"notes": "`'object'` returns `{ r, g, b }`. Default `'css'` returns `rgb(r, g, b)`."
+								}
 							]
 						},
 						{
@@ -9848,6 +10333,14 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ format?: \"css\" | \"array\" | \"object\" }`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "format",
+									"type": "string",
+									"default": "'css'",
+									"notes": "`'object'` returns `{ h, s, l }`. Default `'css'` returns `hsl(h, s%, l%)`."
 								}
 							]
 						},
@@ -10108,6 +10601,23 @@
 									"type": "object",
 									"required": "No",
 									"notes": "`{ table?, action?, minDuration? }` — all optional filters."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "table",
+									"type": "string",
+									"notes": "Filter results by table name."
+								},
+								{
+									"option": "action",
+									"type": "string",
+									"notes": "Filter by action type: `select`, `insert`, `update`, `delete`, `count`."
+								},
+								{
+									"option": "minDuration",
+									"type": "number",
+									"notes": "Minimum duration in ms."
 								}
 							]
 						}

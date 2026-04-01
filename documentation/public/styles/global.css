@@ -1101,6 +1101,17 @@ button.site-badge{cursor:pointer;border:none;background:none;padding:0;font-fami
 .mm-row-required{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#f85149;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.14);padding:1px 6px;border-radius:4px}
 .mm-row-optional{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);padding:1px 6px;border-radius:4px;opacity:.7}
 .mm-row-desc{font-size:13px;color:var(--text);line-height:1.72;margin:0;opacity:.7}
+/* -- Sub-options (collapsible inside params) ----------------- */
+.mm-sub-opts{margin-top:8px}
+.mm-sub-opts-toggle{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;font-family:Menlo,Monaco,Consolas,'Courier New',monospace;color:#58a6ff;cursor:pointer;padding:3px 10px;border-radius:16px;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);letter-spacing:.02em;transition:background .1s,border-color .1s;list-style:none;user-select:none}
+.mm-sub-opts-toggle::-webkit-details-marker{display:none}
+.mm-sub-opts-toggle::before{content:'▸';font-size:12px;transition:transform .15s}
+.mm-sub-opts[open]>.mm-sub-opts-toggle::before{transform:rotate(90deg)}
+.mm-sub-opts-toggle:hover{background:rgba(88,166,255,.14);border-color:rgba(88,166,255,.4)}
+.mm-sub-opts-toggle svg{flex-shrink:0;opacity:.8}
+.mm-sub-opts-list{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding-left:6px;border-left:2px solid rgba(88,166,255,.25);border-radius:0}
+.mm-sub-opts-row{display:flex;flex-direction:column;gap:5px;padding:8px 12px;border-radius:6px;transition:background .07s}
+.mm-sub-opts-row:hover{background:rgba(88,166,255,.04)}
 /* -- Returns card -------------------------------------------- */
 .mm-return-card{display:flex;flex-direction:column;gap:18px;padding:28px 24px 26px}
 .mm-return-hero{display:flex;flex-direction:column;gap:10px}
@@ -1138,6 +1149,10 @@ button.site-badge{cursor:pointer;border:none;background:none;padding:0;font-fami
 [data-theme="light"] .mm-list[data-kind="returns"] .mm-row:hover{border-left-color:rgba(180,83,9,.7)}
 [data-theme="light"] .mm-row-key{color:#92400e;background:rgba(146,64,14,.08);border-color:rgba(146,64,14,.12)}
 [data-theme="light"] .mm-row-optional{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08)}
+[data-theme="light"] .mm-sub-opts-toggle{color:#0969da;background:rgba(9,105,218,.06);border-color:rgba(9,105,218,.18)}
+[data-theme="light"] .mm-sub-opts-toggle:hover{background:rgba(9,105,218,.12);border-color:rgba(9,105,218,.35)}
+[data-theme="light"] .mm-sub-opts-list{border-left-color:rgba(9,105,218,.2)}
+[data-theme="light"] .mm-sub-opts-row:hover{background:rgba(9,105,218,.03)}
 [data-theme="light"] .mm-kind-pill-opts{color:#0969da;background:rgba(9,105,218,.07);border-color:rgba(9,105,218,.2)}
 [data-theme="light"] .mm-kind-pill-params{color:#1a7f37;background:rgba(26,127,55,.07);border-color:rgba(26,127,55,.2)}
 [data-theme="light"] .mm-kind-pill-returns{color:#b45309;background:rgba(180,83,9,.07);border-color:rgba(180,83,9,.2)}
@@ -1324,6 +1339,7 @@ button.site-badge{cursor:pointer;border:none;background:none;padding:0;font-fami
 	.badge-modal{max-width:100%;margin:0;border-radius:0;max-height:100vh;height:100vh}
 	.meth-btns{gap:3px;margin-top:5px}
 	.meth-btn{font-size:9.5px;padding:1px 6px}
+	.mm-sub-opts-toggle{font-size:9.5px;padding:2px 7px}
 	.bm-chart{flex-direction:column;gap:16px}
 	.sb-sunburst{max-width:min(92vw,420px)}
 	.sb-stats{gap:8px}

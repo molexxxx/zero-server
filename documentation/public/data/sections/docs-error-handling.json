@@ -766,6 +766,18 @@
 									"required": "No",
 									"notes": "Options passed to the `HttpError` constructor."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"notes": "Machine-readable error code (e.g. `'VALIDATION_FAILED'`). Defaults to an auto-generated code from the status text."
+								},
+								{
+									"option": "details",
+									"type": "any",
+									"notes": "Extra data — field errors, debug info, etc. Attached as `error.details` and included in `toJSON()`."
+								}
 							]
 						},
 						{

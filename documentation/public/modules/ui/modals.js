@@ -116,7 +116,7 @@ export function renderCoverageModal(data)
         { label: 'Lines',      pct: c.lines,       color: barColor(c.lines) },
     ];
 
-    const overallPct = Math.round((c.statements + c.branches + c.functions + c.lines) / 4 * 100) / 100;
+    const overallPct = c.statements;
 
     const segs = [];
     const innerGap = 6;
