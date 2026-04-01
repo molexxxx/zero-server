@@ -530,7 +530,7 @@
 							},
 							"methodParams": [
 								{
-									"param": "msg",
+									"param": "obj",
 									"type": "any",
 									"required": "Yes",
 									"notes": "Object to serialize as JSON and broadcast."
@@ -660,7 +660,7 @@
 					"methods": [
 						{
 							"method": "closeAll",
-							"signature": "pool.closeAll()",
+							"signature": "pool.closeAll([code], [reason])",
 							"description": "Close all connections.",
 							"methodReturns": {
 								"type": "void",

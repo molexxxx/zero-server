@@ -712,7 +712,7 @@
 						},
 						{
 							"method": "close",
-							"signature": "close()",
+							"signature": "close([cb])",
 							"description": "Shut down the server.",
 							"methodReturns": {
 								"type": "void",
@@ -1138,6 +1138,14 @@
 									"required": "No",
 									"notes": "`{ secure? }`."
 								}
+							],
+							"methodOptions": [
+								{
+									"option": "secure",
+									"type": "boolean",
+									"default": "undefined",
+									"notes": "When `true`, matches HTTPS only; when `false`, matches HTTP only. Omit to match both protocols."
+								}
 							]
 						},
 						{
@@ -1438,7 +1446,14 @@
 								"type": "string[]",
 								"description": "Array of subdomain segments, reversed. E.g. \"a.b.example.com\" → [\"b\",\"a\"]."
 							},
-							"methodParams": []
+							"methodParams": [
+								{
+									"param": "offset",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of domain segments to skip from the right (default: 2)."
+								}
+							]
 						},
 						{
 							"method": "xhr",
