@@ -4,6 +4,15 @@
 
 import { $, on, escapeHtml, showJsonResult, highlightAllPre } from '../core/helpers.js';
 
+function _detectTextLang(text, ct)
+{
+    if (ct.includes('xml') || ct.includes('svg')) return 'html';
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json';
+    if (trimmed.startsWith('<')) return 'html';
+    return 'bash';
+}
+
 export function initProxy()
 {
     const proxyForm   = $('#proxyForm');
@@ -12,7 +21,12 @@ export function initProxy()
 
     const SAMPLE_URLS = [
         'https://download.samplelib.com/mp4/sample-5s.mp4',
+        'https://download.samplelib.com/mp4/sample-10s.mp4',
         'https://download.samplelib.com/mp3/sample-3s.mp3',
+        'https://download.samplelib.com/mp3/sample-9s.mp3',
+        'https://download.samplelib.com/wav/sample-3s.wav',
+        'https://download.samplelib.com/png/sample-bw-100x100.png',
+        'https://download.samplelib.com/jpeg/sample-clouds-400x300.jpg',
         'https://picsum.photos/400/300',
         'https://picsum.photos/600/400',
         'https://picsum.photos/300/300',
@@ -36,9 +50,8 @@ export function initProxy()
         'https://dog.ceo/api/breeds/image/random',
         'https://official-joke-api.appspot.com/random_joke',
         'https://uselessfacts.jsph.pl/api/v2/facts/random?language=en',
-        'https://www.boredapi.com/api/activity',
-        'https://api.adviceslip.com/advice',
-        'https://placeholder.co/400x300/png'
+        'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        'https://filesamples.com/samples/audio/ogg/sample3.ogg'
     ];
 
     const randomBtn = $('#proxyRandomBtn');
@@ -106,7 +119,7 @@ export function initProxy()
                     mediaHtml = `<video controls src="${proxiedUrl}" style="max-width:480px;display:block;margin-bottom:8px"></video>`;
                 proxyResult.innerHTML = `<div>${mediaHtml}<div class="mono">${escapeHtml('Streaming: ' + ct)}</div></div>`;
             }
-            else if (ct.startsWith('text/') || ct === '')
+            else if (ct.startsWith('text/') || ct === '' || ct.includes('xml'))
             {
                 const txt = await r.text();
 
@@ -136,12 +149,13 @@ export function initProxy()
                         `style="width:100%;height:500px;border:1px solid var(--surface-border);border-radius:8px;background:#fff" ` +
                         `title="Proxied page"></iframe>` +
                         `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer;font-size:13px">View source</summary>` +
-                        `<pre class="code" style="margin-top:6px"><code>${escapeHtml(txt)}</code></pre></details>`;
+                        `<pre class="code" style="margin-top:6px"><code class="language-html">${escapeHtml(txt)}</code></pre></details>`;
                     try { highlightAllPre(); } catch (e) { }
                 }
                 else
                 {
-                    proxyResult.innerHTML = `<pre class="code"><code>${escapeHtml(txt)}</code></pre>`;
+                    const lang = _detectTextLang(txt, ct);
+                    proxyResult.innerHTML = `<pre class="code language-${lang}"><code class="language-${lang}">${escapeHtml(txt)}</code></pre>`;
                     try { highlightAllPre(); } catch (e) { }
                 }
             }

@@ -106,6 +106,10 @@ export interface RateLimitOptions {
     statusCode?: number;
     /** Custom key extraction function. */
     keyGenerator?: (req: Request) => string;
+    /** Return true to skip rate limiting for this request. */
+    skip?: (req: Request) => boolean;
+    /** Custom handler for rate-limited requests (replaces default 429 JSON response). */
+    handler?: (req: Request, res: Response) => void;
 }
 
 export function rateLimit(opts?: RateLimitOptions): MiddlewareFunction;
@@ -209,10 +213,10 @@ export interface CookieParserStatic {
     sign(val: string, secret: string): string;
     /** Unsign a signed value against one or more secrets. Returns the original value or false. */
     unsign(val: string, secrets: string | string[]): string | false;
-    /** Parse a single JSON cookie value (j: prefix). Returns parsed object or original string. */
-    jsonCookie(str: string): any;
-    /** Parse all string values in an object as JSON cookies. */
-    parseJSON(obj: Record<string, any>): Record<string, any>;
+    /** Serialize a value as a JSON cookie string (j: prefix). */
+    jsonCookie(val: any): string;
+    /** Parse a JSON cookie string (j: prefix). Returns parsed value or original string. */
+    parseJSON(str: string): any;
 }
 
 export const cookieParser: CookieParserStatic;

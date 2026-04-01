@@ -756,6 +756,7 @@ html.app-revealed body{opacity:1;transition:opacity .35s cubic-bezier(.4,0,.2,1)
 .docs-sk-short{width:65%}
 .doc-section{margin-bottom:28px;padding:0;scroll-margin-top:calc(var(--header-height) + 24px)}
 .doc-item{scroll-margin-top:calc(var(--header-height) + 24px)}
+.mm-group-label[id],.mm-method-card[id]{scroll-margin-top:calc(var(--header-height) + 24px)}
 
 /* Playground section scroll offset */
 #playground, #upload-testing, #parser-tests, #proxy-test,

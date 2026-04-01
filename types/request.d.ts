@@ -23,6 +23,8 @@ export interface Request {
     params: Record<string, string>;
     /** Request body (set by body-parsing middleware). */
     body: any;
+    /** Raw request body as a Buffer (set by body-parsing middleware before parsing). */
+    rawBody?: Buffer;
     /** Remote IP address. */
     ip: string | null;
     /** `true` when the connection is over TLS. */

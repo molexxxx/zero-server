@@ -488,6 +488,35 @@
 									"notes": "`(err, req, res) => void` — receives every error thrown or passed to `next(err)`."
 								}
 							]
+						},
+						{
+							"method": "route",
+							"signature": "app.route(method, path, ...handlers)",
+							"description": "Register a route with a specific HTTP method string. Lower-level alternative to `app.get()`, `app.post()`, etc.",
+							"methodReturns": {
+								"type": "App",
+								"description": "The app instance (chainable)."
+							},
+							"methodParams": [
+								{
+									"param": "method",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HTTP method (e.g. `\"GET\"`, `\"POST\"`)."
+								},
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route path pattern."
+								},
+								{
+									"param": "...handlers",
+									"type": "RouteHandler[]",
+									"required": "Yes",
+									"notes": "One or more handler functions."
+								}
+							]
 						}
 					]
 				},
@@ -592,6 +621,26 @@
 							"methodReturns": {
 								"type": "any",
 								"description": "Shared object available to all route handlers via req.locals and res.locals."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "router",
+							"signature": "app.router",
+							"description": "The internal RouterInstance. Useful for advanced inspection or mounting child routers.",
+							"methodReturns": {
+								"type": "RouterInstance",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "middlewares",
+							"signature": "app.middlewares",
+							"description": "The middleware stack array. Read-only introspection of registered middleware.",
+							"methodReturns": {
+								"type": "MiddlewareFunction[]",
+								"description": ""
 							},
 							"methodParams": []
 						}
@@ -1055,6 +1104,74 @@
 								"description": "All routes registered on this router."
 							},
 							"methodParams": []
+						},
+						{
+							"method": "add",
+							"signature": "router.add(method, path, handlers, [options])",
+							"description": "Low-level route registration. Prefer `router.get()`, `router.post()`, etc. for convenience.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "method",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HTTP method."
+								},
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "handlers",
+									"type": "RouteHandler[]",
+									"required": "Yes",
+									"notes": "Array of handler functions."
+								},
+								{
+									"param": "options",
+									"type": "RouteOptions",
+									"required": "No",
+									"notes": "`{ secure? }`."
+								}
+							]
+						},
+						{
+							"method": "handle",
+							"signature": "router.handle(req, res)",
+							"description": "Match the request against registered routes and invoke the first matching handler chain. Called internally by the framework.",
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							},
+							"methodParams": [
+								{
+									"param": "req",
+									"type": "Request",
+									"required": "Yes",
+									"notes": "The request object."
+								},
+								{
+									"param": "res",
+									"type": "Response",
+									"required": "Yes",
+									"notes": "The response object."
+								}
+							]
+						},
+						{
+							"method": "routes",
+							"signature": "router.routes",
+							"description": "Array of all registered route entries.",
+							"methodReturns": {
+								"type": "RouteEntry[]",
+								"description": ""
+							},
+							"methodParams": []
 						}
 					]
 				}
@@ -1187,16 +1304,6 @@
 									"notes": "Content types in preference order, e.g. `\"json\"`, `\"html\"`, `\"application/*\"`. Returns best match or `false`."
 								}
 							]
-						},
-						{
-							"method": "type",
-							"signature": "type",
-							"description": "",
-							"methodReturns": {
-								"type": "string",
-								"description": "Shorthand for req.headers['content-type'] — returns the request Content-Type MIME type, e.g. \"application/json\", \"text/html\"."
-							},
-							"methodParams": []
 						}
 					]
 				},
@@ -1230,6 +1337,16 @@
 							"methodReturns": {
 								"type": "any",
 								"description": "Parsed request body.  Value depends on the body-parser middleware applied — object for JSON/urlencoded, Buffer for raw, string for text, or `{ fields, files }` for multipart."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "rawBody",
+							"signature": "req.rawBody",
+							"description": "Raw request body as a Buffer, set by body-parsing middleware before parsing. Useful for webhook signature verification (e.g. Stripe, GitHub).",
+							"methodReturns": {
+								"type": "Buffer",
+								"description": "The raw body bytes before any parsing or decoding."
 							},
 							"methodParams": []
 						}
@@ -1402,6 +1519,51 @@
 							"methodReturns": {
 								"type": "http.IncomingMessage",
 								"description": "The underlying Node.js `http.IncomingMessage` object for low-level access."
+							},
+							"methodParams": []
+						}
+					]
+				},
+				{
+					"group": "Properties",
+					"methods": [
+						{
+							"method": "timedOut",
+							"signature": "req.timedOut",
+							"description": "Whether the request timed out. Set to `true` by the timeout middleware when the deadline is exceeded.",
+							"methodReturns": {
+								"type": "boolean | undefined",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "app",
+							"signature": "req.app",
+							"description": "Reference to the parent App instance.",
+							"methodReturns": {
+								"type": "App | null",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "csrfToken",
+							"signature": "req.csrfToken",
+							"description": "CSRF token string. Populated by the csrf middleware for inclusion in forms or response headers.",
+							"methodReturns": {
+								"type": "string | undefined",
+								"description": ""
+							},
+							"methodParams": []
+						},
+						{
+							"method": "secrets",
+							"signature": "req.secrets",
+							"description": "Array of all signing secrets. Populated by cookieParser when multiple secrets are provided.",
+							"methodReturns": {
+								"type": "string[] | undefined",
+								"description": ""
 							},
 							"methodParams": []
 						}
@@ -2041,6 +2203,16 @@
 							"methodReturns": {
 								"type": "http.ServerResponse",
 								"description": "The underlying Node.js `http.ServerResponse` for low-level write access."
+							},
+							"methodParams": []
+						},
+						{
+							"method": "app",
+							"signature": "res.app",
+							"description": "Reference to the parent App instance.",
+							"methodReturns": {
+								"type": "App | null",
+								"description": ""
 							},
 							"methodParams": []
 						}
