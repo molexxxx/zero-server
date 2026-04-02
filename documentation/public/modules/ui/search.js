@@ -323,12 +323,7 @@ function showRecent()
 
     // Filter recents to only items available in the current version's index
     const available = searchIndex.length
-        ? recents.filter(r =>
-        {
-            // Check if the slug (or its base item slug) exists in the current index
-            const baseSlug = r.slug.includes('--') ? r.slug.split('--')[0] : r.slug;
-            return searchIndex.some(e => e.slug === r.slug || e.slug === baseSlug || (e.name === r.name && e.section === r.section));
-        })
+        ? recents.filter(r => searchIndex.some(e => e.slug === r.slug && e.name === r.name))
         : recents;
 
     if (!available.length)
