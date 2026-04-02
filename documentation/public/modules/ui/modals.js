@@ -16,9 +16,16 @@ export function openBadgeModal(id)
 
     const close = () => histCloseModal(id);
     overlay.querySelector('.badge-modal-close').onclick = close;
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    const onKey = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
+
+    if (overlay._modalClickHandler)
+        overlay.removeEventListener('click', overlay._modalClickHandler);
+    overlay._modalClickHandler = (e) => { if (e.target === overlay) close(); };
+    overlay.addEventListener('click', overlay._modalClickHandler);
+
+    if (overlay._modalKeyHandler)
+        document.removeEventListener('keydown', overlay._modalKeyHandler);
+    overlay._modalKeyHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', overlay._modalKeyHandler); } };
+    document.addEventListener('keydown', overlay._modalKeyHandler);
 }
 
 export function renderTestsModal(data)
