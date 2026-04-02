@@ -4,7 +4,7 @@
  */
 
 import { escapeHtml, formatNotes, slugify, highlightAllPre } from '../core/helpers.js';
-import { histPushAccordion, histPushModal, histCloseModal, histPushHash } from '../core/history.js';
+import { histPushAccordion, histPushModal, histCloseModal, histPushHash, histCloseSidebar } from '../core/history.js';
 import { initTocCollapsible, expandTocForId, scrollToId, refreshScrollSpy } from '../ui/shell.js';
 
 /* -- Method meta store ------------------------------------- */
@@ -877,7 +877,7 @@ function populateToc(sections)
         const a = document.createElement('a');
         a.href = '#' + sSlug;
         a.textContent = section.section;
-        a.addEventListener('click', () => document.body.classList.remove('toc-open'));
+        a.addEventListener('click', () => histCloseSidebar());
         li.appendChild(a);
 
         if (Array.isArray(section.items) && section.items.length)
@@ -892,7 +892,7 @@ function populateToc(sections)
                 const subA = document.createElement('a');
                 subA.href = '#' + itemSlug(section.section, item.name);
                 subA.textContent = item.name;
-                subA.addEventListener('click', () => document.body.classList.remove('toc-open'));
+                subA.addEventListener('click', () => histCloseSidebar());
                 subLi.appendChild(subA);
                 sub.appendChild(subLi);
             }

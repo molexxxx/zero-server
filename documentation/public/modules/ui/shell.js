@@ -4,7 +4,7 @@
  * smooth-scroll, scroll-spy, progress bar, FAB.
  */
 
-import { histPushHash, histPushAccordion } from '../core/history.js';
+import { histPushHash, histPushAccordion, histPushSidebar, histCloseSidebar } from '../core/history.js';
 
 /* -- Theme Toggle (dark / light) --------------------------- */
 
@@ -163,22 +163,11 @@ function initTocSidebar()
 
     syncAria();
 
-    const closeMobileSidebar = () =>
-    {
-        document.body.classList.remove('toc-open');
-        syncAria();
-    };
-
-    /* Back / close button inside mobile sidebar header */
-    const backBtn = sidebar.querySelector('.toc-back-btn');
-    if (backBtn)
-    {
-        backBtn.addEventListener('click', closeMobileSidebar);
-    }
+    /* Close button in toolbar (visible on mobile/tablet only) */
     const closeBtn = sidebar.querySelector('.toc-close-btn');
     if (closeBtn)
     {
-        closeBtn.addEventListener('click', closeMobileSidebar);
+        closeBtn.addEventListener('click', () => histCloseSidebar());
     }
 
     btn.addEventListener('click', () =>
@@ -190,7 +179,10 @@ function initTocSidebar()
         }
         else
         {
+            const opening = !document.body.classList.contains('toc-open');
             document.body.classList.toggle('toc-open');
+            if (opening) histPushSidebar();
+            else histCloseSidebar();
         }
         syncAria();
     });
@@ -199,7 +191,7 @@ function initTocSidebar()
     {
         if (e.key === 'Escape')
         {
-            document.body.classList.remove('toc-open');
+            if (document.body.classList.contains('toc-open')) histCloseSidebar();
             document.body.classList.remove('toc-hidden');
             syncAria();
         }
@@ -209,7 +201,7 @@ function initTocSidebar()
     {
         if (!document.body.classList.contains('toc-open')) return;
         if (e.target.closest('.toc-sidebar') || e.target.closest('.toc-toggle')) return;
-        document.body.classList.remove('toc-open');
+        histCloseSidebar();
         syncAria();
     });
 
@@ -243,7 +235,7 @@ function initTocNavigation()
         e.preventDefault();
         histPushHash(hash);
         scrollToId(hash.slice(1));
-        document.body.classList.remove('toc-open');
+        histCloseSidebar();
 
         const parentLi = a.closest('.toc-collapsible');
         if (parentLi) parentLi.classList.remove('toc-collapsed');
