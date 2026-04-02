@@ -163,6 +163,24 @@ function initTocSidebar()
 
     syncAria();
 
+    const closeMobileSidebar = () =>
+    {
+        document.body.classList.remove('toc-open');
+        syncAria();
+    };
+
+    /* Back / close button inside mobile sidebar header */
+    const backBtn = sidebar.querySelector('.toc-back-btn');
+    if (backBtn)
+    {
+        backBtn.addEventListener('click', closeMobileSidebar);
+    }
+    const closeBtn = sidebar.querySelector('.toc-close-btn');
+    if (closeBtn)
+    {
+        closeBtn.addEventListener('click', closeMobileSidebar);
+    }
+
     btn.addEventListener('click', () =>
     {
         if (isDesktop())
