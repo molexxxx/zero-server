@@ -320,20 +320,31 @@ function clearRecent()
 function showRecent()
 {
     const recents = getRecent();
-    if (!recents.length)
+
+    // Filter recents to only items available in the current version's index
+    const available = searchIndex.length
+        ? recents.filter(r =>
+        {
+            // Check if the slug (or its base item slug) exists in the current index
+            const baseSlug = r.slug.includes('--') ? r.slug.split('--')[0] : r.slug;
+            return searchIndex.some(e => e.slug === r.slug || e.slug === baseSlug || (e.name === r.name && e.section === r.section));
+        })
+        : recents;
+
+    if (!available.length)
     {
         resultsContainer.innerHTML = '<div class="search-modal-empty">Start typing to search…</div>';
         return;
     }
 
-    currentResults = recents;
+    currentResults = available;
     activeIndex = 0;
 
     let html = '<div class="search-group">' +
         '<div class="search-group-title"><span>Recent</span>' +
         '<button class="search-clear-recent" type="button">Clear</button></div>';
 
-    recents.forEach((item, i) =>
+    available.forEach((item, i) =>
     {
         const icon = TYPE_ICONS[item.type] || TYPE_ICONS.item;
         const isActive = i === 0 ? ' search-active' : '';
@@ -590,4 +601,27 @@ function navigateToHash(id)
 export function initSearch()
 {
     _searchBoot();
+}
+
+/**
+ * Rebuild the search index and refresh the visible results/recents.
+ * Called after a version switch inside the search modal.
+ */
+export function refreshSearchResults()
+{
+    // Force index rebuild on next query
+    searchIndex = [];
+    searchIndexVersion = null;
+    _indexedSections = null;
+    buildIndex();
+
+    // If the input has a query, re-run it; otherwise refresh recents
+    if (input && input.value.trim())
+    {
+        runSearch(input.value.trim());
+    }
+    else
+    {
+        showRecent();
+    }
 }

@@ -22,7 +22,7 @@ const errorHandler = require('./lib/middleware/errorHandler');
 const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
-const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager } = require('./lib/orm');
+const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager, DatabaseView, FullTextSearch, GeoQuery, EARTH_RADIUS_KM, EARTH_RADIUS_MI } = require('./lib/orm');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
 const { version } = require('./package.json');
@@ -116,6 +116,17 @@ module.exports = {
     QueryProfiler,
     /** @see module:orm/replicas */
     ReplicaManager,
+    // ORM: Advanced Features (Phase 3)
+    /** @see module:orm/views */
+    DatabaseView,
+    /** @see module:orm/search */
+    FullTextSearch,
+    /** @see module:orm/geo */
+    GeoQuery,
+    /** @see module:orm/geo */
+    EARTH_RADIUS_KM,
+    /** @see module:orm/geo */
+    EARTH_RADIUS_MI,
     // Error handling & debugging
     /** @see module:errors */
     HttpError: errors.HttpError,

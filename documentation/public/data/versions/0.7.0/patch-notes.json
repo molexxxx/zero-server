@@ -1,0 +1,133 @@
+{
+	"version": "0.7.0",
+	"previousVersion": "0.6.9",
+	"date": "2026-04-02",
+	"changes": [
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "DatabaseView",
+			"description": "Database view management for the ORM. Supports creating, dropping, and querying database views. View-backed models are read-only by default."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "FullTextSearch",
+			"description": "Full-text search integration for the ORM. Provides a unified API across PostgreSQL (tsvector/tsquery), MySQL (FULLTEXT), SQLite (FTS5), and in-memory (regex-based)."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "GeoQuery",
+			"description": "Geo-spatial query support for the ORM. Provides distance calculations, bounding box queries, radius searches, and GeoJSON support. Works with in-memory adapters using Haversine formula; SQL adapters can use native spatial extensions (PostGIS, MySQL spatial)."
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "getAttribute"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "setAttribute"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "on"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "once"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "off"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "removeAllListeners"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "observe"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "unobserve"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "morphOne"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "morphMany"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "hasManyThrough"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "selfReferential"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "tree"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "ancestors"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "ORM",
+			"name": "Model",
+			"method": "descendants"
+		}
+	]
+}

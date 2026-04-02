@@ -6,6 +6,7 @@
  */
 
 let _loadDocs = null;
+let _refreshSearch = null;
 let _versions = null;
 let _currentVersion = null;
 let _selectedVersion = null;
@@ -16,6 +17,11 @@ const CHEVRON = '<svg width="8" height="5" viewBox="0 0 8 5" fill="none"><path d
  * Register the loadDocs callback (called from boot.js).
  */
 export function registerVersionLoadDocs(fn) { _loadDocs = fn; }
+
+/**
+ * Register the refreshSearch callback (called from boot.js).
+ */
+export function registerVersionRefreshSearch(fn) { _refreshSearch = fn; }
 
 /**
  * Get the currently-selected version string (for use by search, etc.).
@@ -87,6 +93,17 @@ export async function initVersionSelector()
 		item.textContent = entry.latest ? `v${entry.version} (latest)` : `v${entry.version}`;
 		menu.appendChild(item);
 	}
+
+	/* "What's New" trigger at the bottom of the menu */
+	const whatsNewSep = document.createElement('div');
+	whatsNewSep.className = 'version-menu-sep';
+	menu.appendChild(whatsNewSep);
+	const whatsNew = document.createElement('div');
+	whatsNew.className = 'version-menu-item version-menu-whatsnew';
+	whatsNew.setAttribute('data-patch-notes', '');
+	whatsNew.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1v5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/></svg> What\'s New';
+	menu.appendChild(whatsNew);
+
 	wrapper.appendChild(menu);
 
 	/* Toggle on click */
@@ -112,6 +129,14 @@ export async function initVersionSelector()
 	{
 		const item = e.target.closest('.version-menu-item');
 		if (!item) return;
+
+		/* "What's New" — handled by patch-notes module via data-patch-notes */
+		if (item.hasAttribute('data-patch-notes'))
+		{
+			wrapper.classList.remove('open');
+			badge.setAttribute('aria-expanded', 'false');
+			return;
+		}
 
 		const ver = item.dataset.version;
 		_selectedVersion = ver;
@@ -281,6 +306,9 @@ export function initSearchVersionBadge()
 			window._docsVersion = ver;
 			await _loadDocs(ver);
 		}
+
+		/* Refresh search results/recents with new version data */
+		if (_refreshSearch) _refreshSearch();
 	});
 
 	/* Close when clicking outside */

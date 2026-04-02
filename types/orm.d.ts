@@ -397,6 +397,71 @@ export class Model {
         relatedKey?: string;
     }): void;
 
+    /** Define a polymorphic one-to-one relationship. */
+    static morphOne(RelatedModel: typeof Model, morphName: string, localKey?: string): void;
+    /** Define a polymorphic one-to-many relationship. */
+    static morphMany(RelatedModel: typeof Model, morphName: string, localKey?: string): void;
+    /** Define a has-many-through relationship (distant relation via intermediate model). */
+    static hasManyThrough(
+        RelatedModel: typeof Model,
+        ThroughModel: typeof Model,
+        firstKey: string,
+        secondKey: string,
+        localKey?: string,
+        secondLocalKey?: string,
+    ): void;
+    /** Define self-referential parent/children relationships. */
+    static selfReferential(options: {
+        foreignKey: string;
+        parentName?: string;
+        childrenName?: string;
+    }): void;
+    /** Build a tree structure from self-referential records. */
+    static tree(options?: {
+        foreignKey?: string;
+        childrenKey?: string;
+        rootValue?: any;
+    }): Promise<any[]>;
+
+    /** Get all ancestors of this instance in a self-referential tree. */
+    ancestors(foreignKey?: string): Promise<Model[]>;
+    /** Get all descendants of this instance (breadth-first). */
+    descendants(foreignKey?: string): Promise<Model[]>;
+
+    // -- Computed & Virtual Columns (Phase 3) -----------------
+
+    /** Computed column definitions: { name: (instance) => value }. */
+    static computed: Record<string, (instance: Model) => any>;
+    /** Attribute casting definitions: { field: castType | { get, set } }. */
+    static casts: Record<string, string | { get?: (value: any) => any; set?: (value: any) => any }>;
+    /** Accessor transforms applied on read: { field: (value, instance) => transformedValue }. */
+    static accessors: Record<string, (value: any, instance: Model) => any>;
+    /** Mutator transforms applied on write: { field: (value, instance) => transformedValue }. */
+    static mutators: Record<string, (value: any, instance: Model) => any>;
+
+    /** Get an attribute value with accessor/cast applied. */
+    getAttribute(key: string): any;
+    /** Set an attribute value with mutator/cast applied. */
+    setAttribute(key: string, value: any): Model;
+
+    // -- Model Events (Phase 3) -------------------------------
+
+    /** Listen for a model event. */
+    static on(event: string, listener: (...args: any[]) => void): typeof Model;
+    /** Listen for a model event once. */
+    static once(event: string, listener: (...args: any[]) => void): typeof Model;
+    /** Remove a model event listener. */
+    static off(event: string, listener: (...args: any[]) => void): typeof Model;
+    /** Remove all listeners for an event, or all listeners entirely. */
+    static removeAllListeners(event?: string): typeof Model;
+
+    // -- Observers (Phase 3) ----------------------------------
+
+    /** Register an observer object with lifecycle methods. */
+    static observe(observer: Partial<ModelObserver>): typeof Model;
+    /** Unregister an observer. */
+    static unobserve(observer: Partial<ModelObserver>): typeof Model;
+
     /** Create/sync the table in the database. */
     static sync(): Promise<void>;
     /** Drop the table from the database. */
@@ -404,6 +469,183 @@ export class Model {
 
     /** Allow index access for model fields. */
     [key: string]: any;
+}
+
+// --- Model Observer --------------------------------------------------
+
+export interface ModelObserver {
+    creating?: (data: object) => void | Promise<void>;
+    created?: (instance: Model) => void | Promise<void>;
+    updating?: (data: object) => void | Promise<void>;
+    updated?: (instance: Model) => void | Promise<void>;
+    deleting?: (instance: Model) => void | Promise<void>;
+    deleted?: (instance: Model) => void | Promise<void>;
+}
+
+// --- DatabaseView ----------------------------------------------------
+
+export interface DatabaseViewOptions {
+    /** Query builder instance defining the view's SELECT. */
+    query?: Query;
+    /** Raw SQL for the view definition (SQL adapters only). */
+    sql?: string;
+    /** Model class the view is based on. */
+    model?: typeof Model;
+    /** Column schema for the view (optional; inferred from model if omitted). */
+    schema?: Record<string, SchemaColumnDef>;
+    /** Whether to create a materialized view (PostgreSQL only). */
+    materialized?: boolean;
+}
+
+export class DatabaseView {
+    /** View name. */
+    readonly name: string;
+
+    constructor(name: string, options: DatabaseViewOptions);
+
+    /** Create the view in the database. */
+    create(db: Database): Promise<DatabaseView>;
+    /** Drop the view from the database. */
+    drop(db?: Database): Promise<void>;
+    /** Refresh a materialized view (PostgreSQL only). */
+    refresh(db?: Database): Promise<void>;
+    /** Check whether the view exists. */
+    exists(db?: Database): Promise<boolean>;
+    /** Query all records from the view. */
+    all(): Promise<any[]>;
+    /** Find records matching conditions. */
+    find(conditions?: object): Promise<any[]>;
+    /** Find a single record. */
+    findOne(conditions?: object): Promise<any | null>;
+    /** Count records in the view. */
+    count(conditions?: object): Promise<number>;
+    /** Start a fluent query against the view. */
+    query(): Query;
+}
+
+// --- FullTextSearch --------------------------------------------------
+
+export interface FullTextSearchOptions {
+    /** Column names to include in the search index. */
+    fields: string[];
+    /** Weight map for fields (e.g. { title: 'A', body: 'B' }). */
+    weights?: Record<string, string | number>;
+    /** Language for stemming/tokenisation (default: 'english'). */
+    language?: string;
+    /** Custom index name. */
+    indexName?: string;
+}
+
+export interface SearchOptions {
+    /** Include relevance ranking in results. */
+    rank?: boolean;
+    /** Maximum number of results. */
+    limit?: number;
+    /** Offset for pagination. */
+    offset?: number;
+    /** Additional WHERE conditions. */
+    where?: object;
+    /** Custom order ('rank' or a column name). */
+    orderBy?: string;
+}
+
+export interface SuggestOptions {
+    /** Max suggestions (default: 10). */
+    limit?: number;
+    /** Specific field to suggest from. */
+    field?: string;
+}
+
+export class FullTextSearch {
+    constructor(ModelClass: typeof Model, options: FullTextSearchOptions);
+
+    /** Create the full-text search index. */
+    createIndex(db: Database): Promise<FullTextSearch>;
+    /** Drop the full-text search index. */
+    dropIndex(db?: Database): Promise<void>;
+    /** Perform a full-text search. */
+    search(query: string, options?: SearchOptions): Promise<any[]>;
+    /** Search and return model instances. */
+    searchModels(query: string, options?: SearchOptions): Promise<Model[]>;
+    /** Count matching search results. */
+    count(query: string, options?: Pick<SearchOptions, 'where'>): Promise<number>;
+    /** Build search suggestions (autocomplete). */
+    suggest(prefix: string, options?: SuggestOptions): Promise<string[]>;
+}
+
+// --- GeoQuery --------------------------------------------------------
+
+/** Earth's radius in kilometres. */
+export const EARTH_RADIUS_KM: 6371;
+/** Earth's radius in miles. */
+export const EARTH_RADIUS_MI: 3959;
+
+export interface GeoQueryOptions {
+    /** Column name for latitude. */
+    latField: string;
+    /** Column name for longitude. */
+    lngField: string;
+    /** Distance unit: 'km' or 'mi' (default: 'km'). */
+    unit?: 'km' | 'mi';
+}
+
+export interface NearOptions {
+    /** Maximum distance (in configured unit). */
+    radius?: number;
+    /** Maximum number of results. */
+    limit?: number;
+    /** Skip N results. */
+    offset?: number;
+    /** Additional WHERE conditions. */
+    where?: object;
+    /** Override distance unit. */
+    unit?: 'km' | 'mi';
+    /** Add _distance property to results (default: true). */
+    includeDistance?: boolean;
+}
+
+export interface WithinBounds {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+}
+
+export interface GeoJSONPoint {
+    type: 'Point';
+    coordinates: [number, number]; // [lng, lat]
+}
+
+export interface GeoJSONFeature {
+    type: 'Feature';
+    geometry: GeoJSONPoint;
+    properties: Record<string, any>;
+}
+
+export interface GeoJSONFeatureCollection {
+    type: 'FeatureCollection';
+    features: GeoJSONFeature[];
+}
+
+export class GeoQuery {
+    constructor(ModelClass: typeof Model, options: GeoQueryOptions);
+
+    /** Find records near a geographic point. */
+    near(lat: number, lng: number, options?: NearOptions): Promise<any[]>;
+    /** Find records within a bounding box. */
+    within(bounds: WithinBounds, options?: { limit?: number; where?: object }): Promise<any[]>;
+    /** Calculate distance between two points. */
+    distance(lat1: number, lng1: number, lat2: number, lng2: number, unit?: 'km' | 'mi'): number;
+    /** Calculate Haversine distance between two points. */
+    static haversine(lat1: number, lng1: number, lat2: number, lng2: number, unit?: 'km' | 'mi'): number;
+    /** Convert a record to GeoJSON Feature. */
+    toGeoJSON(record: any, options?: { properties?: string[] }): GeoJSONFeature;
+    /** Convert multiple records to a GeoJSON FeatureCollection. */
+    toGeoJSONCollection(records: any[], options?: { properties?: string[] }): GeoJSONFeatureCollection;
+    /** Create a model data object from a GeoJSON Feature. */
+    fromGeoJSON(feature: GeoJSONFeature): object;
+    /** Check if a point is within a given radius of a center point. */
+    isWithinRadius(lat: number, lng: number, centerLat: number, centerLng: number, radius: number, unit?: 'km' | 'mi'): boolean;
 }
 
 // --- SQLite Options ----------------------------------------------

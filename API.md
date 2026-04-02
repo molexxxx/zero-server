@@ -67,6 +67,9 @@
   - [Seeder & Factory](#seeder-factory)
   - [QueryProfiler](#queryprofiler)
   - [ReplicaManager](#replicamanager)
+  - [DatabaseView](#databaseview)
+  - [FullTextSearch](#fulltextsearch)
+  - [GeoQuery](#geoquery)
 - [Real-Time](#real-time)
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
@@ -1212,7 +1215,7 @@ ORM entry point.  Provides the `Database` factory that creates a connection to a
 
 ### Model
 
-Base Model class for defining database-backed entities. Provides static CRUD methods, instance-level save/update/delete, lifecycle hooks, and relationship definitions.
+Base Model class for defining database-backed entities. Provides static CRUD methods, instance-level save/update/delete, lifecycle hooks, relationship definitions, computed/virtual columns, attribute casting, model events & observers, and advanced relationships.
 
 #### Parameters
 
@@ -1232,7 +1235,7 @@ Base Model class for defining database-backed entities. Provides static CRUD met
 | `increment` | `increment(field, [by])` | Increment a numeric field atomically. |
 | `decrement` | `decrement(field, [by])` | Decrement a numeric field atomically. |
 | `reload` | `reload()` | Reload this instance from the database. |
-| `toJSON` | `toJSON()` | Convert to plain object (for JSON serialization). Respects `static hidden = [...]` to exclude sensitive fields. |
+| `toJSON` | `toJSON()` | Convert to plain object (for JSON serialization). Respects `static hidden = [...]` to exclude sensitive fields. Includes computed columns and applies accessor transformations. |
 
 
 #### Static CRUD
@@ -1276,6 +1279,45 @@ Base Model class for defining database-backed entities. Provides static CRUD met
 | `belongsTo` | `belongsTo(RelatedModel, foreignKey, [otherKey])` | Define a belongsTo relationship. |
 | `belongsToMany` | `belongsToMany(RelatedModel, opts)` | Define a many-to-many relationship through a junction/pivot table. |
 | `load` | `load(relationName)` | Load a related model for this instance. |
+
+
+#### Attribute Casting Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `getAttribute` | `getAttribute(key)` | Get an attribute value with accessor/cast applied. |
+| `setAttribute` | `setAttribute(key, value)` | Set an attribute value with mutator/cast applied. |
+
+
+#### Model Events
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `on(event, listener)` | Register an event listener on this model. Supported events: `creating`, `created`, `updating`, `updated`, `deleting`, `deleted`, `saving`, `saved`. |
+| `once` | `once(event, listener)` | Register a one-time event listener. |
+| `off` | `off(event, listener)` | Remove an event listener. |
+| `removeAllListeners` | `removeAllListeners([event])` | Remove all listeners for an event, or all listeners entirely. |
+
+
+#### Observers
+
+| Method | Signature | Description |
+|---|---|---|
+| `observe` | `observe(observer)` | Register an observer for this model. An observer is an object with methods named after lifecycle events: `creating`, `created`, `updating`, `updated`, `deleting`, `deleted`. |
+| `unobserve` | `unobserve(observer)` | Remove an observer from this model. |
+
+
+#### Advanced Relationships
+
+| Method | Signature | Description |
+|---|---|---|
+| `morphOne` | `morphOne(RelatedModel, morphName, [localKey])` | Define a polymorphic one-to-one relationship (morphOne). The related table uses two columns: a type column and an ID column. |
+| `morphMany` | `morphMany(RelatedModel, morphName, [localKey])` | Define a polymorphic one-to-many relationship (morphMany). The related table uses two columns: a type column and an ID column. |
+| `hasManyThrough` | `hasManyThrough(RelatedModel, ThroughModel, firstKey, secondKey, [localKey], [secondLocalKey])` | Define a has-many-through relationship. Accesses distant relations through an intermediate table. |
+| `selfReferential` | `selfReferential(opts)` | Define a self-referential relationship for tree/graph structures. Sets up both parent and children relationships. |
+| `tree` | `tree([options])` | Build a full tree structure from self-referential records. Returns nested objects with a `children` array property. |
+| `ancestors` | `ancestors([foreignKey])` | Get all ancestors of this instance in a self-referential tree. |
+| `descendants` | `descendants([foreignKey])` | Get all descendants of this instance in a self-referential tree. |
 
 
 ```js
@@ -2854,6 +2896,166 @@ Read replica management with automatic read/write splitting, round-robin and ran
       ],
       { strategy: 'round-robin', stickyWindow: 2000 }
   );
+```
+
+
+### DatabaseView
+
+Database view management for the ORM. Supports creating, dropping, and querying database views. View-backed models are read-only by default.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | View name. |
+
+
+#### DatabaseView class
+
+| Method | Signature | Description |
+|---|---|---|
+| `create` | `create(db)` | Create the view in the database. For SQL adapters, issues CREATE VIEW (or CREATE MATERIALIZED VIEW). For memory/JSON adapters, stores the query definition for execution. |
+| `drop` | `drop(db)` | Drop the view from the database. |
+| `refresh` | `refresh([db])` | Refresh a materialized view (PostgreSQL only). |
+| `exists` | `exists([db])` | Check whether the view exists. |
+| `all` | `all()` | Query all records from the view. |
+| `find` | `find(conditions)` | Find records from the view matching conditions. |
+| `findOne` | `findOne(conditions)` | Find a single record from the view. |
+| `count` | `count([conditions])` | Count records in the view. |
+| `query` | `query()` | Start a fluent query against the view. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `query` | Query | `—` | Query builder instance defining the view's SELECT. |
+| `sql` | string | `—` | Raw SQL for the view definition (SQL adapters only). |
+| `model` | typeof Model | `—` | Model class the view is based on. |
+| `schema` | object | `—` | Column schema for the view (optional; inferred from model if omitted). |
+| `materialized` | boolean | `false` | Whether to create a materialized view (PostgreSQL only). |
+
+
+```js
+  const { DatabaseView } = require('zero-http');
+
+  // Define a view
+  const activeUsers = new DatabaseView('active_users', {
+      query: User.query().where('active', true).select('id', 'name', 'email'),
+      model: User,
+  });
+
+  // Create the view in the database
+  await activeUsers.create(db);
+
+  // Query the view
+  const users = await activeUsers.all();
+  const user = await activeUsers.findOne({ name: 'Alice' });
+```
+
+
+### FullTextSearch
+
+Full-text search integration for the ORM. Provides a unified API across PostgreSQL (tsvector/tsquery), MySQL (FULLTEXT), SQLite (FTS5), and in-memory (regex-based).
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `ModelClass` | typeof Model | Yes | Model class to search. |
+
+
+#### FullTextSearch class
+
+| Method | Signature | Description |
+|---|---|---|
+| `createIndex` | `createIndex(db)` | Create the full-text search index. Adapts to the underlying database: - PostgreSQL: creates a GIN index on tsvector columns - MySQL: creates a FULLTEXT index - SQLite: creates an FTS5 virtual table - Memory/JSON: no-op (search operates with in-memory regex) |
+| `dropIndex` | `dropIndex(db)` | Drop the full-text search index. |
+| `search` | `search(query, [options])` | Perform a full-text search. |
+| `searchModels` | `searchModels(query, [options])` | Search and return model instances instead of plain objects. |
+| `count` | `count(query, [options])` | Count matching search results. |
+| `suggest` | `suggest(prefix, [options])` | Build search suggestions (autocomplete) from indexed fields. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `fields` | string[] | `—` | Column names to include in the search index. |
+| `weights` | Object<string, string> | `—` | Weight map for fields (e.g. `{ title: 'A', body: 'B' }`). |
+| `language` | string | `'english'` | Language for stemming. |
+| `indexName` | string | `—` | Custom index name. |
+
+
+```js
+  const { FullTextSearch } = require('zero-http');
+
+  // Create a search index
+  const search = new FullTextSearch(Article, {
+      fields: ['title', 'body'],
+      weights: { title: 'A', body: 'B' },
+  });
+
+  // Create the index in the database
+  await search.createIndex(db);
+
+  // Search
+  const results = await search.search('javascript framework');
+  const ranked = await search.search('node.js', { rank: true, limit: 10 });
+```
+
+
+### GeoQuery
+
+Geo-spatial query support for the ORM. Provides distance calculations, bounding box queries, radius searches, and GeoJSON support. Works with in-memory adapters using Haversine formula; SQL adapters can use native spatial extensions (PostGIS, MySQL spatial).
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `ModelClass` | typeof Model | Yes | Model class with location data. |
+
+
+#### GeoQuery class
+
+| Method | Signature | Description |
+|---|---|---|
+| `near` | `near(lat, lng, [options])` | Find records near a geographic point. Uses Haversine formula for distance calculation. |
+| `within` | `within(bounds, [options])` | Find records within a bounding box. |
+| `distance` | `distance(lat1, lng1, lat2, lng2, [unit])` | Calculate the distance between two geographic points. Uses the Haversine formula. |
+| `haversine` | `haversine(lat1, lng1, lat2, lng2, [unit])` | Calculate the Haversine distance between two points. |
+| `toGeoJSON` | `toGeoJSON(record, [options])` | Convert a record to GeoJSON Point feature. |
+| `toGeoJSONCollection` | `toGeoJSONCollection(records, [options])` | Convert multiple records to a GeoJSON FeatureCollection. |
+| `fromGeoJSON` | `fromGeoJSON(feature)` | Create a model instance from a GeoJSON Feature. |
+| `isWithinRadius` | `isWithinRadius(lat, lng, centerLat, centerLng, radius, [unit])` | Check if a point is within a given radius of a center point. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `latField` | string | `—` | Column name for latitude. |
+| `lngField` | string | `—` | Column name for longitude. |
+| `unit` | string | `'km'` | Distance unit: 'km' or 'mi'. |
+
+
+```js
+  const { GeoQuery } = require('zero-http');
+
+  // Create a geo query helper for a model
+  const geo = new GeoQuery(Store, {
+      latField: 'latitude',
+      lngField: 'longitude',
+  });
+
+  // Find stores within 10km of a point
+  const nearby = await geo.near(40.7128, -74.0060, { radius: 10 });
+
+  // Find stores within a bounding box
+  const inBox = await geo.within({
+      north: 40.8, south: 40.6,
+      east: -73.9, west: -74.1,
+  });
 ```
 
 

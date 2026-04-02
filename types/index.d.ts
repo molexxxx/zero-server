@@ -36,8 +36,13 @@ export {
 export { Env, EnvFieldDef, EnvSchema, EnvLoadOptions, env } from './env';
 export {
     TYPES, SchemaColumnDef, validateValue, validateFKAction, validateCheck,
-    Query, Model, ModelHooks, FindOrCreateResult, PaginatedResult,
+    Query, Model, ModelHooks, ModelObserver, FindOrCreateResult, PaginatedResult,
     Database, AdapterType, RetryOptions,
+    DatabaseView, DatabaseViewOptions,
+    FullTextSearch, FullTextSearchOptions, SearchOptions, SuggestOptions,
+    GeoQuery, GeoQueryOptions, NearOptions, WithinBounds,
+    GeoJSONPoint, GeoJSONFeature, GeoJSONFeatureCollection,
+    EARTH_RADIUS_KM, EARTH_RADIUS_MI,
     Migrator, MigrationDefinition, MigrateResult, RollbackResult, MigrationStatus, defineMigration,
     QueryCache, QueryCacheOptions, CacheStats,
     Seeder, SeederRunner, Factory, Fake,
