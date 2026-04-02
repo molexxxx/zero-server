@@ -22,7 +22,8 @@ const errorHandler = require('./lib/middleware/errorHandler');
 const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
-const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager, DatabaseView, FullTextSearch, GeoQuery, EARTH_RADIUS_KM, EARTH_RADIUS_MI } = require('./lib/orm');
+const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager, DatabaseView, FullTextSearch, GeoQuery, EARTH_RADIUS_KM, EARTH_RADIUS_MI, TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager, buildSnapshot, loadSnapshot, saveSnapshot, diffSnapshots, hasNoChanges, generateMigrationCode, discoverModels, SNAPSHOT_FILE } = require('./lib/orm');
+const { CLI, runCLI } = require('./lib/cli');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
 const { version } = require('./package.json');
@@ -99,6 +100,16 @@ module.exports = {
     Migrator,
     /** @see module:orm/migrate */
     defineMigration,
+    // ORM: Schema snapshots (EF Core–style auto-migrations)
+    /** @see module:orm/snapshot */
+    buildSnapshot,
+    loadSnapshot,
+    saveSnapshot,
+    diffSnapshots,
+    hasNoChanges,
+    generateMigrationCode,
+    discoverModels,
+    SNAPSHOT_FILE,
     // ORM: Query caching
     /** @see module:orm/cache */
     QueryCache,
@@ -127,6 +138,19 @@ module.exports = {
     EARTH_RADIUS_KM,
     /** @see module:orm/geo */
     EARTH_RADIUS_MI,
+    // ORM: Enterprise Infrastructure (Phase 4)
+    /** @see module:orm/tenancy */
+    TenantManager,
+    /** @see module:orm/audit */
+    AuditLog,
+    /** @see module:orm/plugin */
+    PluginManager,
+    /** @see module:orm/procedures */
+    StoredProcedure,
+    /** @see module:orm/procedures */
+    StoredFunction,
+    /** @see module:orm/procedures */
+    TriggerManager,
     // Error handling & debugging
     /** @see module:errors */
     HttpError: errors.HttpError,
@@ -158,10 +182,20 @@ module.exports = {
     QueryError: errors.QueryError,
     AdapterError: errors.AdapterError,
     CacheError: errors.CacheError,
+    // Phase 4 errors
+    TenancyError: errors.TenancyError,
+    AuditError: errors.AuditError,
+    PluginError: errors.PluginError,
+    ProcedureError: errors.ProcedureError,
     createError: errors.createError,
     isHttpError: errors.isHttpError,
     /** @see module:debug */
     debug,
+    // ORM: CLI tooling
+    /** @see module:cli */
+    CLI,
+    /** @see module:cli */
+    runCLI,
     // classes (for advanced / direct usage)
     /** @see module:ws/connection */
     WebSocketConnection,

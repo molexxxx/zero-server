@@ -48,6 +48,14 @@ export {
     Seeder, SeederRunner, Factory, Fake,
     QueryProfiler, QueryProfilerOptions, ProfiledQuery, N1Detection, ProfilerMetrics,
     ReplicaManager, ReplicaManagerOptions, HealthCheckResult,
+    // Phase 4
+    TenantManager, TenantManagerOptions, TenantMiddlewareOptions,
+    AuditLog, AuditLogOptions, AuditEntry, AuditTrailOptions, AuditMiddlewareOptions,
+    PluginManager, PluginDefinition, PluginInfo,
+    StoredProcedure, StoredProcedureOptions, ProcedureParam,
+    StoredFunction, StoredFunctionOptions,
+    TriggerManager, TriggerDefinition,
+    CLI, runCLI,
 } from './orm';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
 export { validate as schemaValidate } from './orm';
@@ -68,6 +76,10 @@ export {
     QueryError, QueryErrorOptions,
     AdapterError, AdapterErrorOptions,
     CacheError, CacheErrorOptions,
+    TenancyError, TenancyErrorOptions,
+    AuditError, AuditErrorOptions,
+    PluginError, PluginErrorOptions,
+    ProcedureError, ProcedureErrorOptions,
     createError, isHttpError,
     ErrorHandlerOptions, errorHandler,
     Debug, DebugLogger, DebugLevels, debug,
@@ -90,6 +102,7 @@ import { Database, Model, Query } from './orm';
 import { TYPES, validateFKAction, validateCheck } from './orm';
 import { Migrator, QueryCache, Seeder, SeederRunner, Factory, Fake, defineMigration } from './orm';
 import { QueryProfiler, ReplicaManager } from './orm';
+import { TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager, CLI, runCLI } from './orm';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -98,6 +111,7 @@ import {
     BadGatewayError, ServiceUnavailableError,
     DatabaseError, ConfigurationError, MiddlewareError, RoutingError, TimeoutError,
     ConnectionError, MigrationError, TransactionError, QueryError, AdapterError, CacheError,
+    TenancyError, AuditError, PluginError, ProcedureError,
     createError, isHttpError, errorHandler, debug,
 } from './errors';
 
@@ -160,6 +174,11 @@ declare const zeroServer: {
     QueryError: typeof QueryError;
     AdapterError: typeof AdapterError;
     CacheError: typeof CacheError;
+    // Phase 4 errors
+    TenancyError: typeof TenancyError;
+    AuditError: typeof AuditError;
+    PluginError: typeof PluginError;
+    ProcedureError: typeof ProcedureError;
     createError: typeof createError;
     isHttpError: typeof isHttpError;
     errorHandler: typeof errorHandler;
@@ -174,6 +193,16 @@ declare const zeroServer: {
     Fake: typeof Fake;
     QueryProfiler: typeof QueryProfiler;
     ReplicaManager: typeof ReplicaManager;
+    // ORM Enterprise (Phase 4)
+    TenantManager: typeof TenantManager;
+    AuditLog: typeof AuditLog;
+    PluginManager: typeof PluginManager;
+    StoredProcedure: typeof StoredProcedure;
+    StoredFunction: typeof StoredFunction;
+    TriggerManager: typeof TriggerManager;
+    // CLI tooling
+    CLI: typeof CLI;
+    runCLI: typeof runCLI;
     // classes
     WebSocketConnection: WebSocketConnection;
     WebSocketPool: {

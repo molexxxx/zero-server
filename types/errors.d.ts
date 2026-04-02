@@ -201,6 +201,52 @@ export class CacheError extends HttpError {
     constructor(message?: string, opts?: CacheErrorOptions);
 }
 
+// --- Phase 4 Error Classes ------------------------------------------
+
+export interface TenancyErrorOptions extends DatabaseErrorOptions {
+    tenant?: string;
+    strategy?: string;
+}
+
+export class TenancyError extends DatabaseError {
+    readonly tenant?: string;
+    readonly strategy?: string;
+    constructor(message?: string, opts?: TenancyErrorOptions);
+}
+
+export interface AuditErrorOptions extends DatabaseErrorOptions {
+    action?: string;
+    table?: string;
+}
+
+export class AuditError extends DatabaseError {
+    readonly action?: string;
+    readonly table?: string;
+    constructor(message?: string, opts?: AuditErrorOptions);
+}
+
+export interface PluginErrorOptions extends HttpErrorOptions {
+    plugin?: string;
+    phase?: string;
+}
+
+export class PluginError extends HttpError {
+    readonly plugin?: string;
+    readonly phase?: string;
+    constructor(message?: string, opts?: PluginErrorOptions);
+}
+
+export interface ProcedureErrorOptions extends DatabaseErrorOptions {
+    procedure?: string;
+    operation?: string;
+}
+
+export class ProcedureError extends DatabaseError {
+    readonly procedure?: string;
+    readonly operation?: string;
+    constructor(message?: string, opts?: ProcedureErrorOptions);
+}
+
 // --- Error Handler Middleware ------------------------------------
 
 import { Request } from './request';

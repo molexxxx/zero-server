@@ -146,7 +146,7 @@ export function initProxy()
                     proxyResult.innerHTML =
                         `<iframe src="${blobUrl}" ` +
                         `sandbox="allow-scripts allow-same-origin" ` +
-                        `style="width:100%;height:500px;border:1px solid var(--surface-border);border-radius:8px;background:#fff" ` +
+                        `style="width:100%;height:500px;border:1px solid var(--surface-border);border-radius:8px;background:var(--raised)" ` +
                         `title="Proxied page"></iframe>` +
                         `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer;font-size:13px">View source</summary>` +
                         `<pre class="code" style="margin-top:6px"><code class="language-html">${escapeHtml(txt)}</code></pre></details>`;

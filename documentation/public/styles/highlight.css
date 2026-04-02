@@ -99,7 +99,7 @@ pre:has(code.zh-highlighted):hover {
   padding: 3px 10px;
   border-radius: 4px;
   border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(11,13,16,0.85);
+  background: rgba(30,35,48,0.92);
   color: #8b949e;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 0.72rem;
@@ -123,13 +123,13 @@ pre:has(code.zh-highlighted):hover {
 }
 
 .zh-copy-btn:hover {
-  background: #30363d;
+  background: #272d3d;
   color: #c9d1d9;
-  border-color: #484f58;
+  border-color: #4a5060;
 }
 
 .zh-copy-btn:active {
-  background: #484f58;
+  background: #303849;
 }
 
 .zh-copy-btn.zh-copied {

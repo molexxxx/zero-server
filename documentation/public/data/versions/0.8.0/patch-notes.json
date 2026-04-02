@@ -1,0 +1,70 @@
+{
+	"version": "0.8.0",
+	"previousVersion": "0.7.0",
+	"date": "2026-04-02",
+	"changes": [
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "TenantManager",
+			"description": "Multi-tenancy support for the ORM. Provides schema-based tenancy (PostgreSQL) and row-level tenancy with automatic scoping, tenant middleware, and tenant-aware migrations."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "AuditLog",
+			"description": "Automatic audit logging for the ORM. Tracks who changed what and when, with diff-based change logs. Supports storing audit trails in the same database or a separate one and provides querying capabilities for the audit trail."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "PluginManager",
+			"description": "Plugin system for the zero-http ORM. Provides a registration API, lifecycle hooks, and a standard interface for extending the framework."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "StoredProcedure",
+			"description": "Stored procedures, functions, and trigger management for the ORM. Provides a cross-adapter API for defining, creating, executing, and dropping stored procedures, functions, and triggers."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "ORM",
+			"name": "CLI",
+			"description": "CLI tool for zero-http ORM operations. Provides commands for migrations, seeding, and scaffolding. Requires a `zero.config.js` (or `.zero-http.js`) in your project root that exports your database adapter and connection settings."
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Error Handling",
+			"name": "Error Classes",
+			"method": "TenancyError"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Error Handling",
+			"name": "Error Classes",
+			"method": "AuditError"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Error Handling",
+			"name": "Error Classes",
+			"method": "PluginError"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Error Handling",
+			"name": "Error Classes",
+			"method": "ProcedureError"
+		}
+	]
+}

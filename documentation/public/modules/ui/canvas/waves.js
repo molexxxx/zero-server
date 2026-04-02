@@ -58,7 +58,7 @@ function draw()
 {
     const dark = isDark();
 
-    ctx.fillStyle = dark ? '#0e1114' : '#f0f2f5';
+    ctx.fillStyle = dark ? '#12161e' : '#c8cdd8';
     ctx.fillRect(0, 0, width, height);
 
     const palette = dark
@@ -68,9 +68,9 @@ function draw()
             { r: 100, g: 60,  b: 220, a: 0.16 },
         ]
         : [
-            { r: 79,  g: 91,  b: 213, a: 0.15 },
-            { r: 100, g: 120, b: 230, a: 0.12 },
-            { r: 120, g: 90,  b: 210, a: 0.09 },
+            { r: 79,  g: 91,  b: 213, a: 0.22 },
+            { r: 100, g: 120, b: 230, a: 0.18 },
+            { r: 120, g: 90,  b: 210, a: 0.14 },
         ];
 
     for (let i = 0; i < waves.length; i++)
@@ -99,7 +99,7 @@ function draw()
             const y = waveY(w, x, time);
             if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (dark ? 0.35 : 0.18) + ')';
+        ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (dark ? 0.35 : 0.25) + ')';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 

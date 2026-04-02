@@ -393,14 +393,17 @@ describe('Documentation Examples', () => {
     describe('TYPES constants', () => {
         const typesSection = docs.find(s => s.section === 'ORM');
         const typesItem = typesSection?.items.find(i => i.name === 'TYPES');
-        if (!typesItem || !typesItem.options) {
+        const allOptions = typesItem?.options
+            || (typesItem?.optionGroups && typesItem.optionGroups.flatMap(g => g.options))
+            || null;
+        if (!typesItem || !allOptions) {
             it.skip('TYPES item not in docs', () => {});
             return;
         }
 
         it('all documented TYPES constants exist', () => {
             const missing = [];
-            for (const opt of typesItem.options) {
+            for (const opt of allOptions) {
                 if (!(opt.option in zeroHttp.TYPES)) {
                     missing.push(opt.option);
                 }
@@ -414,7 +417,7 @@ describe('Documentation Examples', () => {
         });
 
         it('TYPES values are strings', () => {
-            for (const opt of typesItem.options) {
+            for (const opt of allOptions) {
                 if (opt.option in zeroHttp.TYPES) {
                     expect(typeof zeroHttp.TYPES[opt.option]).toBe('string');
                 }

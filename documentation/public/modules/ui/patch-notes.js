@@ -39,13 +39,19 @@ function ensureOverlay()
 		'</div>';
 	document.body.appendChild(_overlay);
 
-	const close = () => histCloseModal('patch-notes-overlay');
+	const close = () => { document.body.style.overflow = ''; histCloseModal('patch-notes-overlay'); };
 	document.getElementById('patch-notes-close').addEventListener('click', close);
 	_overlay.addEventListener('click', e => { if (e.target === _overlay) close(); });
 	document.addEventListener('keydown', e =>
 	{
 		if (e.key === 'Escape' && _overlay.getAttribute('aria-hidden') === 'false') close();
 	});
+
+	// Restore body scroll if modal is closed via browser back button
+	new MutationObserver(() =>
+	{
+		if (_overlay.getAttribute('aria-hidden') === 'true') document.body.style.overflow = '';
+	}).observe(_overlay, { attributes: true, attributeFilter: ['aria-hidden'] });
 }
 
 async function fetchPatchNotes(ver)
@@ -139,25 +145,81 @@ export async function showPatchNotes(ver)
 {
 	ensureOverlay();
 
-	const version = ver || getSelectedVersion();
-	if (!version) return;
-
 	const body = document.getElementById('patch-notes-body');
 	const title = document.getElementById('patch-notes-title');
 	if (body) body.innerHTML = '<p class="pn-loading">Loading…</p>';
-	if (title) title.textContent = `Patch Notes — v${version}`;
+	if (title) title.textContent = 'Patch Notes';
 
 	_overlay.setAttribute('aria-hidden', 'false');
+	document.body.style.overflow = 'hidden';
 	histPushModal('patch-notes-overlay');
 
-	const notes = await fetchPatchNotes(version);
-	if (!notes)
+	const versions = await getVersions();
+	if (!versions || !versions.length) { if (body) body.innerHTML = '<p class="pn-empty">No versions available.</p>'; return; }
+
+	const current = ver || getSelectedVersion() || (versions[0] && versions[0].version);
+	const sorted = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+
+	// Fetch all patch notes in parallel
+	const allNotes = await Promise.all(sorted.map(v => fetchPatchNotes(v.version)));
+
+	if (title) title.textContent = 'Patch Notes';
+
+	let html = '';
+	for (let i = 0; i < sorted.length; i++)
 	{
-		if (body) body.innerHTML = '<p class="pn-empty">No patch notes available for this version.</p>';
-		return;
+		const v = sorted[i].version;
+		const notes = allNotes[i];
+		const isCurrent = v === current;
+		const openAttr = isCurrent ? ' open' : '';
+
+		html += `<details class="pn-version-group"${openAttr}>`;
+		html += `<summary class="pn-version-header">`;
+		html += `<span class="pn-version-label">v${escapeHtml(v)}</span>`;
+		if (isCurrent) html += `<span class="pn-version-badge">current</span>`;
+		if (notes && notes.changes) html += `<span class="pn-version-count">${notes.changes.length} change${notes.changes.length !== 1 ? 's' : ''}</span>`;
+		html += `</summary>`;
+		html += `<div class="pn-version-body">`;
+
+		if (!notes)
+		{
+			html += '<p class="pn-empty">No patch notes available for this version.</p>';
+		}
+		else if (!notes.changes || !notes.changes.length)
+		{
+			html += '<p class="pn-empty">No changes detected from the previous version.</p>';
+		}
+		else
+		{
+			if (notes.previousVersion)
+			{
+				html += `<p class="pn-subtitle">Changes from <strong>v${escapeHtml(notes.previousVersion)}</strong> to <strong>v${escapeHtml(notes.version)}</strong></p>`;
+			}
+
+			const added = notes.changes.filter(c => c.type === 'added');
+			const removed = notes.changes.filter(c => c.type === 'removed');
+
+			if (added.length)
+			{
+				html += '<div class="pn-group">';
+				html += `<div class="pn-group-title pn-added">${CHANGE_ICONS.added}<span>Added (${added.length})</span></div>`;
+				html += renderChangeList(added);
+				html += '</div>';
+			}
+
+			if (removed.length)
+			{
+				html += '<div class="pn-group">';
+				html += `<div class="pn-group-title pn-removed">${CHANGE_ICONS.removed}<span>Removed (${removed.length})</span></div>`;
+				html += renderChangeList(removed);
+				html += '</div>';
+			}
+		}
+
+		html += '</div></details>';
 	}
 
-	renderPatchNotes(notes);
+	if (body) body.innerHTML = html;
 }
 
 export function initPatchNotes()

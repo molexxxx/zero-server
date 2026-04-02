@@ -459,3 +459,33 @@ describe('DatabaseView — _createViewModel', () =>
         expect(VM.schema).toEqual({});
     });
 });
+
+// ===================================================================
+// Name validation (security)
+// ===================================================================
+describe('DatabaseView — name validation (security)', () =>
+{
+    it('rejects SQL injection in view name', () =>
+    {
+        expect(() => new DatabaseView('my_view; DROP TABLE', {})).toThrow('Invalid view name');
+    });
+
+    it('rejects special characters in view name', () =>
+    {
+        expect(() => new DatabaseView('view@evil', {})).toThrow('Invalid view name');
+        expect(() => new DatabaseView('view/path', {})).toThrow('Invalid view name');
+        expect(() => new DatabaseView('view name', {})).toThrow('Invalid view name');
+    });
+
+    it('rejects names starting with a number', () =>
+    {
+        expect(() => new DatabaseView('123view', {})).toThrow('Invalid view name');
+    });
+
+    it('accepts valid identifier names', () =>
+    {
+        expect(() => new DatabaseView('valid_view', { sql: 'SELECT 1' })).not.toThrow();
+        expect(() => new DatabaseView('_private', { sql: 'SELECT 1' })).not.toThrow();
+        expect(() => new DatabaseView('ViewName', { sql: 'SELECT 1' })).not.toThrow();
+    });
+});
