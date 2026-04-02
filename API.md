@@ -70,6 +70,11 @@
   - [DatabaseView](#databaseview)
   - [FullTextSearch](#fulltextsearch)
   - [GeoQuery](#geoquery)
+  - [TenantManager](#tenantmanager)
+  - [AuditLog](#auditlog)
+  - [PluginManager](#pluginmanager)
+  - [StoredProcedure](#storedprocedure)
+  - [CLI](#cli)
 - [Real-Time](#real-time)
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
@@ -3059,6 +3064,304 @@ Geo-spatial query support for the ORM. Provides distance calculations, bounding 
 ```
 
 
+### TenantManager
+
+Multi-tenancy support for the ORM. Provides schema-based tenancy (PostgreSQL) and row-level tenancy with automatic scoping, tenant middleware, and tenant-aware migrations.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `db` | import('./index').Database | Yes | Database instance. |
+
+
+#### Tenant Identity
+
+| Method | Signature | Description |
+|---|---|---|
+| `setCurrentTenant` | `setCurrentTenant(tenantId)` | Set the current tenant for all subsequent queries. |
+| `getCurrentTenant` | `getCurrentTenant()` | Get the current tenant ID. |
+| `clearTenant` | `clearTenant()` | Clear the current tenant context. |
+| `withTenant` | `withTenant(tenantId, fn)` | Execute a function within a specific tenant context. Restores the previous tenant after the callback completes. |
+
+
+#### Model Registration
+
+| Method | Signature | Description |
+|---|---|---|
+| `addModel` | `addModel(ModelClass)` | Register a Model class for tenant scoping. For row-level tenancy, this patches the model's query methods to auto-filter. |
+| `addModels` | `addModels(...models)` | Register multiple Model classes for tenant scoping. |
+
+
+#### Schema-Based Tenancy
+
+| Method | Signature | Description |
+|---|---|---|
+| `createTenant` | `createTenant(tenantId)` | Create a new tenant schema (PostgreSQL schema-based tenancy). Runs all registered model syncs within the new schema. |
+| `dropTenant` | `dropTenant(tenantId, [options])` | Drop a tenant schema (schema-based) or delete tenant rows (row-level). |
+| `listTenants` | `listTenants()` | List all known tenant IDs. |
+| `hasTenant` | `hasTenant(tenantId)` | Check if a tenant exists. |
+
+
+#### Tenant Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `middleware` | `middleware([options])` | Returns an HTTP middleware function that extracts the tenant ID from the request and sets it on the TenantManager. |
+
+
+#### Tenant-Aware Migrations
+
+| Method | Signature | Description |
+|---|---|---|
+| `migrate` | `migrate(migrator, tenantId)` | Run migrations for a specific tenant. For schema strategy, switches to the tenant's schema before migrating. For row strategy, runs normal migrations (tables are shared). |
+| `migrateAll` | `migrateAll(migrator)` | Run migrations for all known tenants. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `strategy` | string | `'row'` | Tenancy strategy: `'row'` or `'schema'`. |
+| `tenantColumn` | string | `'tenant_id'` | Column name for row-level tenancy. |
+| `defaultSchema` | string | `'public'` | Default schema name (schema strategy). |
+| `schemaPrefix` | string | `'tenant_'` | Schema name prefix (schema strategy). |
+
+
+```js
+  const { TenantManager } = require('zero-http');
+
+  // Row-level tenancy
+  const tenants = new TenantManager(db, {
+      strategy: 'row',
+      tenantColumn: 'tenant_id',
+  });
+
+  tenants.setCurrentTenant('acme');
+  const users = await User.find(); // auto-scoped to tenant_id = 'acme'
+```
+
+
+### AuditLog
+
+Automatic audit logging for the ORM. Tracks who changed what and when, with diff-based change logs. Supports storing audit trails in the same database or a separate one and provides querying capabilities for the audit trail.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `db` | import('./index').Database | Yes | Database instance for storing audit entries. |
+
+
+#### Setup
+
+| Method | Signature | Description |
+|---|---|---|
+| `install` | `install()` | Initialize the audit log table and attach hooks to models. Must be called after models are registered and synced. |
+
+
+#### Actor Management
+
+| Method | Signature | Description |
+|---|---|---|
+| `setActor` | `setActor(actor)` | Set the current actor (user) performing operations. |
+| `getActor` | `getActor()` | Get the current actor. |
+| `withActor` | `withActor(actor, fn)` | Execute a function within a specific actor context. |
+
+
+#### Diff Computation
+
+| Method | Signature | Description |
+|---|---|---|
+| `diff` | `diff(oldValues, newValues)` | Compute a diff between old and new values. Returns an array of `{ field, from, to }` objects. |
+
+
+#### Querying Audit Trail
+
+| Method | Signature | Description |
+|---|---|---|
+| `trail` | `trail([options])` | Query the audit trail. |
+| `history` | `history(table, recordId, [options])` | Get the audit history for a specific record. |
+| `byActor` | `byActor([options])` | Get audit entries grouped by actor. |
+| `count` | `count([options])` | Count audit entries matching the given filters. |
+| `purge` | `purge(options)` | Purge old audit entries. |
+| `middleware` | `middleware([options])` | Returns an HTTP middleware that sets the actor from the request. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `table` | string | `'_audit_log'` | Table name for audit entries. |
+| `include` | Array<typeof import('./model')> | `—` | Models to audit (all registered if omitted). |
+| `exclude` | Array<typeof import('./model')> | `—` | Models to exclude from auditing. |
+| `excludeFields` | string[] | `—` | Fields to never log (e.g. passwords). |
+| `actorField` | string | `—` | Context property for the actor identifier. |
+| `storage` | import('./index').Database | `—` | Separate database for audit storage. |
+| `timestamps` | boolean | `true` | Include timestamps in audit entries. |
+| `diffs` | boolean | `true` | Store field-level diffs for updates. |
+
+
+```js
+  const { AuditLog } = require('zero-http');
+
+  const audit = new AuditLog(db, {
+      actorField: 'userId',       // field on req/context identifying the actor
+      include: [User, Post],      // models to audit
+  });
+
+  // Automatically tracks creates, updates, and deletes
+  await User.create({ name: 'Alice' }); // audit entry logged
+
+  // Query audit trail
+  const trail = await audit.trail({ table: 'users', recordId: 1 });
+```
+
+
+### PluginManager
+
+Plugin system for the zero-http ORM. Provides a registration API, lifecycle hooks, and a standard interface for extending the framework.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `db` | import('./index').Database | No | Database instance (optional, can be set later). |
+
+
+#### Registration
+
+| Method | Signature | Description |
+|---|---|---|
+| `register` | `register(plugin, [options])` | Register a plugin. |
+| `registerAll` | `registerAll(...plugins)` | Register multiple plugins at once. |
+| `unregister` | `unregister(name)` | Unregister a plugin by name. |
+
+
+#### Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `boot` | `boot()` | Boot all registered plugins. Calls the `boot()` method on each plugin (if defined). Should be called after all plugins are registered. |
+
+
+#### Hook System
+
+| Method | Signature | Description |
+|---|---|---|
+| `hook` | `hook(name, callback)` | Register a hook listener. |
+| `unhook` | `unhook(name, callback)` | Remove a hook listener. |
+| `runHook` | `runHook(name, ...args)` | Execute all listeners for a hook. Listeners run in registration order. If a listener returns a value, that value is passed to the next listener as the payload. |
+| `hasHook` | `hasHook(name)` | Check if any listeners exist for a hook. |
+
+
+#### Query
+
+| Method | Signature | Description |
+|---|---|---|
+| `has` | `has(name)` | Check if a plugin is registered. |
+| `get` | `get(name)` | Get a registered plugin by name. |
+| `getOptions` | `getOptions(name)` | Get options for a registered plugin. |
+| `list` | `list()` | List all registered plugin names. |
+| `info` | `info()` | Get detailed info about all registered plugins. |
+| `size` | `size()` | Number of registered plugins. |
+
+
+```js
+  const { PluginManager } = require('zero-http');
+
+  // Define a plugin
+  const timestampPlugin = {
+      name: 'timestamps',
+      version: '1.0.0',
+      install(manager, options) {
+          manager.hook('beforeCreate', (model, data) => {
+              data.createdAt = new Date().toISOString();
+              return data;
+          });
+      },
+  };
+
+  // Register it
+  const plugins = new PluginManager(db);
+  plugins.register(timestampPlugin);
+```
+
+
+### StoredProcedure
+
+Stored procedures, functions, and trigger management for the ORM. Provides a cross-adapter API for defining, creating, executing, and dropping stored procedures, functions, and triggers.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Procedure name. |
+
+
+#### StoredProcedure
+
+| Method | Signature | Description |
+|---|---|---|
+| `create` | `create(db)` | Create the stored procedure in the database. |
+| `drop` | `drop(db, [options])` | Drop the stored procedure. |
+| `execute` | `execute(db, [args])` | Execute the stored procedure with arguments. |
+| `exists` | `exists(db)` | Check if the procedure exists. |
+
+
+#### StoredFunction
+
+| Method | Signature | Description |
+|---|---|---|
+| `create` | `create(db)` | Create the function in the database. |
+| `drop` | `drop(db, [options])` | Drop the function. |
+| `call` | `call(db, [args])` | Call the function and return its result. |
+| `exists` | `exists(db)` | Check if the function exists. |
+
+
+#### TriggerManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `define` | `define(name, options)` | Define a trigger. |
+| `create` | `create(name)` | Create a trigger in the database. |
+| `createAll` | `createAll()` | Create all defined triggers. |
+| `drop` | `drop(name, [options])` | Drop a trigger. |
+| `list` | `list()` | List all defined trigger names. |
+| `get` | `get(name)` | Get a trigger definition by name. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `params` | Array<{name: string, type: string, direction?: string}> | `[` | ] - Parameters. |
+| `body` | string | `—` | Procedure body (SQL). |
+| `language` | string | `'sql'` | Language (sql, plpgsql, javascript). |
+| `options` | object | `—` | Adapter-specific options. |
+
+
+```js
+  const { StoredProcedure, StoredFunction, TriggerManager } = require('zero-http');
+
+  // Define a procedure
+  const proc = new StoredProcedure('update_balance', {
+      params: [
+          { name: 'user_id', type: 'INTEGER' },
+          { name: 'amount', type: 'DECIMAL' },
+      ],
+      body: `UPDATE accounts SET balance = balance + amount WHERE id = user_id;`,
+  });
+
+  await proc.create(db);
+  await proc.execute(db, [1, 50.00]);
+```
+
+
+### CLI
+
+CLI tool for zero-http ORM operations. Provides commands for migrations, seeding, and scaffolding. Requires a `zero.config.js` (or `.zero-http.js`) in your project root that exports your database adapter and connection settings.
+
 
 ---
 
@@ -3322,6 +3625,16 @@ HTTP error classes with status codes, error codes, and structured details. Every
 | `QueryError` | `new QueryError([message], [opts])` | Query error — query execution failures with SQL context. |
 | `AdapterError` | `new AdapterError([message], [opts])` | Adapter error — adapter-level issues (driver not found, unsupported operation). |
 | `CacheError` | `new CacheError([message], [opts])` | Cache error — caching layer failures. |
+
+
+#### Phase 4 Error Classes
+
+| Method | Signature | Description |
+|---|---|---|
+| `TenancyError` | `new TenancyError([message], [opts])` | Tenancy error — multi-tenancy operation failures. |
+| `AuditError` | `new AuditError([message], [opts])` | Audit error — audit logging failures. |
+| `PluginError` | `new PluginError([message], [opts])` | Plugin error — plugin registration or lifecycle failures. |
+| `ProcedureError` | `new ProcedureError([message], [opts])` | Procedure error — stored procedure/function failures. |
 
 
 #### Utilities

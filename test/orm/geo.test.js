@@ -473,3 +473,60 @@ describe('GeoQuery — fromGeoJSON', () =>
         })).toThrow('Only Point');
     });
 });
+
+// ===================================================================
+// Coordinate validation (security)
+// ===================================================================
+describe('GeoQuery — coordinate validation (security)', () =>
+{
+    let db, geo;
+
+    beforeEach(async () =>
+    {
+        db = memDb();
+        const Location = makeModel(db, 'locations', {
+            id:  { type: 'integer', primaryKey: true, autoIncrement: true },
+            lat: { type: 'float' },
+            lng: { type: 'float' },
+        });
+        await db.sync();
+        geo = new GeoQuery(db, { model: Location, latField: 'lat', lngField: 'lng' });
+    });
+
+    it('near() rejects NaN coordinates', async () =>
+    {
+        await expect(geo.near(NaN, 1)).rejects.toThrow('finite numbers');
+        await expect(geo.near(1, NaN)).rejects.toThrow('finite numbers');
+    });
+
+    it('near() rejects Infinity coordinates', async () =>
+    {
+        await expect(geo.near(Infinity, 1)).rejects.toThrow('finite numbers');
+        await expect(geo.near(1, -Infinity)).rejects.toThrow('finite numbers');
+    });
+
+    it('near() rejects negative radius', async () =>
+    {
+        await expect(geo.near(40, -74, { radius: -5 })).rejects.toThrow('non-negative finite');
+    });
+
+    it('near() rejects Infinity radius', async () =>
+    {
+        await expect(geo.near(40, -74, { radius: Infinity })).rejects.toThrow('non-negative finite');
+    });
+
+    it('within() rejects NaN bounds', async () =>
+    {
+        await expect(geo.within({ north: NaN, south: 40, east: -73, west: -74 })).rejects.toThrow('finite numbers');
+    });
+
+    it('within() rejects Infinity bounds', async () =>
+    {
+        await expect(geo.within({ north: 42, south: Infinity, east: -73, west: -74 })).rejects.toThrow('finite numbers');
+    });
+
+    it('within() rejects missing bounds', async () =>
+    {
+        await expect(geo.within(null)).rejects.toThrow('finite numbers');
+    });
+});

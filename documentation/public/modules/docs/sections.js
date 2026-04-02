@@ -370,6 +370,299 @@ function renderDocItem(item, section)
         body.appendChild(p);
     }
 
+    /* -- CLI Tool layout ----------------------------------- */
+    if (item.cliTool)
+    {
+        /* -- Config file (setup first) ----------------------- */
+        if (Array.isArray(item.configExamples) && item.configExamples.length)
+        {
+            const h6 = document.createElement('h6');
+            h6.textContent = 'Config File';
+            body.appendChild(h6);
+
+            const intro = document.createElement('p');
+            intro.className = 'cli-cfg-intro';
+            intro.innerHTML =
+                'The CLI reads a <code>zero.config.js</code> file from your project root to know which database to connect to and where your project files live. ' +
+                'Create this file once and every <code>zh</code> command will use it automatically — no flags needed.';
+            body.appendChild(intro);
+
+            const dirExplain = document.createElement('div');
+            dirExplain.className = 'cli-cfg-dirs';
+            dirExplain.innerHTML =
+                '<div class="cli-cfg-dir-item">' +
+                    '<code>migrationsDir</code>' +
+                    '<p>The folder where your migration files live. Migrations are versioned scripts that create or modify database tables ' +
+                    'so every developer (and every deploy) gets the exact same schema.  ' +
+                    'Run <code>npx zh make:migration &lt;name&gt;</code> to generate one, then <code>npx zh migrate</code> to apply it.</p>' +
+                '</div>' +
+                '<div class="cli-cfg-dir-item">' +
+                    '<code>seedersDir</code>' +
+                    '<p>The folder where your seeder files live. Seeders insert sample or default data into your tables — ' +
+                    'useful for populating a fresh database during development or setting up initial records in production.  ' +
+                    'Run <code>npx zh make:seeder &lt;name&gt;</code> to generate one, then <code>npx zh seed</code> to run them all.</p>' +
+                '</div>' +
+                '<div class="cli-cfg-dir-item">' +
+                    '<code>modelsDir</code>' +
+                    '<p>The folder where your Model class files live. When you run <code>npx zh make:migration</code>, the CLI loads every model from this directory, ' +
+                    'compares their schemas against the last snapshot, and auto-generates migration code for any changes it detects. ' +
+                    'This is what powers the auto-diff migration system.</p>' +
+                '</div>';
+            body.appendChild(dirExplain);
+
+            const tabs = document.createElement('div');
+            tabs.className = 'cli-cfg-tabs';
+
+            const panels = document.createElement('div');
+            panels.className = 'cli-cfg-panels';
+
+            item.configExamples.forEach((ex, i) =>
+            {
+                const btn = document.createElement('button');
+                btn.className = 'cli-cfg-tab' + (i === 0 ? ' active' : '');
+                btn.textContent = ex.adapter;
+                btn.setAttribute('data-idx', i);
+                tabs.appendChild(btn);
+
+                const panel = document.createElement('div');
+                panel.className = 'cli-cfg-panel' + (i === 0 ? ' active' : '');
+                panel.setAttribute('data-idx', i);
+                const pre = document.createElement('pre');
+                pre.className = 'language-javascript code';
+                const code = document.createElement('code');
+                code.className = 'language-javascript';
+                code.textContent = ex.code;
+                pre.appendChild(code);
+                panel.appendChild(pre);
+                panels.appendChild(panel);
+            });
+
+            tabs.addEventListener('click', (e) =>
+            {
+                const btn = e.target.closest('.cli-cfg-tab');
+                if (!btn) return;
+                const idx = btn.getAttribute('data-idx');
+                tabs.querySelectorAll('.cli-cfg-tab').forEach(t => t.classList.remove('active'));
+                panels.querySelectorAll('.cli-cfg-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                panels.querySelector(`.cli-cfg-panel[data-idx="${idx}"]`).classList.add('active');
+            });
+
+            body.appendChild(tabs);
+            body.appendChild(panels);
+        }
+
+        if (Array.isArray(item.cliOptions) && item.cliOptions.length)
+        {
+            const glabel = document.createElement('div');
+            glabel.className = 'mm-group-label';
+            glabel.textContent = 'Global Options';
+            body.appendChild(glabel);
+
+            const olist = document.createElement('div');
+            olist.className = 'mm-prop-list';
+            for (const opt of item.cliOptions)
+            {
+                const row = document.createElement('div');
+                row.className = 'mm-prop-row';
+                row.innerHTML =
+                    `<div class="mm-prop-head">` +
+                        `<code class="mm-prop-key">${escapeHtml(opt.flag)}</code>` +
+                    `</div>` +
+                    `<p class="mm-prop-notes">${escapeHtml(opt.desc)}</p>`;
+                olist.appendChild(row);
+            }
+            body.appendChild(olist);
+        }
+
+        /* -- Workflow walkthroughs ----------------------------- */
+        if (Array.isArray(item.workflows) && item.workflows.length)
+        {
+            const wfLabel = document.createElement('div');
+            wfLabel.className = 'mm-group-label';
+            wfLabel.textContent = 'Workflows';
+            body.appendChild(wfLabel);
+
+            /* top-level tabs for switching between workflows */
+            const wfTabBar = document.createElement('div');
+            wfTabBar.className = 'cli-wf-topbar';
+
+            const wfPanelWrap = document.createElement('div');
+            wfPanelWrap.className = 'cli-wf-toppanels';
+
+            item.workflows.forEach((wf, wi) =>
+            {
+                const btn = document.createElement('button');
+                btn.className = 'cli-wf-toptab' + (wi === 0 ? ' active' : '');
+                btn.textContent = wf.tab;
+                btn.setAttribute('data-wf', wi);
+                wfTabBar.appendChild(btn);
+
+                const panel = document.createElement('div');
+                panel.className = 'cli-wf-toppanel' + (wi === 0 ? ' active' : '');
+                panel.setAttribute('data-wf', wi);
+
+                if (wf.description)
+                {
+                    const desc = document.createElement('p');
+                    desc.className = 'cli-group-desc';
+                    desc.textContent = wf.description;
+                    panel.appendChild(desc);
+                }
+
+                const steps = document.createElement('div');
+                steps.className = 'cli-wf-steps';
+
+                for (const step of wf.steps)
+                {
+                    const card = document.createElement('div');
+                    card.className = 'cli-wf-step';
+
+                    const label = document.createElement('div');
+                    label.className = 'cli-wf-label';
+                    label.textContent = step.label;
+                    card.appendChild(label);
+
+                    if (step.note)
+                    {
+                        const note = document.createElement('p');
+                        note.className = 'cli-wf-note';
+                        note.innerHTML = step.note;
+                        card.appendChild(note);
+                    }
+
+                    if (Array.isArray(step.tabs) && step.tabs.length)
+                    {
+                        const tabBar = document.createElement('div');
+                        tabBar.className = 'cli-wf-tabs';
+
+                        const tabPanels = document.createElement('div');
+                        tabPanels.className = 'cli-wf-panels';
+
+                        step.tabs.forEach((t, ti) =>
+                        {
+                            const tabBtn = document.createElement('button');
+                            tabBtn.className = 'cli-wf-tab' + (ti === 0 ? ' active' : '');
+                            tabBtn.textContent = t.tab;
+                            tabBtn.setAttribute('data-idx', ti);
+                            tabBar.appendChild(tabBtn);
+
+                            const tp = document.createElement('div');
+                            tp.className = 'cli-wf-panel' + (ti === 0 ? ' active' : '');
+                            tp.setAttribute('data-idx', ti);
+                            const pre = document.createElement('pre');
+                            const isShell = t.code.trimStart().startsWith('$');
+                            pre.className = (isShell ? 'language-shell' : 'language-javascript') + ' code';
+                            const code = document.createElement('code');
+                            code.className = isShell ? 'language-shell' : 'language-javascript';
+                            code.textContent = t.code;
+                            pre.appendChild(code);
+                            tp.appendChild(pre);
+                            tabPanels.appendChild(tp);
+                        });
+
+                        tabBar.addEventListener('click', (e) =>
+                        {
+                            const b = e.target.closest('.cli-wf-tab');
+                            if (!b) return;
+                            const idx = b.getAttribute('data-idx');
+                            tabBar.querySelectorAll('.cli-wf-tab').forEach(x => x.classList.remove('active'));
+                            tabPanels.querySelectorAll('.cli-wf-panel').forEach(x => x.classList.remove('active'));
+                            b.classList.add('active');
+                            tabPanels.querySelector(`.cli-wf-panel[data-idx="${idx}"]`).classList.add('active');
+                        });
+
+                        card.appendChild(tabBar);
+                        card.appendChild(tabPanels);
+                    }
+                    else
+                    {
+                        const pre = document.createElement('pre');
+                        const isShell = step.code.trimStart().startsWith('$');
+                        pre.className = (isShell ? 'language-shell' : 'language-javascript') + ' code';
+                        const code = document.createElement('code');
+                        code.className = isShell ? 'language-shell' : 'language-javascript';
+                        code.textContent = step.code;
+                        pre.appendChild(code);
+                        card.appendChild(pre);
+                    }
+
+                    steps.appendChild(card);
+                }
+
+                panel.appendChild(steps);
+                wfPanelWrap.appendChild(panel);
+            });
+
+            wfTabBar.addEventListener('click', (e) =>
+            {
+                const btn = e.target.closest('.cli-wf-toptab');
+                if (!btn) return;
+                const idx = btn.getAttribute('data-wf');
+                wfTabBar.querySelectorAll('.cli-wf-toptab').forEach(b => b.classList.remove('active'));
+                wfPanelWrap.querySelectorAll('.cli-wf-toppanel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                wfPanelWrap.querySelector(`.cli-wf-toppanel[data-wf="${idx}"]`).classList.add('active');
+            });
+
+            body.appendChild(wfTabBar);
+            body.appendChild(wfPanelWrap);
+        }
+
+        /* -- Command groups -------------------------------- */
+        if (Array.isArray(item.commandGroups) && item.commandGroups.length)
+        {
+            for (const group of item.commandGroups)
+            {
+                const glabel = document.createElement('div');
+                glabel.className = 'mm-group-label';
+                glabel.textContent = group.label;
+                body.appendChild(glabel);
+
+                if (group.description)
+                {
+                    const gdesc = document.createElement('p');
+                    gdesc.className = 'cli-group-desc';
+                    gdesc.innerHTML = group.description;
+                    body.appendChild(gdesc);
+                }
+
+                const list = document.createElement('div');
+                list.className = 'cli-cmd-list';
+                for (const c of group.commands)
+                {
+                    const row = document.createElement('div');
+                    row.className = 'cli-cmd-row';
+                    const pre = document.createElement('pre');
+                    pre.className = 'cli-cmd-code language-shell code';
+                    const code = document.createElement('code');
+                    code.className = 'language-shell';
+                    code.textContent = c.cmd;
+                    pre.appendChild(code);
+                    row.appendChild(pre);
+
+                    const desc = document.createElement('p');
+                    desc.className = 'cli-cmd-desc';
+                    desc.innerHTML = c.desc;
+                    row.appendChild(desc);
+
+                    if (c.args)
+                    {
+                        const argsSpan = document.createElement('span');
+                        argsSpan.className = 'cli-cmd-args';
+                        argsSpan.innerHTML = `<span class="cli-cmd-args-label">args</span> <code>${escapeHtml(c.args)}</code>`;
+                        row.appendChild(argsSpan);
+                    }
+                    list.appendChild(row);
+                }
+                body.appendChild(list);
+            }
+        }
+
+        d.appendChild(body);
+        return d;
+    }
+
     if (Array.isArray(item.params) && item.params.length)
     {
         const glabel = document.createElement('div');

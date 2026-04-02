@@ -1,0 +1,923 @@
+{
+  "tests": {
+    "label": "tests",
+    "message": "5409 passed",
+    "color": "brightgreen",
+    "url": "https://img.shields.io/badge/tests-5409%20passed-brightgreen.svg"
+  },
+  "coverage": {
+    "label": "coverage",
+    "message": "95.59%",
+    "color": "brightgreen",
+    "url": "https://img.shields.io/badge/coverage-95.59%25-brightgreen.svg"
+  },
+  "raw": {
+    "tests": {
+      "total": 5409,
+      "passed": 5409,
+      "failed": 0
+    },
+    "coverage": {
+      "lines": 96.65,
+      "statements": 95.59,
+      "functions": 97.4,
+      "branches": 89.49
+    },
+    "testSuites": [
+      {
+        "file": "app/api-helpers.test.js",
+        "status": "passed",
+        "tests": 28,
+        "duration": 82
+      },
+      {
+        "file": "app/cookies-orm.test.js",
+        "status": "passed",
+        "tests": 66,
+        "duration": 224
+      },
+      {
+        "file": "app/exports.test.js",
+        "status": "passed",
+        "tests": 40,
+        "duration": 16
+      },
+      {
+        "file": "body/multipart-branches.test.js",
+        "status": "passed",
+        "tests": 29,
+        "duration": 1375
+      },
+      {
+        "file": "body/parsers-features.test.js",
+        "status": "passed",
+        "tests": 101,
+        "duration": 342
+      },
+      {
+        "file": "body/parsers.test.js",
+        "status": "passed",
+        "tests": 59,
+        "duration": 308
+      },
+      {
+        "file": "body/security.test.js",
+        "status": "passed",
+        "tests": 157,
+        "duration": 1284
+      },
+      {
+        "file": "body/urlencoded.test.js",
+        "status": "passed",
+        "tests": 36,
+        "duration": 60
+      },
+      {
+        "file": "docs/code-examples.test.js",
+        "status": "passed",
+        "tests": 268,
+        "duration": 487
+      },
+      {
+        "file": "docs/integration.test.js",
+        "status": "passed",
+        "tests": 242,
+        "duration": 3236
+      },
+      {
+        "file": "docs/manifest-validation.test.js",
+        "status": "passed",
+        "tests": 184,
+        "duration": 65
+      },
+      {
+        "file": "env/env.test.js",
+        "status": "passed",
+        "tests": 80,
+        "duration": 200
+      },
+      {
+        "file": "errors/errors.test.js",
+        "status": "passed",
+        "tests": 96,
+        "duration": 78
+      },
+      {
+        "file": "errors/subsystem-errors.test.js",
+        "status": "passed",
+        "tests": 43,
+        "duration": 317
+      },
+      {
+        "file": "http/fetch.test.js",
+        "status": "passed",
+        "tests": 17,
+        "duration": 280
+      },
+      {
+        "file": "http/integration.test.js",
+        "status": "passed",
+        "tests": 58,
+        "duration": 2035
+      },
+      {
+        "file": "http/req-res-branches.test.js",
+        "status": "passed",
+        "tests": 163,
+        "duration": 314
+      },
+      {
+        "file": "http/request.test.js",
+        "status": "passed",
+        "tests": 58,
+        "duration": 196
+      },
+      {
+        "file": "http/response.test.js",
+        "status": "passed",
+        "tests": 57,
+        "duration": 199
+      },
+      {
+        "file": "middleware/csrf-validator.test.js",
+        "status": "passed",
+        "tests": 42,
+        "duration": 304
+      },
+      {
+        "file": "middleware/integration.test.js",
+        "status": "passed",
+        "tests": 73,
+        "duration": 1071
+      },
+      {
+        "file": "middleware/security.test.js",
+        "status": "passed",
+        "tests": 127,
+        "duration": 408
+      },
+      {
+        "file": "middleware/static.test.js",
+        "status": "passed",
+        "tests": 31,
+        "duration": 400
+      },
+      {
+        "file": "middleware/unit.test.js",
+        "status": "passed",
+        "tests": 244,
+        "duration": 1808
+      },
+      {
+        "file": "orm/adapters/constructors.test.js",
+        "status": "passed",
+        "tests": 71,
+        "duration": 721
+      },
+      {
+        "file": "orm/adapters/initialization.test.js",
+        "status": "passed",
+        "tests": 80,
+        "duration": 624
+      },
+      {
+        "file": "orm/adapters/methods.test.js",
+        "status": "passed",
+        "tests": 66,
+        "duration": 519
+      },
+      {
+        "file": "orm/adapters/mongo.test.js",
+        "status": "passed",
+        "tests": 63,
+        "duration": 363
+      },
+      {
+        "file": "orm/adapters/mysql.test.js",
+        "status": "passed",
+        "tests": 88,
+        "duration": 265
+      },
+      {
+        "file": "orm/adapters/postgres.test.js",
+        "status": "passed",
+        "tests": 83,
+        "duration": 180
+      },
+      {
+        "file": "orm/adapters/redis.test.js",
+        "status": "passed",
+        "tests": 168,
+        "duration": 62
+      },
+      {
+        "file": "orm/adapters/sql-base.test.js",
+        "status": "passed",
+        "tests": 49,
+        "duration": 9
+      },
+      {
+        "file": "orm/adapters/sqlite.test.js",
+        "status": "passed",
+        "tests": 50,
+        "duration": 247
+      },
+      {
+        "file": "orm/audit.test.js",
+        "status": "passed",
+        "tests": 80,
+        "duration": 98
+      },
+      {
+        "file": "orm/branches.test.js",
+        "status": "passed",
+        "tests": 776,
+        "duration": 313
+      },
+      {
+        "file": "orm/cache-redis.test.js",
+        "status": "passed",
+        "tests": 17,
+        "duration": 7
+      },
+      {
+        "file": "orm/cache.test.js",
+        "status": "passed",
+        "tests": 47,
+        "duration": 497
+      },
+      {
+        "file": "orm/cli.test.js",
+        "status": "passed",
+        "tests": 47,
+        "duration": 245
+      },
+      {
+        "file": "orm/computed-casts.test.js",
+        "status": "passed",
+        "tests": 31,
+        "duration": 12
+      },
+      {
+        "file": "orm/database-schema.test.js",
+        "status": "passed",
+        "tests": 34,
+        "duration": 303
+      },
+      {
+        "file": "orm/events-observers.test.js",
+        "status": "passed",
+        "tests": 30,
+        "duration": 17
+      },
+      {
+        "file": "orm/geo.test.js",
+        "status": "passed",
+        "tests": 49,
+        "duration": 19
+      },
+      {
+        "file": "orm/linq.test.js",
+        "status": "passed",
+        "tests": 201,
+        "duration": 189
+      },
+      {
+        "file": "orm/migrate.test.js",
+        "status": "passed",
+        "tests": 31,
+        "duration": 13
+      },
+      {
+        "file": "orm/model.test.js",
+        "status": "passed",
+        "tests": 104,
+        "duration": 54
+      },
+      {
+        "file": "orm/performance.test.js",
+        "status": "passed",
+        "tests": 54,
+        "duration": 144
+      },
+      {
+        "file": "orm/plugin.test.js",
+        "status": "passed",
+        "tests": 43,
+        "duration": 12
+      },
+      {
+        "file": "orm/procedures.test.js",
+        "status": "passed",
+        "tests": 71,
+        "duration": 14
+      },
+      {
+        "file": "orm/relationships.test.js",
+        "status": "passed",
+        "tests": 40,
+        "duration": 17
+      },
+      {
+        "file": "orm/schema.test.js",
+        "status": "passed",
+        "tests": 57,
+        "duration": 168
+      },
+      {
+        "file": "orm/search.test.js",
+        "status": "passed",
+        "tests": 45,
+        "duration": 16
+      },
+      {
+        "file": "orm/seed-fake.test.js",
+        "status": "passed",
+        "tests": 249,
+        "duration": 30
+      },
+      {
+        "file": "orm/seed.test.js",
+        "status": "passed",
+        "tests": 75,
+        "duration": 144
+      },
+      {
+        "file": "orm/snapshot.test.js",
+        "status": "passed",
+        "tests": 45,
+        "duration": 88
+      },
+      {
+        "file": "orm/tenancy.test.js",
+        "status": "passed",
+        "tests": 46,
+        "duration": 25
+      },
+      {
+        "file": "orm/views.test.js",
+        "status": "passed",
+        "tests": 42,
+        "duration": 15
+      },
+      {
+        "file": "realtime/connection.test.js",
+        "status": "passed",
+        "tests": 60,
+        "duration": 15
+      },
+      {
+        "file": "realtime/sse.test.js",
+        "status": "passed",
+        "tests": 41,
+        "duration": 950
+      },
+      {
+        "file": "realtime/websocket.test.js",
+        "status": "passed",
+        "tests": 42,
+        "duration": 873
+      },
+      {
+        "file": "routing/router.test.js",
+        "status": "passed",
+        "tests": 35,
+        "duration": 152
+      }
+    ],
+    "coverageFiles": [
+      {
+        "file": "index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/app.js",
+        "statements": 98.02,
+        "branches": 82.75,
+        "functions": 100,
+        "lines": 98.38
+      },
+      {
+        "file": "lib/body/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/json.js",
+        "statements": 98.18,
+        "branches": 98.3,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/multipart.js",
+        "statements": 99.11,
+        "branches": 88.75,
+        "functions": 94.73,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/raw.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/rawBuffer.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/sendError.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/text.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/typeMatch.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/body/urlencoded.js",
+        "statements": 99.23,
+        "branches": 94.11,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/cli.js",
+        "statements": 96.62,
+        "branches": 85.45,
+        "functions": 98.18,
+        "lines": 97.09
+      },
+      {
+        "file": "lib/debug.js",
+        "statements": 90,
+        "branches": 81.72,
+        "functions": 96.15,
+        "lines": 91.6
+      },
+      {
+        "file": "lib/env/index.js",
+        "statements": 99.43,
+        "branches": 79.33,
+        "functions": 100,
+        "lines": 99.35
+      },
+      {
+        "file": "lib/errors.js",
+        "statements": 81.98,
+        "branches": 76.56,
+        "functions": 88.57,
+        "lines": 84.61
+      },
+      {
+        "file": "lib/fetch/index.js",
+        "statements": 76.66,
+        "branches": 78.18,
+        "functions": 87.5,
+        "lines": 81.55
+      },
+      {
+        "file": "lib/http/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/http/request.js",
+        "statements": 99.15,
+        "branches": 98.98,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/http/response.js",
+        "statements": 99.6,
+        "branches": 91.86,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/compress.js",
+        "statements": 96.52,
+        "branches": 92.4,
+        "functions": 100,
+        "lines": 98.96
+      },
+      {
+        "file": "lib/middleware/cookieParser.js",
+        "statements": 96.96,
+        "branches": 97.61,
+        "functions": 100,
+        "lines": 98.27
+      },
+      {
+        "file": "lib/middleware/cors.js",
+        "statements": 100,
+        "branches": 95.83,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/csrf.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/errorHandler.js",
+        "statements": 100,
+        "branches": 88.13,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/helmet.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/logger.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/rateLimit.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/requestId.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/static.js",
+        "statements": 92.06,
+        "branches": 95.23,
+        "functions": 83.33,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/timeout.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/middleware/validator.js",
+        "statements": 99.29,
+        "branches": 97.6,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/adapters/json.js",
+        "statements": 85.86,
+        "branches": 71.42,
+        "functions": 90.47,
+        "lines": 86.66
+      },
+      {
+        "file": "lib/orm/adapters/memory.js",
+        "statements": 100,
+        "branches": 92.21,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/adapters/mongo.js",
+        "statements": 98.24,
+        "branches": 92.27,
+        "functions": 95.34,
+        "lines": 98.33
+      },
+      {
+        "file": "lib/orm/adapters/mysql.js",
+        "statements": 94.11,
+        "branches": 84.1,
+        "functions": 98.7,
+        "lines": 96.25
+      },
+      {
+        "file": "lib/orm/adapters/postgres.js",
+        "statements": 89.76,
+        "branches": 80.2,
+        "functions": 97.56,
+        "lines": 89.41
+      },
+      {
+        "file": "lib/orm/adapters/redis.js",
+        "statements": 98.75,
+        "branches": 87.09,
+        "functions": 96.46,
+        "lines": 99.17
+      },
+      {
+        "file": "lib/orm/adapters/sql-base.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/adapters/sqlite.js",
+        "statements": 80.25,
+        "branches": 76.53,
+        "functions": 84.5,
+        "lines": 83.2
+      },
+      {
+        "file": "lib/orm/audit.js",
+        "statements": 99.47,
+        "branches": 96.29,
+        "functions": 100,
+        "lines": 99.39
+      },
+      {
+        "file": "lib/orm/cache.js",
+        "statements": 100,
+        "branches": 97.89,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/geo.js",
+        "statements": 98.97,
+        "branches": 96.55,
+        "functions": 100,
+        "lines": 98.78
+      },
+      {
+        "file": "lib/orm/index.js",
+        "statements": 99.09,
+        "branches": 93.82,
+        "functions": 100,
+        "lines": 99.52
+      },
+      {
+        "file": "lib/orm/migrate.js",
+        "statements": 99.21,
+        "branches": 97.43,
+        "functions": 100,
+        "lines": 99.11
+      },
+      {
+        "file": "lib/orm/model.js",
+        "statements": 96.2,
+        "branches": 91.52,
+        "functions": 100,
+        "lines": 98.09
+      },
+      {
+        "file": "lib/orm/plugin.js",
+        "statements": 100,
+        "branches": 98.18,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/procedures.js",
+        "statements": 80.22,
+        "branches": 73.49,
+        "functions": 93.54,
+        "lines": 80.89
+      },
+      {
+        "file": "lib/orm/profiler.js",
+        "statements": 100,
+        "branches": 98.21,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/query.js",
+        "statements": 97.66,
+        "branches": 83.1,
+        "functions": 99.26,
+        "lines": 99.81
+      },
+      {
+        "file": "lib/orm/replicas.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/schema.js",
+        "statements": 100,
+        "branches": 98.63,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/search.js",
+        "statements": 91.72,
+        "branches": 88.23,
+        "functions": 100,
+        "lines": 96.26
+      },
+      {
+        "file": "lib/orm/seed/data/commerce.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/internet.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/locations.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/names.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/person.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/phone.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/data/words.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/factory.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/fake.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/rng.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/seeder.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/seed/unique.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/orm/snapshot.js",
+        "statements": 98.13,
+        "branches": 88.13,
+        "functions": 100,
+        "lines": 98.92
+      },
+      {
+        "file": "lib/orm/tenancy.js",
+        "statements": 88.88,
+        "branches": 79.09,
+        "functions": 100,
+        "lines": 88.62
+      },
+      {
+        "file": "lib/orm/views.js",
+        "statements": 88.59,
+        "branches": 84.94,
+        "functions": 94.11,
+        "lines": 93.06
+      },
+      {
+        "file": "lib/router/index.js",
+        "statements": 95.23,
+        "branches": 92.85,
+        "functions": 92.85,
+        "lines": 97.65
+      },
+      {
+        "file": "lib/sse/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/sse/stream.js",
+        "statements": 97.54,
+        "branches": 89.55,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/ws/connection.js",
+        "statements": 93.81,
+        "branches": 89.71,
+        "functions": 96.15,
+        "lines": 96.15
+      },
+      {
+        "file": "lib/ws/handshake.js",
+        "statements": 100,
+        "branches": 95,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/ws/index.js",
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      {
+        "file": "lib/ws/room.js",
+        "statements": 98.03,
+        "branches": 92.3,
+        "functions": 100,
+        "lines": 100
+      }
+    ]
+  }
+}

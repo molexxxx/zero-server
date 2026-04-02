@@ -100,6 +100,7 @@ function closeSearch()
 
 /* -- Index builder ----------------------------------------- */
 
+function _stripHtml(s) { return s.replace(/<[^>]+>/g, ''); }
 function sectionSlug(name) { return 'section-' + slugify(name); }
 function itemSlug(section, item) { return slugify(section) + '-' + slugify(item); }
 
@@ -237,6 +238,95 @@ function buildIndex()
                         text: tip,
                         context: tip,
                         parent: item.name,
+                    });
+                }
+            }
+
+            /* -- CLI structured content ----------------------------- */
+
+            if (Array.isArray(item.commandGroups))
+            {
+                for (const group of item.commandGroups)
+                {
+                    if (Array.isArray(group.commands))
+                    {
+                        for (const c of group.commands)
+                        {
+                            const cmd = (c.cmd || '').replace(/<[^>]+>/g, '');
+                            const desc = _stripHtml(c.desc || '');
+                            const args = c.args || '';
+                            searchIndex.push({
+                                type: 'option',
+                                section: section.section,
+                                sectionIcon: section.icon,
+                                name: cmd,
+                                slug,
+                                text: cmd + ' ' + args,
+                                context: desc,
+                                parent: item.name + ' › ' + (group.label || 'Commands'),
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (Array.isArray(item.cliOptions))
+            {
+                for (const o of item.cliOptions)
+                {
+                    searchIndex.push({
+                        type: 'option',
+                        section: section.section,
+                        sectionIcon: section.icon,
+                        name: o.flag || '',
+                        slug,
+                        text: o.flag || '',
+                        context: _stripHtml(o.desc || ''),
+                        parent: item.name + ' › Options',
+                    });
+                }
+            }
+
+            if (Array.isArray(item.workflows))
+            {
+                for (const wf of item.workflows)
+                {
+                    const wfName = wf.tab || 'Workflow';
+                    if (Array.isArray(wf.steps))
+                    {
+                        for (const step of wf.steps)
+                        {
+                            const label = step.label || '';
+                            const code = step.code || '';
+                            const note = _stripHtml(step.note || '');
+                            searchIndex.push({
+                                type: 'tip',
+                                section: section.section,
+                                sectionIcon: section.icon,
+                                name: label,
+                                slug,
+                                text: label + ' ' + code + ' ' + note,
+                                context: wfName + ' workflow',
+                                parent: item.name + ' › ' + wfName,
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (Array.isArray(item.configExamples))
+            {
+                for (const cfg of item.configExamples)
+                {
+                    searchIndex.push({
+                        type: 'tip',
+                        section: section.section,
+                        sectionIcon: section.icon,
+                        name: (cfg.adapter || 'Config') + ' config',
+                        slug,
+                        text: (cfg.adapter || '') + ' ' + (cfg.code || ''),
+                        context: item.name + ' configuration example',
+                        parent: item.name + ' › Config',
                     });
                 }
             }

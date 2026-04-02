@@ -1568,3 +1568,320 @@ export class ReplicaManager {
     /** Close all adapters (primary + replicas). */
     closeAll(): Promise<void>;
 }
+
+// --- Multi-Tenancy (Phase 4) ----------------------------------------
+
+export interface TenantManagerOptions {
+    /** Tenancy strategy. */
+    strategy?: 'row' | 'schema';
+    /** Column name for row-level tenancy. */
+    tenantColumn?: string;
+    /** Default schema name (schema strategy). */
+    defaultSchema?: string;
+    /** Schema name prefix (schema strategy). */
+    schemaPrefix?: string;
+}
+
+export interface TenantMiddlewareOptions {
+    /** Header to read tenant from. */
+    header?: string;
+    /** Query parameter name. */
+    queryParam?: string;
+    /** Custom extraction function. */
+    extract?: (req: any) => string | undefined;
+    /** Reject requests without tenant. */
+    required?: boolean;
+}
+
+export class TenantManager {
+    constructor(db: Database, options?: TenantManagerOptions);
+
+    /** The tenancy strategy. */
+    readonly strategy: string;
+    /** The tenant column name (row strategy). */
+    readonly tenantColumn: string;
+
+    /** Set the current tenant for subsequent queries. */
+    setCurrentTenant(tenantId: string): TenantManager;
+    /** Get the current tenant ID. */
+    getCurrentTenant(): string | null;
+    /** Clear the current tenant context. */
+    clearTenant(): TenantManager;
+    /** Execute a function within a specific tenant context. */
+    withTenant<T>(tenantId: string, fn: () => Promise<T>): Promise<T>;
+    /** Register a Model for tenant scoping. */
+    addModel(ModelClass: typeof Model): TenantManager;
+    /** Register multiple Models for tenant scoping. */
+    addModels(...models: Array<typeof Model>): TenantManager;
+    /** Create a new tenant (schema or row). */
+    createTenant(tenantId: string): Promise<void>;
+    /** Drop a tenant. */
+    dropTenant(tenantId: string, options?: { cascade?: boolean }): Promise<void>;
+    /** List all known tenant IDs. */
+    listTenants(): string[];
+    /** Check if a tenant exists. */
+    hasTenant(tenantId: string): boolean;
+    /** Returns tenant extraction middleware. */
+    middleware(options?: TenantMiddlewareOptions): (req: any, res: any, next: () => void) => void;
+    /** Run migrations for a specific tenant. */
+    migrate(migrator: Migrator, tenantId: string): Promise<MigrateResult>;
+    /** Run migrations for all known tenants. */
+    migrateAll(migrator: Migrator): Promise<Map<string, MigrateResult>>;
+}
+
+// --- Audit Logging (Phase 4) ----------------------------------------
+
+export interface AuditLogOptions {
+    /** Table name for audit entries. */
+    table?: string;
+    /** Models to audit. */
+    include?: Array<typeof Model>;
+    /** Models to exclude from auditing. */
+    exclude?: Array<typeof Model>;
+    /** Fields to never log. */
+    excludeFields?: string[];
+    /** Context property for actor identifier. */
+    actorField?: string;
+    /** Separate database for audit storage. */
+    storage?: Database;
+    /** Include timestamps in entries. */
+    timestamps?: boolean;
+    /** Store field-level diffs for updates. */
+    diffs?: boolean;
+}
+
+export interface AuditEntry {
+    id: number;
+    action: 'create' | 'update' | 'delete';
+    table_name: string;
+    record_id: string | null;
+    actor: string | null;
+    old_values: Record<string, any> | null;
+    new_values: Record<string, any> | null;
+    diff: Array<{ field: string; from: any; to: any }> | null;
+    timestamp: string;
+}
+
+export interface AuditTrailOptions {
+    /** Filter by table name. */
+    table?: string;
+    /** Filter by action. */
+    action?: 'create' | 'update' | 'delete';
+    /** Filter by record ID. */
+    recordId?: string;
+    /** Filter by actor. */
+    actor?: string;
+    /** ISO timestamp lower bound. */
+    since?: string;
+    /** ISO timestamp upper bound. */
+    until?: string;
+    /** Maximum entries (default 100). */
+    limit?: number;
+    /** Skip entries. */
+    offset?: number;
+    /** Sort order (default 'desc'). */
+    order?: 'asc' | 'desc';
+}
+
+export interface AuditMiddlewareOptions {
+    /** Custom actor extraction function. */
+    extract?: (req: any) => string | undefined;
+    /** Header to read actor from. */
+    header?: string;
+}
+
+export class AuditLog {
+    constructor(db: Database, options?: AuditLogOptions);
+
+    /** Initialize the audit table and attach hooks. */
+    install(): Promise<AuditLog>;
+    /** Set the current actor. */
+    setActor(actor: string): AuditLog;
+    /** Get the current actor. */
+    getActor(): string | null;
+    /** Execute a function within a specific actor context. */
+    withActor<T>(actor: string, fn: () => Promise<T>): Promise<T>;
+    /** Compute a diff between two objects. */
+    diff(oldValues: Record<string, any>, newValues: Record<string, any>): Array<{ field: string; from: any; to: any }>;
+    /** Query the audit trail. */
+    trail(options?: AuditTrailOptions): Promise<AuditEntry[]>;
+    /** Get audit history for a specific record. */
+    history(table: string, recordId: string | number, options?: AuditTrailOptions): Promise<AuditEntry[]>;
+    /** Get audit entries grouped by actor. */
+    byActor(options?: AuditTrailOptions): Promise<Map<string, AuditEntry[]>>;
+    /** Count audit entries. */
+    count(options?: AuditTrailOptions): Promise<number>;
+    /** Purge old audit entries. */
+    purge(options: { before?: string; table?: string; keepLast?: number }): Promise<number>;
+    /** Returns actor extraction middleware. */
+    middleware(options?: AuditMiddlewareOptions): (req: any, res: any, next: () => void) => void;
+}
+
+// --- Plugin System (Phase 4) ----------------------------------------
+
+export interface PluginDefinition {
+    /** Unique plugin name. */
+    name: string;
+    /** Plugin version string. */
+    version?: string;
+    /** Install function called on registration. */
+    install: (manager: PluginManager, options?: Record<string, any>) => void;
+    /** Boot function called after all plugins are registered. */
+    boot?: (manager: PluginManager, options?: Record<string, any>) => Promise<void> | void;
+    /** Cleanup function. */
+    uninstall?: (manager: PluginManager) => void;
+    /** Required plugin names. */
+    dependencies?: string[];
+}
+
+export interface PluginInfo {
+    name: string;
+    version: string;
+    hasBootFn: boolean;
+}
+
+export class PluginManager {
+    constructor(db?: Database);
+
+    /** Number of registered plugins. */
+    readonly size: number;
+
+    /** Register a plugin. */
+    register(plugin: PluginDefinition, options?: Record<string, any>): PluginManager;
+    /** Register multiple plugins. */
+    registerAll(...plugins: Array<PluginDefinition | [PluginDefinition, Record<string, any>]>): PluginManager;
+    /** Unregister a plugin by name. */
+    unregister(name: string): PluginManager;
+    /** Boot all registered plugins. */
+    boot(): Promise<PluginManager>;
+    /** Register a hook listener. */
+    hook(name: string, callback: (...args: any[]) => any): PluginManager;
+    /** Remove a hook listener. */
+    unhook(name: string, callback: Function): PluginManager;
+    /** Execute all listeners for a hook. */
+    runHook(name: string, ...args: any[]): Promise<any>;
+    /** Check if listeners exist for a hook. */
+    hasHook(name: string): boolean;
+    /** Check if a plugin is registered. */
+    has(name: string): boolean;
+    /** Get a registered plugin by name. */
+    get(name: string): PluginDefinition | undefined;
+    /** Get options for a registered plugin. */
+    getOptions(name: string): Record<string, any> | undefined;
+    /** List all registered plugin names. */
+    list(): string[];
+    /** Get info about all registered plugins. */
+    info(): PluginInfo[];
+}
+
+// --- Stored Procedures & Functions (Phase 4) ------------------------
+
+export interface ProcedureParam {
+    /** Parameter name. */
+    name: string;
+    /** SQL type. */
+    type: string;
+    /** IN, OUT, or INOUT (procedures only). */
+    direction?: 'IN' | 'OUT' | 'INOUT';
+}
+
+export interface StoredProcedureOptions {
+    /** Procedure parameters. */
+    params?: ProcedureParam[];
+    /** Procedure body (SQL). */
+    body: string;
+    /** Language (sql, plpgsql). */
+    language?: string;
+    /** Adapter-specific options. */
+    options?: Record<string, any>;
+}
+
+export class StoredProcedure {
+    constructor(name: string, options: StoredProcedureOptions);
+
+    /** Procedure name. */
+    readonly name: string;
+
+    /** Create the procedure in the database. */
+    create(db: Database): Promise<void>;
+    /** Drop the procedure. */
+    drop(db: Database, options?: { ifExists?: boolean }): Promise<void>;
+    /** Execute the procedure with arguments. */
+    execute(db: Database, args?: any[]): Promise<any>;
+    /** Check if the procedure exists. */
+    exists(db: Database): Promise<boolean>;
+}
+
+export interface StoredFunctionOptions {
+    /** Function parameters. */
+    params?: Array<{ name: string; type: string }>;
+    /** Return type. */
+    returns: string;
+    /** Function body (SQL). */
+    body: string;
+    /** Language. */
+    language?: string;
+    /** Whether the function is deterministic (MySQL). */
+    deterministic?: boolean;
+    /** PostgreSQL volatility (STABLE, VOLATILE, IMMUTABLE). */
+    volatility?: string;
+}
+
+export class StoredFunction {
+    constructor(name: string, options: StoredFunctionOptions);
+
+    /** Function name. */
+    readonly name: string;
+
+    /** Create the function in the database. */
+    create(db: Database): Promise<void>;
+    /** Drop the function. */
+    drop(db: Database, options?: { ifExists?: boolean }): Promise<void>;
+    /** Call the function and return its result. */
+    call(db: Database, args?: any[]): Promise<any>;
+    /** Check if the function exists. */
+    exists(db: Database): Promise<boolean>;
+}
+
+export interface TriggerDefinition {
+    /** Table the trigger is on. */
+    table: string;
+    /** BEFORE, AFTER, or INSTEAD OF. */
+    timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+    /** INSERT, UPDATE, or DELETE. */
+    event: 'INSERT' | 'UPDATE' | 'DELETE';
+    /** Trigger body (SQL). */
+    body: string;
+    /** ROW or STATEMENT. */
+    forEach?: 'ROW' | 'STATEMENT';
+    /** Optional WHEN condition. */
+    when?: string;
+}
+
+export class TriggerManager {
+    constructor(db: Database);
+
+    /** Define a trigger. */
+    define(name: string, options: TriggerDefinition): TriggerManager;
+    /** Create a trigger in the database. */
+    create(name: string): Promise<void>;
+    /** Create all defined triggers. */
+    createAll(): Promise<string[]>;
+    /** Drop a trigger. */
+    drop(name: string, options?: { table?: string; ifExists?: boolean }): Promise<void>;
+    /** List all defined trigger names. */
+    list(): string[];
+    /** Get a trigger definition by name. */
+    get(name: string): TriggerDefinition | undefined;
+}
+
+// --- CLI (Phase 4) --------------------------------------------------
+
+export class CLI {
+    constructor(argv?: string[]);
+    /** Run the CLI command. */
+    run(): Promise<void>;
+}
+
+/** Create and run the CLI. */
+export function runCLI(argv?: string[]): Promise<void>;

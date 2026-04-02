@@ -1,0 +1,37 @@
+{
+	"section": "Getting Started",
+	"icon": "rocket",
+	"items": [
+		{
+			"name": "Installation",
+			"description": "Install zero-http from npm. No external dependencies are required — everything is built in.",
+			"example": "npm install zero-http",
+			"exampleLang": "bash",
+			"tips": [
+				"zero-http has zero runtime dependencies — npm install is all you need.",
+				"Requires Node.js 18+ (uses crypto.randomUUID, structuredClone, etc.).",
+				"TypeScript definitions are included in the package under types/."
+			]
+		},
+		{
+			"name": "Quickstart",
+			"description": "Create a minimal server with JSON parsing and static file serving in under 10 lines.",
+			"example": "const { createApp, json, static: serveStatic } = require('zero-http')\nconst path = require('path')\nconst app = createApp()\n\napp.use(json({ limit: '10kb' }))\napp.use(serveStatic(path.join(__dirname, 'public'), { index: 'index.html' }))\n\napp.get('/ping', (req, res) => res.json({ pong: true }))\n\napp.listen(3000, () => {\n\tconsole.log('Server listening on http://localhost:3000')\n})",
+			"tips": [
+				"Middleware runs in registration order — add parsers before route handlers.",
+				"All route methods (get, post, put, etc.) return the app, so you can chain them.",
+				"Use app.onError() to register a global error handler for uncaught errors."
+			]
+		},
+		{
+			"name": "Full-Featured Server",
+			"description": "A complete production-ready skeleton combining security headers, CSRF, cookies, timeouts, request IDs, logging, CORS, compression, body parsing, rate limiting, validation, static serving, WebSocket, SSE, Router sub-apps, app settings, and error handling.",
+			"example": "const path = require('path')\nconst { createApp, cors, json, urlencoded, text, compress, helmet, timeout,\n\trequestId, cookieParser, csrf, validate, rateLimit, logger,\n\tstatic: serveStatic, Router, WebSocketPool } = require('zero-http')\n\nconst app = createApp()\n\n// App settings\napp.set('env', process.env.NODE_ENV || 'development')\napp.locals.appName = 'My App'\n\n// Middleware stack (order matters!)\napp.use(requestId())    // tag every request with a unique ID\napp.use(logger())       // log method, url, status, response time\napp.use(helmet())       // security headers (CSP, HSTS, X-Frame, etc.)\napp.use(cors())         // CORS with preflight handling\napp.use(compress())     // brotli/gzip/deflate response compression\napp.use(timeout(30000)) // 30s timeout → 408\napp.use(rateLimit())    // 100 req/min per IP\napp.use(cookieParser('my-secret'))  // signed cookies\napp.use(json({ limit: '1mb' }))     // JSON body parser\napp.use(urlencoded({ extended: true })) // form body parser\napp.use(text())         // plain text parser\napp.use(csrf())         // CSRF protection\napp.use(serveStatic(path.join(__dirname, 'public')))\n\n// API routes\nconst api = Router()\napi.get('/health', (req, res) => res.json({ status: 'ok', id: req.id }))\napi.post('/users', validate({\n\tbody: {\n\t\tname:  { type: 'string', required: true, minLength: 2 },\n\t\temail: { type: 'email', required: true }\n\t}\n}), (req, res) => res.status(201).json(req.body))\napp.use('/api', api)\n\n// WebSocket with rooms\nconst pool = new WebSocketPool()\napp.ws('/chat', (ws, req) => {\n\tpool.add(ws)\n\tpool.join(ws, 'general')\n\tws.on('message', msg => pool.toRoom('general', msg, ws))\n})\n\n// SSE\napp.get('/events', (req, res) => {\n\tconst sse = res.sse({ retry: 3000, autoId: true })\n\tsse.send('connected')\n\tsse.on('close', () => console.log('bye'))\n})\n\napp.onError((err, req, res) => {\n\tres.status(500).json({ error: err.message, requestId: req.id })\n})\n\napp.listen(3000)",
+			"tips": [
+				"Always place parsers (json, urlencoded) before route handlers.",
+				"helmet() should come early in the middleware stack to set security headers on all responses.",
+				"cookieParser must come before csrf() since CSRF reads the cookie token."
+			]
+		}
+	]
+}

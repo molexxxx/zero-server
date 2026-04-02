@@ -24,12 +24,12 @@ export function initTasks()
     function statusBadge(s)
     {
         const colors = { pending: '#fa0', 'in-progress': '#5865f2', done: '#2ecc71' };
-        return `<span style="padding:2px 8px;border-radius:4px;font-size:12px;background:${colors[s] || '#555'};color:#fff">${escapeHtml(s)}</span>`;
+        return `<span style="padding:2px 8px;border-radius:4px;font-size:12px;background:${colors[s] || '#555'}22;color:${colors[s] || '#555'}">${escapeHtml(s)}</span>`;
     }
 
     function priorityStars(n)
     {
-        return '<span style="color:#fa0">' + '★'.repeat(n) + '</span>' + '<span style="color:#333">' + '☆'.repeat(5 - n) + '</span>';
+        return '<span style="color:#fa0">' + '★'.repeat(n) + '</span>' + '<span style="color:var(--muted)">' + '☆'.repeat(5 - n) + '</span>';
     }
 
     async function loadStats()

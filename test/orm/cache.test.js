@@ -483,4 +483,59 @@ describe('cache — deep coverage', () => {
 		expect(cache._maxEntries).toBe(1); // Should be at least 1
 		expect(cache._defaultTTL).toBe(0); // Should be at least 0
 	});
-});
+});
+
+// ===================================================================
+// Cache stampede prevention (_inflight dedup)
+// ===================================================================
+describe('QueryCache — remember() stampede prevention', () =>
+{
+	let cache;
+
+	beforeEach(() => { cache = new QueryCache({ maxEntries: 10, defaultTTL: 60 }); });
+
+	it('deduplicates concurrent calls for the same key', async () =>
+	{
+		let callCount = 0;
+		const fn = () => new Promise(resolve =>
+		{
+			callCount++;
+			setTimeout(() => resolve('result'), 50);
+		});
+
+		// Fire 5 concurrent remember() calls for the same key
+		const promises = Array.from({ length: 5 }, () => cache.remember('dedup-key', fn, 60));
+		const results = await Promise.all(promises);
+
+		// fn should only be called once despite 5 concurrent calls
+		expect(callCount).toBe(1);
+		expect(results).toEqual(['result', 'result', 'result', 'result', 'result']);
+	});
+
+	it('cleans up _inflight after completion', async () =>
+	{
+		await cache.remember('cleanup-key', async () => 'val', 60);
+		expect(cache._inflight.has('cleanup-key')).toBe(false);
+	});
+
+	it('cleans up _inflight after error', async () =>
+	{
+		try { await cache.remember('err-key', async () => { throw new Error('boom'); }, 60); }
+		catch (_) {}
+		expect(cache._inflight.has('err-key')).toBe(false);
+	});
+
+	it('allows new call after previous completes', async () =>
+	{
+		let callCount = 0;
+		const fn = async () => { callCount++; return 'v' + callCount; };
+
+		const r1 = await cache.remember('serial-key', fn, 60);
+		cache.flush(); // clear cached value
+		const r2 = await cache.remember('serial-key', fn, 60);
+
+		expect(callCount).toBe(2);
+		expect(r1).toBe('v1');
+		expect(r2).toBe('v2');
+	});
+});
