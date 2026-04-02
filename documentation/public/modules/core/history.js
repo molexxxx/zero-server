@@ -76,6 +76,34 @@ export function histDismissModal(id) {
     }
 }
 
+export function histPushSidebar() {
+    _stack.length = _cursor;
+    _stack.push({ t: 's' });
+    _cursor = _stack.length;
+    history.pushState({ _ui: _cursor }, '');
+}
+
+export function histCloseSidebar() {
+    const top = _cursor > 0 ? _stack[_cursor - 1] : null;
+    if (top && top.t === 's') {
+        history.back();
+        return;
+    }
+    _closeSidebar();
+    for (let i = _cursor - 1; i >= 0; i--) {
+        if (_stack[i] && _stack[i].t === 's' && !_stack[i].dead) {
+            _stack[i].dead = true;
+            break;
+        }
+    }
+}
+
+function _closeSidebar() {
+    document.body.classList.remove('toc-open');
+    const btn = document.querySelector('.toc-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
 export function histPushAccordion(detailsId, nowOpen) {
     _stack.length = _cursor;
     _stack.push({ t: 'a', id: detailsId, undo: !nowOpen });
@@ -120,6 +148,7 @@ window.addEventListener('popstate', function (e) {
             if (!entry || entry.dead) continue;
             anyLiveAction = true;
             if (entry.t === 'm') _closeModal(entry.id);
+            if (entry.t === 's') _closeSidebar();
             if (entry.t === 'a') {
                 const det = document.getElementById(entry.id);
                 if (det) det.open = entry.undo;
@@ -132,6 +161,11 @@ window.addEventListener('popstate', function (e) {
             if (!fwd || fwd.dead) continue;
             anyLiveAction = true;
             if (fwd.t === 'm') _openModal(fwd.id);
+            if (fwd.t === 's') {
+                document.body.classList.add('toc-open');
+                const btn = document.querySelector('.toc-toggle');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            }
             if (fwd.t === 'a') {
                 const det2 = document.getElementById(fwd.id);
                 if (det2) det2.open = !fwd.undo;

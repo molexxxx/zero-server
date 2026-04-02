@@ -44,7 +44,7 @@ function applyMiddleware(app)
         setHeaders(res, filePath)
         {
             const rel = filePath.replace(/\\/g, '/');
-            if (/\/modules\//.test(rel) || /\/data\//.test(rel))
+            if (/\/modules\//.test(rel) || /\/data\//.test(rel) || /\/styles\//.test(rel))
             {
                 res.raw.setHeader('Cache-Control', 'no-cache');
             }
