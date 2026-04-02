@@ -4,21 +4,20 @@
  */
 
 import { openBadgeModal, renderTestsModal, renderCoverageModal } from './modals.js';
+import { getSelectedVersion } from './version-selector.js';
 
 export function initBadges()
 {
-    const versionP = fetch('/api/version').then(r => r.json()).then(d =>
-    {
-        const badge = document.getElementById('version-badge');
-        if (badge && d.version) badge.textContent = 'v' + d.version;
-        return d.version || '';
-    }).catch(() => '');
+    const _v = window.__v ? `?v=${window.__v}` : '';
+    const ver = getSelectedVersion() || window._docsVersion;
+    const badgesUrl = ver
+        ? `/data/versions/${encodeURIComponent(ver)}/badges.json${_v}`
+        : `/data/badges.json${_v}`;
 
-    const badgesP = fetch(`/data/badges.json${window.__v ? `?v=${window.__v}` : ''}`).then(r => r.json()).catch(() => null);
+    const badgesP = fetch(badgesUrl).then(r => r.json()).catch(() => null);
 
-    Promise.allSettled([versionP, badgesP]).then(([vRes, bRes]) =>
+    badgesP.then(badgeData =>
     {
-        const badgeData = bRes.status === 'fulfilled' ? bRes.value : null;
 
         const strip = document.getElementById('badgeStrip');
         if (!strip) return;

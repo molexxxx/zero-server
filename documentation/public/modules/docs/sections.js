@@ -3,9 +3,9 @@
  * Renders hierarchical documentation sections with sidebar TOC population.
  */
 
-import { escapeHtml, slugify, highlightAllPre } from '../core/helpers.js';
+import { escapeHtml, formatNotes, slugify, highlightAllPre } from '../core/helpers.js';
 import { histPushAccordion, histPushModal, histCloseModal, histPushHash } from '../core/history.js';
-import { initTocCollapsible, expandTocForId, scrollToId } from '../ui/shell.js';
+import { initTocCollapsible, expandTocForId, scrollToId, refreshScrollSpy } from '../ui/shell.js';
 
 /* -- Method meta store ------------------------------------- */
 
@@ -128,7 +128,7 @@ function _mmRows(kind, data)
                     (item.type ? `<span class="type-badge">${escapeHtml(item.type)}</span>` : '') +
                     metaHtml +
                 `</div>` +
-                (item.notes ? `<p class="mm-row-desc">${escapeHtml(item.notes)}</p>` : '');
+                (item.notes ? `<p class="mm-row-desc">${formatNotes(item.notes)}</p>` : '');
 
             /* -- collapsible sub-options ---------------------- */
             if (Array.isArray(item._subOptions) && item._subOptions.length)
@@ -155,7 +155,7 @@ function _mmRows(kind, data)
                             (opt.type ? `<span class="type-badge">${escapeHtml(opt.type)}</span>` : '') +
                             defHtml +
                         `</div>` +
-                        (opt.notes ? `<p class="mm-row-desc">${escapeHtml(opt.notes)}</p>` : '');
+                        (opt.notes ? `<p class="mm-row-desc">${formatNotes(opt.notes)}</p>` : '');
                     subList.appendChild(sub);
                 }
                 details.appendChild(subList);
@@ -173,7 +173,7 @@ function _mmRows(kind, data)
                     (item.type ? `<span class="type-badge">${escapeHtml(item.type)}</span>` : '') +
                     defHtml +
                 `</div>` +
-                (item.notes ? `<p class="mm-row-desc">${escapeHtml(item.notes)}</p>` : '');
+                (item.notes ? `<p class="mm-row-desc">${formatNotes(item.notes)}</p>` : '');
         }
         list.appendChild(row);
     }
@@ -252,7 +252,7 @@ function buildMethodRow(m, parentSlug)
 
     const buttons = [];
 
-    /* ── Merge methodOptions into the matching param ──────── */
+    /* -- Merge methodOptions into the matching param -------- */
     const hasOpts   = Array.isArray(m.methodOptions) && m.methodOptions.length;
     const hasParams = Array.isArray(m.methodParams) && m.methodParams.length;
     let mergedParams = hasParams ? m.methodParams.map(p => Object.assign({}, p)) : null;
@@ -393,7 +393,7 @@ function renderDocItem(item, section)
                     (p.type ? `<span class="type-badge">${escapeHtml(p.type)}</span>` : '') +
                     reqHtml +
                 `</div>` +
-                (p.notes ? `<p class="mm-prop-notes">${escapeHtml(p.notes)}</p>` : '');
+                (p.notes ? `<p class="mm-prop-notes">${formatNotes(p.notes)}</p>` : '');
             plist.appendChild(row);
         }
         body.appendChild(plist);
@@ -421,7 +421,7 @@ function renderDocItem(item, section)
                     (opt.type ? `<span class="type-badge">${escapeHtml(opt.type)}</span>` : '') +
                     defHtml +
                 `</div>` +
-                (opt.notes ? `<p class="mm-prop-notes">${escapeHtml(opt.notes)}</p>` : '');
+                (opt.notes ? `<p class="mm-prop-notes">${formatNotes(opt.notes)}</p>` : '');
             olist.appendChild(row);
         }
         body.appendChild(olist);
@@ -451,7 +451,7 @@ function renderDocItem(item, section)
                         (opt.type ? `<span class="type-badge">${escapeHtml(opt.type)}</span>` : '') +
                         defHtml +
                     `</div>` +
-                    (opt.notes ? `<p class="mm-prop-notes">${escapeHtml(opt.notes)}</p>` : '');
+                    (opt.notes ? `<p class="mm-prop-notes">${formatNotes(opt.notes)}</p>` : '');
                 olist.appendChild(row);
             }
             body.appendChild(olist);
@@ -622,18 +622,26 @@ function populateToc(sections)
 
 /* -- Main loader ------------------------------------------- */
 
-export async function loadDocs()
+export async function loadDocs(version)
 {
     try
     {
         const _v = window.__v ? `?v=${window.__v}` : '';
-        const mres = await fetch(`/data/docs-manifest.json${_v}`);
+
+        /* Resolve paths — always use /data/versions/{ver}/sections/ */
+        const ver = version || window._docsVersion;
+        if (!ver) return;
+        const basePath = `/data/versions/${encodeURIComponent(ver)}`;
+        const manifestUrl  = `${basePath}/docs-manifest.json${_v}`;
+        const sectionsBase = `${basePath}/sections`;
+
+        const mres = await fetch(manifestUrl);
         if (!mres.ok) return;
         const manifest = await mres.json();
 
         const results = await Promise.all(
             manifest.map(filename =>
-                fetch(`/data/sections/${filename}${_v}`)
+                fetch(`${sectionsBase}/${filename}${_v}`)
                     .then(r => r.ok ? r.json() : null)
             )
         );
@@ -667,6 +675,7 @@ export async function loadDocs()
         requestAnimationFrame(() => container.classList.add('docs-ready'));
 
         populateToc(sections);
+        refreshScrollSpy();
 
         container.querySelectorAll('details.acc summary').forEach(summary =>
         {

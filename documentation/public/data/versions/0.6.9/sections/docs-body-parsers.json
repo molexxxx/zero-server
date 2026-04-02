@@ -1,0 +1,265 @@
+{
+	"section": "Body Parsers",
+	"icon": "parse",
+	"items": [
+		{
+			"name": "json",
+			"description": "JSON body-parsing middleware. Reads the request body, parses it as JSON, and sets `req.body`. Stores the raw buffer on `req.rawBody` for signature verification.",
+			"options": [
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "—",
+					"notes": "Max body size (e.g. `'10kb'`). Default `'1mb'`."
+				},
+				{
+					"option": "reviver",
+					"type": "Function",
+					"default": "—",
+					"notes": "`JSON.parse` reviver function."
+				},
+				{
+					"option": "strict",
+					"type": "boolean",
+					"default": "true",
+					"notes": "When true, reject non-object/array roots."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | Function",
+					"default": "'application/json'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "When true, reject non-HTTPS requests with 403."
+				},
+				{
+					"option": "verify",
+					"type": "Function",
+					"default": "—",
+					"notes": "`verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/br bodies. When false, compressed bodies return 415."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Async middleware `(req, res, next) => void`."
+			},
+			"example": "  const { json } = require('zero-http');\r\n\n  app.use(json({ limit: '500kb', strict: true }));\r\n\n  app.post('/api/data', (req, res) => {\r\n      console.log(req.body); // parsed JSON object\r\n      res.json({ ok: true });\r\n  });"
+		},
+		{
+			"name": "urlencoded",
+			"description": "URL-encoded body-parsing middleware. Supports both flat (`URLSearchParams`) and extended (nested bracket syntax) parsing modes. Stores the raw buffer on `req.rawBody` for signature verification.",
+			"options": [
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "—",
+					"notes": "Max body size (e.g. `'10kb'`). Default `'1mb'`."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | Function",
+					"default": "'application/x-www-form-urlencoded'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "extended",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Use nested bracket parsing (e.g. `a[b][c]=1`)."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "When true, reject non-HTTPS requests with 403."
+				},
+				{
+					"option": "parameterLimit",
+					"type": "number",
+					"default": "1000",
+					"notes": "Max number of parameters. Prevents DoS via huge payloads."
+				},
+				{
+					"option": "depth",
+					"type": "number",
+					"default": "32",
+					"notes": "Max nesting depth for bracket syntax. Prevents deep-nesting DoS."
+				},
+				{
+					"option": "verify",
+					"type": "Function",
+					"default": "—",
+					"notes": "`verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/br bodies."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Async middleware `(req, res, next) => void`."
+			},
+			"example": "  const { urlencoded } = require('zero-http');\r\n\n  // Flat parsing (default)\r\n  app.use(urlencoded({ limit: '100kb' }));\r\n\n  // Nested bracket syntax\r\n  app.use(urlencoded({ extended: true }));\r\n\n  app.post('/form', (req, res) => {\r\n      console.log(req.body); // { name: 'Tony', age: '30' }\r\n      res.json(req.body);\r\n  });"
+		},
+		{
+			"name": "text",
+			"description": "Plain-text body-parsing middleware. Reads the request body as a string and sets `req.body`. Stores the raw buffer on `req.rawBody` for signature verification.",
+			"options": [
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "—",
+					"notes": "Max body size. Default `'1mb'`."
+				},
+				{
+					"option": "encoding",
+					"type": "string",
+					"default": "'utf8'",
+					"notes": "Fallback character encoding when Content-Type has no charset."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | Function",
+					"default": "'text/*'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "When true, reject non-HTTPS requests with 403."
+				},
+				{
+					"option": "verify",
+					"type": "Function",
+					"default": "—",
+					"notes": "`verify(req, res, buf, encoding)` — called before decoding. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/br bodies. When false, compressed bodies return 415."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Async middleware `(req, res, next) => void`."
+			},
+			"example": "  const { text } = require('zero-http');\r\n\n  app.use(text({ type: 'text/plain', limit: '256kb' }));\r\n\n  app.post('/log', (req, res) => {\r\n      console.log(req.body); // raw string\r\n      res.send('ok');\r\n  });"
+		},
+		{
+			"name": "raw",
+			"description": "Raw-buffer body-parsing middleware. Stores the full request body as a Buffer on `req.body`. Also sets `req.rawBody` for signature verification workflows.",
+			"options": [
+				{
+					"option": "limit",
+					"type": "string | number",
+					"default": "—",
+					"notes": "Max body size. Default `'1mb'`."
+				},
+				{
+					"option": "type",
+					"type": "string | string[] | Function",
+					"default": "'application/octet-stream'",
+					"notes": "Content-Type(s) to match."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "When true, reject non-HTTPS requests with 403."
+				},
+				{
+					"option": "verify",
+					"type": "Function",
+					"default": "—",
+					"notes": "`verify(req, res, buf)` — called before setting body. Throw to reject with 403."
+				},
+				{
+					"option": "inflate",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Decompress gzip/deflate/br bodies. When false, compressed bodies return 415."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Async middleware `(req, res, next) => void`."
+			},
+			"example": "  const { raw } = require('zero-http');\r\n\n  app.use(raw({ type: 'application/octet-stream', limit: '5mb' }));\r\n\n  app.post('/upload', (req, res) => {\r\n      console.log(req.body); // Buffer\r\n      res.send('received ' + req.body.length + ' bytes');\r\n  });"
+		},
+		{
+			"name": "multipart",
+			"description": "Streaming multipart/form-data parser. Writes uploaded files to a temp directory and collects form fields.  Sets `req.body = { fields, files }`.",
+			"options": [
+				{
+					"option": "dir",
+					"type": "string",
+					"default": "—",
+					"notes": "Upload directory (default: OS temp dir)."
+				},
+				{
+					"option": "maxFileSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum size per file in bytes."
+				},
+				{
+					"option": "requireSecure",
+					"type": "boolean",
+					"default": "false",
+					"notes": "When true, reject non-HTTPS requests with 403."
+				},
+				{
+					"option": "maxFields",
+					"type": "number",
+					"default": "1000",
+					"notes": "Maximum number of non-file fields. Prevents DoS via field flooding."
+				},
+				{
+					"option": "maxFiles",
+					"type": "number",
+					"default": "10",
+					"notes": "Maximum number of uploaded files."
+				},
+				{
+					"option": "maxFieldSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum size of a single field value in bytes. Default 1 MB."
+				},
+				{
+					"option": "allowedMimeTypes",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Whitelist of MIME types for uploaded files (e.g. `['image/png', 'image/jpeg']`)."
+				},
+				{
+					"option": "maxTotalSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Maximum combined size of all uploaded files in bytes."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Async middleware `(req, res, next) => void`."
+			},
+			"example": "  const { multipart } = require('zero-http');\r\n\n  app.use(multipart({\r\n      dir: './uploads',\r\n      maxFileSize: 10 * 1024 * 1024, // 10 MB\r\n      maxFiles: 5,\r\n      allowedMimeTypes: ['image/png', 'image/jpeg'],\r\n  }));\r\n\n  app.post('/upload', (req, res) => {\r\n      const { fields, files } = req.body;\r\n      res.json({ fields, uploaded: Object.keys(files) });\r\n  });"
+		}
+	]
+}

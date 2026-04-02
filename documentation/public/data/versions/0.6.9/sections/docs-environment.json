@@ -1,0 +1,209 @@
+{
+	"section": "Environment",
+	"icon": "settings",
+	"items": [
+		{
+			"name": "env",
+			"description": "Zero-dependency typed environment variable system. Loads `.env` files, validates against a typed schema, and exposes a fast accessor with built-in type coercion. Supports: string, number, boolean, integer, array, json, url, port, enum. Multi-environment: `.env`, `.env.local`, `.env.{NODE_ENV}`, `.env.{NODE_ENV}.local`.",
+			"example": "  const { env } = require('zero-http');\r\n\n  env.load({\r\n      PORT:            { type: 'port',    default: 3000 },\r\n      DATABASE_URL:    { type: 'string',  required: true },\r\n      DEBUG:           { type: 'boolean', default: false },\r\n      ALLOWED_ORIGINS: { type: 'array',   separator: ',' },\r\n      LOG_LEVEL:       { type: 'enum',    values: ['debug','info','warn','error'], default: 'info' },\r\n  });\r\n\n  env.PORT          // => 3000 (number)\r\n  env('PORT')       // => 3000\r\n  env.DEBUG         // => false (boolean)\r\n  env.require('DATABASE_URL')  // throws if missing",
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "load",
+							"signature": "load([schema], [options])",
+							"description": "Load environment variables from `.env` files and validate against a typed schema. Files are loaded in precedence order (later overrides earlier): 1. `.env` — shared defaults 2. `.env.local` — local overrides (gitignored) 3. `.env.{NODE_ENV}` — environment-specific  (e.g. `.env.production`) 4. `.env.{NODE_ENV}.local` — env-specific local overrides Process environment variables (`process.env`) always take precedence.",
+							"methodParams": [
+								{
+									"param": "schema",
+									"type": "Object<string, object>",
+									"required": "No",
+									"notes": "Typed schema definition."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "path",
+									"type": "string",
+									"default": "—",
+									"notes": "Custom directory to load from (default: `process.cwd()`)."
+								},
+								{
+									"option": "override",
+									"type": "boolean",
+									"default": "false",
+									"notes": "When true, overwrite existing `process.env` values with file values.\nWhen false (default), file values are written to `process.env` only for keys not already set.\nSet to `false` explicitly to disable all `process.env` syncing."
+								}
+							],
+							"methodReturns": {
+								"type": "Object<string, *>",
+								"description": "The validated env store."
+							}
+						},
+						{
+							"method": "get",
+							"signature": "get(key)",
+							"description": "Get a typed environment variable. Can also be called as `env(key)`.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Variable name."
+								}
+							],
+							"methodReturns": {
+								"type": "*",
+								"description": "The typed value."
+							}
+						},
+						{
+							"method": "require",
+							"signature": "require(key)",
+							"description": "Get a required environment variable. Throws if missing.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Variable name."
+								}
+							],
+							"methodReturns": {
+								"type": "*",
+								"description": "The typed value."
+							}
+						},
+						{
+							"method": "has",
+							"signature": "has(key)",
+							"description": "Check if a variable is set (not undefined).",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Variable name."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "Boolean result."
+							}
+						},
+						{
+							"method": "all",
+							"signature": "all()",
+							"description": "Get all loaded values as a plain object.",
+							"methodReturns": {
+								"type": "Object<string, *>",
+								"description": "Result value."
+							}
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset the env store (useful for testing)."
+						},
+						{
+							"method": "parse",
+							"signature": "parse(src)",
+							"description": "Parse a `.env` file string into key-value pairs. Supports `#` comments, single/double/backtick quotes, multiline values, inline comments, interpolation `${VAR}`, and `export` prefix.",
+							"methodParams": [
+								{
+									"param": "src",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Raw file contents."
+								}
+							],
+							"methodReturns": {
+								"type": "Object<string, string>",
+								"description": "Parsed key-value pairs."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": ".env File Format",
+			"description": "The .env file format supports comments, quoted values (single, double, backtick), multiline strings, variable interpolation, and export prefix.",
+			"example": "# Database\nDATABASE_URL=postgres://localhost/mydb\n\n# Quoted values\nAPP_NAME=\"My App\"\nSECRET_KEY='s3cr3t'\n\n# Multiline (backtick)\nRSA_KEY=`-----BEGIN RSA KEY-----\nMIIBog...\n-----END RSA KEY-----`\n\n# Interpolation\nBASE_URL=https://example.com\nAPI_URL=${BASE_URL}/api/v1\n\n# Export prefix (optional, ignored)\nexport NODE_ENV=production",
+			"exampleLang": "env",
+			"tips": [
+				"Lines starting with # are comments.",
+				"Variable interpolation uses ${VAR} syntax and resolves from already-parsed values or process.env.",
+				"Files load in order: .env → .env.local → .env.{NODE_ENV} → .env.{NODE_ENV}.local (later files override earlier)."
+			]
+		},
+		{
+			"name": "Schema Types",
+			"description": "Supported schema types for env.load() validation. Each type automatically coerces and validates the raw string from the environment.",
+			"example": "env.load({\n\tPORT:       { type: 'port',    default: 3000 },\n\tDB_URL:     { type: 'string',  required: true },\n\tDEBUG:      { type: 'boolean', default: false },\n\tORIGINS:    { type: 'array',   separator: ',' },\n\tLOG_LEVEL:  { type: 'enum',    values: ['debug','info','warn','error'], default: 'info' },\n})",
+			"options": [
+				{
+					"option": "string",
+					"type": "string",
+					"default": "—",
+					"notes": "Pass-through. Supports min/max length and match regex constraints."
+				},
+				{
+					"option": "number",
+					"type": "number",
+					"default": "—",
+					"notes": "Parsed via Number(). Supports min/max range."
+				},
+				{
+					"option": "integer",
+					"type": "integer",
+					"default": "—",
+					"notes": "Parsed via parseInt(). Supports min/max range."
+				},
+				{
+					"option": "port",
+					"type": "port",
+					"default": "—",
+					"notes": "Integer 0–65535. Rejects out-of-range values."
+				},
+				{
+					"option": "boolean",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'."
+				},
+				{
+					"option": "array",
+					"type": "array",
+					"default": "—",
+					"notes": "Split by separator (default ',')."
+				},
+				{
+					"option": "json",
+					"type": "json",
+					"default": "—",
+					"notes": "Parsed via JSON.parse()."
+				},
+				{
+					"option": "url",
+					"type": "url",
+					"default": "—",
+					"notes": "Validated via new URL()."
+				},
+				{
+					"option": "enum",
+					"type": "enum",
+					"default": "—",
+					"notes": "Must be one of the 'values' array."
+				}
+			]
+		}
+	]
+}

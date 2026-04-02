@@ -24,6 +24,39 @@ export function escapeHtml(s)
         .replace(/>/g, '&gt;');
 }
 
+/**
+ * Escape HTML then apply lightweight inline formatting:
+ *   `code`          → <code class="tip-val">code</code>
+ *   'value'         → <code class="tip-val">'value'</code>
+ *   true/false/null → <code class="tip-val">…</code>
+ *   Multi-line      → grid layout when lines start with code values, else <br>
+ */
+export function formatNotes(s)
+{
+    let h = escapeHtml(s);
+    h = h.replace(/`([^`]+)`/g, '<code class="tip-val">$1</code>');
+    h = h.replace(/'([^']+)'/g, '<code class="tip-val">\'$1\'</code>');
+    h = h.replace(/\b(true|false|null|undefined)\b/g, '<code class="tip-val">$1</code>');
+
+    if (h.includes('\n'))
+    {
+        const [first, ...rest] = h.split('\n');
+        if (rest.length)
+        {
+            // Use grid layout only when every continuation line starts with a code value
+            const allStructured = rest.every(l => l.trimStart().startsWith('<code'));
+            if (allStructured)
+            {
+                const lines = rest.map(l => `<span class="note-line">${l}</span>`).join('');
+                return first + `<span class="note-list">${lines}</span>`;
+            }
+            // Flowing text (wrapped sentences) — join with spaces
+            return first + ' ' + rest.map(l => l.trim()).join(' ');
+        }
+    }
+    return h;
+}
+
 export function slugify(str)
 {
     return (str || '').toString()

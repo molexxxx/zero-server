@@ -10,10 +10,11 @@ import { registerScrollHandler, histPushAccordion } from './core/history.js';
 
 /* -- UI ---------------------------------------------------- */
 
-import { initUI, scrollToId, registerLoadDocs } from './ui/shell.js';
+import { initUI, scrollToId } from './ui/shell.js';
 import { initCustomSelects } from './ui/select.js';
 import { initSearch } from './ui/search.js';
 import { initBadges } from './ui/badges.js';
+import { initVersionSelector, registerVersionLoadDocs } from './ui/version-selector.js';
 
 /* -- Canvas ------------------------------------------------ */
 
@@ -40,7 +41,7 @@ import { initProxy } from './playground/proxy.js';
 /* -- Late Bindings ----------------------------------------- */
 
 registerScrollHandler(scrollToId);
-registerLoadDocs(loadDocs);
+registerVersionLoadDocs(loadDocs);
 
 /* -- Boot -------------------------------------------------- */
 
@@ -106,10 +107,14 @@ function boot()
         });
     }
 
-    // Documentation sections + search + badges
-    loadDocs().catch(() => {});
+    // Documentation sections + search + badges + version selector
+    initVersionSelector().then(ver =>
+    {
+        window._docsVersion = ver;
+        loadDocs(ver).catch(() => {});
+        initBadges();
+    }).catch(() => { loadDocs().catch(() => {}); initBadges(); });
     initSearch();
-    initBadges();
 
     // Canvas animations
     initWaves();

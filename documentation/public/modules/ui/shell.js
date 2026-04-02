@@ -311,24 +311,11 @@ export function initTocCollapsible()
 
 /* -- Scroll-Spy Active TOC Highlighting -------------------- */
 
-let _loadDocsRef = null;
-
-export function registerLoadDocs(fn) { _loadDocsRef = fn; }
+let _scrollSpySetup = null;
 
 function initScrollSpy()
 {
-    if (_loadDocsRef && !window._scrollSpyPatched)
-    {
-        window._scrollSpyPatched = true;
-        const orig = _loadDocsRef;
-        _loadDocsRef = async function ()
-        {
-            const result = await orig.apply(this, arguments);
-            setupScrollObserver();
-            return result;
-        };
-    }
-
+    _scrollSpySetup = setupScrollObserver;
     setupScrollObserver();
 
     function setupScrollObserver()
@@ -427,6 +414,11 @@ function initFabTop()
 }
 
 /* -- Exported helpers -------------------------------------- */
+
+export function refreshScrollSpy()
+{
+    if (_scrollSpySetup) _scrollSpySetup();
+}
 
 export function expandTocForId(id)
 {

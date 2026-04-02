@@ -6,12 +6,15 @@
 import { escapeHtml, slugify } from '../core/helpers.js';
 import { histPushModal, histCloseModal, histDismissModal, histPushHash } from '../core/history.js';
 import { expandTocForId } from './shell.js';
+import { getSelectedVersion, initSearchVersionBadge } from './version-selector.js';
 
 const RECENT_KEY = 'zero-http-search-recent';
 const MAX_RECENT = 8;
 
 let overlay, input, resultsContainer;
 let searchIndex = [];
+let searchIndexVersion = null;
+let _indexedSections = null;
 let activeIndex = -1;
 let currentResults = [];
 
@@ -69,6 +72,8 @@ function isInputFocused()
     return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
 }
 
+let _searchBadgeReady = false;
+
 function openSearch()
 {
     buildIndex();
@@ -77,6 +82,13 @@ function openSearch()
     input.value = '';
     activeIndex = -1;
     currentResults = [];
+
+    if (!_searchBadgeReady)
+    {
+        initSearchVersionBadge();
+        _searchBadgeReady = true;
+    }
+
     showRecent();
     setTimeout(() => input.focus(), 50);
 }
@@ -94,7 +106,13 @@ function itemSlug(section, item) { return slugify(section) + '-' + slugify(item)
 function buildIndex()
 {
     const sections = window._docSections;
-    if (!sections || searchIndex.length) return;
+    const ver = getSelectedVersion() || null;
+    if (!sections) return;
+    if (searchIndex.length && searchIndexVersion === ver && _indexedSections === sections) return;
+
+    searchIndex = [];
+    searchIndexVersion = ver;
+    _indexedSections = sections;
 
     for (const section of sections)
     {

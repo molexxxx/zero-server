@@ -16,8 +16,10 @@ const path = require('path');
 
 const ROOT         = path.resolve(__dirname, '..');
 const DATA_DIR     = path.join(ROOT, 'documentation', 'public', 'data');
-const MANIFEST     = path.join(DATA_DIR, 'docs-manifest.json');
-const SECTIONS_DIR = path.join(DATA_DIR, 'sections');
+const ver          = process.argv[2] || '';
+const BASE_DIR     = ver ? path.join(DATA_DIR, 'versions', ver) : DATA_DIR;
+const MANIFEST     = path.join(BASE_DIR, 'docs-manifest.json');
+const SECTIONS_DIR = path.join(BASE_DIR, 'sections');
 const OUTPUT       = path.join(ROOT, 'API.md');
 
 // -- Static content ------------------------------------------

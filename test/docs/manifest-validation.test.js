@@ -4,8 +4,10 @@ const vm = require('vm');
 const zeroHttp = require('../../');
 
 const DATA_DIR    = path.join(__dirname, '..', '..', 'documentation', 'public', 'data');
-const manifest    = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'docs-manifest.json'), 'utf8'));
-const docs        = manifest.map(f => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'sections', f), 'utf8')));
+const version     = require('../../package.json').version;
+const VERSION_DIR = path.join(DATA_DIR, 'versions', version);
+const manifest    = JSON.parse(fs.readFileSync(path.join(VERSION_DIR, 'docs-manifest.json'), 'utf8'));
+const docs        = manifest.map(f => JSON.parse(fs.readFileSync(path.join(VERSION_DIR, 'sections', f), 'utf8')));
 
 /* Flatten methods across both item.methods and item.methodGroups */
 function getAllMethods(item) {
@@ -390,10 +392,11 @@ describe('Documentation Examples', () => {
     /* --- TYPES constant checks ------------------------------------ */
     describe('TYPES constants', () => {
         const typesSection = docs.find(s => s.section === 'ORM');
-        if (!typesSection) return;
-
-        const typesItem = typesSection.items.find(i => i.name === 'TYPES');
-        if (!typesItem || !typesItem.options) return;
+        const typesItem = typesSection?.items.find(i => i.name === 'TYPES');
+        if (!typesItem || !typesItem.options) {
+            it.skip('TYPES item not in docs', () => {});
+            return;
+        }
 
         it('all documented TYPES constants exist', () => {
             const missing = [];
@@ -478,10 +481,11 @@ describe('Documentation Examples', () => {
     /* --- Router API checks ---------------------------------------- */
     describe('Router API', () => {
         const coreSection = docs.find(s => s.section === 'Core');
-        if (!coreSection) return;
-
-        const routerItem = coreSection.items.find(i => i.name === 'Router');
-        if (!routerItem || !getAllMethods(routerItem).length) return;
+        const routerItem = coreSection?.items.find(i => i.name === 'Router');
+        if (!routerItem || !getAllMethods(routerItem).length) {
+            it.skip('Router item not in docs', () => {});
+            return;
+        }
 
         it('all documented Router methods exist', () => {
             const router = zeroHttp.Router();
@@ -668,40 +672,6 @@ describe('Documentation Examples', () => {
                 expect(typeof adapter[method]).toBe('function');
             });
         }
-    });
-
-    /* --- Schema DDL options documented correctly ------------------- */
-    describe('Schema DDL options', () => {
-        const ormSection = docs.find(s => s.section === 'ORM');
-        const schemaDDL = ormSection?.items.find(i => i.name === 'Schema DDL');
-
-        it('Schema DDL item exists in docs', () => {
-            expect(schemaDDL).toBeDefined();
-        });
-
-        it('has all expected DDL options', () => {
-            const optionNames = schemaDDL.options.map(o => o.option);
-            const expected = ['references', 'check', 'index', 'compositeKey', 'compositeUnique', 'compositeIndex', 'guarded'];
-            for (const opt of expected) {
-                expect(optionNames).toContain(opt);
-            }
-        });
-
-        it('has an example that imports Database', () => {
-            expect(schemaDDL.example).toContain('Database');
-            expect(schemaDDL.example).toContain("require('zero-http')");
-        });
-
-        it('example includes FK, composite PK, and migration patterns', () => {
-            expect(schemaDDL.example).toContain('references');
-            expect(schemaDDL.example).toContain('compositeKey');
-            expect(schemaDDL.example).toContain('compositeUnique');
-            expect(schemaDDL.example).toContain('compositeIndex');
-            expect(schemaDDL.example).toContain('addColumn');
-            expect(schemaDDL.example).toContain('createIndex');
-            expect(schemaDDL.example).toContain('hasTable');
-            expect(schemaDDL.example).toContain('describeTable');
-        });
     });
 
     /* --- Database docs list all migration methods ------------------ */

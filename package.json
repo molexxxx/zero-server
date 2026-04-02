@@ -14,13 +14,10 @@
   "scripts": {
     "start": "node documentation/full-server.js",
     "docs": "node documentation/full-server.js",
-    "docs:audit": "node .tools/audit-docs.mjs",
-    "docs:patch": "node .tools/patch-docs.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:api": "node .tools/build-api-md.js",
-    "build:badges": "node .tools/build-badges.js",
-    "bust:cache": "node .tools/cache-bust.js"
+    "build": "node .tools/build.js",
+    "build:api": "node .tools/build-api-md.js"
   },
   "keywords": [
     "http",
