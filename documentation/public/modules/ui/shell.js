@@ -149,7 +149,14 @@ function initBentoGrid()
             toggle.textContent = expanded ? 'Show fewer' : 'Show all features';
 
             glowTargets.length = 0;
-            section.querySelectorAll('.bento-card').forEach(c => glowTargets.push(c));
+            section.querySelectorAll('.bento-card').forEach(c =>
+            {
+                glowTargets.push(c);
+                if (expanded && c.classList.contains('bento-extra'))
+                {
+                    c.style.animationPlayState = '';
+                }
+            });
             glowTargets.push(toggle);
         });
     }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-hook" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Circular lifecycle arrows -->
+  <path d="M32 10 A22 22 0 0 1 54 32" fill="none" stroke="url(#g-hook)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M54 32 A22 22 0 0 1 32 54" fill="none" stroke="url(#g-hook)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M32 54 A22 22 0 0 1 10 32" fill="none" stroke="url(#g-hook)" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <path d="M10 32 A22 22 0 0 1 32 10" fill="none" stroke="url(#g-hook)" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+  <!-- Arrow heads -->
+  <polygon points="54,32 48,28 48,36" fill="url(#g-hook)"/>
+  <polygon points="32,54 28,48 36,48" fill="url(#g-hook)" opacity="0.7"/>
+  <!-- Center dot -->
+  <circle cx="32" cy="32" r="5" fill="url(#g-hook)" opacity="0.85"/>
+  <circle cx="32" cy="32" r="2" fill="rgba(255,255,255,0.8)"/>
+</svg>

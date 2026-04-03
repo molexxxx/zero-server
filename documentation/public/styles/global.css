@@ -479,6 +479,8 @@ a.bento-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 12px 32p
 /* Class-based hiding for extra cards (replaces nth-child) */
 .bento-grid .bento-card.bento-extra{display:none}
 .bento-section.bento-expanded .bento-grid .bento-card.bento-extra{display:flex}
+/* Fast reveal for extra cards toggled open (override page-load stagger) */
+.bento-section.bento-expanded .bento-grid .bento-card.bento-extra{animation-delay:calc((var(--i,0) - 6) * 0.02s);animation-duration:.3s}
 /* Desktop: use order for correct grid placement */
 @media(min-width:601px){.bento-card{order:var(--desktop-order,0)}}
 .bento-toggle{position:relative;overflow:visible;display:inline-flex;align-items:center;justify-content:center;gap:5px;margin:10px auto 0;padding:6px 14px;border-radius:999px;border:1px solid rgba(88,101,242,0.15);background:rgba(88,101,242,0.06);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s;text-transform:uppercase;letter-spacing:0.06em}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-rep" x1="0" x2="1">
+      <stop offset="0" stop-color="#7b61ff"/>
+      <stop offset="1" stop-color="#3ec6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="transparent"/>
+  <!-- Primary DB -->
+  <ellipse cx="20" cy="18" rx="11" ry="5" fill="url(#g-rep)" opacity="0.85"/>
+  <path d="M9 18 V30 A11 5 0 0 0 31 30 V18" fill="url(#g-rep)" opacity="0.6"/>
+  <ellipse cx="20" cy="30" rx="11" ry="5" fill="url(#g-rep)" opacity="0.85"/>
+  <!-- Replica DB -->
+  <ellipse cx="44" cy="34" rx="11" ry="5" fill="url(#g-rep)" opacity="0.85"/>
+  <path d="M33 34 V46 A11 5 0 0 0 55 46 V34" fill="url(#g-rep)" opacity="0.6"/>
+  <ellipse cx="44" cy="46" rx="11" ry="5" fill="url(#g-rep)" opacity="0.85"/>
+  <!-- Sync arrow -->
+  <path d="M28 26 L36 36" stroke="url(#g-rep)" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <polygon points="36,36 34,30 38,32" fill="url(#g-rep)" opacity="0.7"/>
+</svg>

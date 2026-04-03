@@ -25,13 +25,13 @@
 	<meta name="twitter:description" content="Zero-dependency backend framework for Node.js" />
 	<meta name="twitter:image" content="https://z-http.com/icons/og-image.png" />
 
-	<link rel="stylesheet" href="/styles/global.css?v=mnim8o4p" />
-	<link rel="stylesheet" href="/styles/highlight.css?v=mnim8o4p" />
+	<link rel="stylesheet" href="/styles/global.css?v=mniphwsu" />
+	<link rel="stylesheet" href="/styles/highlight.css?v=mniphwsu" />
 
-	<script type="module" src="/modules/boot.js?v=mnim8o4p"></script>
+	<script type="module" src="/modules/boot.js?v=mniphwsu"></script>
 
 	<!-- Cache version for data fetches (updated by npm run bust:cache) -->
-	<script>window.__v='mnim8o4p'</script>
+	<script>window.__v='mniphwsu'</script>
 
 	<!-- Prevent theme flash: apply saved or OS-preferred theme before paint -->
 	<script>
@@ -349,7 +349,19 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-ratelimit" style="--i:9;--desktop-order:10">
+						<a class="bento-card bento-extra" href="#section-authentication-sessions" style="--i:9;--desktop-order:10">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/auth.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Auth &amp; Sessions</h4>
+									<p>JWT signing and verification, OAuth flows, cookie sessions, and role-based route guards.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#middleware-ratelimit" style="--i:10;--desktop-order:11">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -361,43 +373,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-compress" style="--i:10;--desktop-order:11">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/compress.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Compression</h4>
-									<p>Brotli, gzip, and deflate with threshold and content filtering.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card bento-extra" href="#middleware-static" style="--i:11;--desktop-order:12">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/static.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Static Files</h4>
-									<p>MIME detection, ETag caching, HTTP/2 push, and directory index support.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card bento-extra" href="#body-parsers-multipart" style="--i:12;--desktop-order:13">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/stream.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>Streaming Uploads</h4>
-									<p>Multipart file streaming to disk with size limits and progress.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card bento-extra" href="#cookies-security-validate" style="--i:13;--desktop-order:14">
+						<a class="bento-card bento-extra" href="#cookies-security-validate" style="--i:11;--desktop-order:12">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -409,43 +385,43 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#section-error-handling" style="--i:14;--desktop-order:15">
+						<a class="bento-card bento-extra" href="#middleware-compress" style="--i:12;--desktop-order:13">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/error.svg" alt="" aria-hidden="true" width="48" height="48" />
+									<img class="icon-svg" src="/icons/compress.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>Error Handling</h4>
-									<p>16+ typed HTTP error classes with structured details and global handlers.</p>
+									<h4>Compression</h4>
+									<p>Brotli, gzip, and deflate with threshold and content filtering.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#orm-cli" style="--i:15;--desktop-order:16">
+						<a class="bento-card bento-extra" href="#middleware-static" style="--i:13;--desktop-order:14">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/cli.svg" alt="" aria-hidden="true" width="48" height="48" />
+									<img class="icon-svg" src="/icons/static.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>CLI &amp; Scaffolding</h4>
-									<p>Migration runner, model and seeder generators, and database commands.</p>
+									<h4>Static Files</h4>
+									<p>MIME detection, ETag caching, HTTP/2 push, and directory index support.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#lifecycle-clustering-clustermanager" style="--i:16;--desktop-order:17">
+						<a class="bento-card bento-extra" href="#body-parsers-multipart" style="--i:14;--desktop-order:15">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/cluster.svg" alt="" aria-hidden="true" width="48" height="48" />
+									<img class="icon-svg" src="/icons/stream.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>Clustering</h4>
-									<p>Multi-process workers with auto-respawn, backoff, and graceful shutdown.</p>
+									<h4>Streaming Uploads</h4>
+									<p>Multipart file streaming to disk with size limits and progress.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-logger" style="--i:17;--desktop-order:18">
+						<a class="bento-card bento-extra" href="#middleware-logger" style="--i:15;--desktop-order:16">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -457,7 +433,139 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#section-environment" style="--i:18;--desktop-order:19">
+						<a class="bento-card bento-extra" href="#section-error-handling" style="--i:16;--desktop-order:17">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/error.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Error Handling</h4>
+									<p>16+ typed HTTP error classes with structured details and global handlers.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-querycache" style="--i:17;--desktop-order:18">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/cache.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Query Caching</h4>
+									<p>In-memory LRU cache with TTL for hot queries and automatic invalidation on writes.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-replicamanager" style="--i:18;--desktop-order:19">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/replicas.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Read Replicas</h4>
+									<p>Load-balanced read scaling with automatic primary/replica routing and health monitoring.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-fulltextsearch" style="--i:19;--desktop-order:20">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/search.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Full-Text &amp; Geo Search</h4>
+									<p>Built-in full-text indexing and geospatial queries with radius, bounding box, and nearest-neighbor support.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-tenantmanager" style="--i:20;--desktop-order:21">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/tenant.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Multi-Tenancy</h4>
+									<p>Isolated tenant data with automatic scoping, migration, and per-tenant configuration.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-auditlog" style="--i:21;--desktop-order:22">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/audit.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Audit Logging</h4>
+									<p>Automatic change tracking for every create, update, and delete with diff snapshots and user attribution.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-seeder-factory" style="--i:22;--desktop-order:23">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/seed.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Database Seeding</h4>
+									<p>Factory-based seed data generation with bulk inserts, environment-aware profiles, and rollback support.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#orm-cli" style="--i:23;--desktop-order:24">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/cli.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>CLI &amp; Scaffolding</h4>
+									<p>Migration runner, model and seeder generators, and database commands.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#section-observability" style="--i:24;--desktop-order:25">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/observe.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Observability</h4>
+									<p>Prometheus metrics, W3C distributed tracing, structured logging, and health-check probes.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#section-lifecycle-clustering" style="--i:25;--desktop-order:26">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/lifecycle.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Lifecycle Hooks</h4>
+									<p>Graceful startup and shutdown with dependency-ordered teardown, signal handling, and drain support.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#lifecycle-clustering-clustermanager" style="--i:26;--desktop-order:27">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/cluster.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Clustering</h4>
+									<p>Multi-process workers with auto-respawn, backoff, and graceful shutdown.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#section-environment" style="--i:27;--desktop-order:28">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -469,7 +577,7 @@
 								</div>
 							</div>
 						</a>
-						<div class="bento-card bento-extra" style="--i:19;--desktop-order:20">
+						<div class="bento-card bento-extra" style="--i:28;--desktop-order:29">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
