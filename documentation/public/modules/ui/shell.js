@@ -20,8 +20,10 @@ function initThemeToggle()
 
     function setTheme(theme)
     {
+        document.documentElement.classList.add('no-transitions');
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('zero-theme', theme);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { document.documentElement.classList.remove('no-transitions'); }); });
     }
 
     btn.addEventListener('click', () =>
@@ -141,6 +143,18 @@ function initBentoGrid()
             glowTargets.push(toggle);
         });
     }
+
+    /* Intercept bento card anchor clicks so scrollToId applies the correct offset */
+    section.addEventListener('click', (e) =>
+    {
+        const a = e.target.closest('a[href^="#"]');
+        if (!a) return;
+        const hash = a.getAttribute('href');
+        if (!hash || hash.charAt(0) !== '#') return;
+        e.preventDefault();
+        histPushHash(hash);
+        scrollToId(hash.slice(1));
+    });
 }
 
 /* -- TOC Sidebar Toggle ------------------------------------ */
@@ -234,7 +248,11 @@ function initTocNavigation()
 
         e.preventDefault();
         histPushHash(hash);
-        scrollToId(hash.slice(1));
+        if (hash === '#features') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            scrollToId(hash.slice(1));
+        }
         histCloseSidebar();
 
         const parentLi = a.closest('.toc-collapsible');
@@ -256,40 +274,14 @@ function initTocNavigation()
 
 function initTocToolbar()
 {
-    const topBtn = document.getElementById('toc-top-btn');
-    const toggleBtn = document.getElementById('toc-toggle-acc');
-    if (!topBtn && !toggleBtn) return;
-
     const brandBtn = document.getElementById('brand-top');
-
-    [topBtn, brandBtn].forEach(el =>
+    if (brandBtn)
     {
-        if (!el) return;
-        el.addEventListener('click', (e) =>
+        brandBtn.addEventListener('click', (e) =>
         {
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: 'smooth' });
             histPushHash(window.location.pathname);
-        });
-    });
-
-    if (toggleBtn)
-    {
-        let expanded = true;
-        toggleBtn.classList.add('acc-expanded');
-
-        toggleBtn.addEventListener('click', () =>
-        {
-            expanded = !expanded;
-
-            document.querySelectorAll('.toc-collapsible').forEach(li =>
-            {
-                li.classList.toggle('toc-collapsed', !expanded);
-            });
-
-            toggleBtn.classList.toggle('acc-expanded', expanded);
-            toggleBtn.title = expanded ? 'Collapse all' : 'Expand all';
-            toggleBtn.setAttribute('aria-label', expanded ? 'Collapse all sections' : 'Expand all sections');
         });
     }
 }
@@ -298,24 +290,23 @@ function initTocToolbar()
 
 export function initTocCollapsible()
 {
-    const items = document.querySelectorAll('.toc-collapsible');
-    items.forEach(li =>
+    /* Handle static collapsible items (e.g. Playground) that aren't created by populateToc.
+       Dynamic sections already wire their own chevron click handlers. */
+    document.querySelectorAll('.toc-collapsible[data-static]').forEach(li =>
     {
-        if (li.querySelector('.toc-collapse-btn')) return;
-
-        const toggle = document.createElement('button');
-        toggle.className = 'toc-collapse-btn';
-        toggle.setAttribute('aria-label', 'Toggle section');
-        toggle.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-        toggle.addEventListener('click', (e) =>
+        const a = li.querySelector(':scope > a');
+        if (!a) return;
+        li.classList.add('toc-collapsed');
+        a.addEventListener('click', (e) =>
         {
-            e.preventDefault();
-            e.stopPropagation();
-            li.classList.toggle('toc-collapsed');
+            const t = e.target.closest('.toc-chevron, .toc-item-count');
+            if (t)
+            {
+                e.preventDefault();
+                e.stopPropagation();
+                li.classList.toggle('toc-collapsed');
+            }
         });
-
-        li.insertBefore(toggle, li.firstChild);
     });
 }
 
@@ -333,7 +324,23 @@ function initScrollSpy()
         const nav = document.querySelector('.toc-sidebar nav');
         if (!nav) return;
 
-        const targets = document.querySelectorAll('.doc-section, .doc-item, [id="features"], [id="playground"]');
+        /* Derive all observable IDs from sidebar links */
+        const sidebarLinks = nav.querySelectorAll('a[href^="#"]');
+        const idMap = new Map();
+        const targets = [];
+
+        for (const link of sidebarLinks)
+        {
+            const id = link.getAttribute('href').slice(1);
+            if (!id) continue;
+            const el = document.getElementById(id);
+            if (el)
+            {
+                idMap.set(id, link);
+                targets.push(el);
+            }
+        }
+
         if (!targets.length) return;
 
         if (window._scrollSpyObserver) window._scrollSpyObserver.disconnect();
@@ -348,33 +355,70 @@ function initScrollSpy()
                 else visibleSet.delete(entry.target.id);
             }
             updateActiveLink();
-        }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+        }, { rootMargin: '-117px 0px -60% 0px', threshold: 0 });
 
         window._scrollSpyObserver = observer;
-        targets.forEach(t => { if (t.id) observer.observe(t); });
+        targets.forEach(t => observer.observe(t));
 
         function updateActiveLink()
         {
-            nav.querySelectorAll('.toc-active').forEach(el => el.classList.remove('toc-active'));
+            nav.querySelectorAll('.toc-active,.toc-parent-active').forEach(el => el.classList.remove('toc-active', 'toc-parent-active'));
 
             if (!visibleSet.size) return;
 
+            /* Prefer sub-items over parent sections for accurate tracking */
             let activeId = null;
             for (const t of targets)
             {
-                if (visibleSet.has(t.id)) { activeId = t.id; break; }
+                if (!visibleSet.has(t.id)) continue;
+                const link = idMap.get(t.id);
+                if (link && link.closest('.toc-sub-item')) { activeId = t.id; break; }
+            }
+            /* Fall back to any visible target (section or static) */
+            if (!activeId)
+            {
+                for (const t of targets) { if (visibleSet.has(t.id)) { activeId = t.id; break; } }
             }
             if (!activeId) return;
 
-            const link = nav.querySelector(`a[href="#${activeId}"]`);
-            if (link)
+            const link = idMap.get(activeId);
+            if (!link) return;
+
+            link.classList.add('toc-active');
+
+            /* Find which collapsible section contains this link */
+            const parentLi = link.closest('li.toc-collapsible');
+
+            /* Mark parent section link with softer parent-active (when a sub-item is active) */
+            if (parentLi)
             {
-                link.classList.add('toc-active');
-                const parentLi = link.closest('li.toc-collapsible');
-                if (parentLi)
+                const parentLink = parentLi.querySelector(':scope > a');
+                if (parentLink && parentLink !== link) parentLink.classList.add('toc-parent-active');
+            }
+
+            /* Auto-collapse/expand: only the active section stays open.
+               When Features is active, also keep Getting Started expanded
+               since its items are auto-expanded and visually contiguous. */
+            const featuresActive = activeId === 'features';
+            const gettingStartedLi = featuresActive
+                ? nav.querySelector('a[href="#section-getting-started"]')?.closest('li.toc-collapsible')
+                : null;
+
+            nav.querySelectorAll('li.toc-collapsible').forEach(li =>
+            {
+                if (li === parentLi || li === gettingStartedLi) li.classList.remove('toc-collapsed');
+                else li.classList.add('toc-collapsed');
+            });
+
+            /* Keep active link visible in sidebar scroll */
+            const navEl = link.closest('nav');
+            if (navEl && navEl.scrollHeight > navEl.clientHeight)
+            {
+                const linkRect = link.getBoundingClientRect();
+                const navRect = navEl.getBoundingClientRect();
+                if (linkRect.top < navRect.top || linkRect.bottom > navRect.bottom)
                 {
-                    const parentLink = parentLi.querySelector(':scope > a');
-                    if (parentLink) parentLink.classList.add('toc-active');
+                    link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 }
             }
         }
@@ -463,6 +507,10 @@ export function scrollToId(id)
     const target = document.getElementById(id);
     if (!target) return;
 
+    /* Expand the target's doc-item card */
+    const docItem = target.closest('.doc-item') || (target.classList.contains('doc-item') ? target : null);
+    if (docItem) docItem.classList.add('doc-item-expanded');
+
     let d = target.closest('details');
     while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
 
@@ -472,7 +520,8 @@ export function scrollToId(id)
         .forEach(s => s.style.contentVisibility = 'visible');
 
     void document.documentElement.offsetHeight;
-    target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    const y = target.getBoundingClientRect().top + window.scrollY - 117;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
 }
 
 /* -- Boot --------------------------------------------------- */

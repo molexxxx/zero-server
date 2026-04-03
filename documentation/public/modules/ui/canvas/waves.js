@@ -58,7 +58,7 @@ function draw()
 {
     const dark = isDark();
 
-    ctx.fillStyle = dark ? '#12161e' : '#c8cdd8';
+    ctx.fillStyle = dark ? '#12161e' : '#edeef4';
     ctx.fillRect(0, 0, width, height);
 
     const palette = dark
@@ -68,9 +68,9 @@ function draw()
             { r: 100, g: 60,  b: 220, a: 0.16 },
         ]
         : [
-            { r: 79,  g: 91,  b: 213, a: 0.22 },
-            { r: 100, g: 120, b: 230, a: 0.18 },
-            { r: 120, g: 90,  b: 210, a: 0.14 },
+            { r: 79,  g: 91,  b: 213, a: 0.10 },
+            { r: 100, g: 120, b: 230, a: 0.08 },
+            { r: 120, g: 90,  b: 210, a: 0.06 },
         ];
 
     for (let i = 0; i < waves.length; i++)

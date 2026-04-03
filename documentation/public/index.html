@@ -25,13 +25,13 @@
 	<meta name="twitter:description" content="Zero-dependency backend framework for Node.js" />
 	<meta name="twitter:image" content="https://z-http.com/icons/og-image.png" />
 
-	<link rel="stylesheet" href="/styles/global.css?v=mni4fot0" />
-	<link rel="stylesheet" href="/styles/highlight.css?v=mni4fot0" />
+	<link rel="stylesheet" href="/styles/global.css?v=mnihd3kr" />
+	<link rel="stylesheet" href="/styles/highlight.css?v=mnihd3kr" />
 
-	<script type="module" src="/modules/boot.js?v=mni4fot0"></script>
+	<script type="module" src="/modules/boot.js?v=mnihd3kr"></script>
 
 	<!-- Cache version for data fetches (updated by npm run bust:cache) -->
-	<script>window.__v='mni4fot0'</script>
+	<script>window.__v='mnihd3kr'</script>
 
 	<!-- Prevent theme flash: apply saved or OS-preferred theme before paint -->
 	<script>
@@ -97,9 +97,11 @@
 
 	<div class="ui-shell">
 		<header class="ui-header">
-			<button class="toc-toggle" aria-label="Toggle table of contents" title="Toggle table of contents">
+			<button class="toc-toggle" aria-label="Toggle sidebar" title="Toggle sidebar">
 				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-					<path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+					<line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+					<line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+					<line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 				</svg>
 			</button>
 
@@ -191,27 +193,27 @@
 		</header>
 
 		<aside class="toc-sidebar" aria-label="Table of contents">
+			<div class="toc-toolbar">
+				<button class="search-trigger toc-search-trigger" aria-label="Search documentation (Ctrl+.)" title="Search (Ctrl+.)">
+					<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+					<span>Search…</span>
+					<kbd class="toc-search-kbd">Ctrl .</kbd>
+				</button>
+				<button class="toc-tool-btn toc-close-btn" aria-label="Close navigation" title="Close">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+				</button>
+			</div>
 			<nav>
-				<div class="toc-toolbar">
-					<button class="search-trigger toc-search-trigger" aria-label="Search documentation (Ctrl+.)" title="Search (Ctrl+.)">
-						<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-						<span>Search…</span>
-						<kbd class="toc-search-kbd">Ctrl .</kbd>
-					</button>
-					<button class="toc-tool-btn" id="toc-toggle-acc" title="Collapse all" aria-label="Collapse all sections">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9l6 4 6-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-					<button class="toc-tool-btn" id="toc-top-btn" title="Back to top" aria-label="Scroll to top">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 7l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-					<button class="toc-tool-btn toc-close-btn" aria-label="Close navigation" title="Close">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-					</button>
-				</div>
 				<ul>
-					<li data-static="features"><a href="#features">Features</a></li>
-					<!-- Dynamic doc sections inserted here by data-sections.js -->
-					<li data-static="playground" class="toc-collapsible"><a href="#playground">Playground</a>
+					<li data-static="features"><a href="#features" title="Features">
+						<svg class="toc-link-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+						<span class="toc-link-text">Features</span></a></li>
+					<!-- Dynamic doc sections inserted here by sections.js -->
+					<li data-static="playground" class="toc-collapsible"><a href="#playground" title="Playground">
+						<svg class="toc-link-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+						<span class="toc-link-text">Playground</span>
+						<span class="toc-item-count">8</span>
+						<span class="toc-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></a>
 						<ul class="toc-sub">
 							<li class="toc-sub-item"><a href="#upload-testing">Upload multipart data</a></li>
 							<li class="toc-sub-item"><a href="#parser-tests">Parser tests</a></li>
@@ -227,11 +229,13 @@
 			</nav>
 		</aside>
 		<main class="ui-main">
-			<div class="card docs-card">
+			<div class="header-badge-bar">
+				<div class="badge-strip" id="badgeStrip"></div>
+			</div>
 
-				<div class="bento-section" id="features">
-					<div class="badge-strip" id="badgeStrip"></div>
-					<div class="bento-grid">
+			<div class="bento-section" id="features">
+
+				<div class="bento-grid">
 						<!-- Always-visible cards (DOM order = mobile order: featured first) -->
 						<div class="bento-card bento-wide bento-main bento-hero" style="--i:0;--desktop-order:1">
 							<canvas class="hero-canvas" aria-hidden="true"></canvas>
@@ -255,7 +259,7 @@
 								</div>
 								<div class="bento-text">
 									<h4>ORM &amp; Database</h4>
-									<p>LINQ-style query builder, schema DDL, and 7 adapters — SQLite, MySQL, PostgreSQL, MongoDB, Redis, Memory, and JSON.</p>
+									<p>LINQ-style query builder, schema DDL, migrations, and 7 adapters — SQLite, MySQL, PostgreSQL, MongoDB, Redis, Memory, and JSON.</p>
 								</div>
 							</div>
 						</a>
@@ -308,7 +312,32 @@
 							</div>
 						</a>
 						<!-- Extra cards — hidden until toggle -->
-						<a class="bento-card bento-extra" href="#networking-fetch" style="--i:6;--desktop-order:7">
+						<a class="bento-card bento-extra bento-wide bento-main bento-rt" href="#section-real-time" style="--i:6;--desktop-order:7">
+							<canvas class="rt-canvas" aria-hidden="true"></canvas>
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Real-time</h4>
+									<p>WebSocket rooms, broadcasting, and sub-protocols. SSE with auto-IDs and keep-alive.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#core-createapp" style="--i:7;--desktop-order:8">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/https.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>HTTP/2 &amp; TLS</h4>
+									<p>Native HTTP/2, HTTPS, and mutual TLS with automatic HTTP/1.1 fallback.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#networking-fetch" style="--i:8;--desktop-order:9">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -316,11 +345,11 @@
 								</div>
 								<div class="bento-text">
 									<h4>HTTP Client</h4>
-									<p>Built-in server-side fetch with proxy and TLS passthrough.</p>
+									<p>Built-in fetch with mTLS, progress callbacks, and abort support.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-ratelimit" style="--i:7;--desktop-order:8">
+						<a class="bento-card bento-extra" href="#middleware-ratelimit" style="--i:9;--desktop-order:10">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -332,7 +361,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-compress" style="--i:8;--desktop-order:9">
+						<a class="bento-card bento-extra" href="#middleware-compress" style="--i:10;--desktop-order:11">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -344,7 +373,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-static" style="--i:9;--desktop-order:10">
+						<a class="bento-card bento-extra" href="#middleware-static" style="--i:11;--desktop-order:12">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -352,11 +381,11 @@
 								</div>
 								<div class="bento-text">
 									<h4>Static Files</h4>
-									<p>Content-Type detection, ETag caching, and index file support.</p>
+									<p>MIME detection, ETag caching, HTTP/2 push, and directory index support.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#body-parsers-multipart" style="--i:10;--desktop-order:11">
+						<a class="bento-card bento-extra" href="#body-parsers-multipart" style="--i:12;--desktop-order:13">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -368,7 +397,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#cookies-security-validate" style="--i:11;--desktop-order:12">
+						<a class="bento-card bento-extra" href="#cookies-security-validate" style="--i:13;--desktop-order:14">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -380,19 +409,7 @@
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#core-createapp" style="--i:12;--desktop-order:13">
-							<div class="bento-glow"></div>
-							<div class="bento-body">
-								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/https.svg" alt="" aria-hidden="true" width="48" height="48" />
-								</div>
-								<div class="bento-text">
-									<h4>HTTPS &amp; TLS</h4>
-									<p>Native HTTPS with req.secure and secure-only routing.</p>
-								</div>
-							</div>
-						</a>
-						<a class="bento-card bento-extra" href="#section-error-handling" style="--i:13;--desktop-order:14">
+						<a class="bento-card bento-extra" href="#section-error-handling" style="--i:14;--desktop-order:15">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -400,36 +417,47 @@
 								</div>
 								<div class="bento-text">
 									<h4>Error Handling</h4>
-									<p>Typed HTTP and framework error classes with global error handling.</p>
+									<p>16+ typed HTTP error classes with structured details and global handlers.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra bento-wide bento-main bento-rt" href="#section-real-time" style="--i:14;--desktop-order:15">
-							<canvas class="rt-canvas" aria-hidden="true"></canvas>
+						<a class="bento-card bento-extra" href="#orm-cli" style="--i:15;--desktop-order:16">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
-									<img class="icon-svg" src="/icons/websocket.svg" alt="" aria-hidden="true" width="48" height="48" />
+									<img class="icon-svg" src="/icons/cli.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>Real-time</h4>
-									<p>WebSocket rooms, pooling, broadcasting. SSE with auto-IDs and keep-alive.</p>
+									<h4>CLI &amp; Scaffolding</h4>
+									<p>Migration runner, model and seeder generators, and database commands.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#middleware-logger" style="--i:15;--desktop-order:16">
+						<a class="bento-card bento-extra" href="#lifecycle-clustering-clustermanager" style="--i:16;--desktop-order:17">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/cluster.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>Clustering</h4>
+									<p>Multi-process workers with auto-respawn, backoff, and graceful shutdown.</p>
+								</div>
+							</div>
+						</a>
+						<a class="bento-card bento-extra" href="#middleware-logger" style="--i:17;--desktop-order:18">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
 									<img class="icon-svg" src="/icons/logger.svg" alt="" aria-hidden="true" width="48" height="48" />
 								</div>
 								<div class="bento-text">
-									<h4>Logging &amp; Debugging</h4>
-									<p>Request logger with timing, request IDs, and debug output.</p>
+									<h4>Logging</h4>
+									<p>Request logger with response timing, colorized output, and custom formats.</p>
 								</div>
 							</div>
 						</a>
-						<a class="bento-card bento-extra" href="#section-environment" style="--i:16;--desktop-order:17">
+						<a class="bento-card bento-extra" href="#section-environment" style="--i:18;--desktop-order:19">
 							<div class="bento-glow"></div>
 							<div class="bento-body">
 								<div class="bento-icon">
@@ -437,14 +465,27 @@
 								</div>
 								<div class="bento-text">
 									<h4>Environment Config</h4>
-									<p>Typed .env loading with schema validation and default values.</p>
+									<p>Multi-environment .env loading with variable interpolation and type coercion.</p>
 								</div>
 							</div>
 						</a>
-					</div>
-					<button class="bento-toggle" id="bento-toggle">Show all features</button>
+						<div class="bento-card bento-extra" style="--i:19;--desktop-order:20">
+							<div class="bento-glow"></div>
+							<div class="bento-body">
+								<div class="bento-icon">
+									<img class="icon-svg" src="/icons/typescript.svg" alt="" aria-hidden="true" width="48" height="48" />
+								</div>
+								<div class="bento-text">
+									<h4>TypeScript</h4>
+									<p>Full type definitions for every API, middleware, ORM model, and plugin.</p>
+								</div>
+							</div>
+						</div>
 				</div>
+				<button class="bento-toggle" id="bento-toggle">Show all features</button>
+			</div>
 
+			<div class="card docs-card">
 				<!-- Dynamic documentation sections rendered by data-sections.js -->
 					<div id="doc-sections" class="doc-sections-container docs-loading">
 						<div class="docs-skeleton">

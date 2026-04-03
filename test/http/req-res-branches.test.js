@@ -254,6 +254,7 @@ describe('Request — hostname and subdomains', () =>
     it('hostname prefers X-Forwarded-Host for trusted proxies', () =>
     {
         const req = makeReq({ headers: { host: 'localhost', 'x-forwarded-host': 'api.example.com:8080' } });
+        req.app = { set: (k) => k === 'trust proxy' ? true : undefined };
         expect(req.hostname).toBe('api.example.com');
     });
 

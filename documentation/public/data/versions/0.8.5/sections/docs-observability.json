@@ -1,0 +1,1348 @@
+{
+	"section": "Observability",
+	"icon": "activity",
+	"items": [
+		{
+			"name": "structuredLogger",
+			"description": "Structured, enterprise-grade request logger. Outputs JSON or pretty-text with consistent fields: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`. Correlates with the `requestId` middleware (`req.id`), supports child loggers with bound context, custom transports, and environment-aware log level defaults.",
+			"example": "  const { structuredLogger } = require('zero-http');\r\n  app.use(structuredLogger());",
+			"options": [
+				{
+					"option": "level",
+					"type": "string | number",
+					"default": "—",
+					"notes": "Minimum log level."
+				},
+				{
+					"option": "context",
+					"type": "object",
+					"default": "—",
+					"notes": "Bound context fields merged into every entry."
+				},
+				{
+					"option": "transport",
+					"type": "Function",
+					"default": "—",
+					"notes": "Custom transport `(entry) => void`."
+				},
+				{
+					"option": "json",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Force JSON output."
+				},
+				{
+					"option": "colors",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Enable ANSI colors (default: TTY detection)."
+				},
+				{
+					"option": "timestamps",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Include timestamps."
+				},
+				{
+					"option": "stream",
+					"type": "WritableStream",
+					"default": "—",
+					"notes": "Output stream (default: stdout/stderr)."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Logger Core",
+					"methods": [
+						{
+							"method": "child",
+							"signature": "child(context)",
+							"description": "Create a child logger with additional bound context. Child inherits all parent settings but merges extra fields into every log entry.",
+							"methodParams": [
+								{
+									"param": "context",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Extra key-value pairs for the child."
+								}
+							],
+							"methodReturns": {
+								"type": "Logger",
+								"description": "New child logger instance."
+							}
+						},
+						{
+							"method": "setLevel",
+							"signature": "setLevel(level)",
+							"description": "Set the minimum log level.",
+							"methodParams": [
+								{
+									"param": "level",
+									"type": "string | number",
+									"required": "Yes",
+									"notes": "Level name or number."
+								}
+							],
+							"methodReturns": {
+								"type": "Logger",
+								"description": "this"
+							}
+						},
+						{
+							"method": "trace",
+							"signature": "trace(message, [fields])",
+							"description": "Log at trace level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						},
+						{
+							"method": "debug",
+							"signature": "debug(message, [fields])",
+							"description": "Log at debug level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						},
+						{
+							"method": "info",
+							"signature": "info(message, [fields])",
+							"description": "Log at info level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						},
+						{
+							"method": "warn",
+							"signature": "warn(message, [fields])",
+							"description": "Log at warn level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						},
+						{
+							"method": "error",
+							"signature": "error(message, [fields])",
+							"description": "Log at error level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						},
+						{
+							"method": "fatal",
+							"signature": "fatal(message, [fields])",
+							"description": "Log at fatal level.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Log message."
+								},
+								{
+									"param": "fields",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional fields."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Structured Logger Middleware",
+					"methods": [
+						{
+							"method": "structuredLogger",
+							"signature": "structuredLogger([opts])",
+							"description": "Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` — a child logger with bound request context so handlers can log with full correlation.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "level",
+									"type": "string | number",
+									"default": "'info'",
+									"notes": "Minimum log level. Default follows NODE_ENV."
+								},
+								{
+									"option": "format",
+									"type": "'json' | 'pretty'",
+									"default": "—",
+									"notes": "Output format. `'json'` for production, `'pretty'` for dev. Default: `'json'` in production, `'pretty'` otherwise."
+								},
+								{
+									"option": "transport",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom transport `(entry) => void` for each log entry."
+								},
+								{
+									"option": "colors",
+									"type": "boolean",
+									"default": "—",
+									"notes": "ANSI colors (default: TTY detection). Only applies to pretty format."
+								},
+								{
+									"option": "timestamps",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include timestamps."
+								},
+								{
+									"option": "stream",
+									"type": "WritableStream",
+									"default": "—",
+									"notes": "Output stream override."
+								},
+								{
+									"option": "skip",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res) => boolean` — skip logging for certain requests."
+								},
+								{
+									"option": "customFields",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res) => object` — extra fields to merge into each request log entry."
+								},
+								{
+									"option": "msg",
+									"type": "string",
+									"default": "—",
+									"notes": "Custom message template. Supports placeholders: `:method`, `:url`, `:status`, `:duration`."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "MetricsRegistry",
+			"description": "Zero-dependency metrics registry with Prometheus-compatible text exposition format. Provides Counter, Gauge, and Histogram metric types with label support, automatic HTTP instrumentation middleware, and a handler for `/metrics` endpoints.",
+			"example": "  const { MetricsRegistry, metricsMiddleware } = require('zero-http');\r\n\n  const registry = new MetricsRegistry();\r\n  app.use(metricsMiddleware({ registry }));\r\n  app.get('/metrics', (req, res) => {\r\n      res.set('Content-Type', 'text/plain; version=0.04');\r\n      res.send(registry.metrics());\r\n  });",
+			"options": [
+				{
+					"option": "name",
+					"type": "string",
+					"default": "—",
+					"notes": "Metric name (snake_case recommended)."
+				},
+				{
+					"option": "help",
+					"type": "string",
+					"default": "—",
+					"notes": "Human-readable description."
+				},
+				{
+					"option": "labels",
+					"type": "string[]",
+					"default": "[",
+					"notes": "] - Label names."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Metric Types",
+					"methods": [
+						{
+							"method": "inc",
+							"signature": "inc([labels], [value])",
+							"description": "Increment the counter.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "No",
+									"notes": "Amount to increment (must be >= 0)."
+								}
+							]
+						},
+						{
+							"method": "get",
+							"signature": "get([labels])",
+							"description": "Get the current value.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								}
+							],
+							"methodReturns": {
+								"type": "number",
+								"description": "Current counter value."
+							}
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset the counter (all label combinations)."
+						},
+						{
+							"method": "collect",
+							"signature": "collect()",
+							"description": "Serialize to Prometheus text format.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Gauge",
+					"methods": [
+						{
+							"method": "set",
+							"signature": "set(labels, [value])",
+							"description": "Set the gauge to a specific value.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object | number",
+									"required": "Yes",
+									"notes": "Label values or value (if no labels)."
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "No",
+									"notes": "Gauge value."
+								}
+							]
+						},
+						{
+							"method": "inc",
+							"signature": "inc([labels], [value])",
+							"description": "Increment the gauge.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "No",
+									"notes": "Amount."
+								}
+							]
+						},
+						{
+							"method": "dec",
+							"signature": "dec([labels], [value])",
+							"description": "Decrement the gauge.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "No",
+									"notes": "Amount."
+								}
+							]
+						},
+						{
+							"method": "get",
+							"signature": "get([labels])",
+							"description": "Get the current value.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								}
+							],
+							"methodReturns": {
+								"type": "number",
+								"description": "Current gauge value."
+							}
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset the gauge (all label combinations)."
+						},
+						{
+							"method": "collect",
+							"signature": "collect()",
+							"description": "Serialize to Prometheus text format.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Histogram",
+					"methods": [
+						{
+							"method": "observe",
+							"signature": "observe(labels, [value])",
+							"description": "Observe a value.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object | number",
+									"required": "Yes",
+									"notes": "Label values or value (if no labels)."
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "No",
+									"notes": "Observed value."
+								}
+							]
+						},
+						{
+							"method": "startTimer",
+							"signature": "startTimer([labels])",
+							"description": "Start a timer that, when stopped, observes the elapsed duration in seconds.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Stop function — call it to record the duration."
+							}
+						},
+						{
+							"method": "get",
+							"signature": "get([labels])",
+							"description": "Get summary stats for a label combination.",
+							"methodParams": [
+								{
+									"param": "labels",
+									"type": "object",
+									"required": "No",
+									"notes": "Label values."
+								}
+							],
+							"methodReturns": {
+								"type": "{ sum: number, count: number } | null",
+								"description": "Stats or null."
+							}
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset all observations."
+						},
+						{
+							"method": "collect",
+							"signature": "collect()",
+							"description": "Serialize to Prometheus text format.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Metrics Registry",
+					"methods": [
+						{
+							"method": "counter",
+							"signature": "counter(opts)",
+							"description": "Create and register a Counter.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Counter options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "name",
+									"type": "string",
+									"default": "—",
+									"notes": "Metric name."
+								},
+								{
+									"option": "help",
+									"type": "string",
+									"default": "—",
+									"notes": "Description."
+								},
+								{
+									"option": "labels",
+									"type": "string[]",
+									"default": "—",
+									"notes": "Label names."
+								}
+							],
+							"methodReturns": {
+								"type": "Counter",
+								"description": "The registered counter."
+							}
+						},
+						{
+							"method": "gauge",
+							"signature": "gauge(opts)",
+							"description": "Create and register a Gauge.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Gauge options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "name",
+									"type": "string",
+									"default": "—",
+									"notes": "Metric name."
+								},
+								{
+									"option": "help",
+									"type": "string",
+									"default": "—",
+									"notes": "Description."
+								},
+								{
+									"option": "labels",
+									"type": "string[]",
+									"default": "—",
+									"notes": "Label names."
+								},
+								{
+									"option": "collect",
+									"type": "Function",
+									"default": "—",
+									"notes": "Dynamic collection callback."
+								}
+							],
+							"methodReturns": {
+								"type": "Gauge",
+								"description": "The registered gauge."
+							}
+						},
+						{
+							"method": "histogram",
+							"signature": "histogram(opts)",
+							"description": "Create and register a Histogram.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Histogram options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "name",
+									"type": "string",
+									"default": "—",
+									"notes": "Metric name."
+								},
+								{
+									"option": "help",
+									"type": "string",
+									"default": "—",
+									"notes": "Description."
+								},
+								{
+									"option": "labels",
+									"type": "string[]",
+									"default": "—",
+									"notes": "Label names."
+								},
+								{
+									"option": "buckets",
+									"type": "number[]",
+									"default": "—",
+									"notes": "Bucket boundaries."
+								}
+							],
+							"methodReturns": {
+								"type": "Histogram",
+								"description": "The registered histogram."
+							}
+						},
+						{
+							"method": "getMetric",
+							"signature": "getMetric(name)",
+							"description": "Get a registered metric by name.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Full metric name (including prefix)."
+								}
+							],
+							"methodReturns": {
+								"type": "Counter | Gauge | Histogram | undefined",
+								"description": ""
+							}
+						},
+						{
+							"method": "removeMetric",
+							"signature": "removeMetric(name)",
+							"description": "Remove a registered metric.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metric name."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "True if removed."
+							}
+						},
+						{
+							"method": "clear",
+							"signature": "clear()",
+							"description": "Remove all registered metrics."
+						},
+						{
+							"method": "resetAll",
+							"signature": "resetAll()",
+							"description": "Reset all metric values without removing registrations."
+						},
+						{
+							"method": "metrics",
+							"signature": "metrics()",
+							"description": "Serialize all metrics to Prometheus text exposition format.",
+							"methodReturns": {
+								"type": "string",
+								"description": "Multi-line Prometheus-compatible text."
+							}
+						},
+						{
+							"method": "toJSON",
+							"signature": "toJSON()",
+							"description": "Return all metrics as a plain object (for JSON export or IPC transfer).",
+							"methodReturns": {
+								"type": "object",
+								"description": "Serialisable snapshot of all metrics."
+							}
+						},
+						{
+							"method": "merge",
+							"signature": "merge(snapshot)",
+							"description": "Merge a metrics snapshot (from `toJSON()`) into this registry. Used for aggregating worker metrics on the primary process.",
+							"methodParams": [
+								{
+									"param": "snapshot",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Object from `toJSON()`."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Default HTTP Metrics",
+					"methods": [
+						{
+							"method": "createDefaultMetrics",
+							"signature": "createDefaultMetrics(registry)",
+							"description": "Create the standard set of HTTP metrics on a registry.",
+							"methodParams": [
+								{
+									"param": "registry",
+									"type": "MetricsRegistry",
+									"required": "Yes",
+									"notes": "Target registry."
+								}
+							],
+							"methodReturns": {
+								"type": "object",
+								"description": "Object with all default metric instances."
+							}
+						}
+					]
+				},
+				{
+					"group": "Metrics Middleware",
+					"methods": [
+						{
+							"method": "metricsMiddleware",
+							"signature": "metricsMiddleware([opts])",
+							"description": "Create HTTP metrics collection middleware. Automatically tracks `http_requests_total`, `http_request_duration_seconds`, and `http_active_connections`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "registry",
+									"type": "MetricsRegistry",
+									"default": "—",
+									"notes": "Metrics registry. Creates a new one if not provided."
+								},
+								{
+									"option": "routeLabel",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string` — extract route label for metrics. Default: `req.route || req.url`."
+								},
+								{
+									"option": "skip",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => boolean` — skip metrics for certain requests."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						},
+						{
+							"method": "metricsEndpoint",
+							"signature": "metricsEndpoint(registry)",
+							"description": "Create a metrics endpoint handler. Returns Prometheus text exposition format.",
+							"methodParams": [
+								{
+									"param": "registry",
+									"type": "MetricsRegistry",
+									"required": "Yes",
+									"notes": "The registry to expose."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Route handler `(req, res) => void`."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Tracer",
+			"description": "Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend.",
+			"example": "  const { tracingMiddleware, Tracer } = require('zero-http');\r\n\n  const tracer = new Tracer({ serviceName: 'my-api' });\r\n  app.use(tracingMiddleware({ tracer }));",
+			"options": [
+				{
+					"option": "name",
+					"type": "string",
+					"default": "—",
+					"notes": "Operation name."
+				},
+				{
+					"option": "traceId",
+					"type": "string",
+					"default": "—",
+					"notes": "Trace ID."
+				},
+				{
+					"option": "parentSpanId",
+					"type": "string",
+					"default": "—",
+					"notes": "Parent span ID."
+				},
+				{
+					"option": "kind",
+					"type": "string",
+					"default": "'server'",
+					"notes": "Span kind: 'server', 'client', 'producer', 'consumer', 'internal'."
+				},
+				{
+					"option": "attributes",
+					"type": "object",
+					"default": "—",
+					"notes": "Initial attributes."
+				},
+				{
+					"option": "tracer",
+					"type": "Tracer",
+					"default": "—",
+					"notes": "Tracer instance for export."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Span",
+					"methods": [
+						{
+							"method": "setAttribute",
+							"signature": "setAttribute(key, value)",
+							"description": "Set a span attribute.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Attribute name (OpenTelemetry semantic convention recommended)."
+								},
+								{
+									"param": "value",
+									"type": "string | number | boolean",
+									"required": "Yes",
+									"notes": "Attribute value."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "setAttributes",
+							"signature": "setAttributes(attrs)",
+							"description": "Set multiple attributes at once.",
+							"methodParams": [
+								{
+									"param": "attrs",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Key-value pairs."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "addEvent",
+							"signature": "addEvent(name, [attributes])",
+							"description": "Add a timestamped event to the span.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Event name."
+								},
+								{
+									"param": "attributes",
+									"type": "object",
+									"required": "No",
+									"notes": "Event attributes."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "setOk",
+							"signature": "setOk()",
+							"description": "Set status to OK.",
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "setError",
+							"signature": "setError([message])",
+							"description": "Set status to ERROR.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Error description."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "recordException",
+							"signature": "recordException(err)",
+							"description": "Record an exception as a span event and set error status.",
+							"methodParams": [
+								{
+									"param": "err",
+									"type": "Error",
+									"required": "Yes",
+									"notes": "The exception."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "end",
+							"signature": "end()",
+							"description": "End the span and report to the tracer.",
+							"methodReturns": {
+								"type": "Span",
+								"description": "this"
+							}
+						},
+						{
+							"method": "duration",
+							"signature": "duration()",
+							"description": "Duration in milliseconds (or null if not ended)."
+						},
+						{
+							"method": "traceparent",
+							"signature": "traceparent()",
+							"description": "The traceparent header value for this span."
+						},
+						{
+							"method": "toJSON",
+							"signature": "toJSON()",
+							"description": "Serialize span for export.",
+							"methodReturns": {
+								"type": "object",
+								"description": "OTLP-compatible span object."
+							}
+						}
+					]
+				},
+				{
+					"group": "Tracer",
+					"methods": [
+						{
+							"method": "startSpan",
+							"signature": "startSpan(name, [opts])",
+							"description": "Create a new span.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Span/operation name."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Span options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "traceId",
+									"type": "string",
+									"default": "—",
+									"notes": "Trace ID (inherits from parent context or generates new)."
+								},
+								{
+									"option": "parentSpanId",
+									"type": "string",
+									"default": "—",
+									"notes": "Parent span ID."
+								},
+								{
+									"option": "kind",
+									"type": "string",
+									"default": "'server'",
+									"notes": "Span kind."
+								},
+								{
+									"option": "attributes",
+									"type": "object",
+									"default": "—",
+									"notes": "Initial attributes."
+								}
+							],
+							"methodReturns": {
+								"type": "Span",
+								"description": "The new span."
+							}
+						},
+						{
+							"method": "shouldSample",
+							"signature": "shouldSample()",
+							"description": "Whether a new trace should be sampled.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "onSpanEnd",
+							"signature": "onSpanEnd(fn)",
+							"description": "Register a listener for completed spans.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "`(span: Span) => void`."
+								}
+							],
+							"methodReturns": {
+								"type": "Tracer",
+								"description": "this"
+							}
+						},
+						{
+							"method": "flush",
+							"signature": "flush()",
+							"description": "Flush buffered spans to the exporter.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						},
+						{
+							"method": "shutdown",
+							"signature": "shutdown()",
+							"description": "Shut down the tracer, flushing remaining spans.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Tracing Middleware",
+					"methods": [
+						{
+							"method": "tracingMiddleware",
+							"signature": "tracingMiddleware([opts])",
+							"description": "Create HTTP tracing middleware. Automatically creates a span for each request, extracts incoming `traceparent`/`tracestate` headers, and sets outgoing `traceparent`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "tracer",
+									"type": "Tracer",
+									"default": "—",
+									"notes": "Tracer instance. Creates a default if not provided."
+								},
+								{
+									"option": "routeLabel",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string` — extract route label for span name."
+								},
+								{
+									"option": "skip",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => boolean` — skip tracing for certain requests."
+								},
+								{
+									"option": "propagate",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Propagate W3C trace context via response headers."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						},
+						{
+							"method": "instrumentFetch",
+							"signature": "instrumentFetch(fetchFn, tracer)",
+							"description": "Instrument outbound fetch calls with tracing. Wraps the zero-http fetch to inject `traceparent` headers and create client spans.",
+							"methodParams": [
+								{
+									"param": "fetchFn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "The original fetch function."
+								},
+								{
+									"param": "tracer",
+									"type": "Tracer",
+									"required": "Yes",
+									"notes": "Tracer instance."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Instrumented fetch with same signature."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "healthCheck",
+			"description": "Health check middleware with liveness and readiness probes. Kubernetes-compatible `/healthz` and `/readyz` endpoints with composable checks (database ping, memory, event loop lag, disk space) and custom check registration. Returns `200` when healthy, `503` when degraded or during shutdown drain phase, with a JSON body detailing each check.",
+			"options": [
+				{
+					"option": "maxHeapUsedPercent",
+					"type": "number",
+					"default": "90",
+					"notes": "Max heap usage percentage."
+				},
+				{
+					"option": "maxRssBytes",
+					"type": "number",
+					"default": "—",
+					"notes": "Max RSS in bytes."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Check function."
+			},
+			"example": "  const { healthCheck } = require('zero-http');\r\n\n  app.get('/healthz', healthCheck());\r\n  app.get('/readyz', healthCheck({\r\n      checks: {\r\n          database: () => db.ping(),\r\n          cache: () => redis.ping(),\r\n      },\r\n  }));",
+			"methodGroups": [
+				{
+					"group": "Health Check Handler",
+					"methods": [
+						{
+							"method": "healthCheck",
+							"signature": "healthCheck([opts])",
+							"description": "Create a health check route handler. Returns a JSON response with the status of all registered checks. Returns `200` when all checks pass, `503` when any check fails or when the application is in drain/shutdown state. Response format: ```json { \"status\": \"healthy\", \"uptime\": 12345, \"timestamp\": \"2026-01-01T00:00:00.000Z\", \"checks\": { \"database\": { \"healthy\": true, \"duration\": 5, \"details\": {} } } } ```",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "checks",
+									"type": "Object<string, Function>",
+									"default": "—",
+									"notes": "Named check functions. Each returns `{ healthy, details }` or a boolean/Promise."
+								},
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "5000",
+									"notes": "Max time to wait for all checks in ms."
+								},
+								{
+									"option": "verbose",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Include check details in response."
+								},
+								{
+									"option": "onFailure",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(results) => void` — called when any check fails."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Route handler `(req, res) => void`."
+							}
+						}
+					]
+				},
+				{
+					"group": "Convenience Health & Ready Factory",
+					"methods": [
+						{
+							"method": "createHealthHandlers",
+							"signature": "createHealthHandlers([opts])",
+							"description": "Create paired liveness and readiness handlers for an app. Liveness includes basic process checks; readiness includes all registered dependency checks.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "checks",
+									"type": "Object<string, Function>",
+									"default": "—",
+									"notes": "Named readiness checks."
+								},
+								{
+									"option": "includeMemory",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Include memory check in liveness."
+								},
+								{
+									"option": "includeEventLoop",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Include event loop lag check."
+								},
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "5000",
+									"notes": "Check timeout."
+								}
+							],
+							"methodReturns": {
+								"type": "{ health: Function, ready: Function }",
+								"description": "Route handlers."
+							}
+						}
+					]
+				},
+				{
+					"group": "Built-in Checks",
+					"methods": [
+						{
+							"method": "eventLoopCheck",
+							"signature": "eventLoopCheck([opts])",
+							"description": "Check event loop lag against a threshold.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Check options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "maxLagMs",
+									"type": "number",
+									"default": "500",
+									"notes": "Max acceptable lag in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Check function."
+							}
+						},
+						{
+							"method": "diskSpaceCheck",
+							"signature": "diskSpaceCheck([opts])",
+							"description": "Check available disk space (simple heuristic using os.freemem).",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Check options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "minFreeBytes",
+									"type": "number",
+									"default": "104857600",
+									"notes": "Minimum free memory in bytes (default: 100MB)."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Check function."
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

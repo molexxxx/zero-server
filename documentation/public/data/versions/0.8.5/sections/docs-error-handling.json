@@ -1,0 +1,1677 @@
+{
+	"section": "Error Handling",
+	"icon": "alert-triangle",
+	"items": [
+		{
+			"name": "Error Classes",
+			"description": "HTTP error classes with status codes, error codes, and structured details. Every error extends HttpError which carries a statusCode, code, and optional details.",
+			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+			"methodGroups": [
+				{
+					"group": "Base HttpError",
+					"methods": [
+						{
+							"method": "HttpError",
+							"signature": "new HttpError(statusCode, [message], [opts])",
+							"description": "Base HTTP error class.  All framework error classes extend this.",
+							"methodParams": [
+								{
+									"param": "statusCode",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code (e.g. 'VALIDATION_FAILED')."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Specific Error Classes",
+					"methods": [
+						{
+							"method": "BadRequestError",
+							"signature": "new BadRequestError([message], [opts])",
+							"description": "Bad Request",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "UnauthorizedError",
+							"signature": "new UnauthorizedError([message], [opts])",
+							"description": "Unauthorized",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ForbiddenError",
+							"signature": "new ForbiddenError([message], [opts])",
+							"description": "Forbidden",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "NotFoundError",
+							"signature": "new NotFoundError([message], [opts])",
+							"description": "Not Found",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "MethodNotAllowedError",
+							"signature": "new MethodNotAllowedError([message], [opts])",
+							"description": "Method Not Allowed",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ConflictError",
+							"signature": "new ConflictError([message], [opts])",
+							"description": "Conflict",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "GoneError",
+							"signature": "new GoneError([message], [opts])",
+							"description": "Gone",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "PayloadTooLargeError",
+							"signature": "new PayloadTooLargeError([message], [opts])",
+							"description": "Payload Too Large",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "UnprocessableEntityError",
+							"signature": "new UnprocessableEntityError([message], [opts])",
+							"description": "Unprocessable Entity",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ValidationError",
+							"signature": "new ValidationError([message], [errors], [opts])",
+							"description": "Validation error with field-level details.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Summary message."
+								},
+								{
+									"param": "errors",
+									"type": "object | Array",
+									"required": "No",
+									"notes": "Field errors, e.g. { email: 'required', age: 'must be >= 18' }."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								}
+							]
+						},
+						{
+							"method": "TooManyRequestsError",
+							"signature": "new TooManyRequestsError([message], [opts])",
+							"description": "Too Many Requests",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "InternalError",
+							"signature": "new InternalError([message], [opts])",
+							"description": "Internal Server Error",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "NotImplementedError",
+							"signature": "new NotImplementedError([message], [opts])",
+							"description": "Not Implemented",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "BadGatewayError",
+							"signature": "new BadGatewayError([message], [opts])",
+							"description": "Bad Gateway",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ServiceUnavailableError",
+							"signature": "new ServiceUnavailableError([message], [opts])",
+							"description": "Service Unavailable",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Framework Error Classes",
+					"methods": [
+						{
+							"method": "DatabaseError",
+							"signature": "new DatabaseError([message], [opts])",
+							"description": "Database / ORM error — wraps adapter-level failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description of the DB failure."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "query",
+									"type": "string",
+									"default": "—",
+									"notes": "The query or operation that failed."
+								},
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name (sqlite, mysql, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ConfigurationError",
+							"signature": "new ConfigurationError([message], [opts])",
+							"description": "Configuration error — thrown when app/adapter configuration is invalid.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "What misconfiguration was detected."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "setting",
+									"type": "string",
+									"default": "—",
+									"notes": "The setting key that's invalid."
+								}
+							]
+						},
+						{
+							"method": "MiddlewareError",
+							"signature": "new MiddlewareError([message], [opts])",
+							"description": "Middleware error — a middleware function failed unexpectedly.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "middleware",
+									"type": "string",
+									"default": "—",
+									"notes": "Middleware name."
+								}
+							]
+						},
+						{
+							"method": "RoutingError",
+							"signature": "new RoutingError([message], [opts])",
+							"description": "Routing error — thrown when route resolution fails.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "path",
+									"type": "string",
+									"default": "—",
+									"notes": "The route path."
+								},
+								{
+									"option": "method",
+									"type": "string",
+									"default": "—",
+									"notes": "The HTTP method."
+								}
+							]
+						},
+						{
+							"method": "TimeoutError",
+							"signature": "new TimeoutError([message], [opts])",
+							"description": "Timeout error — operation exceeded allowed time.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "—",
+									"notes": "The timeout limit in ms."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "ORM-Specific Error Classes",
+					"methods": [
+						{
+							"method": "ConnectionError",
+							"signature": "new ConnectionError([message], [opts])",
+							"description": "Connection error — database connection failures with retry context.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name."
+								},
+								{
+									"option": "attempt",
+									"type": "number",
+									"default": "—",
+									"notes": "Retry attempt number."
+								},
+								{
+									"option": "maxRetries",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum retries configured."
+								},
+								{
+									"option": "host",
+									"type": "string",
+									"default": "—",
+									"notes": "Target host."
+								},
+								{
+									"option": "port",
+									"type": "number",
+									"default": "—",
+									"notes": "Target port."
+								}
+							]
+						},
+						{
+							"method": "MigrationError",
+							"signature": "new MigrationError([message], [opts])",
+							"description": "Migration error — migration execution failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "migration",
+									"type": "string",
+									"default": "—",
+									"notes": "Migration name that failed."
+								},
+								{
+									"option": "direction",
+									"type": "string",
+									"default": "—",
+									"notes": "'up' or 'down'."
+								},
+								{
+									"option": "batch",
+									"type": "number",
+									"default": "—",
+									"notes": "Batch number."
+								}
+							]
+						},
+						{
+							"method": "TransactionError",
+							"signature": "new TransactionError([message], [opts])",
+							"description": "Transaction error — transaction commit/rollback failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "phase",
+									"type": "string",
+									"default": "—",
+									"notes": "'begin', 'commit', or 'rollback'."
+								}
+							]
+						},
+						{
+							"method": "QueryError",
+							"signature": "new QueryError([message], [opts])",
+							"description": "Query error — query execution failures with SQL context.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "sql",
+									"type": "string",
+									"default": "—",
+									"notes": "The SQL that failed (if applicable)."
+								},
+								{
+									"option": "params",
+									"type": "Array",
+									"default": "—",
+									"notes": "Query parameters."
+								},
+								{
+									"option": "table",
+									"type": "string",
+									"default": "—",
+									"notes": "Target table."
+								}
+							]
+						},
+						{
+							"method": "AdapterError",
+							"signature": "new AdapterError([message], [opts])",
+							"description": "Adapter error — adapter-level issues (driver not found, unsupported operation).",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name."
+								},
+								{
+									"option": "operation",
+									"type": "string",
+									"default": "—",
+									"notes": "The operation that failed."
+								}
+							]
+						},
+						{
+							"method": "CacheError",
+							"signature": "new CacheError([message], [opts])",
+							"description": "Cache error — caching layer failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "operation",
+									"type": "string",
+									"default": "—",
+									"notes": "Cache operation that failed."
+								},
+								{
+									"option": "key",
+									"type": "string",
+									"default": "—",
+									"notes": "Cache key involved."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Phase 4 Error Classes",
+					"methods": [
+						{
+							"method": "TenancyError",
+							"signature": "new TenancyError([message], [opts])",
+							"description": "Tenancy error — multi-tenancy operation failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "tenant",
+									"type": "string",
+									"default": "—",
+									"notes": "Tenant identifier."
+								},
+								{
+									"option": "strategy",
+									"type": "string",
+									"default": "—",
+									"notes": "Tenancy strategy (row, schema)."
+								}
+							]
+						},
+						{
+							"method": "AuditError",
+							"signature": "new AuditError([message], [opts])",
+							"description": "Audit error — audit logging failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "action",
+									"type": "string",
+									"default": "—",
+									"notes": "Audit action that failed."
+								},
+								{
+									"option": "table",
+									"type": "string",
+									"default": "—",
+									"notes": "Target table."
+								}
+							]
+						},
+						{
+							"method": "PluginError",
+							"signature": "new PluginError([message], [opts])",
+							"description": "Plugin error — plugin registration or lifecycle failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "plugin",
+									"type": "string",
+									"default": "—",
+									"notes": "Plugin name."
+								},
+								{
+									"option": "phase",
+									"type": "string",
+									"default": "—",
+									"notes": "Lifecycle phase (install, boot, uninstall)."
+								}
+							]
+						},
+						{
+							"method": "ProcedureError",
+							"signature": "new ProcedureError([message], [opts])",
+							"description": "Procedure error — stored procedure/function failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "procedure",
+									"type": "string",
+									"default": "—",
+									"notes": "Procedure or function name."
+								},
+								{
+									"option": "operation",
+									"type": "string",
+									"default": "—",
+									"notes": "Operation (create, drop, execute)."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Utilities",
+					"methods": [
+						{
+							"method": "createError",
+							"signature": "createError(statusCode, [message], [opts])",
+							"description": "Create an HttpError by status code.",
+							"methodParams": [
+								{
+									"param": "statusCode",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable error message."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "code",
+									"type": "string",
+									"default": "—",
+									"notes": "Machine-readable error code."
+								},
+								{
+									"option": "details",
+									"type": "*",
+									"default": "—",
+									"notes": "Extra data (field errors, debug info, etc.)."
+								}
+							],
+							"methodReturns": {
+								"type": "HttpError",
+								"description": "Matching HttpError subclass instance."
+							}
+						},
+						{
+							"method": "isHttpError",
+							"signature": "isHttpError(err)",
+							"description": "Check if a value is an HttpError (or duck-typed equivalent).",
+							"methodParams": [
+								{
+									"param": "err",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Error object."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "True if the value is an HttpError."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Framework Errors",
+			"description": "Specialized error classes for framework internals, ORM operations, and infrastructure failures. All extend HttpError and carry structured context.",
+			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+			"methodGroups": [
+				{
+					"group": "Framework Error Classes",
+					"methods": [
+						{
+							"method": "DatabaseError",
+							"signature": "new DatabaseError([message], [opts])",
+							"description": "Database / ORM error — wraps adapter-level failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description of the DB failure."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "query",
+									"type": "string",
+									"default": "—",
+									"notes": "The query or operation that failed."
+								},
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name (sqlite, mysql, etc.)."
+								}
+							]
+						},
+						{
+							"method": "ConfigurationError",
+							"signature": "new ConfigurationError([message], [opts])",
+							"description": "Configuration error — thrown when app/adapter configuration is invalid.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "What misconfiguration was detected."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "setting",
+									"type": "string",
+									"default": "—",
+									"notes": "The setting key that's invalid."
+								}
+							]
+						},
+						{
+							"method": "MiddlewareError",
+							"signature": "new MiddlewareError([message], [opts])",
+							"description": "Middleware error — a middleware function failed unexpectedly.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "middleware",
+									"type": "string",
+									"default": "—",
+									"notes": "Middleware name."
+								}
+							]
+						},
+						{
+							"method": "RoutingError",
+							"signature": "new RoutingError([message], [opts])",
+							"description": "Routing error — thrown when route resolution fails.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "path",
+									"type": "string",
+									"default": "—",
+									"notes": "The route path."
+								},
+								{
+									"option": "method",
+									"type": "string",
+									"default": "—",
+									"notes": "The HTTP method."
+								}
+							]
+						},
+						{
+							"method": "TimeoutError",
+							"signature": "new TimeoutError([message], [opts])",
+							"description": "Timeout error — operation exceeded allowed time.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "—",
+									"notes": "The timeout limit in ms."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "ORM-Specific Error Classes",
+					"methods": [
+						{
+							"method": "ConnectionError",
+							"signature": "new ConnectionError([message], [opts])",
+							"description": "Connection error — database connection failures with retry context.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name."
+								},
+								{
+									"option": "attempt",
+									"type": "number",
+									"default": "—",
+									"notes": "Retry attempt number."
+								},
+								{
+									"option": "maxRetries",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum retries configured."
+								},
+								{
+									"option": "host",
+									"type": "string",
+									"default": "—",
+									"notes": "Target host."
+								},
+								{
+									"option": "port",
+									"type": "number",
+									"default": "—",
+									"notes": "Target port."
+								}
+							]
+						},
+						{
+							"method": "MigrationError",
+							"signature": "new MigrationError([message], [opts])",
+							"description": "Migration error — migration execution failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "migration",
+									"type": "string",
+									"default": "—",
+									"notes": "Migration name that failed."
+								},
+								{
+									"option": "direction",
+									"type": "string",
+									"default": "—",
+									"notes": "'up' or 'down'."
+								},
+								{
+									"option": "batch",
+									"type": "number",
+									"default": "—",
+									"notes": "Batch number."
+								}
+							]
+						},
+						{
+							"method": "TransactionError",
+							"signature": "new TransactionError([message], [opts])",
+							"description": "Transaction error — transaction commit/rollback failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "phase",
+									"type": "string",
+									"default": "—",
+									"notes": "'begin', 'commit', or 'rollback'."
+								}
+							]
+						},
+						{
+							"method": "QueryError",
+							"signature": "new QueryError([message], [opts])",
+							"description": "Query error — query execution failures with SQL context.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "sql",
+									"type": "string",
+									"default": "—",
+									"notes": "The SQL that failed (if applicable)."
+								},
+								{
+									"option": "params",
+									"type": "Array",
+									"default": "—",
+									"notes": "Query parameters."
+								},
+								{
+									"option": "table",
+									"type": "string",
+									"default": "—",
+									"notes": "Target table."
+								}
+							]
+						},
+						{
+							"method": "AdapterError",
+							"signature": "new AdapterError([message], [opts])",
+							"description": "Adapter error — adapter-level issues (driver not found, unsupported operation).",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "adapter",
+									"type": "string",
+									"default": "—",
+									"notes": "Adapter name."
+								},
+								{
+									"option": "operation",
+									"type": "string",
+									"default": "—",
+									"notes": "The operation that failed."
+								}
+							]
+						},
+						{
+							"method": "CacheError",
+							"signature": "new CacheError([message], [opts])",
+							"description": "Cache error — caching layer failures.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Description."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional error options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "operation",
+									"type": "string",
+									"default": "—",
+									"notes": "Cache operation that failed."
+								},
+								{
+									"option": "key",
+									"type": "string",
+									"default": "—",
+									"notes": "Cache key involved."
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "errorHandler",
+			"description": "Configurable error-handling middleware that formats error responses based on environment (dev vs production), supports custom formatters, and integrates with HttpError classes.",
+			"options": [
+				{
+					"option": "stack",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Include stack traces in responses (default: true when NODE_ENV !== 'production')."
+				},
+				{
+					"option": "log",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Log errors to console (default: true)."
+				},
+				{
+					"option": "logger",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom log function (default: console.error)."
+				},
+				{
+					"option": "formatter",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom response formatter: (err, req, isDev) => object."
+				},
+				{
+					"option": "onError",
+					"type": "function",
+					"default": "—",
+					"notes": "Callback on every error: (err, req, res) => void."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Error-handling middleware `(err, req, res, next) => void`."
+			},
+			"example": "  app.use(errorHandler());                       // dev-friendly by default\r\n  app.use(errorHandler({ stack: false }));        // hide stack traces\r\n  app.use(errorHandler({\r\n      formatter: (err, req, isDev) => ({ message: err.message }),\r\n      onError: (err) => metrics.increment('errors'),\r\n  }));"
+		},
+		{
+			"name": "debug",
+			"description": "Lightweight namespaced debug logger with levels, colors, and timestamps. Enable via DEBUG env variable: DEBUG=app:*,router (supports glob patterns). Each namespace gets a unique color for easy visual scanning. Levels: trace (0), debug (1), info (2), warn (3), error (4), fatal (5), silent (6). Set level via DEBUG_LEVEL env var or programmatically.",
+			"params": [
+				{
+					"param": "namespace",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Logger namespace (e.g. 'app:routes', 'db:queries')."
+				}
+			],
+			"returns": {
+				"type": "Function & { trace, debug, info, warn, error, fatal, enabled }",
+				"description": "Logger function."
+			},
+			"example": "  const debug = require('zero-http').debug;\r\n  const log = debug('app:routes');\r\n\n  log.info('server started on port %d', 3000);\r\n  log.warn('deprecation notice');\r\n  log.error('failed to connect', err);\r\n  log('shorthand for debug level');\r\n\n  // Set minimum level — anything below is silenced\r\n  debug.level('warn');   // only warn, error, fatal\r\n  debug.level('silent'); // suppress all output\r\n  debug.level('trace');  // show everything\r\n  debug.level(0);        // same as 'trace'",
+			"methodGroups": [
+				{
+					"group": "Configuration API",
+					"methods": [
+						{
+							"method": "level",
+							"signature": "level(level)",
+							"description": "Set the minimum log level globally. Messages below this level are silenced.",
+							"methodParams": [
+								{
+									"param": "level",
+									"type": "string | number",
+									"required": "Yes",
+									"notes": "Level name or number.\n`'trace'` (0) — all output\n`'debug'` (1) — debug and above\n`'info'` (2) — info and above\n`'warn'` (3) — warn and above\n`'error'` (4) — error and fatal only\n`'fatal'` (5) — fatal only\n`'silent'` (6) — nothing"
+								}
+							]
+						},
+						{
+							"method": "enable",
+							"signature": "enable(patterns)",
+							"description": "Enable/disable namespaces programmatically (same syntax as DEBUG env var).",
+							"methodParams": [
+								{
+									"param": "patterns",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Comma-separated patterns. Use '-ns' to exclude."
+								}
+							]
+						},
+						{
+							"method": "disable",
+							"signature": "disable()",
+							"description": "Disable all debug output."
+						},
+						{
+							"method": "json",
+							"signature": "json([on])",
+							"description": "Enable structured JSON output.",
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Enable flag."
+								}
+							]
+						},
+						{
+							"method": "timestamps",
+							"signature": "timestamps([on])",
+							"description": "Enable/disable timestamps.",
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Enable flag."
+								}
+							]
+						},
+						{
+							"method": "colors",
+							"signature": "colors([on])",
+							"description": "Enable/disable colors.",
+							"methodParams": [
+								{
+									"param": "on",
+									"type": "boolean",
+									"required": "No",
+									"notes": "Enable flag."
+								}
+							]
+						},
+						{
+							"method": "output",
+							"signature": "output(stream)",
+							"description": "Set custom output stream.",
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Writable stream with write() method."
+								}
+							]
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset all settings to defaults."
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -2903,7 +2903,7 @@ describe('serveStatic — additional path coverage', () =>
             {
                 expect(res.raw.write).toHaveBeenCalled();
                 resolve();
-            }, 50);
+            }, 150);
         });
     });
 

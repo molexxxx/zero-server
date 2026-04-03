@@ -1,0 +1,552 @@
+{
+	"section": "Lifecycle & Clustering",
+	"icon": "refresh-cw",
+	"items": [
+		{
+			"name": "LifecycleManager",
+			"description": "Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting.",
+			"example": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic — SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
+			"params": [
+				{
+					"param": "app",
+					"type": "import('./app')",
+					"required": "Yes",
+					"notes": "The App instance to manage."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Event Emitter",
+					"methods": [
+						{
+							"method": "on",
+							"signature": "on(event, fn)",
+							"description": "Register a lifecycle event listener.",
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "'beforeShutdown' | 'shutdown' | 'close'",
+									"required": "Yes",
+									"notes": "Event name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Callback function."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "off",
+							"signature": "off(event, fn)",
+							"description": "Remove a lifecycle event listener.",
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "'beforeShutdown' | 'shutdown' | 'close'",
+									"required": "Yes",
+									"notes": "Event name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Callback to remove."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						}
+					]
+				},
+				{
+					"group": "Connection Tracking",
+					"methods": [
+						{
+							"method": "trackRequest",
+							"signature": "trackRequest(res)",
+							"description": "Track an active HTTP request. Called automatically by the App request handler when lifecycle management is enabled.",
+							"methodParams": [
+								{
+									"param": "res",
+									"type": "import('http').ServerResponse",
+									"required": "Yes",
+									"notes": "The raw response object."
+								}
+							]
+						},
+						{
+							"method": "activeRequests",
+							"signature": "activeRequests()",
+							"description": "Number of currently active HTTP requests."
+						},
+						{
+							"method": "registerPool",
+							"signature": "registerPool(pool)",
+							"description": "Register a WebSocket pool for graceful shutdown. All connections in registered pools are closed with code `1001` during shutdown.",
+							"methodParams": [
+								{
+									"param": "pool",
+									"type": "import('./ws/room')",
+									"required": "Yes",
+									"notes": "WebSocket pool instance."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "unregisterPool",
+							"signature": "unregisterPool(pool)",
+							"description": "Unregister a WebSocket pool.",
+							"methodParams": [
+								{
+									"param": "pool",
+									"type": "import('./ws/room')",
+									"required": "Yes",
+									"notes": "WebSocket pool instance."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "trackSSE",
+							"signature": "trackSSE(stream)",
+							"description": "Track an active SSE stream for graceful shutdown.",
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "import('./sse/stream')",
+									"required": "Yes",
+									"notes": "SSE stream instance."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "registerDatabase",
+							"signature": "registerDatabase(db)",
+							"description": "Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown.",
+							"methodParams": [
+								{
+									"param": "db",
+									"type": "import('./orm')",
+									"required": "Yes",
+									"notes": "Database instance."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "unregisterDatabase",
+							"signature": "unregisterDatabase(db)",
+							"description": "Unregister an ORM Database instance.",
+							"methodParams": [
+								{
+									"param": "db",
+									"type": "import('./orm')",
+									"required": "Yes",
+									"notes": "Database instance."
+								}
+							],
+							"methodReturns": {
+								"type": "LifecycleManager",
+								"description": "this"
+							}
+						}
+					]
+				},
+				{
+					"group": "Signal Handling",
+					"methods": [
+						{
+							"method": "installSignalHandlers",
+							"signature": "installSignalHandlers()",
+							"description": "Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times — handlers are only installed once."
+						},
+						{
+							"method": "removeSignalHandlers",
+							"signature": "removeSignalHandlers()",
+							"description": "Remove previously installed signal handlers. Called automatically during shutdown cleanup."
+						}
+					]
+				},
+				{
+					"group": "Shutdown Sequence",
+					"methods": [
+						{
+							"method": "shutdown",
+							"signature": "shutdown([opts])",
+							"description": "Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Wait for in-flight HTTP requests to complete (with timeout) 6. Close all registered ORM database connections 7. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Shutdown options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum ms to wait for in-flight requests. Overrides the configured default."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when shutdown is complete."
+							}
+						},
+						{
+							"method": "isDraining",
+							"signature": "isDraining()",
+							"description": "Whether the server is currently draining (rejecting new requests)."
+						},
+						{
+							"method": "isClosed",
+							"signature": "isClosed()",
+							"description": "Whether the server has fully shut down."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "ClusterManager",
+			"description": "Clustering support for zero-http applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers.",
+			"example": "  const { createApp, cluster } = require('zero-http');\r\n\n  cluster((worker) => {\r\n      const app = createApp();\r\n      app.get('/', (req, res) => res.json({ pid: process.pid }));\r\n      app.listen(3000);\r\n  });",
+			"options": [
+				{
+					"option": "workers",
+					"type": "number",
+					"default": "—",
+					"notes": "Number of worker processes (default: CPU count)."
+				},
+				{
+					"option": "respawn",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Automatically respawn crashed workers."
+				},
+				{
+					"option": "respawnDelay",
+					"type": "number",
+					"default": "1000",
+					"notes": "Initial delay (ms) before respawning."
+				},
+				{
+					"option": "maxRespawnDelay",
+					"type": "number",
+					"default": "30000",
+					"notes": "Maximum respawn delay after backoff."
+				},
+				{
+					"option": "backoffFactor",
+					"type": "number",
+					"default": "2",
+					"notes": "Multiplier for exponential backoff."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Cluster Manager",
+					"methods": [
+						{
+							"method": "isPrimary",
+							"signature": "isPrimary()",
+							"description": "Whether the current process is the primary (master) process."
+						},
+						{
+							"method": "isWorker",
+							"signature": "isWorker()",
+							"description": "Whether the current process is a worker process."
+						},
+						{
+							"method": "workerCount",
+							"signature": "workerCount()",
+							"description": "Number of configured workers."
+						},
+						{
+							"method": "workerIds",
+							"signature": "workerIds()",
+							"description": "Get all active worker IDs.",
+							"methodReturns": {
+								"type": "number[]",
+								"description": "Array of worker IDs."
+							}
+						},
+						{
+							"method": "activeWorkers",
+							"signature": "activeWorkers()",
+							"description": "Number of currently alive workers."
+						},
+						{
+							"method": "fork",
+							"signature": "fork()",
+							"description": "Fork all worker processes. Only call from the primary process.",
+							"methodReturns": {
+								"type": "ClusterManager",
+								"description": "this"
+							}
+						}
+					]
+				},
+				{
+					"group": "IPC Messaging",
+					"methods": [
+						{
+							"method": "broadcast",
+							"signature": "broadcast(type, data)",
+							"description": "Send a typed message from the primary to all workers.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Message type identifier."
+								},
+								{
+									"param": "data",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Message payload (must be serialisable)."
+								}
+							]
+						},
+						{
+							"method": "sendTo",
+							"signature": "sendTo(workerId, type, data)",
+							"description": "Send a typed message to a specific worker.",
+							"methodParams": [
+								{
+									"param": "workerId",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Target worker ID."
+								},
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Message type identifier."
+								},
+								{
+									"param": "data",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Message payload."
+								}
+							]
+						},
+						{
+							"method": "sendToPrimary",
+							"signature": "sendToPrimary(type, data)",
+							"description": "Send a typed message from a worker to the primary process. Call this from within a worker process.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Message type identifier."
+								},
+								{
+									"param": "data",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Message payload."
+								}
+							]
+						},
+						{
+							"method": "onMessage",
+							"signature": "onMessage(type, fn)",
+							"description": "Register a handler for a typed IPC message. On the primary, receives messages from workers. On workers, receives messages from the primary.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Message type to listen for."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler `(data, worker?) => void`. `worker` is only present on the primary."
+								}
+							],
+							"methodReturns": {
+								"type": "ClusterManager",
+								"description": "this"
+							}
+						}
+					]
+				},
+				{
+					"group": "Per-Worker Metrics Aggregation",
+					"methods": [
+						{
+							"method": "enableMetrics",
+							"signature": "enableMetrics(registry, [opts])",
+							"description": "Enable automatic per-worker metrics aggregation. Workers periodically send their metrics snapshot to the primary, which merges them into a single registry for exposition.",
+							"methodParams": [
+								{
+									"param": "registry",
+									"type": "import('./observe/metrics').MetricsRegistry",
+									"required": "Yes",
+									"notes": "Registry to aggregate into (on primary) or report from (on worker)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "interval",
+									"type": "number",
+									"default": "5000",
+									"notes": "Reporting interval in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "ClusterManager",
+								"description": "this"
+							}
+						},
+						{
+							"method": "disableMetrics",
+							"signature": "disableMetrics()",
+							"description": "Stop the per-worker metrics reporting timer."
+						}
+					]
+				},
+				{
+					"group": "Sticky Sessions",
+					"methods": [
+						{
+							"method": "enableSticky",
+							"signature": "enableSticky(server, [opts])",
+							"description": "Enable sticky sessions by hashing client IP addresses to specific workers. Ensures WebSocket and SSE connections from the same client always land on the same worker for proper room/state management. Must be called on the primary BEFORE listen(). Replaces the default round-robin OS scheduling with a custom `connection` listener that distributes sockets to workers based on IP hash.",
+							"methodParams": [
+								{
+									"param": "server",
+									"type": "import('http').Server | import('https').Server",
+									"required": "Yes",
+									"notes": "The HTTP server to attach to."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "hash",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom hash function `(ip, workerCount) => workerIndex`."
+								}
+							],
+							"methodReturns": {
+								"type": "ClusterManager",
+								"description": "this"
+							}
+						}
+					]
+				},
+				{
+					"group": "Graceful Restart & Shutdown",
+					"methods": [
+						{
+							"method": "reload",
+							"signature": "reload()",
+							"description": "Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time — a new worker is spawned and confirmed listening before the old one is disconnected.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when all workers have been replaced."
+							}
+						},
+						{
+							"method": "shutdown",
+							"signature": "shutdown([opts])",
+							"description": "Shut down the entire cluster gracefully. Sends `'shutdown'` IPC message to all workers, then waits for them to exit. Workers that don't exit within the timeout are killed.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Shutdown options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "30000",
+									"notes": "Maximum ms to wait for workers to exit."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when all workers have exited."
+							}
+						}
+					]
+				},
+				{
+					"group": "Convenience Function",
+					"methods": [
+						{
+							"method": "clusterize",
+							"signature": "clusterize(workerFn, [opts])",
+							"description": "High-level clustering helper. Forks workers on the primary process and runs the provided setup function on each worker.",
+							"methodParams": [
+								{
+									"param": "workerFn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Function to execute on each worker process.\nReceives the ClusterManager instance as argument."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Cluster options (see ClusterManager constructor)."
+								}
+							],
+							"methodReturns": {
+								"type": "ClusterManager",
+								"description": "The cluster manager instance (on both primary and workers)."
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

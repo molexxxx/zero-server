@@ -2,11 +2,22 @@
 
 import { Server as HttpServer } from 'http';
 import { Server as HttpsServer, ServerOptions as TlsOptions } from 'https';
+import { Http2Server, Http2SecureServer } from 'http2';
 import { Request } from './request';
 import { Response } from './response';
 import { RouterInstance, RouteChain, RouteInfo, RouteOptions, RouteHandler } from './router';
 import { MiddlewareFunction, ErrorHandlerFunction, NextFunction } from './middleware';
-import { WebSocketHandler, WebSocketOptions } from './websocket';
+import { WebSocketHandler, WebSocketOptions, WebSocketPool } from './websocket';
+import { SSEStream } from './sse';
+import { LifecycleState } from './lifecycle';
+import { MetricsRegistry, HealthCheckResult } from './observe';
+
+export interface ListenOptions {
+    /** Create an HTTP/2 server. Combined with TLS options for h2 over TLS, or h2c (cleartext) otherwise. */
+    http2?: boolean;
+    /** Allow HTTP/1.1 fallback on HTTP/2 TLS servers (ALPN negotiation). Default: true. */
+    allowHTTP1?: boolean;
+}
 
 export interface App {
     /** Internal router instance. */
@@ -35,14 +46,95 @@ export interface App {
 
     /**
      * Start listening for connections.
+     * Pass `{ http2: true }` to create an HTTP/2 server (h2c cleartext or TLS with ALPN).
      */
     listen(port?: number, cb?: () => void): HttpServer;
     listen(port: number, opts: TlsOptions, cb?: () => void): HttpsServer;
+    listen(port: number, opts: ListenOptions & { http2: true } & TlsOptions, cb?: () => void): Http2SecureServer;
+    listen(port: number, opts: ListenOptions & { http2: true }, cb?: () => void): Http2Server;
+    listen(port: number, opts: ListenOptions, cb?: () => void): HttpServer | HttpsServer | Http2Server | Http2SecureServer;
 
     /**
      * Gracefully close the server.
      */
     close(cb?: (err?: Error) => void): void;
+
+    /**
+     * Perform a full graceful shutdown.
+     */
+    shutdown(opts?: { timeout?: number }): Promise<void>;
+
+    /**
+     * Register a lifecycle event listener.
+     */
+    on(event: 'beforeShutdown' | 'shutdown', fn: () => void | Promise<void>): App;
+
+    /**
+     * Remove a lifecycle event listener.
+     */
+    off(event: 'beforeShutdown' | 'shutdown', fn: () => void | Promise<void>): App;
+
+    /**
+     * Register a WebSocket pool for graceful shutdown.
+     */
+    registerPool(pool: WebSocketPool): App;
+
+    /**
+     * Unregister a WebSocket pool from lifecycle management.
+     */
+    unregisterPool(pool: WebSocketPool): App;
+
+    /**
+     * Track an SSE stream for graceful shutdown.
+     */
+    trackSSE(stream: SSEStream): App;
+
+    /**
+     * Register an ORM Database for graceful shutdown.
+     */
+    registerDatabase(db: { close(): Promise<void> }): App;
+
+    /**
+     * Unregister an ORM Database from lifecycle management.
+     */
+    unregisterDatabase(db: { close(): Promise<void> }): App;
+
+    /**
+     * Configure the shutdown timeout in milliseconds.
+     */
+    shutdownTimeout(ms: number): App;
+
+    /**
+     * Current lifecycle state.
+     */
+    readonly lifecycleState: LifecycleState;
+
+    /**
+     * Register a liveness health check endpoint.
+     */
+    health(path?: string, checks?: Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>): App;
+    health(checks?: Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>): App;
+
+    /**
+     * Register a readiness health check endpoint.
+     */
+    ready(path?: string, checks?: Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>): App;
+    ready(checks?: Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>): App;
+
+    /**
+     * Register a custom health check.
+     */
+    addHealthCheck(name: string, fn: () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>): App;
+
+    /**
+     * Get the application metrics registry.
+     */
+    metrics(): MetricsRegistry;
+
+    /**
+     * Mount a Prometheus metrics endpoint.
+     */
+    metricsEndpoint(path?: string, opts?: { registry?: MetricsRegistry }): App;
 
     /**
      * Register a WebSocket upgrade handler.

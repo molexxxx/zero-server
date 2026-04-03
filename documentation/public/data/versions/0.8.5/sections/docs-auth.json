@@ -1,0 +1,1070 @@
+{
+	"section": "Authentication & Sessions",
+	"icon": "lock",
+	"items": [
+		{
+			"name": "jwt",
+			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string.",
+			"params": [
+				{
+					"param": "token",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Raw JWT string."
+				}
+			],
+			"returns": {
+				"type": "{ header: object, payload: object, signature: string } | null",
+				"description": ""
+			},
+			"example": "  const { createApp, jwt } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(jwt({ secret: process.env.JWT_SECRET }));",
+			"methodGroups": [
+				{
+					"group": "JWT Middleware",
+					"methods": [
+						{
+							"method": "jwt",
+							"signature": "jwt(opts)",
+							"description": "Create JWT authentication middleware. On success, populates: - `req.user` — decoded payload - `req.auth` — `{ header, payload, token }` full decode info - `req.token` — raw JWT string",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Configuration."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "secret",
+									"type": "string | Buffer",
+									"default": "—",
+									"notes": "HMAC secret for HS* algorithms."
+								},
+								{
+									"option": "publicKey",
+									"type": "string | Buffer",
+									"default": "—",
+									"notes": "RSA public key (PEM) for RS* algorithms."
+								},
+								{
+									"option": "getKey",
+									"type": "Function",
+									"default": "—",
+									"notes": "Dynamic key resolver `async (header, payload) => key`. Overrides `secret`/`publicKey`."
+								},
+								{
+									"option": "jwksUri",
+									"type": "string",
+									"default": "—",
+									"notes": "JWKS endpoint URL (creates a `getKey` automatically)."
+								},
+								{
+									"option": "algorithms",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Allowed algorithms. Default: auto-detect."
+								},
+								{
+									"option": "getToken",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom token extractor `(req) => string|null`."
+								},
+								{
+									"option": "tokenLocation",
+									"type": "string",
+									"default": "'header'",
+									"notes": "Where to look: `'header'`, `'cookie'`, `'query'`."
+								},
+								{
+									"option": "cookieName",
+									"type": "string",
+									"default": "'token'",
+									"notes": "Cookie name when `tokenLocation='cookie'`."
+								},
+								{
+									"option": "queryParam",
+									"type": "string",
+									"default": "'token'",
+									"notes": "Query param name when `tokenLocation='query'`."
+								},
+								{
+									"option": "audience",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Required `aud` claim."
+								},
+								{
+									"option": "issuer",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Required `iss` claim."
+								},
+								{
+									"option": "subject",
+									"type": "string",
+									"default": "—",
+									"notes": "Required `sub` claim."
+								},
+								{
+									"option": "clockTolerance",
+									"type": "number",
+									"default": "0",
+									"notes": "Clock skew tolerance in seconds."
+								},
+								{
+									"option": "maxAge",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum token age in seconds."
+								},
+								{
+									"option": "credentialsRequired",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Return 401 if no token found (false = optional auth)."
+								},
+								{
+									"option": "isRevoked",
+									"type": "Function",
+									"default": "—",
+									"notes": "`async (payload) => boolean` — check token revocation."
+								},
+								{
+									"option": "onError",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom error handler `(err, req, res) => void`."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						}
+					]
+				},
+				{
+					"group": "JWT Core Functions",
+					"methods": [
+						{
+							"method": "sign",
+							"signature": "sign(payload, secret, [opts])",
+							"description": "Sign a payload and produce a JWT string.",
+							"methodParams": [
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Claims to encode."
+								},
+								{
+									"param": "secret",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "HMAC secret or RSA private key (PEM)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Signing options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'HS256'",
+									"notes": "Signing algorithm."
+								},
+								{
+									"option": "expiresIn",
+									"type": "number",
+									"default": "—",
+									"notes": "Expiry in seconds from now."
+								},
+								{
+									"option": "issuer",
+									"type": "string",
+									"default": "—",
+									"notes": "`iss` claim."
+								},
+								{
+									"option": "audience",
+									"type": "string",
+									"default": "—",
+									"notes": "`aud` claim."
+								},
+								{
+									"option": "subject",
+									"type": "string",
+									"default": "—",
+									"notes": "`sub` claim."
+								},
+								{
+									"option": "jwtId",
+									"type": "string",
+									"default": "—",
+									"notes": "`jti` claim."
+								},
+								{
+									"option": "header",
+									"type": "object",
+									"default": "—",
+									"notes": "Extra header fields."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "Signed JWT."
+							}
+						},
+						{
+							"method": "verify",
+							"signature": "verify(token, secretOrKey, [opts])",
+							"description": "Verify a JWT signature and validate claims.",
+							"methodParams": [
+								{
+									"param": "token",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Raw JWT string."
+								},
+								{
+									"param": "secretOrKey",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "HMAC secret or RSA public key (PEM)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Verification options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "algorithms",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Allowed algorithms. Default: inferred from key type."
+								},
+								{
+									"option": "audience",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Required `aud` claim."
+								},
+								{
+									"option": "issuer",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Required `iss` claim."
+								},
+								{
+									"option": "subject",
+									"type": "string",
+									"default": "—",
+									"notes": "Required `sub` claim."
+								},
+								{
+									"option": "clockTolerance",
+									"type": "number",
+									"default": "0",
+									"notes": "Seconds of clock skew tolerance for `exp`/`nbf`."
+								},
+								{
+									"option": "maxAge",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum token age in seconds (from `iat`)."
+								},
+								{
+									"option": "ignoreExpiration",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Skip expiry validation."
+								}
+							],
+							"methodReturns": {
+								"type": "{ header: object, payload: object }",
+								"description": "Decoded and verified token."
+							}
+						}
+					]
+				},
+				{
+					"group": "JWKS Support",
+					"methods": [
+						{
+							"method": "jwks",
+							"signature": "jwks(jwksUri, [opts])",
+							"description": "Create a JWKS key provider that fetches and caches public keys. Auto-refreshes keys when a `kid` is not found.",
+							"methodParams": [
+								{
+									"param": "jwksUri",
+									"type": "string",
+									"required": "Yes",
+									"notes": "URL of the JWKS endpoint."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "fetcher",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom fetch function (default: built-in fetch)."
+								},
+								{
+									"option": "cacheTtl",
+									"type": "number",
+									"default": "600000",
+									"notes": "Cache TTL in ms (default 10 minutes)."
+								},
+								{
+									"option": "requestTimeout",
+									"type": "number",
+									"default": "5000",
+									"notes": "Request timeout in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "`async (header) => publicKey` — resolves the signing key for a JWT header."
+							}
+						}
+					]
+				},
+				{
+					"group": "Token Refresh Helpers",
+					"methods": [
+						{
+							"method": "tokenPair",
+							"signature": "tokenPair(config)",
+							"description": "Create a token-pair factory for convenient access + refresh token generation.",
+							"methodParams": [
+								{
+									"param": "config",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Configuration."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "accessSecret",
+									"type": "string | Buffer",
+									"default": "—",
+									"notes": "Secret for access tokens."
+								},
+								{
+									"option": "refreshSecret",
+									"type": "string | Buffer",
+									"default": "—",
+									"notes": "Secret for refresh tokens (defaults to accessSecret)."
+								},
+								{
+									"option": "accessExpiresIn",
+									"type": "number",
+									"default": "900",
+									"notes": "Access token expiry in seconds (default: 15 min)."
+								},
+								{
+									"option": "refreshExpiresIn",
+									"type": "number",
+									"default": "604800",
+									"notes": "Refresh token expiry (default: 7 days)."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'HS256'",
+									"notes": "Signing algorithm."
+								}
+							],
+							"methodReturns": {
+								"type": "{ generateTokens: Function, verifyRefreshToken: Function, verifyAccessToken: Function }",
+								"description": ""
+							}
+						},
+						{
+							"method": "createRefreshToken",
+							"signature": "createRefreshToken(payload, secret, [opts])",
+							"description": "Generate a signed refresh token. Refresh tokens are long-lived and should be stored securely.",
+							"methodParams": [
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Claims (typically `{ sub, jti }`)."
+								},
+								{
+									"param": "secret",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Signing secret."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "expiresIn",
+									"type": "number",
+									"default": "604800",
+									"notes": "Expiry in seconds (default: 7 days)."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'HS256'",
+									"notes": "Signing algorithm."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "Signed refresh token (JWT)."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "session",
+			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server.",
+			"example": "  // Encrypted cookie session (stateless)\r\n  app.use(session({ secret: process.env.SESSION_SECRET }));",
+			"params": [
+				{
+					"param": "id",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Session ID."
+				},
+				{
+					"param": "data",
+					"type": "object",
+					"required": "No",
+					"notes": "Initial data."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Session class",
+					"methods": [
+						{
+							"method": "get",
+							"signature": "get(key)",
+							"description": "Get a session value by key.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "*",
+								"description": ""
+							}
+						},
+						{
+							"method": "set",
+							"signature": "set(key, value)",
+							"description": "Set a session value.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "value",
+									"type": "*",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Session",
+								"description": "this (chainable)"
+							}
+						},
+						{
+							"method": "has",
+							"signature": "has(key)",
+							"description": "Check if a key exists in the session.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "delete",
+							"signature": "delete(key)",
+							"description": "Delete a session key.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "true if the key existed."
+							}
+						},
+						{
+							"method": "all",
+							"signature": "all()",
+							"description": "Get all session data as a plain object.",
+							"methodReturns": {
+								"type": "object",
+								"description": ""
+							}
+						},
+						{
+							"method": "size",
+							"signature": "size()",
+							"description": "Number of session entries.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "clear",
+							"signature": "clear()",
+							"description": "Clear all session data.",
+							"methodReturns": {
+								"type": "Session",
+								"description": ""
+							}
+						},
+						{
+							"method": "destroy",
+							"signature": "destroy()",
+							"description": "Destroy the session. Clears all data and marks cookie for expiry."
+						},
+						{
+							"method": "regenerate",
+							"signature": "regenerate()",
+							"description": "Regenerate the session ID (prevents session fixation). Preserves existing data under a new ID."
+						},
+						{
+							"method": "flash",
+							"signature": "flash(key, value)",
+							"description": "Set a flash message (available only on the next request).",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Flash key (e.g. `'success'`, `'error'`)."
+								},
+								{
+									"param": "value",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Flash value."
+								}
+							],
+							"methodReturns": {
+								"type": "Session",
+								"description": ""
+							}
+						},
+						{
+							"method": "flashes",
+							"signature": "flashes([key])",
+							"description": "Read flash messages for a key (consumes them).",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "No",
+									"notes": "Flash key. If omitted, returns all flashes."
+								}
+							],
+							"methodReturns": {
+								"type": "*[] | object",
+								"description": "Array of messages for key, or object of all flashes."
+							}
+						}
+					]
+				},
+				{
+					"group": "Memory Store",
+					"methods": [
+						{
+							"method": "get",
+							"signature": "get(sid)",
+							"methodParams": [
+								{
+									"param": "sid",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "set",
+							"signature": "set(sid, data, [maxAge])",
+							"methodParams": [
+								{
+									"param": "sid",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "data",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Serialized session."
+								},
+								{
+									"param": "maxAge",
+									"type": "number",
+									"required": "No",
+									"notes": "TTL in ms."
+								}
+							]
+						},
+						{
+							"method": "destroy",
+							"signature": "destroy(sid)",
+							"methodParams": [
+								{
+									"param": "sid",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "length",
+							"signature": "length()",
+							"description": "Number of active sessions."
+						},
+						{
+							"method": "clear",
+							"signature": "clear()",
+							"description": "Clear all sessions."
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Stop the prune timer."
+						}
+					]
+				},
+				{
+					"group": "Session Middleware",
+					"methods": [
+						{
+							"method": "session",
+							"signature": "session(opts)",
+							"description": "Create session middleware. Two modes: 1. **Cookie session** (no `store`): Entire session encrypted in a cookie. Great for small payloads (< 4 KB). Zero server state. 2. **Server-side session** (with `store`): Only session ID in cookie, data lives in the store. Scales to large payloads.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Configuration."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "secret",
+									"type": "string | string[]",
+									"default": "—",
+									"notes": "Encryption secret(s). First secret used for\nencryption, all are tried for decryption (supports rotation)."
+								},
+								{
+									"option": "store",
+									"type": "object",
+									"default": "—",
+									"notes": "Server-side session store (must implement `get`, `set`, `destroy`)."
+								},
+								{
+									"option": "name",
+									"type": "string",
+									"default": "'sid'",
+									"notes": "Cookie name."
+								},
+								{
+									"option": "cookie",
+									"type": "object",
+									"default": "—",
+									"notes": "Cookie options."
+								},
+								{
+									"option": "cookie.maxAge",
+									"type": "number",
+									"default": "86400000",
+									"notes": "Cookie max-age in ms (default 24h)."
+								},
+								{
+									"option": "cookie.path",
+									"type": "string",
+									"default": "'/'",
+									"notes": "Cookie path."
+								},
+								{
+									"option": "cookie.domain",
+									"type": "string",
+									"default": "—",
+									"notes": "Cookie domain."
+								},
+								{
+									"option": "cookie.secure",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Secure-only flag (default: auto-detect via `req.secure`)."
+								},
+								{
+									"option": "cookie.httpOnly",
+									"type": "boolean",
+									"default": "true",
+									"notes": "HttpOnly flag."
+								},
+								{
+									"option": "cookie.sameSite",
+									"type": "string",
+									"default": "'Lax'",
+									"notes": "SameSite attribute."
+								},
+								{
+									"option": "rolling",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Reset cookie maxAge on every response."
+								},
+								{
+									"option": "genid",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom session ID generator."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "oauth",
+			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security.",
+			"params": [
+				{
+					"param": "length",
+					"type": "number",
+					"required": "No",
+					"notes": "Verifier length (43–128 per RFC 7636)."
+				}
+			],
+			"returns": {
+				"type": "{ codeVerifier: string, codeChallenge: string }",
+				"description": ""
+			},
+			"example": "  const { oauth } = require('zero-http');\r\n  const github = oauth({\r\n      provider: 'github',\r\n      clientId: process.env.GITHUB_CLIENT_ID,\r\n      clientSecret: process.env.GITHUB_CLIENT_SECRET,\r\n      callbackUrl: 'https://myapp.com/auth/github/callback',\r\n  });\r\n\n  app.get('/auth/github', (req, res) => {\r\n      const { url, state, codeVerifier } = github.authorize({ scope: 'user:email' });\r\n      req.session.set('oauth_state', state);\r\n      req.session.set('oauth_verifier', codeVerifier);\r\n      res.redirect(url);\r\n  });\r\n\n  app.get('/auth/github/callback', async (req, res) => {\r\n      const tokens = await github.callback(req.query, {\r\n          state: req.session.get('oauth_state'),\r\n          codeVerifier: req.session.get('oauth_verifier'),\r\n      });\r\n      const user = await github.userInfo(tokens.access_token);\r\n      res.json(user);\r\n  });",
+			"methodGroups": [
+				{
+					"group": "OAuth2 Client",
+					"methods": [
+						{
+							"method": "oauth",
+							"signature": "oauth(opts)",
+							"description": "Create an OAuth 2.0 client for Authorization Code flow (+ PKCE).",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Configuration."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "provider",
+									"type": "string",
+									"default": "—",
+									"notes": "Built-in provider name (`'google'`, `'github'`, `'microsoft'`, `'apple'`)."
+								},
+								{
+									"option": "clientId",
+									"type": "string",
+									"default": "—",
+									"notes": "OAuth client ID."
+								},
+								{
+									"option": "clientSecret",
+									"type": "string",
+									"default": "—",
+									"notes": "OAuth client secret."
+								},
+								{
+									"option": "callbackUrl",
+									"type": "string",
+									"default": "—",
+									"notes": "Redirect URI."
+								},
+								{
+									"option": "authorizeUrl",
+									"type": "string",
+									"default": "—",
+									"notes": "Authorization endpoint URL (overrides provider)."
+								},
+								{
+									"option": "tokenUrl",
+									"type": "string",
+									"default": "—",
+									"notes": "Token endpoint URL (overrides provider)."
+								},
+								{
+									"option": "userInfoUrl",
+									"type": "string",
+									"default": "—",
+									"notes": "UserInfo endpoint URL (overrides provider)."
+								},
+								{
+									"option": "scope",
+									"type": "string",
+									"default": "—",
+									"notes": "Default scopes (space-separated)."
+								},
+								{
+									"option": "pkce",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Enable PKCE (default: true if provider supports it)."
+								},
+								{
+									"option": "responseMode",
+									"type": "string",
+									"default": "—",
+									"notes": "Response mode override (e.g. `'form_post'` for Apple)."
+								},
+								{
+									"option": "fetcher",
+									"type": "Function",
+									"default": "—",
+									"notes": "Custom HTTP fetch function (default: built-in fetch)."
+								},
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "10000",
+									"notes": "HTTP request timeout in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function }",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "PKCE Helpers",
+					"methods": [
+						{
+							"method": "generateState",
+							"signature": "generateState([bytes])",
+							"description": "Generate a cryptographically random state parameter.",
+							"methodParams": [
+								{
+									"param": "bytes",
+									"type": "number",
+									"required": "No",
+									"notes": "Entropy bytes."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "URL-safe random string."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "authorize",
+			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.",
+			"example": "  const { authorize, can } = require('zero-http');\r\n\n  // Role-based: only admins and editors\r\n  app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {\r\n      res.json({ updated: true });\r\n  });\r\n\n  // Permission-based\r\n  app.delete('/posts/:id', can('posts:delete'), (req, res) => {\r\n      res.json({ deleted: true });\r\n  });\r\n\n  // Policy class\r\n  class PostPolicy extends Policy {\r\n      update(user, post) { return user.id === post.authorId || user.role === 'admin'; }\r\n      delete(user, post) { return user.role === 'admin'; }\r\n  }\r\n  app.delete('/posts/:id', gate(new PostPolicy(), 'delete', async (req) => {\r\n      return await db.query('SELECT * FROM posts WHERE id = ?', [req.params.id]);\r\n  }), (req, res) => {\r\n      res.json({ deleted: true });\r\n  });",
+			"methodGroups": [
+				{
+					"group": "Role-Based Access Control",
+					"methods": [
+						{
+							"method": "authorize",
+							"signature": "authorize(...roles)",
+							"description": "Role-based authorization middleware. Checks `req.user.role` or `req.user.roles` against allowed roles. Returns 401 if `req.user` is missing (not authenticated). Returns 403 if the user's role is not in the allowed list.",
+							"methodParams": [
+								{
+									"param": "roles",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Allowed roles."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						}
+					]
+				},
+				{
+					"group": "Permission-Based Access Control",
+					"methods": [
+						{
+							"method": "can",
+							"signature": "can(...permissions)",
+							"description": "Permission-based authorization middleware. Checks `req.user.permissions` (array or Set) for the required permission(s). Permission strings follow a `resource:action` convention: - `'posts:write'` — write access to posts - `'users:delete'` — delete users - `'*'` — superuser wildcard",
+							"methodParams": [
+								{
+									"param": "permissions",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Required permissions (ALL must be present unless `opts.any` is true)."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						},
+						{
+							"method": "canAny",
+							"signature": "canAny(...permissions)",
+							"description": "Like `can()`, but passes if the user has ANY of the listed permissions.",
+							"methodParams": [
+								{
+									"param": "permissions",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Permissions to check (any one is sufficient)."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware."
+							}
+						}
+					]
+				},
+				{
+					"group": "Policy Classes",
+					"methods": [
+						{
+							"method": "check",
+							"signature": "check(action, user, [resource])",
+							"description": "Check if an action is allowed. Falls through to the action method if defined, otherwise denies.",
+							"methodParams": [
+								{
+									"param": "action",
+									"type": "string",
+									"required": "Yes",
+									"notes": "The action name (method name)."
+								},
+								{
+									"param": "user",
+									"type": "object",
+									"required": "Yes",
+									"notes": "The authenticated user."
+								},
+								{
+									"param": "resource",
+									"type": "object",
+									"required": "No",
+									"notes": "The resource being accessed."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean | Promise<boolean>",
+								"description": ""
+							}
+						},
+						{
+							"method": "gate",
+							"signature": "gate(policy, action, [getResource])",
+							"description": "Policy gate middleware. Runs a policy check against a resource loaded from the request.",
+							"methodParams": [
+								{
+									"param": "policy",
+									"type": "Policy",
+									"required": "Yes",
+									"notes": "Policy instance."
+								},
+								{
+									"param": "action",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Action name to check."
+								},
+								{
+									"param": "getResource",
+									"type": "Function",
+									"required": "No",
+									"notes": "`async (req) => resource` loader. If omitted, passes `null`."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							}
+						}
+					]
+				},
+				{
+					"group": "req.user helpers (mixed in by middleware barrel)",
+					"methods": [
+						{
+							"method": "attachUserHelpers",
+							"signature": "attachUserHelpers()",
+							"description": "Attach convenience authorization methods to `req.user`. Call this middleware after JWT/session middleware. Adds: - `req.user.is(...roles)` — check roles - `req.user.can(...perms)` — check permissions",
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware."
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

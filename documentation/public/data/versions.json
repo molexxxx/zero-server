@@ -1,8 +1,13 @@
 [
 	{
+		"version": "0.8.5",
+		"date": "2026-04-03",
+		"latest": true
+	},
+	{
 		"version": "0.8.0",
 		"date": "2026-04-02",
-		"latest": true
+		"latest": false
 	},
 	{
 		"version": "0.7.0",

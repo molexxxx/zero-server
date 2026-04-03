@@ -657,6 +657,10 @@ function navigateToHash(id)
         const parentEl = document.getElementById(parentId);
         if (parentEl)
         {
+            /* Expand parent doc-item card */
+            const parentCard = parentEl.closest('.doc-item') || (parentEl.classList.contains('doc-item') ? parentEl : null);
+            if (parentCard) parentCard.classList.add('doc-item-expanded');
+
             let d = parentEl.closest('details');
             while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
             if (parentEl.tagName === 'DETAILS') parentEl.open = true;
@@ -668,6 +672,10 @@ function navigateToHash(id)
 
     if (!target) return;
 
+    /* Expand the target's doc-item card */
+    const docItem = target.closest('.doc-item') || (target.classList.contains('doc-item') ? target : null);
+    if (docItem) docItem.classList.add('doc-item-expanded');
+
     let d = target.closest('details');
     while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
 
@@ -678,7 +686,8 @@ function navigateToHash(id)
         .forEach(s => s.style.contentVisibility = 'visible');
 
     void document.documentElement.offsetHeight;
-    target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    const y = target.getBoundingClientRect().top + window.scrollY - 117;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
 }
 
 /* -- Export ------------------------------------------------- */

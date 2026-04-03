@@ -1,0 +1,139 @@
+{
+	"section": "Networking",
+	"icon": "globe",
+	"items": [
+		{
+			"name": "fetch",
+			"description": "Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS, JSON/URLSearchParams/Buffer/stream bodies, download & upload progress callbacks, timeouts, and AbortSignal.",
+			"options": [
+				{
+					"option": "method",
+					"type": "string",
+					"default": "'GET'",
+					"notes": "HTTP method."
+				},
+				{
+					"option": "headers",
+					"type": "object",
+					"default": "—",
+					"notes": "Request headers."
+				},
+				{
+					"option": "body",
+					"type": "string | Buffer | object | ReadableStream",
+					"default": "—",
+					"notes": "Request body."
+				},
+				{
+					"option": "timeout",
+					"type": "number",
+					"default": "—",
+					"notes": "Request timeout in ms."
+				},
+				{
+					"option": "signal",
+					"type": "AbortSignal",
+					"default": "—",
+					"notes": "Abort signal for cancellation."
+				},
+				{
+					"option": "agent",
+					"type": "import('http').Agent",
+					"default": "—",
+					"notes": "Custom HTTP agent."
+				},
+				{
+					"option": "onDownloadProgress",
+					"type": "Function",
+					"default": "—",
+					"notes": "`({ loaded, total }) => void` download progress callback."
+				},
+				{
+					"option": "onUploadProgress",
+					"type": "Function",
+					"default": "—",
+					"notes": "`({ loaded, total }) => void` upload progress callback."
+				},
+				{
+					"option": "rejectUnauthorized",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Reject connections with unverified certs (default: Node default `true`). TLS option — passed to `https.request()`."
+				},
+				{
+					"option": "ca",
+					"type": "string | Buffer | Array",
+					"default": "—",
+					"notes": "Override default CA certificates."
+				},
+				{
+					"option": "cert",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "Client certificate (PEM) for mutual TLS."
+				},
+				{
+					"option": "key",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "Private key (PEM) for mutual TLS."
+				},
+				{
+					"option": "pfx",
+					"type": "string | Buffer",
+					"default": "—",
+					"notes": "PFX / PKCS12 bundle (alternative to cert+key)."
+				},
+				{
+					"option": "passphrase",
+					"type": "string",
+					"default": "—",
+					"notes": "Passphrase for the key or PFX."
+				},
+				{
+					"option": "servername",
+					"type": "string",
+					"default": "—",
+					"notes": "SNI server name override."
+				},
+				{
+					"option": "ciphers",
+					"type": "string",
+					"default": "—",
+					"notes": "Colon-separated cipher list."
+				},
+				{
+					"option": "secureProtocol",
+					"type": "string",
+					"default": "—",
+					"notes": "SSL/TLS protocol method name."
+				},
+				{
+					"option": "minVersion",
+					"type": "string",
+					"default": "—",
+					"notes": "Minimum TLS version (`'TLSv1.2'`, etc.)."
+				},
+				{
+					"option": "maxVersion",
+					"type": "string",
+					"default": "—",
+					"notes": "Maximum TLS version."
+				}
+			],
+			"params": [
+				{
+					"param": "url",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Absolute URL to fetch."
+				}
+			],
+			"returns": {
+				"type": "Promise<{ status: number, statusText: string, ok: boolean, secure: boolean, url: string, headers: object, arrayBuffer: Function, text: Function, json: Function }>",
+				"description": "Resolves with a response object containing status info, headers, and body-reading helpers (`text()`, `json()`, `arrayBuffer()`)."
+			},
+			"example": "  const res = await fetch('https://api.example.com/data');\r\n  const body = await res.json();\r\n\n  // POST with JSON body & timeout\r\n  const res2 = await fetch('https://api.example.com/items', {\r\n      method: 'POST',\r\n      body: { name: 'widget' },\r\n      timeout: 5000,\r\n  });"
+		}
+	]
+}

@@ -1,0 +1,270 @@
+{
+	"version": "0.8.5",
+	"previousVersion": "0.8.0",
+	"date": "2026-04-03",
+	"changes": [
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Getting Started",
+			"name": "Full-Featured Server",
+			"description": "A complete production-ready skeleton combining security headers, CSRF, cookies, timeouts, request IDs, logging, CORS, compression, body parsing, rate limiting, validation, static serving, WebSocket, SSE, Router sub-apps, app settings, and error handling."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "jwt",
+			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "session",
+			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "oauth",
+			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "authorize",
+			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Observability",
+			"name": "structuredLogger",
+			"description": "Structured, enterprise-grade request logger. Outputs JSON or pretty-text with consistent fields: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`. Correlates with the `requestId` middleware (`req.id`), supports child loggers with bound context, custom transports, and environment-aware log level defaults."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Observability",
+			"name": "MetricsRegistry",
+			"description": "Zero-dependency metrics registry with Prometheus-compatible text exposition format. Provides Counter, Gauge, and Histogram metric types with label support, automatic HTTP instrumentation middleware, and a handler for `/metrics` endpoints."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Observability",
+			"name": "Tracer",
+			"description": "Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Observability",
+			"name": "healthCheck",
+			"description": "Health check middleware with liveness and readiness probes. Kubernetes-compatible `/healthz` and `/readyz` endpoints with composable checks (database ping, memory, event loop lag, disk space) and custom check registration. Returns `200` when healthy, `503` when degraded or during shutdown drain phase, with a JSON body detailing each check."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Lifecycle & Clustering",
+			"name": "LifecycleManager",
+			"description": "Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Lifecycle & Clustering",
+			"name": "ClusterManager",
+			"description": "Clustering support for zero-http applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers."
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "shutdown"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "on"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "off"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "registerPool"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "unregisterPool"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "trackSSE"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "registerDatabase"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "unregisterDatabase"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "shutdownTimeout"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "lifecycleState"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "health"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "ready"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "addHealthCheck"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "metrics"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "metricsEndpoint"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "jwtAuth"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "sessions"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "oauth"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Request",
+			"method": "ip"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Request",
+			"method": "ips"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Request",
+			"method": "protocol"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Request",
+			"method": "secure"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Response",
+			"method": "push"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "Response",
+			"method": "supportsPush"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Authentication & Sessions",
+			"name": "Authentication & Sessions"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Observability",
+			"name": "Observability"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Lifecycle & Clustering",
+			"name": "Lifecycle & Clustering"
+		}
+	]
+}

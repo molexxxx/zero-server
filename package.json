@@ -1,6 +1,6 @@
 {
   "name": "zero-http",
-  "version": "0.8.0",
+  "version": "0.8.5",
   "description": "Zero-dependency backend framework with routing, ORM, WebSocket, SSE, security middleware, and more",
   "main": "index.js",
   "bin": {

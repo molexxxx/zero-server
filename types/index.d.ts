@@ -6,11 +6,34 @@
 
 // --- Re-exports from individual type modules ---------------------
 
-export { App } from './app';
+export { App, ListenOptions } from './app';
 export { RouterInstance, RouteChain, RouteEntry, RouteInfo, RouteOptions, RouteHandler } from './router';
 export { Request, RangeResult } from './request';
-export { Response, SendFileOptions, CookieOptions } from './response';
+export { Response, SendFileOptions, CookieOptions, PushOptions } from './response';
 export { SSEOptions, SSEStream } from './sse';
+export { LifecycleManager, LifecycleState, LIFECYCLE_STATE } from './lifecycle';
+export { ClusterManager, ClusterOptions, cluster } from './cluster';
+export {
+    Logger, LoggerOptions, LogEntry, StructuredLoggerOptions, structuredLogger,
+    Counter, CounterOptions, Gauge, GaugeOptions, Histogram, HistogramOptions,
+    MetricsRegistry, MetricsRegistryOptions, DEFAULT_BUCKETS, DefaultMetrics,
+    createDefaultMetrics, MetricsMiddlewareOptions, metricsMiddleware, metricsEndpoint,
+    Span, Tracer, TracerOptions, TracingMiddlewareOptions,
+    parseTraceparent, formatTraceparent, tracingMiddleware, instrumentFetch,
+    HealthCheckResult, HealthCheckOptions, healthCheck,
+    CreateHealthHandlersOptions, createHealthHandlers,
+    memoryCheck, eventLoopCheck, diskSpaceCheck,
+} from './observe';
+export {
+    JwtHeader, JwtPayload, JwtDecoded, JwtSignOptions, JwtVerifyOptions, JwtVerifyResult,
+    JwtMiddlewareOptions, jwt, jwtSign, jwtVerify, jwtDecode,
+    JwksGetKey, JwksOptions, jwks,
+    TokenPairConfig, TokenPairInstance, tokenPair, createRefreshToken, SUPPORTED_ALGORITHMS,
+    Session, SessionData, SessionCookieOptions, SessionStore, MemoryStoreOptions, MemoryStore, SessionOptions, session,
+    OAuthProviderPreset, OAuthOptions, OAuthAuthorizeResult, OAuthTokens, OAuthClient,
+    oauth, generatePKCE, generateState, OAUTH_PROVIDERS,
+    authorize, can, canAny, Policy, gate, attachUserHelpers,
+} from './auth';
 export { WebSocketOptions, WebSocketHandler, WebSocketConnection, WebSocketPool } from './websocket';
 export {
     NextFunction, MiddlewareFunction, ErrorHandlerFunction,
@@ -103,6 +126,21 @@ import { TYPES, validateFKAction, validateCheck } from './orm';
 import { Migrator, QueryCache, Seeder, SeederRunner, Factory, Fake, defineMigration } from './orm';
 import { QueryProfiler, ReplicaManager } from './orm';
 import { TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager, CLI, runCLI } from './orm';
+import { LifecycleManager, LIFECYCLE_STATE } from './lifecycle';
+import { ClusterManager, cluster as clusterize } from './cluster';
+import {
+    Logger, structuredLogger,
+    Counter, Gauge, Histogram, MetricsRegistry, DEFAULT_BUCKETS,
+    createDefaultMetrics, metricsMiddleware, metricsEndpoint as metricsEndpointHandler,
+    Span, Tracer, parseTraceparent, formatTraceparent, tracingMiddleware, instrumentFetch,
+    healthCheck, createHealthHandlers, memoryCheck, eventLoopCheck, diskSpaceCheck,
+} from './observe';
+import {
+    jwt, jwtSign, jwtVerify, jwtDecode, jwks, tokenPair, createRefreshToken, SUPPORTED_ALGORITHMS,
+    session, Session, MemoryStore,
+    oauth, generatePKCE, generateState, OAUTH_PROVIDERS,
+    authorize, can, canAny, Policy, gate, attachUserHelpers,
+} from './auth';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -209,6 +247,58 @@ declare const zeroServer: {
         new(): WebSocketPool;
     };
     SSEStream: SSEStream;
+    // Lifecycle & Clustering
+    LifecycleManager: typeof LifecycleManager;
+    LIFECYCLE_STATE: typeof LIFECYCLE_STATE;
+    ClusterManager: typeof ClusterManager;
+    cluster: typeof clusterize;
+    // Observability — Structured Logging
+    Logger: typeof Logger;
+    structuredLogger: typeof structuredLogger;
+    // Observability — Metrics
+    Counter: typeof Counter;
+    Gauge: typeof Gauge;
+    Histogram: typeof Histogram;
+    MetricsRegistry: typeof MetricsRegistry;
+    DEFAULT_BUCKETS: typeof DEFAULT_BUCKETS;
+    createDefaultMetrics: typeof createDefaultMetrics;
+    metricsMiddleware: typeof metricsMiddleware;
+    metricsEndpoint: typeof metricsEndpointHandler;
+    // Observability — Tracing
+    Span: typeof Span;
+    Tracer: typeof Tracer;
+    parseTraceparent: typeof parseTraceparent;
+    formatTraceparent: typeof formatTraceparent;
+    tracingMiddleware: typeof tracingMiddleware;
+    instrumentFetch: typeof instrumentFetch;
+    // Observability — Health Checks
+    healthCheck: typeof healthCheck;
+    createHealthHandlers: typeof createHealthHandlers;
+    memoryCheck: typeof memoryCheck;
+    eventLoopCheck: typeof eventLoopCheck;
+    diskSpaceCheck: typeof diskSpaceCheck;
+    // Authentication & Sessions (Phase 3)
+    jwt: typeof jwt;
+    jwtSign: typeof jwtSign;
+    jwtVerify: typeof jwtVerify;
+    jwtDecode: typeof jwtDecode;
+    jwks: typeof jwks;
+    tokenPair: typeof tokenPair;
+    createRefreshToken: typeof createRefreshToken;
+    SUPPORTED_ALGORITHMS: typeof SUPPORTED_ALGORITHMS;
+    session: typeof session;
+    Session: typeof Session;
+    MemoryStore: typeof MemoryStore;
+    oauth: typeof oauth;
+    generatePKCE: typeof generatePKCE;
+    generateState: typeof generateState;
+    OAUTH_PROVIDERS: typeof OAUTH_PROVIDERS;
+    authorize: typeof authorize;
+    can: typeof can;
+    canAny: typeof canAny;
+    Policy: typeof Policy;
+    gate: typeof gate;
+    attachUserHelpers: typeof attachUserHelpers;
     /** Package version string */
     version: string;
 };

@@ -1,0 +1,293 @@
+{
+	"section": "Cookies & Security",
+	"icon": "shield",
+	"items": [
+		{
+			"name": "cookieParser",
+			"description": "Cookie parsing middleware. Parses the `Cookie` header and populates `req.cookies`. Supports signed cookies, JSON cookies, secret rotation, and timing-safe signature verification.",
+			"options": [
+				{
+					"option": "decode",
+					"type": "boolean",
+					"default": "true",
+					"notes": "URI-decode cookie values."
+				}
+			],
+			"params": [
+				{
+					"param": "secret",
+					"type": "string | string[]",
+					"required": "No",
+					"notes": "Secret(s) for signing / verifying cookies."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(cookieParser());\r\n  app.use(cookieParser('my-secret'));\r\n  app.use(cookieParser(['new-secret', 'old-secret'])); // key rotation",
+			"methodGroups": [
+				{
+					"group": "Static helpers",
+					"methods": [
+						{
+							"method": "sign",
+							"signature": "sign(val, secret)",
+							"description": "Sign a cookie value with the given secret.",
+							"methodParams": [
+								{
+									"param": "val",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cookie value to sign."
+								},
+								{
+									"param": "secret",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Signing secret."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "Signed value in format `s:<value>.<signature>`."
+							}
+						},
+						{
+							"method": "unsign",
+							"signature": "unsign(val, secret)",
+							"description": "Verify and unsign a signed cookie value.",
+							"methodParams": [
+								{
+									"param": "val",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Signed cookie value (`s:data.sig`)."
+								},
+								{
+									"param": "secret",
+									"type": "string | string[]",
+									"required": "Yes",
+									"notes": "Secret or array of secrets (for rotation)."
+								}
+							],
+							"methodReturns": {
+								"type": "string | false",
+								"description": "Unsigned value on success, `false` on failure."
+							}
+						},
+						{
+							"method": "jsonCookie",
+							"signature": "jsonCookie(val)",
+							"description": "Serialize a value as a JSON cookie string (prefixed with `j:`).",
+							"methodParams": [
+								{
+									"param": "val",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Value to serialize (object, array, etc.)."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "JSON cookie string."
+							}
+						},
+						{
+							"method": "parseJSON",
+							"signature": "parseJSON(str)",
+							"description": "Parse a JSON cookie string (must start with `j:`).",
+							"methodParams": [
+								{
+									"param": "str",
+									"type": "string",
+									"required": "Yes",
+									"notes": "JSON cookie string."
+								}
+							],
+							"methodReturns": {
+								"type": "*",
+								"description": "Parsed value, or the original string if not a valid JSON cookie."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "csrf",
+			"description": "CSRF (Cross-Site Request Forgery) protection middleware. Uses the double-submit cookie + header/body token pattern. Safe methods (GET, HEAD, OPTIONS) are skipped automatically. For state-changing requests (POST, PUT, PATCH, DELETE), the middleware checks for a matching token in: 1. `req.headers['x-csrf-token']` 2. `req.body._csrf` (if body parsed) 3. `req.query._csrf`",
+			"options": [
+				{
+					"option": "cookie",
+					"type": "string",
+					"default": "'_csrf'",
+					"notes": "Name of the double-submit cookie."
+				},
+				{
+					"option": "header",
+					"type": "string",
+					"default": "'x-csrf-token'",
+					"notes": "Request header that carries the token."
+				},
+				{
+					"option": "saltLength",
+					"type": "number",
+					"default": "18",
+					"notes": "Bytes of randomness for token generation."
+				},
+				{
+					"option": "secret",
+					"type": "string",
+					"default": "—",
+					"notes": "HMAC secret. Auto-generated per process if omitted."
+				},
+				{
+					"option": "ignoreMethods",
+					"type": "string[]",
+					"default": "—",
+					"notes": "HTTP methods to skip. Default: GET, HEAD, OPTIONS."
+				},
+				{
+					"option": "ignorePaths",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Path prefixes to skip (e.g. ['/api/webhooks'])."
+				},
+				{
+					"option": "onError",
+					"type": "Function",
+					"default": "—",
+					"notes": "Custom error handler `(req, res) => {}`."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware function."
+			},
+			"example": "  const { createApp, csrf } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(csrf());                   // default options\r\n  app.use(csrf({ cookie: 'tok' }));  // custom cookie name\r\n\n  // In a route, read the token for forms / SPA:\r\n  app.get('/form', (req, res) => {\r\n      res.json({ csrfToken: req.csrfToken });\r\n  });"
+		},
+		{
+			"name": "validate",
+			"description": "Request validation middleware. Validates `req.body`, `req.query`, and `req.params` against a schema object.  Returns 422 with detailed errors on failure.",
+			"options": [
+				{
+					"option": "body",
+					"type": "object",
+					"default": "—",
+					"notes": "Rules for req.body fields."
+				},
+				{
+					"option": "query",
+					"type": "object",
+					"default": "—",
+					"notes": "Rules for req.query fields."
+				},
+				{
+					"option": "params",
+					"type": "object",
+					"default": "—",
+					"notes": "Rules for req.params fields."
+				},
+				{
+					"option": "stripUnknown",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Remove fields not in schema."
+				},
+				{
+					"option": "onError",
+					"type": "Function",
+					"default": "—",
+					"notes": "Custom error handler `(errors, req, res) => {}`."
+				}
+			],
+			"params": [
+				{
+					"param": "schema",
+					"type": "object",
+					"required": "Yes",
+					"notes": "Validation rules object."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware function."
+			},
+			"example": "  const { createApp, validate } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.post('/users', validate({\r\n      body: {\r\n          name:  { type: 'string', required: true, minLength: 1, maxLength: 100 },\r\n          email: { type: 'string', required: true, match: /^[^@]+@[^@]+\\.[^@]+$/ },\r\n          age:   { type: 'integer', min: 0, max: 150 },\r\n      },\r\n      query: {\r\n          format: { type: 'string', enum: ['json', 'xml'], default: 'json' },\r\n      },\r\n  }), (req, res) => {\r\n      // req.body / req.query are now validated and sanitised\r\n  });",
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "field",
+							"signature": "field(value, rule, field)",
+							"description": "Validate a single value against a rule definition.",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Raw input value."
+								},
+								{
+									"param": "rule",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Rule definition."
+								},
+								{
+									"param": "field",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Field name (for error messages)."
+								}
+							],
+							"methodReturns": {
+								"type": "{ value: *, error: string | null }",
+								"description": ""
+							}
+						},
+						{
+							"method": "object",
+							"signature": "object(data, schema, [opts])",
+							"description": "Validate an object against a schema.",
+							"methodParams": [
+								{
+									"param": "data",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Input data."
+								},
+								{
+									"param": "schema",
+									"type": "object",
+									"required": "Yes",
+									"notes": "{ fieldName: ruleObject }"
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "stripUnknown",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Remove fields not in schema."
+								}
+							],
+							"methodReturns": {
+								"type": "{ sanitized: object, errors: string[] }",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}
