@@ -504,6 +504,7 @@ export function expandTocForId(id)
 
 export function scrollToId(id)
 {
+    if (id === 'features') { window.scrollTo({ top: 0, behavior: 'instant' }); return; }
     const target = document.getElementById(id);
     if (!target) return;
 

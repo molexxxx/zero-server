@@ -366,12 +366,19 @@ function renderDocItem(item, section)
     titleWrap.appendChild(createAnchorLink(slug));
 
     /* expand/collapse chevron */
-    const chevron = document.createElement('svg');
-    chevron.className = 'doc-item-chevron';
+    const ns = 'http://www.w3.org/2000/svg';
+    const chevron = document.createElementNS(ns, 'svg');
+    chevron.setAttribute('class', 'doc-item-chevron');
     chevron.setAttribute('viewBox', '0 0 24 24');
     chevron.setAttribute('fill', 'none');
     chevron.setAttribute('aria-hidden', 'true');
-    chevron.innerHTML = '<path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    const chevPath = document.createElementNS(ns, 'path');
+    chevPath.setAttribute('d', 'M9 6l6 6-6 6');
+    chevPath.setAttribute('stroke', 'currentColor');
+    chevPath.setAttribute('stroke-width', '2');
+    chevPath.setAttribute('stroke-linecap', 'round');
+    chevPath.setAttribute('stroke-linejoin', 'round');
+    chevron.appendChild(chevPath);
     titleWrap.appendChild(chevron);
 
     header.appendChild(titleWrap);
@@ -1141,7 +1148,7 @@ export async function loadDocs(version)
         /* Start deferred rendering */
         if (deferIdx < sections.length) _ric(renderBatch);
 
-        if (location.hash)
+        if (location.hash && location.hash !== '#features')
         {
             /* Force-render all deferred sections if hash target isn't rendered yet */
             const id = location.hash.slice(1);

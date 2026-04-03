@@ -6,13 +6,6 @@
 		{
 			"type": "added",
 			"kind": "item",
-			"section": "Getting Started",
-			"name": "Full-Featured Server",
-			"description": "A complete production-ready skeleton combining security headers, CSRF, cookies, timeouts, request IDs, logging, CORS, compression, body parsing, rate limiting, validation, static serving, WebSocket, SSE, Router sub-apps, app settings, and error handling."
-		},
-		{
-			"type": "added",
-			"kind": "item",
 			"section": "Authentication & Sessions",
 			"name": "jwt",
 			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
