@@ -16,6 +16,7 @@ import { initSearch, refreshSearchResults } from './ui/search.js';
 import { initBadges } from './ui/badges.js';
 import { initVersionSelector, registerVersionLoadDocs, registerVersionRefreshSearch } from './ui/version-selector.js';
 import { initPatchNotes } from './ui/patch-notes.js';
+import { initKingBobbyB } from './ui/kingbobbyb.js';
 
 /* -- Canvas ------------------------------------------------ */
 
@@ -49,6 +50,9 @@ registerVersionRefreshSearch(refreshSearchResults);
 
 function boot()
 {
+    // #features is "home" — prevent browser native anchor scroll
+    if (!location.hash || location.hash === '#features') window.scrollTo(0, 0);
+
     // UI shell (theme, bento, TOC, scroll-spy, progress, FAB)
     initUI();
     initCustomSelects();
@@ -118,6 +122,9 @@ function boot()
     }).catch(() => { loadDocs().catch(() => {}); initBadges(); });
     initSearch();
     initPatchNotes();
+
+    // Easter egg
+    initKingBobbyB();
 
     // Canvas animations
     initWaves();

@@ -19,7 +19,6 @@
 - [Exports](#exports)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
-- [Full-Featured Server](#full-featured-server)
 - [Core](#core)
   - [createApp](#createapp)
   - [Router](#router)
@@ -234,78 +233,6 @@ app.listen(3000, () => {
 > **Tip:** Middleware runs in registration order — add parsers before route handlers.
 > **Tip:** All route methods (get, post, put, etc.) return the app, so you can chain them.
 > **Tip:** Use app.onError() to register a global error handler for uncaught errors.
-
-
----
-
-## Full-Featured Server
-
-A complete production-ready skeleton combining security headers, CSRF, cookies, timeouts, request IDs, logging, CORS, compression, body parsing, rate limiting, validation, static serving, WebSocket, SSE, Router sub-apps, app settings, and error handling.
-
-```js
-const path = require('path')
-const { createApp, cors, json, urlencoded, text, compress, helmet, timeout,
-	requestId, cookieParser, csrf, validate, rateLimit, logger,
-	static: serveStatic, Router, WebSocketPool } = require('zero-http')
-
-const app = createApp()
-
-// App settings
-app.set('env', process.env.NODE_ENV || 'development')
-app.locals.appName = 'My App'
-
-// Middleware stack (order matters!)
-app.use(requestId())    // tag every request with a unique ID
-app.use(logger())       // log method, url, status, response time
-app.use(helmet())       // security headers (CSP, HSTS, X-Frame, etc.)
-app.use(cors())         // CORS with preflight handling
-app.use(compress())     // brotli/gzip/deflate response compression
-app.use(timeout(30000)) // 30s timeout → 408
-app.use(rateLimit())    // 100 req/min per IP
-app.use(cookieParser('my-secret'))  // signed cookies
-app.use(json({ limit: '1mb' }))     // JSON body parser
-app.use(urlencoded({ extended: true })) // form body parser
-app.use(text())         // plain text parser
-app.use(csrf())         // CSRF protection
-app.use(serveStatic(path.join(__dirname, 'public')))
-
-// API routes
-const api = Router()
-api.get('/health', (req, res) => res.json({ status: 'ok', id: req.id }))
-api.post('/users', validate({
-	body: {
-		name:  { type: 'string', required: true, minLength: 2 },
-		email: { type: 'email', required: true }
-	}
-}), (req, res) => res.status(201).json(req.body))
-app.use('/api', api)
-
-// WebSocket with rooms
-const pool = new WebSocketPool()
-app.ws('/chat', (ws, req) => {
-	pool.add(ws)
-	pool.join(ws, 'general')
-	ws.on('message', msg => pool.toRoom('general', msg, ws))
-})
-
-// SSE
-app.get('/events', (req, res) => {
-	const sse = res.sse({ retry: 3000, autoId: true })
-	sse.send('connected')
-	sse.on('close', () => console.log('bye'))
-})
-
-app.onError((err, req, res) => {
-	res.status(500).json({ error: err.message, requestId: req.id })
-})
-
-app.listen(3000)
-```
-
-
-> **Tip:** Always place parsers (json, urlencoded) before route handlers.
-> **Tip:** helmet() should come early in the middleware stack to set security headers on all responses.
-> **Tip:** cookieParser must come before csrf() since CSRF reads the cookie token.
 
 
 ---
@@ -1140,10 +1067,26 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
 
 
 ```js
-  const { createApp, jwt } = require('zero-http');
+  const { createApp, json, jwt, jwtSign, Router } = require('zero-http');
   const app = createApp();
+  const SECRET = process.env.JWT_SECRET;
 
-  app.use(jwt({ secret: process.env.JWT_SECRET }));
+  // Public — issue tokens
+  app.post('/login', json(), async (req, res) => {
+      const { email, password } = req.body;
+      const user = await db.users.findOne({ email });
+      if (!user || !await verify(password, user.hash))
+          return res.status(401).json({ error: 'Invalid credentials' });
+
+      const token = jwtSign({ sub: user.id, role: user.role }, SECRET, { expiresIn: 3600 });
+      res.json({ token });
+  });
+
+  // Protected — everything under /api requires a valid token
+  const api = Router();
+  api.use(jwt({ secret: SECRET }));
+  api.get('/me', (req, res) => res.json({ id: req.user.sub, role: req.user.role }));
+  app.use('/api', api);
 ```
 
 
@@ -1196,8 +1139,29 @@ Zero-dependency session middleware. Supports encrypted cookie sessions (stateles
 
 
 ```js
-  // Encrypted cookie session (stateless)
+  const { createApp, json, session } = require('zero-http');
+  const app = createApp();
+
   app.use(session({ secret: process.env.SESSION_SECRET }));
+
+  app.post('/login', json(), async (req, res) => {
+      const user = await db.users.findOne({ email: req.body.email });
+      if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+      req.session.set('userId', user.id);
+      req.session.set('role', user.role);
+      res.json({ ok: true });
+  });
+
+  app.get('/dashboard', (req, res) => {
+      if (!req.session.get('userId'))
+          return res.status(401).json({ error: 'Not logged in' });
+      res.json({ userId: req.session.get('userId'), role: req.session.get('role') });
+  });
+
+  app.post('/logout', (req, res) => {
+      req.session.destroy();
+      res.json({ ok: true });
+  });
 ```
 
 
@@ -1288,27 +1252,48 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 
 
 ```js
-  const { authorize, can } = require('zero-http');
+  const { createApp, jwt, authorize, can, canAny, Policy, gate,
+      attachUserHelpers, Router } = require('zero-http');
+  const app = createApp();
 
-  // Role-based: only admins and editors
+  app.use(jwt({ secret: process.env.JWT_SECRET }));
+  app.use(attachUserHelpers());
+
+  // Role-based — only admins and editors can modify posts
   app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {
       res.json({ updated: true });
   });
 
-  // Permission-based
-  app.delete('/posts/:id', can('posts:delete'), (req, res) => {
+  // Permission-based — require ALL listed permissions
+  app.delete('/users/:id', can('users:read', 'users:delete'), (req, res) => {
       res.json({ deleted: true });
   });
 
-  // Policy class
+  // ANY permission — useful for overlapping access
+  app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {
+      res.json({ reports: [] });
+  });
+
+  // Policy class — resource-level authorization
   class PostPolicy extends Policy {
+      before(user) { if (user.role === 'superadmin') return true; }
       update(user, post) { return user.id === post.authorId || user.role === 'admin'; }
       delete(user, post) { return user.role === 'admin'; }
   }
-  app.delete('/posts/:id', gate(new PostPolicy(), 'delete', async (req) => {
-      return await db.query('SELECT * FROM posts WHERE id = ?', [req.params.id]);
+
+  app.put('/posts/:id', gate(new PostPolicy(), 'update', async (req) => {
+      return await Post.findById(req.params.id);
   }), (req, res) => {
-      res.json({ deleted: true });
+      // req.resource is auto-populated by gate()
+      res.json({ updated: req.resource });
+  });
+
+  // Inline checks via attachUserHelpers()
+  app.get('/dashboard', (req, res) => {
+      const data = { user: req.user.sub };
+      if (req.user.is('admin')) data.adminPanel = true;
+      if (req.user.can('reports:export')) data.canExport = true;
+      res.json(data);
   });
 ```
 
