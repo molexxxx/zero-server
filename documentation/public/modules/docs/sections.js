@@ -4,7 +4,7 @@
  */
 
 import { escapeHtml, formatNotes, slugify, highlightAllPre } from '../core/helpers.js';
-import { histPushAccordion, histPushModal, histCloseModal, histPushHash, histCloseSidebar } from '../core/history.js';
+import { histPushAccordion, histPushModal, histCloseModal, histPushHash } from '../core/history.js';
 import { initTocCollapsible, expandTocForId, scrollToId, refreshScrollSpy } from '../ui/shell.js';
 
 /* -- Method meta store ------------------------------------- */
@@ -979,7 +979,6 @@ function populateToc(sections)
                 }
                 /* Expand when navigating to a section */
                 li.classList.remove('toc-collapsed');
-                histCloseSidebar();
             });
             li.appendChild(a);
 
@@ -996,7 +995,6 @@ function populateToc(sections)
                     subA.href = '#' + itemSlug(section.section, item.name);
                     subA.textContent = item.name;
                     subA.title = item.name;
-                    subA.addEventListener('click', () => histCloseSidebar());
                     subLi.appendChild(subA);
                     sub.appendChild(subLi);
                 }
