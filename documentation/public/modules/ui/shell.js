@@ -6,6 +6,16 @@
 
 import { histPushHash, histPushAccordion, histPushSidebar, histCloseSidebar } from '../core/history.js';
 
+function _resolveTopOffset()
+{
+    const el = document.createElement('div');
+    el.style.cssText = 'position:absolute;visibility:hidden;height:var(--top-offset)';
+    document.body.appendChild(el);
+    const px = el.offsetHeight + 5;
+    el.remove();
+    return px;
+}
+
 /* -- Theme Toggle (dark / light) --------------------------- */
 
 function initThemeToggle()
@@ -248,11 +258,6 @@ function initTocNavigation()
 
         e.preventDefault();
         histPushHash(hash);
-        if (hash === '#features') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            scrollToId(hash.slice(1));
-        }
         histCloseSidebar();
 
         const parentLi = a.closest('.toc-collapsible');
@@ -260,6 +265,12 @@ function initTocNavigation()
 
         const btn = document.querySelector('.toc-toggle');
         if (btn) btn.setAttribute('aria-expanded', 'false');
+
+        if (hash === '#features') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            scrollToId(hash.slice(1));
+        }
     });
 
     window.addEventListener('hashchange', () =>
@@ -355,7 +366,7 @@ function initScrollSpy()
                 else visibleSet.delete(entry.target.id);
             }
             updateActiveLink();
-        }, { rootMargin: '-117px 0px -60% 0px', threshold: 0 });
+        }, { rootMargin: `-${_resolveTopOffset()}px 0px -60% 0px`, threshold: 0 });
 
         window._scrollSpyObserver = observer;
         targets.forEach(t => observer.observe(t));
@@ -521,7 +532,7 @@ export function scrollToId(id)
         .forEach(s => s.style.contentVisibility = 'visible');
 
     void document.documentElement.offsetHeight;
-    const y = target.getBoundingClientRect().top + window.scrollY - 117;
+    const y = target.getBoundingClientRect().top + window.scrollY - _resolveTopOffset();
     window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
 }
 

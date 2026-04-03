@@ -11,6 +11,16 @@ import { getSelectedVersion, initSearchVersionBadge } from './version-selector.j
 const RECENT_KEY = 'zero-http-search-recent';
 const MAX_RECENT = 8;
 
+function _resolveTopOffset()
+{
+    const el = document.createElement('div');
+    el.style.cssText = 'position:absolute;visibility:hidden;height:var(--top-offset)';
+    document.body.appendChild(el);
+    const px = el.offsetHeight + 5;
+    el.remove();
+    return px;
+}
+
 let overlay, input, resultsContainer;
 let searchIndex = [];
 let searchIndexVersion = null;
@@ -686,7 +696,7 @@ function navigateToHash(id)
         .forEach(s => s.style.contentVisibility = 'visible');
 
     void document.documentElement.offsetHeight;
-    const y = target.getBoundingClientRect().top + window.scrollY - 117;
+    const y = target.getBoundingClientRect().top + window.scrollY - _resolveTopOffset();
     window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
 }
 
