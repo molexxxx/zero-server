@@ -112,7 +112,11 @@ export function initHeroCanvas()
 
     resize();
     seed();
-    window.addEventListener('resize', () => { resize(); seed(); });
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { resize(); if (paused) { draw(); } }, 150);
+    });
 
     if (!paused) start();
 }

@@ -1,0 +1,427 @@
+{
+	"section": "Middleware",
+	"icon": "layers",
+	"items": [
+		{
+			"name": "cors",
+			"description": "CORS middleware.  Supports exact origins, wildcard `'*'`, arrays of allowed origins, and suffix matching with a leading dot (e.g. `'.example.com'` matches `sub.example.com`).",
+			"options": [
+				{
+					"option": "origin",
+					"type": "string | string[]",
+					"default": "'*'",
+					"notes": "Allowed origin(s).  Use `'*'` for any,\nan array for a whitelist, or a string\nstarting with `'.'` for suffix matching."
+				},
+				{
+					"option": "methods",
+					"type": "string",
+					"default": "'GET,POST,PUT,DELETE,OPTIONS'",
+					"notes": "Allowed HTTP methods."
+				},
+				{
+					"option": "allowedHeaders",
+					"type": "string",
+					"default": "'Content-Type,Authorization'",
+					"notes": "Allowed request headers."
+				},
+				{
+					"option": "exposedHeaders",
+					"type": "string",
+					"default": "—",
+					"notes": "Headers the browser is allowed to read."
+				},
+				{
+					"option": "credentials",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Whether to set `Access-Control-Allow-Credentials`."
+				},
+				{
+					"option": "maxAge",
+					"type": "number",
+					"default": "—",
+					"notes": "Preflight cache duration in seconds."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(cors());                                  // allow all origins\r\n  app.use(cors({ origin: 'https://example.com' })); // single origin\r\n  app.use(cors({                                     // fine-grained\r\n      origin: ['https://my.example.com', '.example.com'],\r\n      credentials: true,\r\n      maxAge: 86400,\r\n  }));"
+		},
+		{
+			"name": "compress",
+			"description": "Response compression middleware using Node's built-in `zlib`. Supports gzip, deflate, and brotli (Node >= 11.7). Zero external dependencies.",
+			"options": [
+				{
+					"option": "threshold",
+					"type": "number",
+					"default": "1024",
+					"notes": "Minimum body size in bytes to compress."
+				},
+				{
+					"option": "level",
+					"type": "number",
+					"default": "—",
+					"notes": "Compression level (zlib.constants.Z_DEFAULT_COMPRESSION)."
+				},
+				{
+					"option": "encoding",
+					"type": "string | string[]",
+					"default": "—",
+					"notes": "Force specific encoding(s). Default: auto-negotiate."
+				},
+				{
+					"option": "filter",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req, res) => boolean` — return false to skip compression."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  const { createApp, compress } = require('zero-http');\r\n  const app = createApp();\r\n  app.use(compress());                // gzip/deflate/br auto-negotiated\r\n  app.use(compress({ threshold: 0 })) // compress everything"
+		},
+		{
+			"name": "helmet",
+			"description": "Security headers middleware. Sets common security-related HTTP response headers to help protect against well-known web vulnerabilities (XSS, clickjacking, MIME sniffing, etc.). Inspired by the `helmet` npm package but zero-dependency.",
+			"options": [
+				{
+					"option": "contentSecurityPolicy",
+					"type": "object | false",
+					"default": "—",
+					"notes": "CSP directive object or `false` to disable."
+				},
+				{
+					"option": "crossOriginEmbedderPolicy",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Set COEP header."
+				},
+				{
+					"option": "crossOriginOpenerPolicy",
+					"type": "string | false",
+					"default": "'same-origin'",
+					"notes": "COOP value."
+				},
+				{
+					"option": "crossOriginResourcePolicy",
+					"type": "string | false",
+					"default": "'same-origin'",
+					"notes": "CORP value."
+				},
+				{
+					"option": "dnsPrefetchControl",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Set X-DNS-Prefetch-Control: off."
+				},
+				{
+					"option": "frameguard",
+					"type": "string | false",
+					"default": "'deny'",
+					"notes": "X-Frame-Options value ('deny' | 'sameorigin')."
+				},
+				{
+					"option": "hidePoweredBy",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Remove X-Powered-By header."
+				},
+				{
+					"option": "hstsMaxAge",
+					"type": "number",
+					"default": "15552000",
+					"notes": "HSTS max-age in seconds (default ~180 days)."
+				},
+				{
+					"option": "hstsIncludeSubDomains",
+					"type": "boolean",
+					"default": "true",
+					"notes": "HSTS includeSubDomains directive."
+				},
+				{
+					"option": "hstsPreload",
+					"type": "boolean",
+					"default": "false",
+					"notes": "HSTS preload directive."
+				},
+				{
+					"option": "ieNoOpen",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Set X-Download-Options: noopen."
+				},
+				{
+					"option": "noSniff",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Set X-Content-Type-Options: nosniff."
+				},
+				{
+					"option": "permittedCrossDomainPolicies",
+					"type": "string | false",
+					"default": "'none'",
+					"notes": "X-Permitted-Cross-Domain-Policies."
+				},
+				{
+					"option": "referrerPolicy",
+					"type": "string | false",
+					"default": "'no-referrer'",
+					"notes": "Referrer-Policy value."
+				},
+				{
+					"option": "xssFilter",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Set X-XSS-Protection (legacy, off by default)."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(helmet());\r\n  app.use(helmet({ frameguard: 'sameorigin', hsts: false }));\r\n  app.use(helmet({\r\n      contentSecurityPolicy: {\r\n          directives: {\r\n              defaultSrc: [\"'self'\"],\r\n              scriptSrc: [\"'self'\", \"'unsafe-inline'\"],\r\n              styleSrc: [\"'self'\", \"'unsafe-inline'\"],\r\n              imgSrc: [\"'self'\", \"data:\", \"https:\"],\r\n          }\r\n      }\r\n  }));"
+		},
+		{
+			"name": "static",
+			"description": "Static file-serving middleware with MIME detection, directory index files, extension fallbacks, dotfile policies, caching, custom header hooks, and HTTP/2 server push for linked assets.",
+			"options": [
+				{
+					"option": "index",
+					"type": "string | false",
+					"default": "'index.html'",
+					"notes": "Default file for directory requests, or `false` to disable."
+				},
+				{
+					"option": "maxAge",
+					"type": "number",
+					"default": "0",
+					"notes": "`Cache-Control` max-age in **milliseconds**."
+				},
+				{
+					"option": "dotfiles",
+					"type": "string",
+					"default": "'ignore'",
+					"notes": "Dotfile policy: `'allow'` | `'deny'` | `'ignore'`."
+				},
+				{
+					"option": "extensions",
+					"type": "string[]",
+					"default": "—",
+					"notes": "Array of fallback extensions (e.g. `['html', 'htm']`)."
+				},
+				{
+					"option": "setHeaders",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(res, filePath) => void` hook to set custom headers."
+				},
+				{
+					"option": "pushAssets",
+					"type": "string[] | Function",
+					"default": "—",
+					"notes": "HTTP/2 server push. Array of paths\n(relative to root) to push when serving HTML files, or a function `(filePath) => string[]`."
+				}
+			],
+			"params": [
+				{
+					"param": "root",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Root directory to serve files from."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(serveStatic('public'));                            // serve ./public\r\n  app.use(serveStatic('dist', { maxAge: 86400000 }));       // 1-day cache\r\n  app.use(serveStatic('assets', { extensions: ['html'] })); // .html fallback"
+		},
+		{
+			"name": "rateLimit",
+			"description": "In-memory rate-limiting middleware. Limits requests per IP address within a fixed time window.",
+			"options": [
+				{
+					"option": "windowMs",
+					"type": "number",
+					"default": "60000",
+					"notes": "Time window in milliseconds."
+				},
+				{
+					"option": "max",
+					"type": "number",
+					"default": "100",
+					"notes": "Maximum requests per window per IP."
+				},
+				{
+					"option": "message",
+					"type": "string",
+					"default": "—",
+					"notes": "Custom error message."
+				},
+				{
+					"option": "statusCode",
+					"type": "number",
+					"default": "429",
+					"notes": "HTTP status for rate-limited responses."
+				},
+				{
+					"option": "keyGenerator",
+					"type": "function",
+					"default": "—",
+					"notes": "(req) => string; custom key extraction (default: req.ip)."
+				},
+				{
+					"option": "skip",
+					"type": "function",
+					"default": "—",
+					"notes": "(req) => boolean; return true to skip rate limiting."
+				},
+				{
+					"option": "handler",
+					"type": "function",
+					"default": "—",
+					"notes": "(req, res) => void; custom handler for rate-limited requests."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(rateLimit());                           // 100 req/min per IP\r\n  app.use(rateLimit({ windowMs: 15 * 60000, max: 50 })); // 50 req per 15 min\r\n  app.use(rateLimit({\r\n      max: 10,\r\n      keyGenerator: req => req.headers['x-api-key'],\r\n      skip: req => req.path === '/health',\r\n  }));"
+		},
+		{
+			"name": "timeout",
+			"description": "Request timeout middleware. Automatically sends a 408 response if the handler doesn't respond within the configured time limit. Helps prevent Slowloris-style attacks and hung requests.",
+			"options": [
+				{
+					"option": "status",
+					"type": "number",
+					"default": "408",
+					"notes": "HTTP status code for timeout responses."
+				},
+				{
+					"option": "message",
+					"type": "string",
+					"default": "'Request Timeout'",
+					"notes": "Error message body."
+				}
+			],
+			"params": [
+				{
+					"param": "ms",
+					"type": "number",
+					"required": "No",
+					"notes": "Timeout in milliseconds (default 30s)."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(timeout(5000)); // 5 second timeout\r\n  app.use(timeout(10000, { message: 'Too slow' }));"
+		},
+		{
+			"name": "requestId",
+			"description": "Request ID middleware. Assigns a unique identifier to each incoming request for tracing and debugging. Sets the ID on both the request object and as a response header.",
+			"options": [
+				{
+					"option": "header",
+					"type": "string",
+					"default": "'X-Request-Id'",
+					"notes": "Response header name."
+				},
+				{
+					"option": "generator",
+					"type": "Function",
+					"default": "—",
+					"notes": "Custom ID generator `() => string`."
+				},
+				{
+					"option": "trustProxy",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Trust incoming X-Request-Id header from proxy."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(requestId());\r\n  app.get('/', (req, res) => {\r\n      console.log(req.id); // e.g. '7f3a2b1c-...'\r\n  });"
+		},
+		{
+			"name": "logger",
+			"description": "Simple request-logging middleware. Logs method, url, status code, and response time.",
+			"options": [
+				{
+					"option": "logger",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom log function (default: console.log)."
+				},
+				{
+					"option": "colors",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Colorize output (default: true when TTY)."
+				},
+				{
+					"option": "format",
+					"type": "string",
+					"default": "—",
+					"notes": "'tiny' | 'short' | 'dev' (default: 'dev')."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  app.use(logger());                           // default 'dev' format\r\n  app.use(logger({ format: 'tiny' }));          // minimal output\r\n  app.use(logger({ colors: false, logger: msg => fs.appendFileSync('access.log', msg + '\\n') }));"
+		},
+		{
+			"name": "errorHandler",
+			"description": "Configurable error-handling middleware that formats error responses based on environment (dev vs production), supports custom formatters, and integrates with HttpError classes.",
+			"options": [
+				{
+					"option": "stack",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Include stack traces in responses (default: true when NODE_ENV !== 'production')."
+				},
+				{
+					"option": "log",
+					"type": "boolean",
+					"default": "—",
+					"notes": "Log errors to console (default: true)."
+				},
+				{
+					"option": "logger",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom log function (default: console.error)."
+				},
+				{
+					"option": "formatter",
+					"type": "function",
+					"default": "—",
+					"notes": "Custom response formatter: (err, req, isDev) => object."
+				},
+				{
+					"option": "onError",
+					"type": "function",
+					"default": "—",
+					"notes": "Callback on every error: (err, req, res) => void."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Error-handling middleware `(err, req, res, next) => void`."
+			},
+			"example": "  app.use(errorHandler());                       // dev-friendly by default\r\n  app.use(errorHandler({ stack: false }));        // hide stack traces\r\n  app.use(errorHandler({\r\n      formatter: (err, req, isDev) => ({ message: err.message }),\r\n      onError: (err) => metrics.increment('errors'),\r\n  }));"
+		}
+	]
+}

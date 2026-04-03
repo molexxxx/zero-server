@@ -816,3 +816,168 @@ describe('json adapter — function coverage', () => {
 		expect(count2).toBe(1);
 	});
 });
+
+// =========================================================================
+//  json adapter — _saveTable EPERM/EACCES retry branch
+// =========================================================================
+
+describe('json adapter — _saveTable atomic write retry', () => {
+	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-eperm-' + Date.now());
+	let adapter;
+
+	beforeAll(() => {
+		const JsonAdapter = require('../../../lib/orm/adapters/json');
+		adapter = new JsonAdapter({ dir: jsonDir });
+		adapter._tables.set('retry_test', [{ id: 1, name: 'hello' }]);
+		adapter._autoIncrements.set('retry_test', 2);
+	});
+
+	afterAll(() => {
+		try { fs.rmSync(jsonDir, { recursive: true, force: true }); } catch {}
+	});
+
+	it('retries rename on EPERM by unlink + rename', () => {
+		// First write normally so the file exists
+		adapter._saveTable('retry_test');
+		expect(fs.existsSync(path.join(jsonDir, 'retry_test.json'))).toBe(true);
+
+		// Monkey-patch renameSync to fail on first call with EPERM
+		const origRename = fs.renameSync;
+		let callCount = 0;
+		fs.renameSync = (...args) => {
+			callCount++;
+			if (callCount === 1) {
+				const err = new Error('EPERM');
+				err.code = 'EPERM';
+				throw err;
+			}
+			return origRename(...args);
+		};
+
+		try {
+			adapter._tables.set('retry_test', [{ id: 1, name: 'updated' }]);
+			adapter._saveTable('retry_test');
+
+			const content = JSON.parse(fs.readFileSync(path.join(jsonDir, 'retry_test.json'), 'utf8'));
+			expect(content.rows[0].name).toBe('updated');
+		} finally {
+			fs.renameSync = origRename;
+		}
+	});
+
+	it('falls back to direct writeFileSync when retry-rename also fails', () => {
+		adapter._saveTable('retry_test'); // ensure file exists
+
+		const origRename = fs.renameSync;
+		fs.renameSync = () => {
+			const err = new Error('EPERM');
+			err.code = 'EPERM';
+			throw err;
+		};
+
+		try {
+			adapter._tables.set('retry_test', [{ id: 1, name: 'fallback' }]);
+			adapter._saveTable('retry_test');
+
+			const content = JSON.parse(fs.readFileSync(path.join(jsonDir, 'retry_test.json'), 'utf8'));
+			expect(content.rows[0].name).toBe('fallback');
+		} finally {
+			fs.renameSync = origRename;
+		}
+	});
+
+	it('rethrows non-EPERM/EACCES errors from rename', () => {
+		const origRename = fs.renameSync;
+		fs.renameSync = () => {
+			const err = new Error('ENOENT');
+			err.code = 'ENOENT';
+			throw err;
+		};
+
+		try {
+			expect(() => adapter._saveTable('retry_test')).toThrow('ENOENT');
+		} finally {
+			fs.renameSync = origRename;
+		}
+	});
+});
+
+// =========================================================================
+//  json adapter — _scheduleSave with autoFlush=false
+// =========================================================================
+
+describe('json adapter — autoFlush=false', () => {
+	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-noauto-' + Date.now());
+	let adapter;
+
+	beforeAll(() => {
+		const JsonAdapter = require('../../../lib/orm/adapters/json');
+		adapter = new JsonAdapter({ dir: jsonDir, autoFlush: false });
+	});
+
+	afterAll(() => {
+		try { fs.rmSync(jsonDir, { recursive: true, force: true }); } catch {}
+	});
+
+	it('does not start flush timer when autoFlush is false', async () => {
+		await adapter.createTable('manual', {
+			id: { type: 'integer', primaryKey: true, autoIncrement: true },
+			name: { type: 'string' },
+		});
+		adapter._scheduleSave('manual');
+		expect(adapter.hasPendingWrites).toBe(true);
+		expect(adapter._flushTimer).toBeNull();
+	});
+
+	it('manual flush() writes dirty tables and clears timer', async () => {
+		await adapter.insert('manual', { name: 'test' });
+		expect(adapter.hasPendingWrites).toBe(true);
+
+		await adapter.flush();
+		expect(adapter.hasPendingWrites).toBe(false);
+		expect(fs.existsSync(path.join(jsonDir, 'manual.json'))).toBe(true);
+	});
+});
+
+// =========================================================================
+//  json adapter — remove method
+// =========================================================================
+
+describe('json adapter — remove', () => {
+	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-remove-' + Date.now());
+	let db;
+
+	beforeAll(async () => {
+		const { Database, Model, TYPES } = require('../../../');
+		db = Database.connect('json', { dir: jsonDir });
+
+		class RmModel extends Model {
+			static table = 'rm_test';
+			static schema = {
+				id: { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },
+				val: { type: TYPES.STRING },
+			};
+		}
+		db.register(RmModel);
+		await db.sync();
+	});
+
+	afterAll(async () => {
+		await db.adapter.flush();
+		try { fs.rmSync(jsonDir, { recursive: true, force: true }); } catch {}
+	});
+
+	it('remove saves after deleting a row', async () => {
+		await db.adapter.insert('rm_test', { val: 'to-delete' });
+		await db.adapter.flush();
+
+		const rows = db.adapter._tables.get('rm_test');
+		const id = rows[rows.length - 1].id;
+
+		await db.adapter.remove('rm_test', 'id', id);
+		await db.adapter.flush();
+
+		const content = JSON.parse(fs.readFileSync(path.join(jsonDir, 'rm_test.json'), 'utf8'));
+		expect(content.rows.find(r => r.id === id)).toBeUndefined();
+	});
+});

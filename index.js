@@ -26,6 +26,21 @@ const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator
 const { CLI, runCLI } = require('./lib/cli');
 const errors = require('./lib/errors');
 const debug = require('./lib/debug');
+const { LifecycleManager, LIFECYCLE_STATE } = require('./lib/lifecycle');
+const { ClusterManager, clusterize } = require('./lib/cluster');
+const {
+    Logger, structuredLogger,
+    Counter, Gauge, Histogram, MetricsRegistry, DEFAULT_BUCKETS,
+    createDefaultMetrics, metricsMiddleware, metricsEndpoint: metricsEndpointHandler,
+    Span, Tracer, parseTraceparent, formatTraceparent, tracingMiddleware, instrumentFetch,
+    healthCheck, createHealthHandlers, memoryCheck, eventLoopCheck, diskSpaceCheck,
+} = require('./lib/observe');
+const {
+    jwt, sign: jwtSign, verify: jwtVerify, decode: jwtDecode, jwks, tokenPair, createRefreshToken, SUPPORTED_ALGORITHMS,
+    session, Session, MemoryStore,
+    oauth, generatePKCE, generateState, PROVIDERS: OAUTH_PROVIDERS,
+    authorize, can, canAny, Policy, gate, attachUserHelpers,
+} = require('./lib/auth');
 const { version } = require('./package.json');
 
 module.exports = {
@@ -203,6 +218,107 @@ module.exports = {
     WebSocketPool,
     /** @see module:sse/stream */
     SSEStream,
+    // Lifecycle & Clustering
+    /** @see module:lifecycle */
+    LifecycleManager,
+    /** @see module:lifecycle */
+    LIFECYCLE_STATE,
+    /** @see module:cluster */
+    ClusterManager,
+    /** @see module:cluster */
+    cluster: clusterize,
+    // Observability — Structured Logging
+    /** @see module:observe/logger */
+    Logger,
+    /** @see module:observe/logger */
+    structuredLogger,
+    // Observability — Metrics
+    /** @see module:observe/metrics */
+    Counter,
+    /** @see module:observe/metrics */
+    Gauge,
+    /** @see module:observe/metrics */
+    Histogram,
+    /** @see module:observe/metrics */
+    MetricsRegistry,
+    /** @see module:observe/metrics */
+    DEFAULT_BUCKETS,
+    /** @see module:observe/metrics */
+    createDefaultMetrics,
+    /** @see module:observe/metrics */
+    metricsMiddleware,
+    /** @see module:observe/metrics */
+    metricsEndpoint: metricsEndpointHandler,
+    // Observability — Tracing
+    /** @see module:observe/tracing */
+    Span,
+    /** @see module:observe/tracing */
+    Tracer,
+    /** @see module:observe/tracing */
+    parseTraceparent,
+    /** @see module:observe/tracing */
+    formatTraceparent,
+    /** @see module:observe/tracing */
+    tracingMiddleware,
+    /** @see module:observe/tracing */
+    instrumentFetch,
+    // Observability — Health Checks
+    /** @see module:observe/health */
+    healthCheck,
+    /** @see module:observe/health */
+    createHealthHandlers,
+    /** @see module:observe/health */
+    memoryCheck,
+    /** @see module:observe/health */
+    eventLoopCheck,
+    /** @see module:observe/health */
+    diskSpaceCheck,
+    // Authentication & Sessions (Phase 3)
+    /** @see module:auth/jwt */
+    jwt,
+    /** @see module:auth/jwt */
+    jwtSign,
+    /** @see module:auth/jwt */
+    jwtVerify,
+    /** @see module:auth/jwt */
+    jwtDecode,
+    /** @see module:auth/jwt */
+    jwks,
+    /** @see module:auth/jwt */
+    tokenPair,
+    /** @see module:auth/jwt */
+    createRefreshToken,
+    /** @see module:auth/jwt */
+    SUPPORTED_ALGORITHMS,
+    // Auth: Sessions
+    /** @see module:auth/session */
+    session,
+    /** @see module:auth/session */
+    Session,
+    /** @see module:auth/session */
+    MemoryStore,
+    // Auth: OAuth2
+    /** @see module:auth/oauth */
+    oauth,
+    /** @see module:auth/oauth */
+    generatePKCE,
+    /** @see module:auth/oauth */
+    generateState,
+    /** @see module:auth/oauth */
+    OAUTH_PROVIDERS,
+    // Auth: Authorization
+    /** @see module:auth/authorize */
+    authorize,
+    /** @see module:auth/authorize */
+    can,
+    /** @see module:auth/authorize */
+    canAny,
+    /** @see module:auth/authorize */
+    Policy,
+    /** @see module:auth/authorize */
+    gate,
+    /** @see module:auth/authorize */
+    attachUserHelpers,
     /** Package version */
     version,
 };

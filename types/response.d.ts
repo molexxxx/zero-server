@@ -23,6 +23,13 @@ export interface CookieOptions {
     partitioned?: boolean;
 }
 
+export interface PushOptions {
+    /** Absolute path to a file to stream as the push body. */
+    filePath?: string;
+    /** Additional headers to include in the push promise. */
+    headers?: Record<string, string>;
+}
+
 export interface Response {
     /** Original Node response. */
     raw: ServerResponse;
@@ -30,6 +37,8 @@ export interface Response {
     locals: Record<string, any>;
     /** Reference to the parent App instance. */
     app: App | null;
+    /** Whether this response supports HTTP/2 server push. */
+    readonly supportsPush: boolean;
 
     /**
      * Set HTTP status code. Chainable.
@@ -139,4 +148,10 @@ export interface Response {
      * Set the Location response header.
      */
     location(url: string): Response;
+
+    /**
+     * Initiate an HTTP/2 server push.
+     * Returns null if the connection is not HTTP/2 or the stream is closed.
+     */
+    push(path: string, opts?: PushOptions): any;
 }

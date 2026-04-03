@@ -234,6 +234,8 @@ export interface StaticOptions {
     extensions?: string[];
     /** Custom header hook. */
     setHeaders?: (res: Response, filePath: string) => void;
+    /** HTTP/2 push: list of asset paths or function returning them. Only triggers for HTML responses on HTTP/2 connections. */
+    pushAssets?: string[] | ((filePath: string) => string[]);
 }
 
 declare function serveStatic(root: string, options?: StaticOptions): MiddlewareFunction;

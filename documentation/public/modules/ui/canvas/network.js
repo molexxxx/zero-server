@@ -216,7 +216,11 @@ export function initNetworkCanvas()
 
     resize();
     seed();
-    window.addEventListener('resize', () => { resize(); seed(); });
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { resize(); seed(); if (paused) { draw(); } }, 150);
+    });
 
     if (!paused) start();
 }

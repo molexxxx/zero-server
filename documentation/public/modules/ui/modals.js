@@ -3,7 +3,6 @@
  * Badge detail modals (tests + coverage).
  */
 
-import { escapeHtml } from '../core/helpers.js';
 import { histPushModal, histCloseModal } from '../core/history.js';
 import { barColor, buildSunburst } from './charts.js';
 

@@ -20,10 +20,13 @@ const SECTION_ICONS = {
     parse: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2"/><path d="M15 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2"/></svg>',
     layers: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
     shield: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    lock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
     settings: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     database: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
     zap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
     globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    activity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    'refresh-cw': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
     'alert-triangle': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
 };
 
@@ -351,24 +354,38 @@ function itemSlug(sectionName, itemName)
 function renderDocItem(item, section)
 {
     const slug = itemSlug(section, item.name);
-    const d = document.createElement('details');
-    d.className = 'acc nested doc-item';
+    const d = document.createElement('div');
+    d.className = 'doc-item';
     d.id = slug;
 
-    const s = document.createElement('summary');
-    s.innerHTML = `<span class="acc-title">${escapeHtml(item.name)}</span>`;
-    s.appendChild(createAnchorLink(slug));
-    d.appendChild(s);
+    const header = document.createElement('div');
+    header.className = 'doc-item-header';
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'doc-item-title-row';
+    titleWrap.innerHTML = `<span class="doc-item-indicator"></span><h5 class="doc-item-title">${escapeHtml(item.name)}</h5>`;
+    titleWrap.appendChild(createAnchorLink(slug));
 
-    const body = document.createElement('div');
-    body.className = 'acc-body';
+    /* expand/collapse chevron */
+    const chevron = document.createElement('svg');
+    chevron.className = 'doc-item-chevron';
+    chevron.setAttribute('viewBox', '0 0 24 24');
+    chevron.setAttribute('fill', 'none');
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = '<path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    titleWrap.appendChild(chevron);
 
+    header.appendChild(titleWrap);
     if (item.description)
     {
-        const p = document.createElement('p');
-        p.textContent = item.description;
-        body.appendChild(p);
+        const desc = document.createElement('p');
+        desc.className = 'doc-item-desc';
+        desc.textContent = item.description;
+        header.appendChild(desc);
     }
+    d.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'doc-item-body';
 
     /* -- CLI Tool layout ----------------------------------- */
     if (item.cliTool)
@@ -820,7 +837,7 @@ function renderDocItem(item, section)
         body.appendChild(tipsDiv);
     }
 
-    d.appendChild(body);
+    if (body.childNodes.length) d.appendChild(body);
     return d;
 }
 
@@ -845,16 +862,29 @@ function renderSection(section)
 
     if (Array.isArray(section.items))
     {
+        const grid = document.createElement('div');
+        grid.className = 'doc-items-grid';
         for (const item of section.items)
         {
-            wrapper.appendChild(renderDocItem(item, section.section));
+            grid.appendChild(renderDocItem(item, section.section));
         }
+        wrapper.appendChild(grid);
     }
 
     return wrapper;
 }
 
 /* -- TOC population ---------------------------------------- */
+
+const CHEVRON_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* Category groups for sidebar organisation */
+const TOC_GROUPS = [
+    { label: 'Framework', sections: ['Getting Started', 'Core', 'Body Parsers', 'Middleware'] },
+    { label: 'Security & Auth', sections: ['Cookies & Security', 'Authentication & Sessions'] },
+    { label: 'Data & I/O', sections: ['Environment', 'Real-Time', 'Networking', 'ORM'] },
+    { label: 'Platform', sections: ['Observability', 'Lifecycle & Clustering', 'Error Handling'] }
+];
 
 function populateToc(sections)
 {
@@ -865,48 +895,110 @@ function populateToc(sections)
 
     Array.from(nav.children).forEach(li =>
     {
-        if (!li.hasAttribute('data-static')) li.remove();
+        if (!li.hasAttribute('data-static') && !li.classList.contains('toc-group-label')) li.remove();
     });
 
-    for (const section of sections)
+    nav.querySelectorAll('.toc-group-label').forEach(el => el.remove());
+
+    const sectionMap = new Map();
+    for (const section of sections) sectionMap.set(section.section, section);
+
+    for (const group of TOC_GROUPS)
     {
-        const sSlug = sectionSlug(section.section);
-        const li = document.createElement('li');
-        li.className = 'toc-collapsible toc-collapsed';
+        const lbl = document.createElement('li');
+        lbl.className = 'toc-group-label';
+        lbl.setAttribute('aria-hidden', 'true');
+        lbl.textContent = group.label;
+        if (playgroundLi) nav.insertBefore(lbl, playgroundLi);
+        else nav.appendChild(lbl);
 
-        const a = document.createElement('a');
-        a.href = '#' + sSlug;
-        a.textContent = section.section;
-        a.addEventListener('click', () => histCloseSidebar());
-        li.appendChild(a);
-
-        if (Array.isArray(section.items) && section.items.length)
+        for (const name of group.sections)
         {
-            const sub = document.createElement('ul');
-            sub.className = 'toc-sub';
+            const section = sectionMap.get(name);
+            if (!section) continue;
 
-            for (const item of section.items)
+            const sSlug = sectionSlug(section.section);
+            const li = document.createElement('li');
+            li.className = 'toc-collapsible toc-collapsed';
+
+            const a = document.createElement('a');
+            a.href = '#' + sSlug;
+            a.title = section.section;
+
+            /* Section icon */
+            const iconHtml = SECTION_ICONS[section.icon];
+            if (iconHtml)
             {
-                const subLi = document.createElement('li');
-                subLi.className = 'toc-sub-item';
-                const subA = document.createElement('a');
-                subA.href = '#' + itemSlug(section.section, item.name);
-                subA.textContent = item.name;
-                subA.addEventListener('click', () => histCloseSidebar());
-                subLi.appendChild(subA);
-                sub.appendChild(subLi);
+                const iconWrap = document.createElement('span');
+                iconWrap.className = 'toc-link-icon';
+                iconWrap.innerHTML = iconHtml;
+                a.appendChild(iconWrap);
             }
 
-            li.appendChild(sub);
-        }
+            /* Section name — ellipsis via CSS */
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'toc-link-text';
+            nameSpan.textContent = section.section;
+            a.appendChild(nameSpan);
 
-        if (playgroundLi)
-        {
-            nav.insertBefore(li, playgroundLi);
-        }
-        else
-        {
-            nav.appendChild(li);
+            /* Item count badge */
+            const itemCount = Array.isArray(section.items) ? section.items.length : 0;
+            if (itemCount)
+            {
+                const badge = document.createElement('span');
+                badge.className = 'toc-item-count';
+                badge.textContent = itemCount;
+                a.appendChild(badge);
+            }
+
+            /* Inline chevron for collapsible toggle */
+            if (itemCount)
+            {
+                const chevron = document.createElement('span');
+                chevron.className = 'toc-chevron';
+                chevron.innerHTML = CHEVRON_SVG;
+                a.appendChild(chevron);
+            }
+
+            a.addEventListener('click', (e) =>
+            {
+                /* If clicked on the chevron area, toggle collapse instead of navigating */
+                if (e.target.closest('.toc-chevron') || e.target.closest('.toc-item-count'))
+                {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    li.classList.toggle('toc-collapsed');
+                    return;
+                }
+                /* Expand when navigating to a section */
+                li.classList.remove('toc-collapsed');
+                histCloseSidebar();
+            });
+            li.appendChild(a);
+
+            if (itemCount)
+            {
+                const sub = document.createElement('ul');
+                sub.className = 'toc-sub';
+
+                for (const item of section.items)
+                {
+                    const subLi = document.createElement('li');
+                    subLi.className = 'toc-sub-item';
+                    const subA = document.createElement('a');
+                    subA.href = '#' + itemSlug(section.section, item.name);
+                    subA.textContent = item.name;
+                    subA.title = item.name;
+                    subA.addEventListener('click', () => histCloseSidebar());
+                    subLi.appendChild(subA);
+                    sub.appendChild(subLi);
+                }
+
+                li.appendChild(sub);
+            }
+
+            if (playgroundLi) nav.insertBefore(li, playgroundLi);
+            else nav.appendChild(li);
         }
     }
 
@@ -946,53 +1038,128 @@ export async function loadDocs(version)
 
         container.innerHTML = '';
 
-        for (let si = 0; si < sections.length; si++)
+        /* -- Progressive rendering: first 3 sections immediately, rest in idle batches -- */
+        const EAGER_COUNT = 3;
+        const BATCH_SIZE  = 2;
+        const _ric = window.requestIdleCallback || (cb => setTimeout(cb, 1));
+
+        function renderAndAppend(si)
         {
             const sectionEl = renderSection(sections[si]);
 
-            if (si === 0 && !location.hash)
+            if (si === 0 && (!location.hash || location.hash === '#features'))
             {
-                const items = sectionEl.querySelectorAll('details.acc');
+                const items = sectionEl.querySelectorAll('.doc-item');
                 for (let i = 0; i < Math.min(2, items.length); i++)
                 {
-                    items[i].open = true;
+                    items[i].classList.add('doc-item-expanded');
                 }
+                /* Expand "Getting Started" in the sidebar to match */
+                expandTocForId('section-getting-started');
             }
 
             container.appendChild(sectionEl);
         }
 
+        /* Eager: render first batch synchronously */
+        const eagerEnd = Math.min(EAGER_COUNT, sections.length);
+        for (let si = 0; si < eagerEnd; si++) renderAndAppend(si);
+
+        /* Deferred: render remaining in idle batches */
+        let deferIdx = eagerEnd;
+
+        function renderBatch()
+        {
+            if (deferIdx >= sections.length)
+            {
+                /* All done — finalize */
+                finalize();
+                return;
+            }
+            const end = Math.min(deferIdx + BATCH_SIZE, sections.length);
+            for (let si = deferIdx; si < end; si++) renderAndAppend(si);
+            deferIdx = end;
+            _ric(renderBatch);
+        }
+
+        function finalize()
+        {
+            try { highlightAllPre(); } catch (e) { }
+            wireAccordions();
+            wireScrollExpand();
+            refreshScrollSpy();
+        }
+
+        function wireAccordions()
+        {
+            container.querySelectorAll('details.acc summary').forEach(summary =>
+            {
+                if (summary.dataset.wired === '1') return;
+                summary.dataset.wired = '1';
+                summary.addEventListener('click', (ev) =>
+                {
+                    ev.preventDefault();
+                    const details = summary.parentElement;
+                    if (details) {
+                        details.open = !details.open;
+                        if (details.id) histPushAccordion(details.id, details.open);
+                    }
+                });
+            });
+        }
+
+        /* -- Click-to-toggle expand/collapse for doc items ----- */
+        function wireScrollExpand()
+        {
+            const items = container.querySelectorAll('.doc-item');
+            if (!items.length) return;
+
+            items.forEach(item =>
+            {
+                const hdr = item.querySelector('.doc-item-header');
+                if (!hdr || hdr.dataset.wired === '1') return;
+                hdr.dataset.wired = '1';
+                hdr.addEventListener('click', (e) =>
+                {
+                    if (e.target.closest('.anchor-link')) return;
+                    item.classList.toggle('doc-item-expanded');
+                });
+            });
+        }
+
+        /* Kick off initial highlight + wiring for eager sections */
         try { highlightAllPre(); } catch (e) { }
 
         container.classList.remove('docs-loading');
         requestAnimationFrame(() => container.classList.add('docs-ready'));
 
         populateToc(sections);
+        wireAccordions();
+        wireScrollExpand();
         refreshScrollSpy();
 
-        container.querySelectorAll('details.acc summary').forEach(summary =>
-        {
-            if (summary.dataset.wired === '1') return;
-            summary.dataset.wired = '1';
-            summary.addEventListener('click', (ev) =>
-            {
-                ev.preventDefault();
-                const details = summary.parentElement;
-                if (details) {
-                    details.open = !details.open;
-                    if (details.id) histPushAccordion(details.id, details.open);
-                }
-            });
-        });
+        /* Start deferred rendering */
+        if (deferIdx < sections.length) _ric(renderBatch);
 
         if (location.hash)
         {
+            /* Force-render all deferred sections if hash target isn't rendered yet */
             const id = location.hash.slice(1);
-            const target = document.getElementById(id);
+            let target = document.getElementById(id);
+            if (!target && deferIdx < sections.length)
+            {
+                while (deferIdx < sections.length) renderAndAppend(deferIdx++);
+                finalize();
+                target = document.getElementById(id);
+            }
             if (target)
             {
                 let d = target.closest('details');
                 while (d) { d.open = true; d = d.parentElement ? d.parentElement.closest('details') : null; }
+
+                /* Expand the target doc-item if it's a collapsible card */
+                const docItem = target.closest('.doc-item') || (target.classList.contains('doc-item') ? target : null);
+                if (docItem) { docItem.classList.add('doc-item-expanded'); }
 
                 expandTocForId(id);
 
@@ -1001,7 +1168,8 @@ export async function loadDocs(version)
 
                 requestAnimationFrame(() => {
                     void document.documentElement.offsetHeight;
-                    target.scrollIntoView({ behavior: 'instant', block: 'start' });
+                    const y = target.getBoundingClientRect().top + window.scrollY - 117;
+                    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
                 });
             }
         }

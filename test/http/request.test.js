@@ -208,6 +208,7 @@ describe('Request — hostname from X-Forwarded-Host', () => {
 
     beforeAll(async () => {
         const app = createApp();
+        app.enable('trust proxy');
         app.get('/host', (req, res) => res.json({ hostname: req.hostname }));
         server = http.createServer(app.handler);
         await new Promise(r => server.listen(0, r));
@@ -702,4 +703,4 @@ describe('request — cookies without middleware', () => {
 		const { data } = await doFetch(`${base}/test`);
 		expect(data.cookies).toEqual({});
 	});
-});
+});

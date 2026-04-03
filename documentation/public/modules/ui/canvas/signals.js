@@ -141,7 +141,11 @@ export function initSignalsCanvas()
 
     resize();
     seed();
-    window.addEventListener('resize', () => { resize(); seed(); });
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { resize(); seed(); if (paused) { draw(); } }, 150);
+    });
 
     let inited = false;
     function initIfVisible() {

@@ -1,0 +1,2077 @@
+{
+	"section": "Core",
+	"icon": "box",
+	"items": [
+		{
+			"name": "createApp",
+			"description": "HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, and HTTP/1.1 support, built-in WebSocket upgrade handling, trust proxy resolution, and route introspection. Created via `createApp()` in the public API.",
+			"example": "  const { createApp } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(logger());\r\n  app.get('/hello', (req, res) => res.json({ hello: 'world' }));\r\n  app.listen(3000);",
+			"methodGroups": [
+				{
+					"group": "Settings",
+					"methods": [
+						{
+							"method": "set",
+							"signature": "set(key, [val])",
+							"description": "Set an application setting, or retrieve one when called with a single argument. When called with two arguments, sets the value and returns `this` for chaining. When called with one argument, returns the stored value. Common settings: `'trust proxy'`, `'env'`, `'json spaces'`, `'etag'`, `'view engine'`, `'views'`, `'case sensitive routing'`.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Setting name."
+								},
+								{
+									"param": "val",
+									"type": "*",
+									"required": "No",
+									"notes": "Setting value."
+								}
+							],
+							"methodReturns": {
+								"type": "* | App",
+								"description": "The stored value (getter) or `this` (setter)."
+							}
+						},
+						{
+							"method": "enable",
+							"signature": "enable(key)",
+							"description": "Set a boolean setting to `true`.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Setting name."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "disable",
+							"signature": "disable(key)",
+							"description": "Set a boolean setting to `false`.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Setting name."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "enabled",
+							"signature": "enabled(key)",
+							"description": "Check if a setting is truthy.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Setting name."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the setting is truthy."
+							}
+						},
+						{
+							"method": "disabled",
+							"signature": "disabled(key)",
+							"description": "Check if a setting is falsy.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Setting name."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the setting is falsy."
+							}
+						}
+					]
+				},
+				{
+					"group": "Middleware",
+					"methods": [
+						{
+							"method": "use",
+							"signature": "use(pathOrFn, [fn])",
+							"description": "Register middleware or mount a sub-router. - `use(fn)` — global middleware applied to every request. - `use('/prefix', fn)` — path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` — mount a Router sub-app at the given prefix.",
+							"methodParams": [
+								{
+									"param": "pathOrFn",
+									"type": "string | Function",
+									"required": "Yes",
+									"notes": "A path prefix string, or middleware function."
+								},
+								{
+									"param": "fn",
+									"type": "Function | Router",
+									"required": "No",
+									"notes": "Middleware function or Router when first arg is a path."
+								}
+							]
+						},
+						{
+							"method": "onError",
+							"signature": "onError(fn)",
+							"description": "Register a global error handler. The handler receives `(err, req, res, next)` and is invoked whenever a middleware or route handler throws or passes an error to `next(err)`.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Error-handling function `(err, req, res, next) => void`."
+								}
+							]
+						},
+						{
+							"method": "param",
+							"signature": "param(name, fn)",
+							"description": "Register a parameter pre-processing handler. Runs before route handlers for any route containing a `:name` parameter.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Parameter name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "`(req, res, next, value) => void`."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						}
+					]
+				},
+				{
+					"group": "Request Handling",
+					"methods": [
+						{
+							"method": "handle",
+							"signature": "handle(req, res)",
+							"description": "Core request handler.  Wraps the raw Node `req`/`res` in `Request`/`Response` wrappers, runs the middleware pipeline, then falls through to the router.",
+							"methodParams": [
+								{
+									"param": "req",
+									"type": "import('http').IncomingMessage",
+									"required": "Yes",
+									"notes": "Raw Node request."
+								},
+								{
+									"param": "res",
+									"type": "import('http').ServerResponse",
+									"required": "Yes",
+									"notes": "Raw Node response."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Server Lifecycle",
+					"methods": [
+						{
+							"method": "listen",
+							"signature": "listen([port], [opts], [cb])",
+							"description": "Start listening for HTTP, HTTPS, or HTTP/2 connections.",
+							"methodParams": [
+								{
+									"param": "port",
+									"type": "number",
+									"required": "No",
+									"notes": "Port number to bind."
+								},
+								{
+									"param": "opts",
+									"type": "object | Function",
+									"required": "No",
+									"notes": "Server options or callback."
+								},
+								{
+									"param": "cb",
+									"type": "Function",
+									"required": "No",
+									"notes": "Callback invoked once the server is listening."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "http2",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Create an HTTP/2 server."
+								},
+								{
+									"option": "key",
+									"type": "Buffer | string",
+									"default": "—",
+									"notes": "Private key for TLS (HTTPS or HTTP/2 with TLS)."
+								},
+								{
+									"option": "cert",
+									"type": "Buffer | string",
+									"default": "—",
+									"notes": "Certificate for TLS."
+								},
+								{
+									"option": "pfx",
+									"type": "Buffer | string",
+									"default": "—",
+									"notes": "PFX/PKCS12 bundle (alternative to key+cert)."
+								},
+								{
+									"option": "ca",
+									"type": "Buffer | string",
+									"default": "—",
+									"notes": "CA certificate(s) for client verification."
+								},
+								{
+									"option": "allowHTTP1",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Allow HTTP/1.1 fallback on HTTP/2 secure servers (ALPN)."
+								},
+								{
+									"option": "settings",
+									"type": "object",
+									"default": "—",
+									"notes": "HTTP/2 settings (SETTINGS frame values)."
+								}
+							],
+							"methodReturns": {
+								"type": "import('http').Server | import('https').Server | import('http2').Http2SecureServer | import('http2').Http2Server",
+								"description": ""
+							}
+						},
+						{
+							"method": "close",
+							"signature": "close([cb])",
+							"description": "Gracefully close the server, stopping new connections.",
+							"methodParams": [
+								{
+									"param": "cb",
+									"type": "Function",
+									"required": "No",
+									"notes": "Callback invoked once the server has closed."
+								}
+							]
+						},
+						{
+							"method": "shutdown",
+							"signature": "shutdown([opts])",
+							"description": "Perform a full graceful shutdown. Stops accepting new connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down registered databases.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Shutdown options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "timeout",
+									"type": "number",
+									"default": "—",
+									"notes": "Maximum ms to wait for in-flight requests (default 30000)."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": "Resolves when shutdown is complete."
+							}
+						}
+					]
+				},
+				{
+					"group": "Lifecycle Events",
+					"methods": [
+						{
+							"method": "on",
+							"signature": "on(event, fn)",
+							"description": "Register a lifecycle event listener. Supported events: - `'beforeShutdown'` — fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       — fires after shutdown is complete",
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "'beforeShutdown' | 'shutdown'",
+									"required": "Yes",
+									"notes": "Lifecycle event name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Async or sync callback."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "off",
+							"signature": "off(event, fn)",
+							"description": "Remove a lifecycle event listener.",
+							"methodParams": [
+								{
+									"param": "event",
+									"type": "'beforeShutdown' | 'shutdown'",
+									"required": "Yes",
+									"notes": "Event name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Callback to remove."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						}
+					]
+				},
+				{
+					"group": "Lifecycle Resource Registration",
+					"methods": [
+						{
+							"method": "registerPool",
+							"signature": "registerPool(pool)",
+							"description": "Register a WebSocket pool for graceful shutdown. All connections in the pool are closed with code `1001` when the server shuts down.",
+							"methodParams": [
+								{
+									"param": "pool",
+									"type": "import('./ws/room')",
+									"required": "Yes",
+									"notes": "WebSocket pool instance."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "unregisterPool",
+							"signature": "unregisterPool(pool)",
+							"description": "Unregister a WebSocket pool from lifecycle management.",
+							"methodParams": [
+								{
+									"param": "pool",
+									"type": "import('./ws/room')",
+									"required": "Yes",
+									"notes": "WebSocket pool instance."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "trackSSE",
+							"signature": "trackSSE(stream)",
+							"description": "Track an SSE stream for graceful shutdown. The stream is automatically untracked when it closes.",
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "import('./sse/stream')",
+									"required": "Yes",
+									"notes": "SSE stream instance."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "registerDatabase",
+							"signature": "registerDatabase(db)",
+							"description": "Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown.",
+							"methodParams": [
+								{
+									"param": "db",
+									"type": "import('./orm')",
+									"required": "Yes",
+									"notes": "Database instance."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "unregisterDatabase",
+							"signature": "unregisterDatabase(db)",
+							"description": "Unregister an ORM Database instance from lifecycle management.",
+							"methodParams": [
+								{
+									"param": "db",
+									"type": "import('./orm')",
+									"required": "Yes",
+									"notes": "Database instance."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "shutdownTimeout",
+							"signature": "shutdownTimeout(ms)",
+							"description": "Configure the shutdown timeout—the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them.",
+							"methodParams": [
+								{
+									"param": "ms",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Timeout in milliseconds."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "lifecycleState",
+							"signature": "lifecycleState()",
+							"description": "Current lifecycle state."
+						}
+					]
+				},
+				{
+					"group": "Observability",
+					"methods": [
+						{
+							"method": "health",
+							"signature": "health([path], [checks])",
+							"description": "Register a liveness health check endpoint. Returns `200` when healthy, `503` during shutdown.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "No",
+									"notes": "Endpoint path."
+								},
+								{
+									"param": "checks",
+									"type": "Object<string, Function>",
+									"required": "No",
+									"notes": "Named health check functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "ready",
+							"signature": "ready([path], [checks])",
+							"description": "Register a readiness health check endpoint. Returns `200` when all checks pass, `503` otherwise.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "No",
+									"notes": "Endpoint path."
+								},
+								{
+									"param": "checks",
+									"type": "Object<string, Function>",
+									"required": "No",
+									"notes": "Named readiness check functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "addHealthCheck",
+							"signature": "addHealthCheck(name, fn)",
+							"description": "Register a custom health check.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Check name."
+								},
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Check function `() => { healthy, details }`."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "metrics",
+							"signature": "metrics()",
+							"description": "Get the application metrics registry. Lazily created on first access. Returns a `MetricsRegistry` instance for registering custom metrics.",
+							"methodReturns": {
+								"type": "import('./observe/metrics').MetricsRegistry",
+								"description": "The metrics registry."
+							}
+						},
+						{
+							"method": "metricsEndpoint",
+							"signature": "metricsEndpoint([path], [opts])",
+							"description": "Mount a Prometheus metrics endpoint.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "No",
+									"notes": "Endpoint path."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "registry",
+									"type": "import('./observe/metrics').MetricsRegistry",
+									"default": "—",
+									"notes": "Registry. Uses `app.metrics()` if not provided."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						}
+					]
+				},
+				{
+					"group": "WebSocket Support",
+					"methods": [
+						{
+							"method": "ws",
+							"signature": "ws(path, [opts], handler)",
+							"description": "Register a WebSocket upgrade handler for a path. The handler receives `(ws, req)` where `ws` is a `WebSocketConnection` instance with methods like `send()`, `sendJSON()`, `on()`, and `close()`.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "URL path to listen for upgrade requests."
+								},
+								{
+									"param": "opts",
+									"type": "object | Function",
+									"required": "No",
+									"notes": "Options object, or the handler function directly."
+								},
+								{
+									"param": "handler",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "`(ws, req) => void`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "maxPayload",
+									"type": "number",
+									"default": "1048576",
+									"notes": "Maximum incoming frame size in bytes (default 1 MB)."
+								},
+								{
+									"option": "pingInterval",
+									"type": "number",
+									"default": "30000",
+									"notes": "Auto-ping interval in ms. Set `0` to disable."
+								},
+								{
+									"option": "verifyClient",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => boolean` — return false to reject the upgrade."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Route Introspection",
+					"methods": [
+						{
+							"method": "routes",
+							"signature": "routes()",
+							"description": "Return a flat list of all registered routes across the router tree, including mounted sub-routers.  Useful for debugging, auto-generated docs, or CLI tooling.",
+							"methodReturns": {
+								"type": "{ method: string, path: string }[]",
+								"description": "Flat array of route entries including WebSocket handlers."
+							}
+						}
+					]
+				},
+				{
+					"group": "Route Registration",
+					"methods": [
+						{
+							"method": "route",
+							"signature": "route(method, path, ...fns)",
+							"description": "Register one or more handler functions for a specific HTTP method and path.",
+							"methodParams": [
+								{
+									"param": "method",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HTTP method (GET, POST, etc.) or 'ALL'."
+								},
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern (e.g. '/users/:id')."
+								},
+								{
+									"param": "fns",
+									"type": "Function | object",
+									"required": "Yes",
+									"notes": "Optional options object `{ secure }` followed by handler functions."
+								}
+							]
+						},
+						{
+							"method": "get",
+							"signature": "get(path, ...fns)",
+							"description": "Shortcut for GET requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "post",
+							"signature": "post(path, ...fns)",
+							"description": "Shortcut for POST requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "put",
+							"signature": "put(path, ...fns)",
+							"description": "Shortcut for PUT requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "delete",
+							"signature": "delete(path, ...fns)",
+							"description": "Shortcut for DELETE requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "patch",
+							"signature": "patch(path, ...fns)",
+							"description": "Shortcut for PATCH requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "options",
+							"signature": "options(path, ...fns)",
+							"description": "Shortcut for OPTIONS requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "head",
+							"signature": "head(path, ...fns)",
+							"description": "Shortcut for HEAD requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "all",
+							"signature": "all(path, ...fns)",
+							"description": "Matches every HTTP method.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "chain",
+							"signature": "chain(path)",
+							"description": "Chainable route builder — register multiple methods on the same path.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								}
+							],
+							"methodReturns": {
+								"type": "object",
+								"description": "Chain object with HTTP verb methods."
+							}
+						},
+						{
+							"method": "group",
+							"signature": "group(prefix, ...middleware)",
+							"description": "Define a route group with shared middleware prefix. All routes registered inside the callback share the given path prefix and middleware stack.",
+							"methodParams": [
+								{
+									"param": "prefix",
+									"type": "string",
+									"required": "Yes",
+									"notes": "URL prefix for the group."
+								},
+								{
+									"param": "middleware",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Shared middleware, last argument is the callback."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						}
+					]
+				},
+				{
+					"group": "Authentication & Sessions",
+					"methods": [
+						{
+							"method": "jwtAuth",
+							"signature": "jwtAuth(opts)",
+							"description": "Mount JWT authentication middleware. Shorthand for `app.use(jwt(opts))`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "JWT options (see `jwt()` for full documentation)."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "sessions",
+							"signature": "sessions(opts)",
+							"description": "Mount session middleware. Shorthand for `app.use(session(opts))`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Session options (see `session()` for full documentation)."
+								}
+							],
+							"methodReturns": {
+								"type": "App",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "oauth",
+							"signature": "oauth(opts)",
+							"description": "Create an OAuth2 client bound to this app. Returns the client — does NOT mount any middleware automatically.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "OAuth options (see `oauth()` for full documentation)."
+								}
+							],
+							"methodReturns": {
+								"type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function }",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Router",
+			"description": "Full-featured pattern-matching router with named parameters, wildcard catch-alls, sequential handler chains, sub-router mounting, and route introspection.",
+			"example": "  const { Router } = require('zero-http');\r\n\n  const api = new Router();\r\n\n  api.get('/users/:id', (req, res) => {\r\n      res.json({ id: req.params.id });\r\n  });\r\n\n  api.route('/posts')\r\n      .get((req, res) => res.json([]))\r\n      .post((req, res) => res.json({ created: true }));\r\n\n  app.use('/api', api);",
+			"methodGroups": [
+				{
+					"group": "Core",
+					"methods": [
+						{
+							"method": "add",
+							"signature": "add(method, path, handlers, [options])",
+							"description": "Register a route.",
+							"methodParams": [
+								{
+									"param": "method",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HTTP method (e.g. 'GET') or 'ALL' to match any."
+								},
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "handlers",
+									"type": "Function[]",
+									"required": "Yes",
+									"notes": "One or more handler functions `(req, res, next) => void`."
+								},
+								{
+									"param": "options",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "secure",
+									"type": "boolean",
+									"default": "—",
+									"notes": "When `true`, route matches only HTTPS requests;\nwhen `false`, only HTTP. Omit to match both."
+								}
+							]
+						},
+						{
+							"method": "use",
+							"signature": "use(prefix, router)",
+							"description": "Mount a child Router under a path prefix. Requests matching the prefix are delegated to the child router with the prefix stripped from `req.url`.",
+							"methodParams": [
+								{
+									"param": "prefix",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Path prefix (e.g. '/api')."
+								},
+								{
+									"param": "router",
+									"type": "Router",
+									"required": "Yes",
+									"notes": "Child router instance."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "handle",
+							"signature": "handle(req, res)",
+							"description": "Match an incoming request against the route table and execute the first matching handler chain.  Delegates to child routers when mounted. Sends a 404 JSON response when no route matches.",
+							"methodParams": [
+								{
+									"param": "req",
+									"type": "import('./request')",
+									"required": "Yes",
+									"notes": "Wrapped request."
+								},
+								{
+									"param": "res",
+									"type": "import('./response')",
+									"required": "Yes",
+									"notes": "Wrapped response."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Route Shortcuts",
+					"methods": [
+						{
+							"method": "get",
+							"signature": "get(path, ...fns)",
+							"description": "Shortcut for GET requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "post",
+							"signature": "post(path, ...fns)",
+							"description": "Shortcut for POST requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "put",
+							"signature": "put(path, ...fns)",
+							"description": "Shortcut for PUT requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "delete",
+							"signature": "delete(path, ...fns)",
+							"description": "Shortcut for DELETE requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "patch",
+							"signature": "patch(path, ...fns)",
+							"description": "Shortcut for PATCH requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "options",
+							"signature": "options(path, ...fns)",
+							"description": "Shortcut for OPTIONS requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "head",
+							"signature": "head(path, ...fns)",
+							"description": "Shortcut for HEAD requests.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "all",
+							"signature": "all(path, ...fns)",
+							"description": "Matches every HTTP method.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								},
+								{
+									"param": "fns",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Handler functions."
+								}
+							],
+							"methodReturns": {
+								"type": "Router",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "route",
+							"signature": "route(path)",
+							"description": "Chainable route builder — register multiple methods on the same path.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Route pattern."
+								}
+							],
+							"methodReturns": {
+								"type": "{ get, post, put, delete, patch, options, head, all: Function }",
+								"description": "Chain object with HTTP verb methods."
+							}
+						}
+					]
+				},
+				{
+					"group": "Introspection",
+					"methods": [
+						{
+							"method": "inspect",
+							"signature": "inspect([prefix])",
+							"description": "Return a flat list of all registered routes, including those in mounted child routers.  Useful for debugging or auto-documentation.",
+							"methodParams": [
+								{
+									"param": "prefix",
+									"type": "string",
+									"required": "No",
+									"notes": "Internal: accumulated prefix from parent routers."
+								}
+							],
+							"methodReturns": {
+								"type": "{ method: string, path: string, secure?: boolean }[]",
+								"description": "Registered routes."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Request",
+			"description": "Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible — detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.",
+			"params": [
+				{
+					"param": "req",
+					"type": "import('http').IncomingMessage",
+					"required": "Yes",
+					"notes": "Raw Node incoming message."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Trust Proxy Resolution",
+					"methods": [
+						{
+							"method": "ip",
+							"signature": "ip()",
+							"description": "Client IP address. When `trust proxy` is enabled, resolves through the X-Forwarded-For chain."
+						},
+						{
+							"method": "ips",
+							"signature": "ips()",
+							"description": "Full proxy chain from X-Forwarded-For (client → proxy1 → proxy2 → socket). Empty array when `trust proxy` is not enabled."
+						},
+						{
+							"method": "protocol",
+							"signature": "protocol()",
+							"description": "Request protocol (`'https'` or `'http'`). Reads `X-Forwarded-Proto` when behind a trusted proxy."
+						},
+						{
+							"method": "secure",
+							"signature": "secure()",
+							"description": "`true` when the connection is over HTTPS. Respects `X-Forwarded-Proto` when trust proxy is enabled."
+						},
+						{
+							"method": "get",
+							"signature": "get(name)",
+							"description": "Get a specific request header (case-insensitive).",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header name to look up."
+								}
+							],
+							"methodReturns": {
+								"type": "string | undefined",
+								"description": "Header value, or `undefined` if not present."
+							}
+						},
+						{
+							"method": "is",
+							"signature": "is(type)",
+							"description": "Check if the request Content-Type matches the given type.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "MIME type or shorthand (e.g. `'json'`, `'html'`, `'application/json'`)."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the Content-Type matches."
+							}
+						},
+						{
+							"method": "hostname",
+							"signature": "hostname()",
+							"description": "Get the hostname from the Host header (without port). Only reads `X-Forwarded-Host` when `trust proxy` is enabled. On HTTP/2, falls back to the `:authority` pseudo-header.",
+							"methodReturns": {
+								"type": "string",
+								"description": "Hostname string, or empty string if no Host header."
+							}
+						},
+						{
+							"method": "subdomains",
+							"signature": "subdomains([offset])",
+							"description": "Get the subdomains as an array (e.g. `['api', 'v2']` for `'v2.api.example.com'`).",
+							"methodParams": [
+								{
+									"param": "offset",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of dot-separated parts to remove from the right as TLD."
+								}
+							],
+							"methodReturns": {
+								"type": "string[]",
+								"description": "Array of subdomain strings in reverse order."
+							}
+						},
+						{
+							"method": "accepts",
+							"signature": "accepts(...types)",
+							"description": "Content negotiation — check if the client accepts the given type(s). Returns the best match, or `false` if none match.",
+							"methodParams": [
+								{
+									"param": "types",
+									"type": "string",
+									"required": "Yes",
+									"notes": "MIME types to check (e.g. 'json', 'html', 'text/plain')."
+								}
+							],
+							"methodReturns": {
+								"type": "string | false",
+								"description": "Best matching type, or `false`."
+							}
+						},
+						{
+							"method": "fresh",
+							"signature": "fresh()",
+							"description": "Check if the request is \"fresh\" (client cache is still valid). Compares If-None-Match / If-Modified-Since with ETag / Last-Modified.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the client's cached copy is up to date."
+							}
+						},
+						{
+							"method": "stale",
+							"signature": "stale()",
+							"description": "Inverse of `fresh`.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the client's cache is outdated."
+							}
+						},
+						{
+							"method": "xhr",
+							"signature": "xhr()",
+							"description": "Check whether this request was made with XMLHttpRequest.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the `X-Requested-With` header is `'XMLHttpRequest'`."
+							}
+						},
+						{
+							"method": "range",
+							"signature": "range(size)",
+							"description": "Parse the Range header.",
+							"methodParams": [
+								{
+									"param": "size",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Total size of the resource in bytes."
+								}
+							],
+							"methodReturns": {
+								"type": "{ type: string, ranges: { start: number, end: number }[] } | -1 | -2",
+								"description": " Returns the parsed ranges, -1 for unsatisfiable ranges, or -2 for malformed header."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Response",
+			"description": "Lightweight wrapper around Node's `ServerResponse`. Provides chainable helpers for status, headers, body output, and HTTP/2 server push.",
+			"params": [
+				{
+					"param": "res",
+					"type": "import('http').ServerResponse",
+					"required": "Yes",
+					"notes": "Raw Node server response."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "HTTP/2 Server Push",
+					"methods": [
+						{
+							"method": "push",
+							"signature": "push(path, [opts])",
+							"description": "Push a resource to the client via HTTP/2 server push. No-op on HTTP/1.x connections (returns `null`). Server push pre-loads assets (CSS, JS, images) before the client requests them, eliminating one round trip for critical resources.",
+							"methodParams": [
+								{
+									"param": "path",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Path of the resource to push (e.g. `'/styles.css'`)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Push options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "filePath",
+									"type": "string",
+									"default": "—",
+									"notes": "Absolute file path to stream. If omitted, returns the push stream for manual writing."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "—",
+									"notes": "Extra response headers for the pushed resource."
+								},
+								{
+									"option": "contentType",
+									"type": "string",
+									"default": "—",
+									"notes": "Content-Type override (auto-detected from file extension if `filePath` is given)."
+								},
+								{
+									"option": "status",
+									"type": "number",
+									"default": "200",
+									"notes": "Status code for the pushed response."
+								}
+							],
+							"methodReturns": {
+								"type": "import('http2').ServerHttp2Stream | null",
+								"description": "The push stream, or `null` if push is not supported."
+							}
+						},
+						{
+							"method": "supportsPush",
+							"signature": "supportsPush()",
+							"description": "Check if the current connection supports HTTP/2 server push."
+						}
+					]
+				},
+				{
+					"group": "Server-Sent Events (SSE)",
+					"methods": [
+						{
+							"method": "sse",
+							"signature": "sse([opts])",
+							"description": "Open a Server-Sent Events stream.  Sets the correct headers and returns an SSE controller object with methods for pushing events. The connection stays open until the client disconnects or you call `sse.close()`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "retry",
+									"type": "number",
+									"default": "—",
+									"notes": "Reconnection interval hint (ms) sent to client."
+								},
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "—",
+									"notes": "Additional headers to set on the response."
+								},
+								{
+									"option": "keepAlive",
+									"type": "number",
+									"default": "0",
+									"notes": "Auto keep-alive interval in ms. `0` to disable."
+								},
+								{
+									"option": "keepAliveComment",
+									"type": "string",
+									"default": "'ping'",
+									"notes": "Comment text for keep-alive messages."
+								},
+								{
+									"option": "autoId",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Auto-increment event IDs on every `.send()` / `.event()`."
+								},
+								{
+									"option": "startId",
+									"type": "number",
+									"default": "1",
+									"notes": "Starting value for auto-IDs."
+								},
+								{
+									"option": "pad",
+									"type": "number",
+									"default": "0",
+									"notes": "Bytes of initial padding (helps flush proxy buffers)."
+								},
+								{
+									"option": "status",
+									"type": "number",
+									"default": "200",
+									"notes": "HTTP status code for the SSE response."
+								}
+							],
+							"methodReturns": {
+								"type": "SSEStream",
+								"description": "SSE controller."
+							}
+						}
+					]
+				},
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "status",
+							"signature": "status(code)",
+							"description": "Set HTTP status code. Chainable.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code (e.g. 200, 404)."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "set",
+							"signature": "set(name, value)",
+							"description": "Set a response header. Chainable.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header name."
+								},
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header value."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "get",
+							"signature": "get(name)",
+							"description": "Get a previously-set response header (case-insensitive).",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header name."
+								}
+							],
+							"methodReturns": {
+								"type": "string | undefined",
+								"description": "Header value, or `undefined` if not set."
+							}
+						},
+						{
+							"method": "type",
+							"signature": "type(ct)",
+							"description": "Set the Content-Type header. Accepts a shorthand alias (`'json'`, `'html'`, `'text'`, etc.) or a full MIME string. Chainable.",
+							"methodParams": [
+								{
+									"param": "ct",
+									"type": "string",
+									"required": "Yes",
+									"notes": "MIME type or shorthand alias."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "send",
+							"signature": "send(body)",
+							"description": "Send a response body and finalise the response. Auto-detects Content-Type (Buffer → octet-stream, string → text or HTML, object → JSON) when not explicitly set.",
+							"methodParams": [
+								{
+									"param": "body",
+									"type": "string | Buffer | object | null",
+									"required": "Yes",
+									"notes": "Response payload."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "json",
+							"signature": "json(obj)",
+							"description": "Send a JSON response.  Sets `Content-Type: application/json`.",
+							"methodParams": [
+								{
+									"param": "obj",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Value to serialise as JSON."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "text",
+							"signature": "text(str)",
+							"description": "Send a plain-text response.  Sets `Content-Type: text/plain`.",
+							"methodParams": [
+								{
+									"param": "str",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Text payload."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "html",
+							"signature": "html(str)",
+							"description": "Send an HTML response.  Sets `Content-Type: text/html`.",
+							"methodParams": [
+								{
+									"param": "str",
+									"type": "string",
+									"required": "Yes",
+									"notes": "HTML payload."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "sendStatus",
+							"signature": "sendStatus(code)",
+							"description": "Send only the status code with the standard reason phrase as body.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "Yes",
+									"notes": "HTTP status code."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "append",
+							"signature": "append(name, value)",
+							"description": "Append a value to a header. If the header already exists, creates a comma-separated list.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header name."
+								},
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header value to append."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "vary",
+							"signature": "vary(field)",
+							"description": "Add the given field to the Vary response header.",
+							"methodParams": [
+								{
+									"param": "field",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Header field name to add to Vary."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "headersSent",
+							"signature": "headersSent()",
+							"description": "Whether headers have been sent to the client."
+						},
+						{
+							"method": "sendFile",
+							"signature": "sendFile(filePath, [opts], [cb])",
+							"description": "Send a file as the response. Streams the file with proper Content-Type.",
+							"methodParams": [
+								{
+									"param": "filePath",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Path to the file."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								},
+								{
+									"param": "cb",
+									"type": "Function",
+									"required": "No",
+									"notes": "Callback `(err) => void`."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "headers",
+									"type": "object",
+									"default": "—",
+									"notes": "Additional headers to set."
+								},
+								{
+									"option": "root",
+									"type": "string",
+									"default": "—",
+									"notes": "Root directory for relative paths."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "download",
+							"signature": "download(filePath, [filename], [cb])",
+							"description": "Prompt a file download. Sets Content-Disposition: attachment.",
+							"methodParams": [
+								{
+									"param": "filePath",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Path to the file."
+								},
+								{
+									"param": "filename",
+									"type": "string",
+									"required": "No",
+									"notes": "Override the download filename."
+								},
+								{
+									"param": "cb",
+									"type": "Function",
+									"required": "No",
+									"notes": "Callback on complete/error."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						},
+						{
+							"method": "cookie",
+							"signature": "cookie(name, value, [opts])",
+							"description": "Set a cookie on the response.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cookie name."
+								},
+								{
+									"param": "value",
+									"type": "*",
+									"required": "Yes",
+									"notes": "Cookie value (strings, objects/arrays auto-serialise as JSON cookies)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Configuration options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "domain",
+									"type": "string",
+									"default": "—",
+									"notes": "Cookie domain."
+								},
+								{
+									"option": "path",
+									"type": "string",
+									"default": "'/'",
+									"notes": "Cookie path."
+								},
+								{
+									"option": "expires",
+									"type": "Date | number",
+									"default": "—",
+									"notes": "Expiration date."
+								},
+								{
+									"option": "maxAge",
+									"type": "number",
+									"default": "—",
+									"notes": "Max-Age in seconds."
+								},
+								{
+									"option": "httpOnly",
+									"type": "boolean",
+									"default": "true",
+									"notes": "HTTP-only flag (default: true for security)."
+								},
+								{
+									"option": "secure",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Secure flag."
+								},
+								{
+									"option": "sameSite",
+									"type": "string",
+									"default": "'Lax'",
+									"notes": "SameSite attribute (Strict, Lax, None)."
+								},
+								{
+									"option": "signed",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Sign the cookie value using req.secret."
+								},
+								{
+									"option": "priority",
+									"type": "string",
+									"default": "—",
+									"notes": "Priority attribute (Low, Medium, High)."
+								},
+								{
+									"option": "partitioned",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Partitioned/CHIPS attribute."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "clearCookie",
+							"signature": "clearCookie(name, [opts])",
+							"description": "Clear a cookie by setting it to expire in the past.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Cookie name."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Must match path/domain of the original cookie."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "path",
+									"type": "string",
+									"default": "'/'",
+									"notes": "Cookie path (must match the original)."
+								},
+								{
+									"option": "domain",
+									"type": "string",
+									"default": "—",
+									"notes": "Cookie domain (must match the original)."
+								},
+								{
+									"option": "secure",
+									"type": "boolean",
+									"default": "—",
+									"notes": "Secure flag."
+								},
+								{
+									"option": "sameSite",
+									"type": "string",
+									"default": "—",
+									"notes": "SameSite attribute."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "format",
+							"signature": "format(types)",
+							"description": "Respond with content-negotiated output based on the request Accept header. Calls the handler matching the best accepted type.",
+							"methodParams": [
+								{
+									"param": "types",
+									"type": "Object<string, Function>",
+									"required": "Yes",
+									"notes": "Map of MIME types to handler functions."
+								}
+							]
+						},
+						{
+							"method": "links",
+							"signature": "links(links)",
+							"description": "Set the Link response header with the given links.",
+							"methodParams": [
+								{
+									"param": "links",
+									"type": "Object<string, string>",
+									"required": "Yes",
+									"notes": "Map of rel → URL."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "location",
+							"signature": "location(url)",
+							"description": "Set the Location response header.",
+							"methodParams": [
+								{
+									"param": "url",
+									"type": "string",
+									"required": "Yes",
+									"notes": "The URL to set."
+								}
+							],
+							"methodReturns": {
+								"type": "Response",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "redirect",
+							"signature": "redirect(statusOrUrl, [url])",
+							"description": "Redirect to the given URL with an optional status code (default 302).",
+							"methodParams": [
+								{
+									"param": "statusOrUrl",
+									"type": "number | string",
+									"required": "Yes",
+									"notes": "Status code or URL."
+								},
+								{
+									"param": "url",
+									"type": "string",
+									"required": "No",
+									"notes": "URL if first arg was status code."
+								}
+							],
+							"methodReturns": {
+								"type": "void",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

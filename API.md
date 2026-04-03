@@ -45,10 +45,20 @@
   - [cookieParser](#cookieparser)
   - [csrf](#csrf)
   - [validate](#validate)
+- [Authentication & Sessions](#authentication-sessions)
+  - [jwt](#jwt)
+  - [session](#session)
+  - [oauth](#oauth)
+  - [authorize](#authorize)
 - [Environment](#environment)
   - [env](#env)
   - [.env File Format](#env-file-format)
   - [Schema Types](#schema-types)
+- [Real-Time](#real-time)
+  - [WebSocket](#websocket)
+  - [WebSocketPool](#websocketpool)
+  - [SSE (Server-Sent Events)](#sse-server-sent-events)
+- [Networking](#networking)
 - [ORM](#orm)
   - [Database](#database)
   - [Model](#model)
@@ -75,11 +85,14 @@
   - [PluginManager](#pluginmanager)
   - [StoredProcedure](#storedprocedure)
   - [CLI](#cli)
-- [Real-Time](#real-time)
-  - [WebSocket](#websocket)
-  - [WebSocketPool](#websocketpool)
-  - [SSE (Server-Sent Events)](#sse-server-sent-events)
-- [Networking](#networking)
+- [Observability](#observability)
+  - [structuredLogger](#structuredlogger)
+  - [MetricsRegistry](#metricsregistry)
+  - [Tracer](#tracer)
+  - [healthCheck](#healthcheck)
+- [Lifecycle & Clustering](#lifecycle-clustering)
+  - [LifecycleManager](#lifecyclemanager)
+  - [ClusterManager](#clustermanager)
 - [Error Handling](#error-handling)
   - [Error Classes](#error-classes)
   - [Framework Errors](#framework-errors)
@@ -301,7 +314,7 @@ app.listen(3000)
 
 ### createApp
 
-HTTP application with middleware pipeline, method-based routing, HTTPS support, built-in WebSocket upgrade handling, and route introspection. Created via `createApp()` in the public API.
+HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, and HTTP/1.1 support, built-in WebSocket upgrade handling, trust proxy resolution, and route introspection. Created via `createApp()` in the public API.
 
 #### Settings
 
@@ -334,8 +347,41 @@ HTTP application with middleware pipeline, method-based routing, HTTPS support, 
 
 | Method | Signature | Description |
 |---|---|---|
-| `listen` | `listen([port], [opts], [cb])` | Start listening for HTTP or HTTPS connections. |
+| `listen` | `listen([port], [opts], [cb])` | Start listening for HTTP, HTTPS, or HTTP/2 connections. |
 | `close` | `close([cb])` | Gracefully close the server, stopping new connections. |
+| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Stops accepting new connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down registered databases. |
+
+
+#### Lifecycle Events
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `on(event, fn)` | Register a lifecycle event listener. Supported events: - `'beforeShutdown'` — fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       — fires after shutdown is complete |
+| `off` | `off(event, fn)` | Remove a lifecycle event listener. |
+
+
+#### Lifecycle Resource Registration
+
+| Method | Signature | Description |
+|---|---|---|
+| `registerPool` | `registerPool(pool)` | Register a WebSocket pool for graceful shutdown. All connections in the pool are closed with code `1001` when the server shuts down. |
+| `unregisterPool` | `unregisterPool(pool)` | Unregister a WebSocket pool from lifecycle management. |
+| `trackSSE` | `trackSSE(stream)` | Track an SSE stream for graceful shutdown. The stream is automatically untracked when it closes. |
+| `registerDatabase` | `registerDatabase(db)` | Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown. |
+| `unregisterDatabase` | `unregisterDatabase(db)` | Unregister an ORM Database instance from lifecycle management. |
+| `shutdownTimeout` | `shutdownTimeout(ms)` | Configure the shutdown timeout—the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them. |
+| `lifecycleState` | `lifecycleState()` | Current lifecycle state. |
+
+
+#### Observability
+
+| Method | Signature | Description |
+|---|---|---|
+| `health` | `health([path], [checks])` | Register a liveness health check endpoint. Returns `200` when healthy, `503` during shutdown. |
+| `ready` | `ready([path], [checks])` | Register a readiness health check endpoint. Returns `200` when all checks pass, `503` otherwise. |
+| `addHealthCheck` | `addHealthCheck(name, fn)` | Register a custom health check. |
+| `metrics` | `metrics()` | Get the application metrics registry. Lazily created on first access. Returns a `MetricsRegistry` instance for registering custom metrics. |
+| `metricsEndpoint` | `metricsEndpoint([path], [opts])` | Mount a Prometheus metrics endpoint. |
 
 
 #### WebSocket Support
@@ -367,6 +413,15 @@ HTTP application with middleware pipeline, method-based routing, HTTPS support, 
 | `all` | `all(path, ...fns)` | Matches every HTTP method. |
 | `chain` | `chain(path)` | Chainable route builder — register multiple methods on the same path. |
 | `group` | `group(prefix, ...middleware)` | Define a route group with shared middleware prefix. All routes registered inside the callback share the given path prefix and middleware stack. |
+
+
+#### Authentication & Sessions
+
+| Method | Signature | Description |
+|---|---|---|
+| `jwtAuth` | `jwtAuth(opts)` | Mount JWT authentication middleware. Shorthand for `app.use(jwt(opts))`. |
+| `sessions` | `sessions(opts)` | Mount session middleware. Shorthand for `app.use(session(opts))`. |
+| `oauth` | `oauth(opts)` | Create an OAuth2 client bound to this app. Returns the client — does NOT mount any middleware automatically. |
 
 
 ```js
@@ -433,7 +488,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 
 ### Request
 
-Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers.
+Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible — detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.
 
 #### Parameters
 
@@ -442,13 +497,17 @@ Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query strin
 | `req` | import('http').IncomingMessage | Yes | Raw Node incoming message. |
 
 
-#### Methods
+#### Trust Proxy Resolution
 
 | Method | Signature | Description |
 |---|---|---|
+| `ip` | `ip()` | Client IP address. When `trust proxy` is enabled, resolves through the X-Forwarded-For chain. |
+| `ips` | `ips()` | Full proxy chain from X-Forwarded-For (client → proxy1 → proxy2 → socket). Empty array when `trust proxy` is not enabled. |
+| `protocol` | `protocol()` | Request protocol (`'https'` or `'http'`). Reads `X-Forwarded-Proto` when behind a trusted proxy. |
+| `secure` | `secure()` | `true` when the connection is over HTTPS. Respects `X-Forwarded-Proto` when trust proxy is enabled. |
 | `get` | `get(name)` | Get a specific request header (case-insensitive). |
 | `is` | `is(type)` | Check if the request Content-Type matches the given type. |
-| `hostname` | `hostname()` | Get the hostname from the Host header (without port). Respects X-Forwarded-Host when behind a proxy. |
+| `hostname` | `hostname()` | Get the hostname from the Host header (without port). Only reads `X-Forwarded-Host` when `trust proxy` is enabled. On HTTP/2, falls back to the `:authority` pseudo-header. |
 | `subdomains` | `subdomains([offset])` | Get the subdomains as an array (e.g. `['api', 'v2']` for `'v2.api.example.com'`). |
 | `accepts` | `accepts(...types)` | Content negotiation — check if the client accepts the given type(s). Returns the best match, or `false` if none match. |
 | `fresh` | `fresh()` | Check if the request is "fresh" (client cache is still valid). Compares If-None-Match / If-Modified-Since with ETag / Last-Modified. |
@@ -459,13 +518,21 @@ Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query strin
 
 ### Response
 
-Lightweight wrapper around Node's `ServerResponse`. Provides chainable helpers for status, headers, and body output.
+Lightweight wrapper around Node's `ServerResponse`. Provides chainable helpers for status, headers, body output, and HTTP/2 server push.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `res` | import('http').ServerResponse | Yes | Raw Node server response. |
+
+
+#### HTTP/2 Server Push
+
+| Method | Signature | Description |
+|---|---|---|
+| `push` | `push(path, [opts])` | Push a resource to the client via HTTP/2 server push. No-op on HTTP/1.x connections (returns `null`). Server push pre-loads assets (CSS, JS, images) before the client requests them, eliminating one round trip for critical resources. |
+| `supportsPush` | `supportsPush()` | Check if the current connection supports HTTP/2 server push. |
 
 
 #### Server-Sent Events (SSE)
@@ -758,7 +825,7 @@ Security headers middleware. Sets common security-related HTTP response headers 
 
 ### static
 
-Static file-serving middleware with MIME detection, directory index files, extension fallbacks, dotfile policies, caching, and custom header hooks.
+Static file-serving middleware with MIME detection, directory index files, extension fallbacks, dotfile policies, caching, custom header hooks, and HTTP/2 server push for linked assets.
 
 #### Parameters
 
@@ -776,6 +843,8 @@ Static file-serving middleware with MIME detection, directory index files, exten
 | `dotfiles` | string | `'ignore'` | Dotfile policy: `'allow'` \| `'deny'` \| `'ignore'`. |
 | `extensions` | string[] | `—` | Array of fallback extensions (e.g. `['html', 'htm']`). |
 | `setHeaders` | Function | `—` | `(res, filePath) => void` hook to set custom headers. |
+| `pushAssets` | string[] \| Function | `—` | HTTP/2 server push. Array of paths
+(relative to root) to push when serving HTML files, or a function `(filePath) => string[]`. |
 
 
 ```js
@@ -1027,6 +1096,226 @@ Request validation middleware. Validates `req.body`, `req.query`, and `req.param
 
 ---
 
+## Authentication & Sessions
+
+### jwt
+
+Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `token` | string | Yes | Raw JWT string. |
+
+
+#### JWT Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `jwt` | `jwt(opts)` | Create JWT authentication middleware. On success, populates: - `req.user` — decoded payload - `req.auth` — `{ header, payload, token }` full decode info - `req.token` — raw JWT string |
+
+
+#### JWT Core Functions
+
+| Method | Signature | Description |
+|---|---|---|
+| `sign` | `sign(payload, secret, [opts])` | Sign a payload and produce a JWT string. |
+| `verify` | `verify(token, secretOrKey, [opts])` | Verify a JWT signature and validate claims. |
+
+
+#### JWKS Support
+
+| Method | Signature | Description |
+|---|---|---|
+| `jwks` | `jwks(jwksUri, [opts])` | Create a JWKS key provider that fetches and caches public keys. Auto-refreshes keys when a `kid` is not found. |
+
+
+#### Token Refresh Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `tokenPair` | `tokenPair(config)` | Create a token-pair factory for convenient access + refresh token generation. |
+| `createRefreshToken` | `createRefreshToken(payload, secret, [opts])` | Generate a signed refresh token. Refresh tokens are long-lived and should be stored securely. |
+
+
+```js
+  const { createApp, jwt } = require('zero-http');
+  const app = createApp();
+
+  app.use(jwt({ secret: process.env.JWT_SECRET }));
+```
+
+
+### session
+
+Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | Yes | Session ID. |
+| `data` | object | No | Initial data. |
+
+
+#### Session class
+
+| Method | Signature | Description |
+|---|---|---|
+| `get` | `get(key)` | Get a session value by key. |
+| `set` | `set(key, value)` | Set a session value. |
+| `has` | `has(key)` | Check if a key exists in the session. |
+| `delete` | `delete(key)` | Delete a session key. |
+| `all` | `all()` | Get all session data as a plain object. |
+| `size` | `size()` | Number of session entries. |
+| `clear` | `clear()` | Clear all session data. |
+| `destroy` | `destroy()` | Destroy the session. Clears all data and marks cookie for expiry. |
+| `regenerate` | `regenerate()` | Regenerate the session ID (prevents session fixation). Preserves existing data under a new ID. |
+| `flash` | `flash(key, value)` | Set a flash message (available only on the next request). |
+| `flashes` | `flashes([key])` | Read flash messages for a key (consumes them). |
+
+
+#### Memory Store
+
+| Method | Signature | Description |
+|---|---|---|
+| `get` | `get(sid)` |  |
+| `set` | `set(sid, data, [maxAge])` |  |
+| `destroy` | `destroy(sid)` |  |
+| `length` | `length()` | Number of active sessions. |
+| `clear` | `clear()` | Clear all sessions. |
+| `close` | `close()` | Stop the prune timer. |
+
+
+#### Session Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `session` | `session(opts)` | Create session middleware. Two modes: 1. **Cookie session** (no `store`): Entire session encrypted in a cookie. Great for small payloads (< 4 KB). Zero server state. 2. **Server-side session** (with `store`): Only session ID in cookie, data lives in the store. Scales to large payloads. |
+
+
+```js
+  // Encrypted cookie session (stateless)
+  app.use(session({ secret: process.env.SESSION_SECRET }));
+```
+
+
+### oauth
+
+Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `length` | number | No | Verifier length (43–128 per RFC 7636). |
+
+
+#### OAuth2 Client
+
+| Method | Signature | Description |
+|---|---|---|
+| `oauth` | `oauth(opts)` | Create an OAuth 2.0 client for Authorization Code flow (+ PKCE). |
+
+
+#### PKCE Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `generateState` | `generateState([bytes])` | Generate a cryptographically random state parameter. |
+
+
+```js
+  const { oauth } = require('zero-http');
+  const github = oauth({
+      provider: 'github',
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackUrl: 'https://myapp.com/auth/github/callback',
+  });
+
+  app.get('/auth/github', (req, res) => {
+      const { url, state, codeVerifier } = github.authorize({ scope: 'user:email' });
+      req.session.set('oauth_state', state);
+      req.session.set('oauth_verifier', codeVerifier);
+      res.redirect(url);
+  });
+
+  app.get('/auth/github/callback', async (req, res) => {
+      const tokens = await github.callback(req.query, {
+          state: req.session.get('oauth_state'),
+          codeVerifier: req.session.get('oauth_verifier'),
+      });
+      const user = await github.userInfo(tokens.access_token);
+      res.json(user);
+  });
+```
+
+
+### authorize
+
+Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.
+
+#### Role-Based Access Control
+
+| Method | Signature | Description |
+|---|---|---|
+| `authorize` | `authorize(...roles)` | Role-based authorization middleware. Checks `req.user.role` or `req.user.roles` against allowed roles. Returns 401 if `req.user` is missing (not authenticated). Returns 403 if the user's role is not in the allowed list. |
+
+
+#### Permission-Based Access Control
+
+| Method | Signature | Description |
+|---|---|---|
+| `can` | `can(...permissions)` | Permission-based authorization middleware. Checks `req.user.permissions` (array or Set) for the required permission(s). Permission strings follow a `resource:action` convention: - `'posts:write'` — write access to posts - `'users:delete'` — delete users - `'*'` — superuser wildcard |
+| `canAny` | `canAny(...permissions)` | Like `can()`, but passes if the user has ANY of the listed permissions. |
+
+
+#### Policy Classes
+
+| Method | Signature | Description |
+|---|---|---|
+| `check` | `check(action, user, [resource])` | Check if an action is allowed. Falls through to the action method if defined, otherwise denies. |
+| `gate` | `gate(policy, action, [getResource])` | Policy gate middleware. Runs a policy check against a resource loaded from the request. |
+
+
+#### req.user helpers (mixed in by middleware barrel)
+
+| Method | Signature | Description |
+|---|---|---|
+| `attachUserHelpers` | `attachUserHelpers()` | Attach convenience authorization methods to `req.user`. Call this middleware after JWT/session middleware. Adds: - `req.user.is(...roles)` — check roles - `req.user.can(...perms)` — check permissions |
+
+
+```js
+  const { authorize, can } = require('zero-http');
+
+  // Role-based: only admins and editors
+  app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {
+      res.json({ updated: true });
+  });
+
+  // Permission-based
+  app.delete('/posts/:id', can('posts:delete'), (req, res) => {
+      res.json({ deleted: true });
+  });
+
+  // Policy class
+  class PostPolicy extends Policy {
+      update(user, post) { return user.id === post.authorId || user.role === 'admin'; }
+      delete(user, post) { return user.role === 'admin'; }
+  }
+  app.delete('/posts/:id', gate(new PostPolicy(), 'delete', async (req) => {
+      return await db.query('SELECT * FROM posts WHERE id = ?', [req.params.id]);
+  }), (req, res) => {
+      res.json({ deleted: true });
+  });
+```
+
+
+
+---
+
 ## Environment
 
 ### env
@@ -1124,6 +1413,211 @@ env.load({
 })
 ```
 
+
+
+---
+
+## Real-Time
+
+### WebSocket
+
+Full-featured WebSocket connection wrapper over a raw TCP socket. Implements RFC 6455 framing for text, binary, ping, pong, and close.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `socket` | import('net').Socket | Yes | The upgraded TCP socket. |
+| `meta` | object | No | Connection metadata from the upgrade handshake. |
+
+
+#### Event Emitter
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `on(event, fn)` | Register an event listener. |
+| `once` | `once(event, fn)` | Register a one-time event listener. |
+| `off` | `off(event, fn)` | Remove a specific event listener. |
+| `removeAllListeners` | `removeAllListeners([event])` | Remove all listeners for an event, or all events if none specified. |
+| `listenerCount` | `listenerCount(event)` | Count listeners for a given event. |
+
+
+#### Sending
+
+| Method | Signature | Description |
+|---|---|---|
+| `send` | `send(data, [opts])` | Send a text or binary message. |
+| `sendJSON` | `sendJSON(obj, [cb])` | Send a JSON-serialised message (sets text frame). |
+| `ping` | `ping([payload], [cb])` | Send a ping frame. |
+| `pong` | `pong([payload], [cb])` | Send a pong frame. |
+| `close` | `close([code], [reason])` | Close the WebSocket connection. |
+| `terminate` | `terminate()` | Forcefully destroy the underlying socket without a close frame. |
+
+
+#### Computed Properties
+
+| Method | Signature | Description |
+|---|---|---|
+| `bufferedAmount` | `bufferedAmount()` | Bytes waiting in the send buffer. |
+| `uptime` | `uptime()` | How long this connection has been alive (ms). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxPayload` | number | `1048576` | Maximum incoming frame size in bytes. |
+| `pingInterval` | number | `30000` | Auto-ping interval in ms (0 to disable). |
+| `protocol` | string | `—` | Negotiated WebSocket sub-protocol. |
+| `extensions` | string | `—` | Negotiated WebSocket extensions. |
+| `headers` | object | `—` | HTTP headers from the upgrade request. |
+| `ip` | string | `—` | Remote IP address of the client. |
+| `query` | object | `—` | Parsed query-string parameters from the upgrade URL. |
+| `url` | string | `—` | The request URL path. |
+| `secure` | boolean | `false` | Whether the connection is over TLS. |
+
+
+### WebSocketPool
+
+WebSocket room/channel manager. Provides broadcast, room-based messaging, and connection registry for WebSocket connections.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `add` | `add(ws)` | Add a connection to the pool. |
+| `remove` | `remove(ws)` | Remove a connection from the pool and all rooms. |
+| `join` | `join(ws, room)` | Join a connection to a room. |
+| `leave` | `leave(ws, room)` | Remove a connection from a room. |
+| `roomsOf` | `roomsOf(ws)` | Get all rooms a connection belongs to. |
+| `broadcast` | `broadcast(data, [exclude])` | Broadcast a message to ALL connected clients. |
+| `broadcastJSON` | `broadcastJSON(obj, [exclude])` | Broadcast a JSON message to ALL connected clients. |
+| `toRoom` | `toRoom(room, data, [exclude])` | Send a message to all connections in a specific room. |
+| `toRoomJSON` | `toRoomJSON(room, obj, [exclude])` | Send a JSON message to all connections in a specific room. |
+| `in` | `in(room)` | Get all connections in a room. |
+| `size` | `size()` | Total number of active connections. |
+| `roomSize` | `roomSize(room)` | Number of connections in a specific room. |
+| `rooms` | `rooms()` | List all active room names. |
+| `clients` | `clients()` | Get all active connections. |
+| `closeAll` | `closeAll([code], [reason])` | Close all connections gracefully. |
+
+
+### SSE (Server-Sent Events)
+
+SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provides the full SSE text protocol. Tracks connection state, event counts, and bytes sent. Emits `'close'` when the client disconnects and `'error'` on write failures.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `raw` | import('http').ServerResponse | Yes | Raw HTTP response stream. |
+
+
+#### Event Emitter
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `on(event, fn)` | Register an event listener. |
+| `once` | `once(event, fn)` | Register a one-time listener. |
+| `off` | `off(event, fn)` | Remove a listener. |
+| `removeAllListeners` | `removeAllListeners([event])` | Remove all listeners for an event (or all events). |
+| `listenerCount` | `listenerCount(event)` | Count listeners for an event. |
+
+
+#### Public API
+
+| Method | Signature | Description |
+|---|---|---|
+| `send` | `send(data, [id])` | Send an unnamed data event. Objects are automatically JSON-serialised. |
+| `sendJSON` | `sendJSON(obj, [id])` | Convenience: send an object as JSON data (same as `.send(obj)`). |
+| `event` | `event(eventName, data, [id])` | Send a named event with data. |
+| `comment` | `comment(text)` | Send a comment line.  Comments are ignored by EventSource clients but useful as a keep-alive mechanism. |
+| `retry` | `retry(ms)` | Send (or update) the retry interval hint. The client's EventSource will use this value for reconnection delay. |
+| `keepAlive` | `keepAlive(intervalMs, [comment])` | Start or restart an automatic keep-alive timer that sends comment pings at the given interval. |
+| `flush` | `flush()` | Flush the response (hint to Node to push buffered data to the network). Useful when piping through reverse proxies that buffer. |
+| `close` | `close()` | Close the SSE connection from the server side. |
+| `connected` | `connected()` | Whether the connection is still open. |
+| `uptime` | `uptime()` | How long this stream has been open (ms). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `secure` | boolean | `—` | Whether the connection is over TLS. |
+| `autoId` | boolean | `—` | Auto-increment event IDs. |
+| `startId` | number | `—` | Starting value for auto-ID (default 1). |
+| `lastEventId` | string | `—` | Last-Event-ID from the client reconnection header. |
+| `keepAlive` | number | `—` | Interval (ms) for automatic keep-alive pings. 0 to disable. |
+| `keepAliveComment` | string | `—` | Comment text for keep-alive pings (default `'ping'`). |
+
+
+```js
+  app.get('/events', (req, res) => {
+      const stream = res.sse();           // opens SSE connection
+
+      stream.send({ hello: 'world' });    // unnamed event
+      stream.event('update', { id: 1 });  // named event
+      stream.retry(3000);                 // set client reconnect delay
+      stream.keepAlive(15000);            // auto-ping every 15s
+
+      stream.on('close', () => {
+          console.log('client disconnected after', stream.uptime, 'ms');
+      });
+  });
+```
+
+
+
+---
+
+## fetch
+
+Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS, JSON/URLSearchParams/Buffer/stream bodies, download & upload progress callbacks, timeouts, and AbortSignal.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `url` | string | Yes | Absolute URL to fetch. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `method` | string | `'GET'` | HTTP method. |
+| `headers` | object | `—` | Request headers. |
+| `body` | string \| Buffer \| object \| ReadableStream | `—` | Request body. |
+| `timeout` | number | `—` | Request timeout in ms. |
+| `signal` | AbortSignal | `—` | Abort signal for cancellation. |
+| `agent` | import('http').Agent | `—` | Custom HTTP agent. |
+| `onDownloadProgress` | Function | `—` | `({ loaded, total }) => void` download progress callback. |
+| `onUploadProgress` | Function | `—` | `({ loaded, total }) => void` upload progress callback. |
+| `rejectUnauthorized` | boolean | `—` | Reject connections with unverified certs (default: Node default `true`). TLS option — passed to `https.request()`. |
+| `ca` | string \| Buffer \| Array | `—` | Override default CA certificates. |
+| `cert` | string \| Buffer | `—` | Client certificate (PEM) for mutual TLS. |
+| `key` | string \| Buffer | `—` | Private key (PEM) for mutual TLS. |
+| `pfx` | string \| Buffer | `—` | PFX / PKCS12 bundle (alternative to cert+key). |
+| `passphrase` | string | `—` | Passphrase for the key or PFX. |
+| `servername` | string | `—` | SNI server name override. |
+| `ciphers` | string | `—` | Colon-separated cipher list. |
+| `secureProtocol` | string | `—` | SSL/TLS protocol method name. |
+| `minVersion` | string | `—` | Minimum TLS version (`'TLSv1.2'`, etc.). |
+| `maxVersion` | string | `—` | Maximum TLS version. |
+
+
+```js
+  const res = await fetch('https://api.example.com/data');
+  const body = await res.json();
+
+  // POST with JSON body & timeout
+  const res2 = await fetch('https://api.example.com/items', {
+      method: 'POST',
+      body: { name: 'widget' },
+      timeout: 5000,
+  });
+```
 
 
 ---
@@ -3365,207 +3859,388 @@ CLI tool for zero-http ORM operations. Provides commands for migrations, seeding
 
 ---
 
-## Real-Time
+## Observability
 
-### WebSocket
+### structuredLogger
 
-Full-featured WebSocket connection wrapper over a raw TCP socket. Implements RFC 6455 framing for text, binary, ping, pong, and close.
+Structured, enterprise-grade request logger. Outputs JSON or pretty-text with consistent fields: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`. Correlates with the `requestId` middleware (`req.id`), supports child loggers with bound context, custom transports, and environment-aware log level defaults.
 
-#### Parameters
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `socket` | import('net').Socket | Yes | The upgraded TCP socket. |
-| `meta` | object | No | Connection metadata from the upgrade handshake. |
-
-
-#### Event Emitter
+#### Logger Core
 
 | Method | Signature | Description |
 |---|---|---|
-| `on` | `on(event, fn)` | Register an event listener. |
-| `once` | `once(event, fn)` | Register a one-time event listener. |
-| `off` | `off(event, fn)` | Remove a specific event listener. |
-| `removeAllListeners` | `removeAllListeners([event])` | Remove all listeners for an event, or all events if none specified. |
-| `listenerCount` | `listenerCount(event)` | Count listeners for a given event. |
+| `child` | `child(context)` | Create a child logger with additional bound context. Child inherits all parent settings but merges extra fields into every log entry. |
+| `setLevel` | `setLevel(level)` | Set the minimum log level. |
+| `trace` | `trace(message, [fields])` | Log at trace level. |
+| `debug` | `debug(message, [fields])` | Log at debug level. |
+| `info` | `info(message, [fields])` | Log at info level. |
+| `warn` | `warn(message, [fields])` | Log at warn level. |
+| `error` | `error(message, [fields])` | Log at error level. |
+| `fatal` | `fatal(message, [fields])` | Log at fatal level. |
 
 
-#### Sending
-
-| Method | Signature | Description |
-|---|---|---|
-| `send` | `send(data, [opts])` | Send a text or binary message. |
-| `sendJSON` | `sendJSON(obj, [cb])` | Send a JSON-serialised message (sets text frame). |
-| `ping` | `ping([payload], [cb])` | Send a ping frame. |
-| `pong` | `pong([payload], [cb])` | Send a pong frame. |
-| `close` | `close([code], [reason])` | Close the WebSocket connection. |
-| `terminate` | `terminate()` | Forcefully destroy the underlying socket without a close frame. |
-
-
-#### Computed Properties
+#### Structured Logger Middleware
 
 | Method | Signature | Description |
 |---|---|---|
-| `bufferedAmount` | `bufferedAmount()` | Bytes waiting in the send buffer. |
-| `uptime` | `uptime()` | How long this connection has been alive (ms). |
+| `structuredLogger` | `structuredLogger([opts])` | Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` — a child logger with bound request context so handlers can log with full correlation. |
 
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `maxPayload` | number | `1048576` | Maximum incoming frame size in bytes. |
-| `pingInterval` | number | `30000` | Auto-ping interval in ms (0 to disable). |
-| `protocol` | string | `—` | Negotiated WebSocket sub-protocol. |
-| `extensions` | string | `—` | Negotiated WebSocket extensions. |
-| `headers` | object | `—` | HTTP headers from the upgrade request. |
-| `ip` | string | `—` | Remote IP address of the client. |
-| `query` | object | `—` | Parsed query-string parameters from the upgrade URL. |
-| `url` | string | `—` | The request URL path. |
-| `secure` | boolean | `false` | Whether the connection is over TLS. |
-
-
-### WebSocketPool
-
-WebSocket room/channel manager. Provides broadcast, room-based messaging, and connection registry for WebSocket connections.
-
-#### Methods
-
-| Method | Signature | Description |
-|---|---|---|
-| `add` | `add(ws)` | Add a connection to the pool. |
-| `remove` | `remove(ws)` | Remove a connection from the pool and all rooms. |
-| `join` | `join(ws, room)` | Join a connection to a room. |
-| `leave` | `leave(ws, room)` | Remove a connection from a room. |
-| `roomsOf` | `roomsOf(ws)` | Get all rooms a connection belongs to. |
-| `broadcast` | `broadcast(data, [exclude])` | Broadcast a message to ALL connected clients. |
-| `broadcastJSON` | `broadcastJSON(obj, [exclude])` | Broadcast a JSON message to ALL connected clients. |
-| `toRoom` | `toRoom(room, data, [exclude])` | Send a message to all connections in a specific room. |
-| `toRoomJSON` | `toRoomJSON(room, obj, [exclude])` | Send a JSON message to all connections in a specific room. |
-| `in` | `in(room)` | Get all connections in a room. |
-| `size` | `size()` | Total number of active connections. |
-| `roomSize` | `roomSize(room)` | Number of connections in a specific room. |
-| `rooms` | `rooms()` | List all active room names. |
-| `clients` | `clients()` | Get all active connections. |
-| `closeAll` | `closeAll([code], [reason])` | Close all connections gracefully. |
-
-
-### SSE (Server-Sent Events)
-
-SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provides the full SSE text protocol. Tracks connection state, event counts, and bytes sent. Emits `'close'` when the client disconnects and `'error'` on write failures.
-
-#### Parameters
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `raw` | import('http').ServerResponse | Yes | Raw HTTP response stream. |
-
-
-#### Event Emitter
-
-| Method | Signature | Description |
-|---|---|---|
-| `on` | `on(event, fn)` | Register an event listener. |
-| `once` | `once(event, fn)` | Register a one-time listener. |
-| `off` | `off(event, fn)` | Remove a listener. |
-| `removeAllListeners` | `removeAllListeners([event])` | Remove all listeners for an event (or all events). |
-| `listenerCount` | `listenerCount(event)` | Count listeners for an event. |
-
-
-#### Public API
-
-| Method | Signature | Description |
-|---|---|---|
-| `send` | `send(data, [id])` | Send an unnamed data event. Objects are automatically JSON-serialised. |
-| `sendJSON` | `sendJSON(obj, [id])` | Convenience: send an object as JSON data (same as `.send(obj)`). |
-| `event` | `event(eventName, data, [id])` | Send a named event with data. |
-| `comment` | `comment(text)` | Send a comment line.  Comments are ignored by EventSource clients but useful as a keep-alive mechanism. |
-| `retry` | `retry(ms)` | Send (or update) the retry interval hint. The client's EventSource will use this value for reconnection delay. |
-| `keepAlive` | `keepAlive(intervalMs, [comment])` | Start or restart an automatic keep-alive timer that sends comment pings at the given interval. |
-| `flush` | `flush()` | Flush the response (hint to Node to push buffered data to the network). Useful when piping through reverse proxies that buffer. |
-| `close` | `close()` | Close the SSE connection from the server side. |
-| `connected` | `connected()` | Whether the connection is still open. |
-| `uptime` | `uptime()` | How long this stream has been open (ms). |
-
-
-#### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `secure` | boolean | `—` | Whether the connection is over TLS. |
-| `autoId` | boolean | `—` | Auto-increment event IDs. |
-| `startId` | number | `—` | Starting value for auto-ID (default 1). |
-| `lastEventId` | string | `—` | Last-Event-ID from the client reconnection header. |
-| `keepAlive` | number | `—` | Interval (ms) for automatic keep-alive pings. 0 to disable. |
-| `keepAliveComment` | string | `—` | Comment text for keep-alive pings (default `'ping'`). |
+| `level` | string \| number | `—` | Minimum log level. |
+| `context` | object | `—` | Bound context fields merged into every entry. |
+| `transport` | Function | `—` | Custom transport `(entry) => void`. |
+| `json` | boolean | `false` | Force JSON output. |
+| `colors` | boolean | `—` | Enable ANSI colors (default: TTY detection). |
+| `timestamps` | boolean | `true` | Include timestamps. |
+| `stream` | WritableStream | `—` | Output stream (default: stdout/stderr). |
 
 
 ```js
-  app.get('/events', (req, res) => {
-      const stream = res.sse();           // opens SSE connection
+  const { structuredLogger } = require('zero-http');
+  app.use(structuredLogger());
+```
 
-      stream.send({ hello: 'world' });    // unnamed event
-      stream.event('update', { id: 1 });  // named event
-      stream.retry(3000);                 // set client reconnect delay
-      stream.keepAlive(15000);            // auto-ping every 15s
 
-      stream.on('close', () => {
-          console.log('client disconnected after', stream.uptime, 'ms');
-      });
+### MetricsRegistry
+
+Zero-dependency metrics registry with Prometheus-compatible text exposition format. Provides Counter, Gauge, and Histogram metric types with label support, automatic HTTP instrumentation middleware, and a handler for `/metrics` endpoints.
+
+#### Metric Types
+
+| Method | Signature | Description |
+|---|---|---|
+| `inc` | `inc([labels], [value])` | Increment the counter. |
+| `get` | `get([labels])` | Get the current value. |
+| `reset` | `reset()` | Reset the counter (all label combinations). |
+| `collect` | `collect()` | Serialize to Prometheus text format. |
+
+
+#### Gauge
+
+| Method | Signature | Description |
+|---|---|---|
+| `set` | `set(labels, [value])` | Set the gauge to a specific value. |
+| `inc` | `inc([labels], [value])` | Increment the gauge. |
+| `dec` | `dec([labels], [value])` | Decrement the gauge. |
+| `get` | `get([labels])` | Get the current value. |
+| `reset` | `reset()` | Reset the gauge (all label combinations). |
+| `collect` | `collect()` | Serialize to Prometheus text format. |
+
+
+#### Histogram
+
+| Method | Signature | Description |
+|---|---|---|
+| `observe` | `observe(labels, [value])` | Observe a value. |
+| `startTimer` | `startTimer([labels])` | Start a timer that, when stopped, observes the elapsed duration in seconds. |
+| `get` | `get([labels])` | Get summary stats for a label combination. |
+| `reset` | `reset()` | Reset all observations. |
+| `collect` | `collect()` | Serialize to Prometheus text format. |
+
+
+#### Metrics Registry
+
+| Method | Signature | Description |
+|---|---|---|
+| `counter` | `counter(opts)` | Create and register a Counter. |
+| `gauge` | `gauge(opts)` | Create and register a Gauge. |
+| `histogram` | `histogram(opts)` | Create and register a Histogram. |
+| `getMetric` | `getMetric(name)` | Get a registered metric by name. |
+| `removeMetric` | `removeMetric(name)` | Remove a registered metric. |
+| `clear` | `clear()` | Remove all registered metrics. |
+| `resetAll` | `resetAll()` | Reset all metric values without removing registrations. |
+| `metrics` | `metrics()` | Serialize all metrics to Prometheus text exposition format. |
+| `toJSON` | `toJSON()` | Return all metrics as a plain object (for JSON export or IPC transfer). |
+| `merge` | `merge(snapshot)` | Merge a metrics snapshot (from `toJSON()`) into this registry. Used for aggregating worker metrics on the primary process. |
+
+
+#### Default HTTP Metrics
+
+| Method | Signature | Description |
+|---|---|---|
+| `createDefaultMetrics` | `createDefaultMetrics(registry)` | Create the standard set of HTTP metrics on a registry. |
+
+
+#### Metrics Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `metricsMiddleware` | `metricsMiddleware([opts])` | Create HTTP metrics collection middleware. Automatically tracks `http_requests_total`, `http_request_duration_seconds`, and `http_active_connections`. |
+| `metricsEndpoint` | `metricsEndpoint(registry)` | Create a metrics endpoint handler. Returns Prometheus text exposition format. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | `—` | Metric name (snake_case recommended). |
+| `help` | string | `—` | Human-readable description. |
+| `labels` | string[] | `[` | ] - Label names. |
+
+
+```js
+  const { MetricsRegistry, metricsMiddleware } = require('zero-http');
+
+  const registry = new MetricsRegistry();
+  app.use(metricsMiddleware({ registry }));
+  app.get('/metrics', (req, res) => {
+      res.set('Content-Type', 'text/plain; version=0.04');
+      res.send(registry.metrics());
   });
+```
+
+
+### Tracer
+
+Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend.
+
+#### Span
+
+| Method | Signature | Description |
+|---|---|---|
+| `setAttribute` | `setAttribute(key, value)` | Set a span attribute. |
+| `setAttributes` | `setAttributes(attrs)` | Set multiple attributes at once. |
+| `addEvent` | `addEvent(name, [attributes])` | Add a timestamped event to the span. |
+| `setOk` | `setOk()` | Set status to OK. |
+| `setError` | `setError([message])` | Set status to ERROR. |
+| `recordException` | `recordException(err)` | Record an exception as a span event and set error status. |
+| `end` | `end()` | End the span and report to the tracer. |
+| `duration` | `duration()` | Duration in milliseconds (or null if not ended). |
+| `traceparent` | `traceparent()` | The traceparent header value for this span. |
+| `toJSON` | `toJSON()` | Serialize span for export. |
+
+
+#### Tracer
+
+| Method | Signature | Description |
+|---|---|---|
+| `startSpan` | `startSpan(name, [opts])` | Create a new span. |
+| `shouldSample` | `shouldSample()` | Whether a new trace should be sampled. |
+| `onSpanEnd` | `onSpanEnd(fn)` | Register a listener for completed spans. |
+| `flush` | `flush()` | Flush buffered spans to the exporter. |
+| `shutdown` | `shutdown()` | Shut down the tracer, flushing remaining spans. |
+
+
+#### Tracing Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `tracingMiddleware` | `tracingMiddleware([opts])` | Create HTTP tracing middleware. Automatically creates a span for each request, extracts incoming `traceparent`/`tracestate` headers, and sets outgoing `traceparent`. |
+| `instrumentFetch` | `instrumentFetch(fetchFn, tracer)` | Instrument outbound fetch calls with tracing. Wraps the zero-http fetch to inject `traceparent` headers and create client spans. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | `—` | Operation name. |
+| `traceId` | string | `—` | Trace ID. |
+| `parentSpanId` | string | `—` | Parent span ID. |
+| `kind` | string | `'server'` | Span kind: 'server', 'client', 'producer', 'consumer', 'internal'. |
+| `attributes` | object | `—` | Initial attributes. |
+| `tracer` | Tracer | `—` | Tracer instance for export. |
+
+
+```js
+  const { tracingMiddleware, Tracer } = require('zero-http');
+
+  const tracer = new Tracer({ serviceName: 'my-api' });
+  app.use(tracingMiddleware({ tracer }));
+```
+
+
+### healthCheck
+
+Health check middleware with liveness and readiness probes. Kubernetes-compatible `/healthz` and `/readyz` endpoints with composable checks (database ping, memory, event loop lag, disk space) and custom check registration. Returns `200` when healthy, `503` when degraded or during shutdown drain phase, with a JSON body detailing each check.
+
+#### Health Check Handler
+
+| Method | Signature | Description |
+|---|---|---|
+| `healthCheck` | `healthCheck([opts])` | Create a health check route handler. Returns a JSON response with the status of all registered checks. Returns `200` when all checks pass, `503` when any check fails or when the application is in drain/shutdown state. Response format: ```json { "status": "healthy", "uptime": 12345, "timestamp": "2026-01-01T00:00:00.000Z", "checks": { "database": { "healthy": true, "duration": 5, "details": {} } } } ``` |
+
+
+#### Convenience Health & Ready Factory
+
+| Method | Signature | Description |
+|---|---|---|
+| `createHealthHandlers` | `createHealthHandlers([opts])` | Create paired liveness and readiness handlers for an app. Liveness includes basic process checks; readiness includes all registered dependency checks. |
+
+
+#### Built-in Checks
+
+| Method | Signature | Description |
+|---|---|---|
+| `eventLoopCheck` | `eventLoopCheck([opts])` | Check event loop lag against a threshold. |
+| `diskSpaceCheck` | `diskSpaceCheck([opts])` | Check available disk space (simple heuristic using os.freemem). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxHeapUsedPercent` | number | `90` | Max heap usage percentage. |
+| `maxRssBytes` | number | `—` | Max RSS in bytes. |
+
+
+```js
+  const { healthCheck } = require('zero-http');
+
+  app.get('/healthz', healthCheck());
+  app.get('/readyz', healthCheck({
+      checks: {
+          database: () => db.ping(),
+          cache: () => redis.ping(),
+      },
+  }));
 ```
 
 
 
 ---
 
-## fetch
+## Lifecycle & Clustering
 
-Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS, JSON/URLSearchParams/Buffer/stream bodies, download & upload progress callbacks, timeouts, and AbortSignal.
+### LifecycleManager
+
+Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `url` | string | Yes | Absolute URL to fetch. |
+| `app` | import('./app') | Yes | The App instance to manage. |
+
+
+#### Event Emitter
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `on(event, fn)` | Register a lifecycle event listener. |
+| `off` | `off(event, fn)` | Remove a lifecycle event listener. |
+
+
+#### Connection Tracking
+
+| Method | Signature | Description |
+|---|---|---|
+| `trackRequest` | `trackRequest(res)` | Track an active HTTP request. Called automatically by the App request handler when lifecycle management is enabled. |
+| `activeRequests` | `activeRequests()` | Number of currently active HTTP requests. |
+| `registerPool` | `registerPool(pool)` | Register a WebSocket pool for graceful shutdown. All connections in registered pools are closed with code `1001` during shutdown. |
+| `unregisterPool` | `unregisterPool(pool)` | Unregister a WebSocket pool. |
+| `trackSSE` | `trackSSE(stream)` | Track an active SSE stream for graceful shutdown. |
+| `registerDatabase` | `registerDatabase(db)` | Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown. |
+| `unregisterDatabase` | `unregisterDatabase(db)` | Unregister an ORM Database instance. |
+
+
+#### Signal Handling
+
+| Method | Signature | Description |
+|---|---|---|
+| `installSignalHandlers` | `installSignalHandlers()` | Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times — handlers are only installed once. |
+| `removeSignalHandlers` | `removeSignalHandlers()` | Remove previously installed signal handlers. Called automatically during shutdown cleanup. |
+
+
+#### Shutdown Sequence
+
+| Method | Signature | Description |
+|---|---|---|
+| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Wait for in-flight HTTP requests to complete (with timeout) 6. Close all registered ORM database connections 7. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated. |
+| `isDraining` | `isDraining()` | Whether the server is currently draining (rejecting new requests). |
+| `isClosed` | `isClosed()` | Whether the server has fully shut down. |
+
+
+```js
+  const app = createApp();
+  app.listen(3000);
+
+  // Automatic — SIGTERM/SIGINT handlers registered by listen()
+  // Manual trigger:
+  await app.shutdown();
+```
+
+
+### ClusterManager
+
+Clustering support for zero-http applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers.
+
+#### Cluster Manager
+
+| Method | Signature | Description |
+|---|---|---|
+| `isPrimary` | `isPrimary()` | Whether the current process is the primary (master) process. |
+| `isWorker` | `isWorker()` | Whether the current process is a worker process. |
+| `workerCount` | `workerCount()` | Number of configured workers. |
+| `workerIds` | `workerIds()` | Get all active worker IDs. |
+| `activeWorkers` | `activeWorkers()` | Number of currently alive workers. |
+| `fork` | `fork()` | Fork all worker processes. Only call from the primary process. |
+
+
+#### IPC Messaging
+
+| Method | Signature | Description |
+|---|---|---|
+| `broadcast` | `broadcast(type, data)` | Send a typed message from the primary to all workers. |
+| `sendTo` | `sendTo(workerId, type, data)` | Send a typed message to a specific worker. |
+| `sendToPrimary` | `sendToPrimary(type, data)` | Send a typed message from a worker to the primary process. Call this from within a worker process. |
+| `onMessage` | `onMessage(type, fn)` | Register a handler for a typed IPC message. On the primary, receives messages from workers. On workers, receives messages from the primary. |
+
+
+#### Per-Worker Metrics Aggregation
+
+| Method | Signature | Description |
+|---|---|---|
+| `enableMetrics` | `enableMetrics(registry, [opts])` | Enable automatic per-worker metrics aggregation. Workers periodically send their metrics snapshot to the primary, which merges them into a single registry for exposition. |
+| `disableMetrics` | `disableMetrics()` | Stop the per-worker metrics reporting timer. |
+
+
+#### Sticky Sessions
+
+| Method | Signature | Description |
+|---|---|---|
+| `enableSticky` | `enableSticky(server, [opts])` | Enable sticky sessions by hashing client IP addresses to specific workers. Ensures WebSocket and SSE connections from the same client always land on the same worker for proper room/state management. Must be called on the primary BEFORE listen(). Replaces the default round-robin OS scheduling with a custom `connection` listener that distributes sockets to workers based on IP hash. |
+
+
+#### Graceful Restart & Shutdown
+
+| Method | Signature | Description |
+|---|---|---|
+| `reload` | `reload()` | Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time — a new worker is spawned and confirmed listening before the old one is disconnected. |
+| `shutdown` | `shutdown([opts])` | Shut down the entire cluster gracefully. Sends `'shutdown'` IPC message to all workers, then waits for them to exit. Workers that don't exit within the timeout are killed. |
+
+
+#### Convenience Function
+
+| Method | Signature | Description |
+|---|---|---|
+| `clusterize` | `clusterize(workerFn, [opts])` | High-level clustering helper. Forks workers on the primary process and runs the provided setup function on each worker. |
 
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `method` | string | `'GET'` | HTTP method. |
-| `headers` | object | `—` | Request headers. |
-| `body` | string \| Buffer \| object \| ReadableStream | `—` | Request body. |
-| `timeout` | number | `—` | Request timeout in ms. |
-| `signal` | AbortSignal | `—` | Abort signal for cancellation. |
-| `agent` | import('http').Agent | `—` | Custom HTTP agent. |
-| `onDownloadProgress` | Function | `—` | `({ loaded, total }) => void` download progress callback. |
-| `onUploadProgress` | Function | `—` | `({ loaded, total }) => void` upload progress callback. |
-| `rejectUnauthorized` | boolean | `—` | Reject connections with unverified certs (default: Node default `true`). TLS option — passed to `https.request()`. |
-| `ca` | string \| Buffer \| Array | `—` | Override default CA certificates. |
-| `cert` | string \| Buffer | `—` | Client certificate (PEM) for mutual TLS. |
-| `key` | string \| Buffer | `—` | Private key (PEM) for mutual TLS. |
-| `pfx` | string \| Buffer | `—` | PFX / PKCS12 bundle (alternative to cert+key). |
-| `passphrase` | string | `—` | Passphrase for the key or PFX. |
-| `servername` | string | `—` | SNI server name override. |
-| `ciphers` | string | `—` | Colon-separated cipher list. |
-| `secureProtocol` | string | `—` | SSL/TLS protocol method name. |
-| `minVersion` | string | `—` | Minimum TLS version (`'TLSv1.2'`, etc.). |
-| `maxVersion` | string | `—` | Maximum TLS version. |
+| `workers` | number | `—` | Number of worker processes (default: CPU count). |
+| `respawn` | boolean | `true` | Automatically respawn crashed workers. |
+| `respawnDelay` | number | `1000` | Initial delay (ms) before respawning. |
+| `maxRespawnDelay` | number | `30000` | Maximum respawn delay after backoff. |
+| `backoffFactor` | number | `2` | Multiplier for exponential backoff. |
 
 
 ```js
-  const res = await fetch('https://api.example.com/data');
-  const body = await res.json();
+  const { createApp, cluster } = require('zero-http');
 
-  // POST with JSON body & timeout
-  const res2 = await fetch('https://api.example.com/items', {
-      method: 'POST',
-      body: { name: 'widget' },
-      timeout: 5000,
+  cluster((worker) => {
+      const app = createApp();
+      app.get('/', (req, res) => res.json({ pid: process.pid }));
+      app.listen(3000);
   });
 ```
+
 
 
 ---
