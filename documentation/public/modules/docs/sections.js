@@ -24,10 +24,13 @@ const SECTION_ICONS = {
     settings: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     database: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
     zap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    radio: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>',
     globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
     activity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
     'refresh-cw': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
-    'alert-triangle': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    'alert-triangle': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    'user-check': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>',
+    key: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>'
 };
 
 /* -- Anchor link helper ------------------------------------ */
@@ -807,20 +810,44 @@ function renderDocItem(item, section)
         }
     }
 
-    if (item.example)
+    const exList = item.examples || (item.example ? [{ code: item.example, lang: item.exampleLang || 'javascript' }] : []);
+    if (exList.length)
     {
         const h6 = document.createElement('h6');
-        h6.textContent = 'Example';
+        h6.textContent = exList.length > 1 ? 'Examples' : 'Example';
         body.appendChild(h6);
 
-        const lang = item.exampleLang || 'javascript';
-        const pre = document.createElement('pre');
-        pre.className = 'language-' + lang + ' code';
-        const code = document.createElement('code');
-        code.className = 'language-' + lang;
-        code.textContent = item.example;
-        pre.appendChild(code);
-        body.appendChild(pre);
+        for (const ex of exList)
+        {
+            const lang = ex.lang || 'javascript';
+            const container = document.createElement('div');
+            container.className = 'zh-example-block';
+
+            if (ex.title)
+            {
+                const header = document.createElement('div');
+                header.className = 'zh-example-header';
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'zh-example-title';
+                titleSpan.textContent = ex.title;
+                titleSpan.title = ex.title;
+                header.appendChild(titleSpan);
+                const langBadge = document.createElement('span');
+                langBadge.className = 'zh-example-lang';
+                langBadge.textContent = lang;
+                header.appendChild(langBadge);
+                container.appendChild(header);
+            }
+
+            const pre = document.createElement('pre');
+            pre.className = 'language-' + lang + ' code' + (ex.title ? ' has-header' : '');
+            const code = document.createElement('code');
+            code.className = 'language-' + lang;
+            code.textContent = ex.code;
+            pre.appendChild(code);
+            container.appendChild(pre);
+            body.appendChild(container);
+        }
     }
 
     if (Array.isArray(item.tips) && item.tips.length)
@@ -889,7 +916,7 @@ const CHEVRON_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"
 const TOC_GROUPS = [
     { label: 'Framework', sections: ['Getting Started', 'Core', 'Body Parsers', 'Middleware'] },
     { label: 'Security & Auth', sections: ['Cookies & Security', 'Authentication & Sessions'] },
-    { label: 'Data & I/O', sections: ['Environment', 'Real-Time', 'Networking', 'ORM'] },
+    { label: 'Data & I/O', sections: ['Environment', 'Real-Time', 'gRPC', 'Networking', 'ORM'] },
     { label: 'Platform', sections: ['Observability', 'Lifecycle & Clustering', 'Error Handling'] }
 ];
 

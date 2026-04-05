@@ -6,7 +6,7 @@ const {
     diskSpaceCheck,
 } = require('../../lib/observe/health');
 
-// ── helpers ──────────────────────────────────────────────────────
+// -- helpers ------------------------------------------------------
 
 function mockReqRes(appOverrides = {})
 {
@@ -20,7 +20,7 @@ function mockReqRes(appOverrides = {})
     return { req, res, getStatus: () => statusCode, getBody: () => body };
 }
 
-// ── memoryCheck ──────────────────────────────────────────────────
+// -- memoryCheck --------------------------------------------------
 
 describe('memoryCheck', () =>
 {
@@ -59,7 +59,7 @@ describe('memoryCheck', () =>
     });
 });
 
-// ── eventLoopCheck ───────────────────────────────────────────────
+// -- eventLoopCheck -----------------------------------------------
 
 describe('eventLoopCheck', () =>
 {
@@ -89,7 +89,7 @@ describe('eventLoopCheck', () =>
     });
 });
 
-// ── diskSpaceCheck ───────────────────────────────────────────────
+// -- diskSpaceCheck -----------------------------------------------
 
 describe('diskSpaceCheck', () =>
 {
@@ -117,7 +117,7 @@ describe('diskSpaceCheck', () =>
     });
 });
 
-// ── healthCheck handler ──────────────────────────────────────────
+// -- healthCheck handler ------------------------------------------
 
 describe('healthCheck', () =>
 {
@@ -323,7 +323,7 @@ describe('healthCheck', () =>
     });
 });
 
-// ── createHealthHandlers ─────────────────────────────────────────
+// -- createHealthHandlers -----------------------------------------
 
 describe('createHealthHandlers', () =>
 {

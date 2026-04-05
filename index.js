@@ -40,7 +40,25 @@ const {
     session, Session, MemoryStore,
     oauth, generatePKCE, generateState, PROVIDERS: OAUTH_PROVIDERS,
     authorize, can, canAny, Policy, gate, attachUserHelpers,
+    twoFactor,
+    webauthn,
+    trustedDevice,
+    enrollment,
 } = require('./lib/auth');
+const {
+    GrpcStatus, grpcToHttp, statusName: grpcStatusName, STATUS_NAMES: GRPC_STATUS_NAMES,
+    Metadata: GrpcMetadata,
+    Writer: ProtoWriter, Reader: ProtoReader, encode: protoEncode, decode: protoDecode,
+    WIRE_TYPE, TYPE_INFO,
+    parseProto, parseProtoFile,
+    frameEncode, FrameParser,
+    GrpcServiceRegistry, GrpcClient,
+    HealthService: GrpcHealthService, ServingStatus: GrpcServingStatus,
+    ReflectionService: GrpcReflectionService,
+    LoadBalancer: GrpcLoadBalancer, Subchannel: GrpcSubchannel, SubchannelState: GrpcSubchannelState,
+    ChannelCredentials, createRotatingCredentials,
+    watchProto,
+} = require('./lib/grpc');
 const { version } = require('./package.json');
 
 module.exports = {
@@ -319,6 +337,76 @@ module.exports = {
     gate,
     /** @see module:auth/authorize */
     attachUserHelpers,
+    // Auth: Two-Factor Authentication
+    /** @see module:auth/twoFactor */
+    twoFactor,
+    // Auth: WebAuthn / Passkeys
+    /** @see module:auth/webauthn */
+    webauthn,
+    // Auth: Trusted Device / Remember Me
+    /** @see module:auth/trustedDevice */
+    trustedDevice,
+    // Auth: 2FA Enrollment Flow
+    /** @see module:auth/enrollment */
+    enrollment,
+    // gRPC
+    /** @see module:grpc/status */
+    GrpcStatus,
+    /** @see module:grpc/status */
+    grpcToHttp,
+    /** @see module:grpc/status */
+    grpcStatusName,
+    /** @see module:grpc/status */
+    GRPC_STATUS_NAMES,
+    /** @see module:grpc/metadata */
+    GrpcMetadata,
+    /** @see module:grpc/codec */
+    ProtoWriter,
+    /** @see module:grpc/codec */
+    ProtoReader,
+    /** @see module:grpc/codec */
+    protoEncode,
+    /** @see module:grpc/codec */
+    protoDecode,
+    /** @see module:grpc/codec */
+    WIRE_TYPE,
+    /** @see module:grpc/codec */
+    TYPE_INFO,
+    /** @see module:grpc/proto */
+    parseProto,
+    /** @see module:grpc/proto */
+    parseProtoFile,
+    /** @see module:grpc/frame */
+    frameEncode,
+    /** @see module:grpc/frame */
+    FrameParser,
+    /** @see module:grpc/server */
+    GrpcServiceRegistry,
+    /** @see module:grpc/client */
+    GrpcClient,
+    // gRPC: Health check
+    /** @see module:grpc/health */
+    GrpcHealthService,
+    /** @see module:grpc/health */
+    GrpcServingStatus,
+    // gRPC: Server reflection
+    /** @see module:grpc/reflection */
+    GrpcReflectionService,
+    // gRPC: Load balancing
+    /** @see module:grpc/balancer */
+    GrpcLoadBalancer,
+    /** @see module:grpc/balancer */
+    GrpcSubchannel,
+    /** @see module:grpc/balancer */
+    GrpcSubchannelState,
+    // gRPC: Channel credentials
+    /** @see module:grpc/credentials */
+    ChannelCredentials,
+    /** @see module:grpc/credentials */
+    createRotatingCredentials,
+    // gRPC: Proto hot-reload
+    /** @see module:grpc/watch */
+    watchProto,
     /** Package version */
     version,
 };

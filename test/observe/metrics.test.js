@@ -4,7 +4,7 @@ const {
     createDefaultMetrics, metricsMiddleware, metricsEndpoint,
 } = require('../../lib/observe/metrics');
 
-// ── Counter ─────────────────────────────────────────────────────
+// -- Counter -----------------------------------------------------
 
 describe('Counter', () =>
 {
@@ -91,7 +91,7 @@ describe('Counter', () =>
     });
 });
 
-// ── Gauge ────────────────────────────────────────────────────────
+// -- Gauge --------------------------------------------------------
 
 describe('Gauge', () =>
 {
@@ -179,7 +179,7 @@ describe('Gauge', () =>
     });
 });
 
-// ── Histogram ────────────────────────────────────────────────────
+// -- Histogram ----------------------------------------------------
 
 describe('Histogram', () =>
 {
@@ -275,7 +275,7 @@ describe('Histogram', () =>
     });
 });
 
-// ── MetricsRegistry ──────────────────────────────────────────────
+// -- MetricsRegistry ----------------------------------------------
 
 describe('MetricsRegistry', () =>
 {
@@ -433,7 +433,7 @@ describe('MetricsRegistry', () =>
     });
 });
 
-// ── Default Metrics ──────────────────────────────────────────────
+// -- Default Metrics ----------------------------------------------
 
 describe('createDefaultMetrics', () =>
 {
@@ -446,6 +446,9 @@ describe('createDefaultMetrics', () =>
         expect(defaults.httpActiveConnections).toBeInstanceOf(Gauge);
         expect(defaults.wsConnectionsActive).toBeInstanceOf(Gauge);
         expect(defaults.sseStreamsActive).toBeInstanceOf(Gauge);
+        expect(defaults.grpcCallsActive).toBeInstanceOf(Gauge);
+        expect(defaults.grpcCallsTotal).toBeInstanceOf(Counter);
+        expect(defaults.grpcCallDuration).toBeInstanceOf(Histogram);
         expect(defaults.dbQueryDuration).toBeInstanceOf(Histogram);
         expect(defaults.dbPoolActive).toBeInstanceOf(Gauge);
         expect(defaults.dbPoolIdle).toBeInstanceOf(Gauge);
@@ -460,7 +463,7 @@ describe('createDefaultMetrics', () =>
     });
 });
 
-// ── Metrics Middleware ───────────────────────────────────────────
+// -- Metrics Middleware -------------------------------------------
 
 describe('metricsMiddleware', () =>
 {
@@ -542,7 +545,7 @@ describe('metricsMiddleware', () =>
     });
 });
 
-// ── Metrics Endpoint ─────────────────────────────────────────────
+// -- Metrics Endpoint ---------------------------------------------
 
 describe('metricsEndpoint', () =>
 {
@@ -567,7 +570,7 @@ describe('metricsEndpoint', () =>
     });
 });
 
-// ── Prometheus Text Escaping ─────────────────────────────────────
+// -- Prometheus Text Escaping -------------------------------------
 
 describe('Prometheus text format', () =>
 {
@@ -596,7 +599,7 @@ describe('Prometheus text format', () =>
     });
 });
 
-// ── DEFAULT_BUCKETS ──────────────────────────────────────────────
+// -- DEFAULT_BUCKETS ----------------------------------------------
 
 describe('DEFAULT_BUCKETS', () =>
 {

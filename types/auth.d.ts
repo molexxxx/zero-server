@@ -250,3 +250,271 @@ export function gate(
 ): MiddlewareFunction;
 
 export function attachUserHelpers(): MiddlewareFunction;
+
+// --- Two-Factor Authentication -----------------------------------
+
+export interface TwoFactorSecret {
+    raw: Buffer;
+    base32: string;
+    hex: string;
+}
+
+export interface TOTPOptions {
+    period?: number;
+    digits?: number;
+    algorithm?: 'sha1' | 'sha256' | 'sha512';
+    time?: number;
+}
+
+export interface TOTPVerifyOptions extends TOTPOptions {
+    window?: number;
+}
+
+export interface TOTPVerifyResult {
+    valid: boolean;
+    delta: number | null;
+}
+
+export interface OtpauthURIOptions {
+    secret: string | Buffer;
+    issuer: string;
+    account: string;
+    period?: number;
+    digits?: number;
+    algorithm?: 'sha1' | 'sha256' | 'sha512';
+}
+
+export interface BackupCodesResult {
+    codes: string[];
+    hashes: string[];
+}
+
+export interface BackupCodeVerifyResult {
+    valid: boolean;
+    index: number | null;
+}
+
+export interface Require2FAOptions {
+    sessionKey?: string;
+    errorMessage?: string;
+    statusCode?: number;
+    isEnabled?: (req: Request) => boolean | Promise<boolean>;
+}
+
+export interface VerifyTOTPMiddlewareOptions {
+    getSecret: (req: Request) => string | Buffer | Promise<string | Buffer>;
+    codeField?: string;
+    sessionKey?: string;
+    maxAttempts?: number;
+    lockoutMs?: number;
+    window?: number;
+    period?: number;
+    algorithm?: 'sha1' | 'sha256' | 'sha512';
+    digits?: number;
+    replayStore?: ReplayStore;
+    getUserId?: (req: Request) => string | Promise<string>;
+    onSuccess?: (req: Request, res: Response) => void;
+    onFailure?: (req: Request, res: Response, attemptsLeft: number) => void;
+}
+
+export interface ReplayStore {
+    get(userId: string): Promise<number | null>;
+    set(userId: string, counter: number, ttlMs: number): Promise<void>;
+}
+
+export declare class InMemoryReplayStore implements ReplayStore {
+    constructor();
+    get(userId: string): Promise<number | null>;
+    set(userId: string, counter: number, ttlMs: number): Promise<void>;
+    clear(): void;
+    destroy(): void;
+}
+
+export interface Verify2FAOptions {
+    getSecret: (req: Request) => string | Buffer | Promise<string | Buffer>;
+    getBackupHashes?: (req: Request) => string[] | Promise<string[]>;
+    onBackupUsed?: (req: Request, index: number) => void | Promise<void>;
+    getCredential?: (req: Request, credId: string) => any | Promise<any>;
+    updateCredentialCounter?: (req: Request, credId: string, newCounter: number) => void | Promise<void>;
+    expectedOrigin?: string;
+    expectedRPID?: string;
+    codeField?: string;
+    backupField?: string;
+    sessionKey?: string;
+    maxAttempts?: number;
+    lockoutMs?: number;
+    window?: number;
+    period?: number;
+    algorithm?: 'sha1' | 'sha256' | 'sha512';
+    digits?: number;
+    replayStore?: ReplayStore;
+    getUserId?: (req: Request) => string | Promise<string>;
+    onSuccess?: (req: Request, res: Response, method: 'totp' | 'backup' | 'webauthn') => void;
+    onFailure?: (req: Request, res: Response, attemptsLeft: number) => void;
+}
+
+export interface TwoFactor {
+    generateSecret(bytes?: number): TwoFactorSecret;
+    generateTOTP(secret: string | Buffer, opts?: TOTPOptions): string;
+    verifyTOTP(token: string, secret: string | Buffer, opts?: TOTPVerifyOptions): TOTPVerifyResult;
+    otpauthURI(opts: OtpauthURIOptions): string;
+    generateBackupCodes(count?: number, bytes?: number): BackupCodesResult;
+    verifyBackupCode(code: string, hashes: string[]): BackupCodeVerifyResult;
+    require2FA(opts?: Require2FAOptions): MiddlewareFunction;
+    verifyTOTPMiddleware(opts: VerifyTOTPMiddlewareOptions): MiddlewareFunction;
+    verify2FA(opts: Verify2FAOptions): MiddlewareFunction;
+    InMemoryReplayStore: typeof InMemoryReplayStore;
+    DEFAULT_PERIOD: number;
+    DEFAULT_DIGITS: number;
+    DEFAULT_ALGORITHM: string;
+    DEFAULT_WINDOW: number;
+    SUPPORTED_TOTP_ALGORITHMS: string[];
+}
+
+export const twoFactor: TwoFactor;
+
+// --- WebAuthn / Passkeys -----------------------------------------
+
+export interface WebAuthnRegistrationOptions {
+    rpName: string;
+    rpId: string;
+    userId: string;
+    userName: string;
+    userDisplayName?: string;
+    challenge?: Buffer;
+    challengeSize?: number;
+    attestation?: 'none' | 'direct' | 'indirect';
+    authenticatorSelection?: {
+        authenticatorAttachment?: 'platform' | 'cross-platform';
+        residentKey?: 'discouraged' | 'preferred' | 'required';
+        requireResidentKey?: boolean;
+        userVerification?: 'discouraged' | 'preferred' | 'required';
+    };
+    excludeCredentials?: Array<{ id: string | Buffer; type?: string; transports?: string[] }>;
+    timeout?: number;
+}
+
+export interface WebAuthnRegistrationResult {
+    verified: boolean;
+    credential: {
+        id: string;
+        publicKey: Buffer;
+        counter: number;
+        type: string;
+        transports?: string[];
+    };
+    authData: {
+        rpIdHash: Buffer;
+        flags: number;
+        signCount: number;
+        aaguid: Buffer;
+        credentialId: Buffer;
+    };
+}
+
+export interface WebAuthnVerifyRegistrationOptions {
+    response: any;
+    expectedChallenge: string;
+    expectedOrigin: string;
+    expectedRPID: string;
+}
+
+export interface WebAuthnAuthenticationOptions {
+    rpId: string;
+    challenge?: Buffer;
+    challengeSize?: number;
+    allowCredentials?: Array<{ id: string | Buffer; type?: string; transports?: string[] }>;
+    userVerification?: 'discouraged' | 'preferred' | 'required';
+    timeout?: number;
+}
+
+export interface WebAuthnAuthenticationResult {
+    verified: boolean;
+    authData: {
+        rpIdHash: Buffer;
+        flags: number;
+        signCount: number;
+    };
+}
+
+export interface WebAuthnVerifyAuthenticationOptions {
+    response: any;
+    expectedChallenge: string;
+    expectedOrigin: string;
+    expectedRPID: string;
+    credential: { publicKey: Buffer; counter: number; id?: string };
+}
+
+export interface WebAuthn {
+    generateRegistrationOptions(opts: WebAuthnRegistrationOptions): any;
+    verifyRegistration(opts: WebAuthnVerifyRegistrationOptions): Promise<WebAuthnRegistrationResult>;
+    generateAuthenticationOptions(opts: WebAuthnAuthenticationOptions): any;
+    verifyAuthentication(opts: WebAuthnVerifyAuthenticationOptions): Promise<WebAuthnAuthenticationResult>;
+}
+
+export const webauthn: WebAuthn;
+
+// --- Trusted Device / Remember Me --------------------------------
+
+export interface TrustedDeviceIssueOptions {
+    secret: string;
+    maxAge?: number;
+    cookieName?: string;
+    fingerprint?: (req: Request) => string | Promise<string>;
+    getUserId?: (req: Request) => string | Promise<string>;
+}
+
+export interface TrustedDeviceVerifyOptions {
+    secret: string;
+    previousSecrets?: string | string[];
+    cookieName?: string;
+    fingerprint?: (req: Request) => string | Promise<string>;
+    getUserId?: (req: Request) => string | Promise<string>;
+    checkIP?: boolean;
+}
+
+export interface TrustedDeviceRevokeOptions {
+    cookieName?: string;
+}
+
+export interface TrustedDevice {
+    issue(opts: TrustedDeviceIssueOptions): MiddlewareFunction;
+    verify(opts: TrustedDeviceVerifyOptions): (req: Request) => Promise<boolean>;
+    revoke(opts?: TrustedDeviceRevokeOptions): MiddlewareFunction;
+}
+
+export const trustedDevice: TrustedDevice;
+
+// --- 2FA Enrollment Flow -----------------------------------------
+
+export interface EnrollmentOptions {
+    saveSecret: (req: Request, secret: string, backupHashes: string[]) => Promise<void>;
+    removeSecret: (req: Request) => Promise<void>;
+    issuer?: string;
+    getAccount?: (req: Request) => string | Promise<string>;
+    sessionKey?: string;
+    ttl?: number;
+    backupCount?: number;
+    window?: number;
+    period?: number;
+    algorithm?: 'sha1' | 'sha256' | 'sha512';
+    digits?: number;
+    isEnabled?: (req: Request) => boolean | Promise<boolean>;
+}
+
+export interface EnrollmentDisableOptions {
+    confirm?: (req: Request) => boolean | Promise<boolean>;
+}
+
+export interface EnrollmentVerifyOptions {
+    codeField?: string;
+}
+
+export interface EnrollmentFlow {
+    start(): MiddlewareFunction;
+    verify(opts?: EnrollmentVerifyOptions): MiddlewareFunction;
+    complete(): MiddlewareFunction;
+    disable(opts?: EnrollmentDisableOptions): MiddlewareFunction;
+}
+
+export function enrollment(opts: EnrollmentOptions): EnrollmentFlow;

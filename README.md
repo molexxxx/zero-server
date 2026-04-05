@@ -10,8 +10,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-6098%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-http/actions)
-[![Coverage](https://img.shields.io/badge/coverage-95.4%25-brightgreen.svg)](https://github.com/tonywied17/zero-http)
+[![Tests](https://img.shields.io/badge/tests-7384%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-http/actions)
+[![Coverage](https://img.shields.io/badge/coverage-97.01%25-brightgreen.svg)](https://github.com/tonywied17/zero-http)
 
 > **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware from a single `require`.**
 
@@ -134,9 +134,48 @@ const users = await User.find({ name: 'Alice' })
 
 ### Observability
 
-- **Prometheus metrics** — `Counter`, `Gauge`, `Histogram`, `metricsMiddleware()`, and `/metrics` endpoint
+Built-in Prometheus metrics, health checks, distributed tracing, and structured logging — zero dependencies.
+
+```js
+const { createApp, metricsMiddleware } = require('zero-http')
+const app = createApp()
+
+// Auto-instrument all HTTP requests (counters, histograms, active connections)
+app.use(metricsMiddleware({ registry: app.metrics() }))
+
+// Expose endpoints
+app.metricsEndpoint()   // GET /metrics  (Prometheus scrape target)
+app.health()            // GET /healthz  (liveness probe)
+app.ready()             // GET /readyz   (readiness probe)
+
+// Custom metrics
+const logins = app.metrics().counter({
+  name: 'user_logins_total',
+  help: 'Total login attempts',
+  labels: ['provider'],
+})
+logins.inc({ provider: 'github' })
+
+app.listen(3000)
+```
+
+**Scrape with Prometheus** — create a `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'my-app'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:3000']
+```
+
+```bash
+docker run -d -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+# Open http://localhost:9090 → Graph → query http_requests_total
+```
+
+**Also includes:**
 - **Distributed tracing** — `Tracer` and `Span` with W3C Trace Context (`traceparent` propagation), `instrumentFetch()` for outgoing requests
-- **Health checks** — `app.health()` and `app.ready()` with built-in memory, event-loop, and disk-space checks
 - **Structured logging** — `Logger` with levels, JSON output, and namespaced `debug()` logger
 
 ### Lifecycle & Clustering

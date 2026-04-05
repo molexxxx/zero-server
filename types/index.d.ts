@@ -33,8 +33,15 @@ export {
     OAuthProviderPreset, OAuthOptions, OAuthAuthorizeResult, OAuthTokens, OAuthClient,
     oauth, generatePKCE, generateState, OAUTH_PROVIDERS,
     authorize, can, canAny, Policy, gate, attachUserHelpers,
+    TwoFactor, twoFactor,
+    InMemoryReplayStore, ReplayStore, Verify2FAOptions,
+    WebAuthn, webauthn, WebAuthnRegistrationOptions, WebAuthnRegistrationResult,
+    WebAuthnVerifyRegistrationOptions, WebAuthnAuthenticationOptions,
+    WebAuthnAuthenticationResult, WebAuthnVerifyAuthenticationOptions,
+    TrustedDevice, trustedDevice, TrustedDeviceIssueOptions,
+    TrustedDeviceVerifyOptions, TrustedDeviceRevokeOptions,
+    EnrollmentFlow, EnrollmentOptions, enrollment,
 } from './auth';
-export { WebSocketOptions, WebSocketHandler, WebSocketConnection, WebSocketPool } from './websocket';
 export {
     NextFunction, MiddlewareFunction, ErrorHandlerFunction,
     CorsOptions, cors,
@@ -82,6 +89,23 @@ export {
 } from './orm';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
 export { validate as schemaValidate } from './orm';
+export {
+    GrpcStatus, STATUS_NAMES, grpcToHttp, statusName as grpcStatusName,
+    Metadata as GrpcMetadata,
+    Writer as ProtoWriter, Reader as ProtoReader, encode as protoEncode, decode as protoDecode,
+    WIRE_TYPE, TYPE_INFO,
+    parseProto, parseProtoFile, tokenize,
+    frameEncode, FrameParser,
+    BaseCall, UnaryCall, ServerStreamCall, ClientStreamCall, BidiStreamCall,
+    GrpcServiceRegistry, GrpcServiceOptions, GrpcInterceptor, GrpcHandler,
+    GrpcClient, GrpcClientOptions, GrpcCallOptions, GrpcClientMultiAddressOptions,
+    ProtoSchema, MessageDescriptor, EnumDescriptor, ServiceDescriptor, MethodDescriptor, FieldDescriptor,
+    HealthService, ServingStatus,
+    ReflectionService, buildFileDescriptorProto,
+    LoadBalancer, Subchannel, SubchannelState, RoundRobinPicker,
+    ChannelCredentials, CredentialType, createRotatingCredentials,
+    watchProto, WatchProtoOptions,
+} from './grpc';
 export {
     HttpError, HttpErrorOptions,
     BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError,
@@ -140,7 +164,25 @@ import {
     session, Session, MemoryStore,
     oauth, generatePKCE, generateState, OAUTH_PROVIDERS,
     authorize, can, canAny, Policy, gate, attachUserHelpers,
+    twoFactor,
+    webauthn,
+    trustedDevice,
+    enrollment,
 } from './auth';
+import {
+    GrpcStatus, grpcToHttp, statusName as grpcStatusName, STATUS_NAMES as GRPC_STATUS_NAMES,
+    GrpcMetadata, ProtoWriter, ProtoReader, protoEncode, protoDecode,
+    WIRE_TYPE, TYPE_INFO,
+    parseProto, parseProtoFile,
+    frameEncode, FrameParser,
+    GrpcServiceRegistry, GrpcClient,
+    ProtoSchema, GrpcServiceOptions, GrpcInterceptor, GrpcHandler,
+    HealthService as GrpcHealthService, ServingStatus as GrpcServingStatus,
+    ReflectionService as GrpcReflectionService,
+    LoadBalancer as GrpcLoadBalancer, Subchannel as GrpcSubchannel, SubchannelState as GrpcSubchannelState,
+    ChannelCredentials, createRotatingCredentials,
+    watchProto,
+} from './grpc';
 import {
     HttpError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, MethodNotAllowedError, ConflictError, GoneError,
@@ -299,6 +341,42 @@ declare const zeroServer: {
     Policy: typeof Policy;
     gate: typeof gate;
     attachUserHelpers: typeof attachUserHelpers;
+    twoFactor: typeof twoFactor;
+    webauthn: typeof webauthn;
+    trustedDevice: typeof trustedDevice;
+    enrollment: typeof enrollment;
+    // gRPC
+    GrpcStatus: typeof GrpcStatus;
+    grpcToHttp: typeof grpcToHttp;
+    grpcStatusName: typeof grpcStatusName;
+    GRPC_STATUS_NAMES: typeof GRPC_STATUS_NAMES;
+    GrpcMetadata: typeof GrpcMetadata;
+    ProtoWriter: typeof ProtoWriter;
+    ProtoReader: typeof ProtoReader;
+    protoEncode: typeof protoEncode;
+    protoDecode: typeof protoDecode;
+    WIRE_TYPE: typeof WIRE_TYPE;
+    TYPE_INFO: typeof TYPE_INFO;
+    parseProto: typeof parseProto;
+    parseProtoFile: typeof parseProtoFile;
+    frameEncode: typeof frameEncode;
+    FrameParser: typeof FrameParser;
+    GrpcServiceRegistry: typeof GrpcServiceRegistry;
+    GrpcClient: typeof GrpcClient;
+    // gRPC: Health check
+    GrpcHealthService: typeof GrpcHealthService;
+    GrpcServingStatus: typeof GrpcServingStatus;
+    // gRPC: Server reflection
+    GrpcReflectionService: typeof GrpcReflectionService;
+    // gRPC: Load balancing
+    GrpcLoadBalancer: typeof GrpcLoadBalancer;
+    GrpcSubchannel: typeof GrpcSubchannel;
+    GrpcSubchannelState: typeof GrpcSubchannelState;
+    // gRPC: Channel credentials
+    ChannelCredentials: typeof ChannelCredentials;
+    createRotatingCredentials: typeof createRotatingCredentials;
+    // gRPC: Proto hot-reload
+    watchProto: typeof watchProto;
     /** Package version string */
     version: string;
 };

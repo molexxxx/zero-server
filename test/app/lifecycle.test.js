@@ -475,6 +475,22 @@ describe('Lifecycle Manager', () =>
             expect(streamClosed).toBe(true);
         });
 
+        it('drains gRPC calls during shutdown', async () =>
+        {
+            const app = createApp();
+            let drained = false;
+            const mockRegistry = {
+                async drain() { drained = true; },
+            };
+
+            app._lifecycle.registerGrpc(mockRegistry);
+            const { port } = await startApp(app);
+            app._lifecycle.removeSignalHandlers();
+
+            await app.shutdown({ timeout: 1000 });
+            expect(drained).toBe(true);
+        });
+
         it('closes ORM databases during shutdown', async () =>
         {
             const app = createApp();
