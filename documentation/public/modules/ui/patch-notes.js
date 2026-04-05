@@ -212,12 +212,21 @@ export async function showPatchNotes(ver)
 
 			const added = notes.changes.filter(c => c.type === 'added');
 			const removed = notes.changes.filter(c => c.type === 'removed');
+			const moved = notes.changes.filter(c => c.type === 'moved');
 
 			if (added.length)
 			{
 				html += '<div class="pn-group">';
 				html += `<div class="pn-group-title pn-added">${CHANGE_ICONS.added}<span>Added (${added.length})</span></div>`;
 				html += renderChangeList(added);
+				html += '</div>';
+			}
+
+			if (moved.length)
+			{
+				html += '<div class="pn-group">';
+				html += `<div class="pn-group-title pn-moved">${CHANGE_ICONS.moved}<span>Moved (${moved.length})</span></div>`;
+				html += renderChangeList(moved);
 				html += '</div>';
 			}
 
