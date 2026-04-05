@@ -6,34 +6,6 @@
 		{
 			"type": "added",
 			"kind": "item",
-			"section": "Authentication",
-			"name": "jwt",
-			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
-		},
-		{
-			"type": "added",
-			"kind": "item",
-			"section": "Authentication",
-			"name": "session",
-			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
-		},
-		{
-			"type": "added",
-			"kind": "item",
-			"section": "Authentication",
-			"name": "oauth",
-			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
-		},
-		{
-			"type": "added",
-			"kind": "item",
-			"section": "Authorization",
-			"name": "authorize",
-			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
-		},
-		{
-			"type": "added",
-			"kind": "item",
 			"section": "Multi-Factor Auth",
 			"name": "twoFactor",
 			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages."
@@ -151,34 +123,6 @@
 			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`."
 		},
 		{
-			"type": "removed",
-			"kind": "item",
-			"section": "Authentication & Sessions",
-			"name": "jwt",
-			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
-		},
-		{
-			"type": "removed",
-			"kind": "item",
-			"section": "Authentication & Sessions",
-			"name": "session",
-			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
-		},
-		{
-			"type": "removed",
-			"kind": "item",
-			"section": "Authentication & Sessions",
-			"name": "oauth",
-			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
-		},
-		{
-			"type": "removed",
-			"kind": "item",
-			"section": "Authentication & Sessions",
-			"name": "authorize",
-			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
-		},
-		{
 			"type": "added",
 			"kind": "method",
 			"section": "Core",
@@ -219,6 +163,38 @@
 			"section": "Lifecycle & Clustering",
 			"name": "LifecycleManager",
 			"method": "registerGrpc"
+		},
+		{
+			"type": "moved",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "jwt",
+			"fromSection": "Authentication & Sessions",
+			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
+		},
+		{
+			"type": "moved",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "session",
+			"fromSection": "Authentication & Sessions",
+			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
+		},
+		{
+			"type": "moved",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "oauth",
+			"fromSection": "Authentication & Sessions",
+			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
+		},
+		{
+			"type": "moved",
+			"kind": "item",
+			"section": "Authorization",
+			"name": "authorize",
+			"fromSection": "Authentication & Sessions",
+			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
 		},
 		{
 			"type": "added",

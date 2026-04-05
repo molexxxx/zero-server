@@ -13,6 +13,7 @@ let _cache = new Map();
 const CHANGE_ICONS = {
 	added:   '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3fb950" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round"/></svg>',
 	removed: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#f85149" stroke-width="1.5"/><path d="M5 8h6" stroke="#f85149" stroke-width="1.5" stroke-linecap="round"/></svg>',
+	moved:   '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#58a6ff" stroke-width="1.5"/><path d="M5 8h6" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/><path d="M9 5.5L11.5 8 9 10.5" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
 const KIND_LABELS = {
@@ -84,9 +85,10 @@ function renderPatchNotes(notes)
 		return;
 	}
 
-	// Group changes by type (added first, then removed)
+	// Group changes by type
 	const added = notes.changes.filter(c => c.type === 'added');
 	const removed = notes.changes.filter(c => c.type === 'removed');
+	const moved = notes.changes.filter(c => c.type === 'moved');
 
 	let html = '';
 
@@ -100,6 +102,14 @@ function renderPatchNotes(notes)
 		html += '<div class="pn-group">';
 		html += `<div class="pn-group-title pn-added">${CHANGE_ICONS.added}<span>Added (${added.length})</span></div>`;
 		html += renderChangeList(added);
+		html += '</div>';
+	}
+
+	if (moved.length)
+	{
+		html += '<div class="pn-group">';
+		html += `<div class="pn-group-title pn-moved">${CHANGE_ICONS.moved}<span>Moved (${moved.length})</span></div>`;
+		html += renderChangeList(moved);
 		html += '</div>';
 	}
 
@@ -122,7 +132,11 @@ function renderChangeList(changes)
 	{
 		const kindLabel = KIND_LABELS[c.kind] || c.kind;
 		const icon = CHANGE_ICONS[c.type] || '';
-		const section = c.section ? `<span class="pn-section">${escapeHtml(c.section)}</span>` : '';
+		let section = c.section ? `<span class="pn-section">${escapeHtml(c.section)}</span>` : '';
+		if (c.type === 'moved' && c.fromSection)
+		{
+			section = `<span class="pn-section">${escapeHtml(c.fromSection)} → ${escapeHtml(c.section)}</span>`;
+		}
 
 		let nameHtml = escapeHtml(c.name);
 		if (c.kind === 'method' && c.method)
