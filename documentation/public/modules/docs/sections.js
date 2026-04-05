@@ -915,7 +915,7 @@ const CHEVRON_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"
 /* Category groups for sidebar organisation */
 const TOC_GROUPS = [
     { label: 'Framework', sections: ['Getting Started', 'Core', 'Body Parsers', 'Middleware'] },
-    { label: 'Security & Auth', sections: ['Cookies & Security', 'Authentication & Sessions'] },
+    { label: 'Security & Auth', sections: ['Cookies & Security', 'Authentication', 'Authorization', 'Multi-Factor Auth'] },
     { label: 'Data & I/O', sections: ['Environment', 'Real-Time', 'gRPC', 'Networking', 'ORM'] },
     { label: 'Platform', sections: ['Observability', 'Lifecycle & Clustering', 'Error Handling'] }
 ];
