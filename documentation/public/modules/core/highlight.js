@@ -2,7 +2,7 @@
  * core/highlight.js
  * Native syntax highlighter for the zero-http docs.
  *
- * Supported languages: javascript, html, css, json, bash
+ * Supported languages: javascript, html, css, json, yaml, bash
  *
  * API:
  *   ZHHighlight.highlight(codeElement)
@@ -84,12 +84,26 @@ const BASH_RULES = [
   ['num',       /\b\d+\b/],
 ];
 
+const YAML_RULES = [
+  ['cmt',       /#[^\n]*/],
+  ['str',       /"(?:[^"\\]|\\.)*"|'[^']*'/],
+  ['val',       /\b(?:true|false|null|yes|no|on|off|~)\b/],
+  ['num',       /-?(?:0[xX][\da-fA-F]+|0[oO][0-7]+|(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/],
+  ['kw',        /^---$|^\.\.\.$/m],
+  ['deco',      /[&*]\w+|<<(?=\s*:)/],
+  ['tag',       /!\S+/],
+  ['attr',      /^[ \t]*[\w][\w./ -]*(?=\s*:)/m],
+  ['punc',      /[{}[\],>|?:-]/],
+];
+
 const GRAMMARS = {
   javascript: JS_RULES,
   js:         JS_RULES,
   html:       HTML_RULES,
   css:        CSS_RULES,
   json:       JSON_RULES,
+  yaml:       YAML_RULES,
+  yml:        YAML_RULES,
   bash:       BASH_RULES,
   shell:      BASH_RULES,
 };

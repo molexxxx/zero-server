@@ -162,6 +162,9 @@ export interface DefaultMetrics {
     httpActiveConnections: Gauge;
     wsConnectionsActive: Gauge;
     sseStreamsActive: Gauge;
+    grpcCallsActive: Gauge;
+    grpcCallsTotal: Counter;
+    grpcCallDuration: Histogram;
     dbQueryDuration: Histogram;
     dbPoolActive: Gauge;
     dbPoolIdle: Gauge;

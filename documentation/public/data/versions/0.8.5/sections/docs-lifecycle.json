@@ -6,6 +6,12 @@
 			"name": "LifecycleManager",
 			"description": "Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting.",
 			"example": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic — SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
+			"examples": [
+				{
+					"code": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic — SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
+					"lang": "javascript"
+				}
+			],
 			"params": [
 				{
 					"param": "app",
@@ -39,7 +45,14 @@
 							"methodReturns": {
 								"type": "LifecycleManager",
 								"description": "this"
-							}
+							},
+							"example": "  app.on('beforeShutdown', async () => {\r\n      await flushMetrics();\r\n  });\r\n\n  app.on('shutdown', () => {\r\n      console.log('server shut down');\r\n  });",
+							"examples": [
+								{
+									"code": "  app.on('beforeShutdown', async () => {\r\n      await flushMetrics();\r\n  });\r\n\n  app.on('shutdown', () => {\r\n      console.log('server shut down');\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "off",
@@ -102,7 +115,14 @@
 							"methodReturns": {
 								"type": "LifecycleManager",
 								"description": "this"
-							}
+							},
+							"example": "  const pool = new WebSocketPool();\r\n  app.registerPool(pool);",
+							"examples": [
+								{
+									"code": "  const pool = new WebSocketPool();\r\n  app.registerPool(pool);",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "unregisterPool",
@@ -153,7 +173,14 @@
 							"methodReturns": {
 								"type": "LifecycleManager",
 								"description": "this"
-							}
+							},
+							"example": "  const db = new Database({ adapter: 'sqlite', file: ':memory:' });\r\n  app.registerDatabase(db);",
+							"examples": [
+								{
+									"code": "  const db = new Database({ adapter: 'sqlite', file: ':memory:' });\r\n  app.registerDatabase(db);",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "unregisterDatabase",
@@ -215,7 +242,20 @@
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": "Resolves when shutdown is complete."
-							}
+							},
+							"example": "  await app.shutdown();",
+							"examples": [
+								{
+									"code": "  await app.shutdown();",
+									"lang": "javascript",
+									"title": "With Default Timeout"
+								},
+								{
+									"code": "  await app.shutdown({ timeout: 5000 });",
+									"lang": "javascript",
+									"title": "With Custom Timeout"
+								}
+							]
 						},
 						{
 							"method": "isDraining",
@@ -235,6 +275,17 @@
 			"name": "ClusterManager",
 			"description": "Clustering support for zero-http applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers.",
 			"example": "  const { createApp, cluster } = require('zero-http');\r\n\n  cluster((worker) => {\r\n      const app = createApp();\r\n      app.get('/', (req, res) => res.json({ pid: process.pid }));\r\n      app.listen(3000);\r\n  });",
+			"examples": [
+				{
+					"code": "  const { createApp, cluster } = require('zero-http');\r\n\n  cluster((worker) => {\r\n      const app = createApp();\r\n      app.get('/', (req, res) => res.json({ pid: process.pid }));\r\n      app.listen(3000);\r\n  });",
+					"lang": "javascript"
+				},
+				{
+					"code": "  cluster((worker) => {\r\n      const app = createApp();\r\n      app.listen(3000);\r\n  }, {\r\n      workers: 4,\r\n      respawn: true,\r\n      respawnDelay: 1000,\r\n      maxRespawnDelay: 30000,\r\n  });",
+					"lang": "javascript",
+					"title": "With Options"
+				}
+			],
 			"options": [
 				{
 					"option": "workers",
@@ -307,7 +358,14 @@
 							"methodReturns": {
 								"type": "ClusterManager",
 								"description": "this"
-							}
+							},
+							"example": "  const mgr = new ClusterManager({ workers: 4 });\r\n  if (mgr.isPrimary) {\r\n      mgr.fork();\r\n  }",
+							"examples": [
+								{
+									"code": "  const mgr = new ClusterManager({ workers: 4 });\r\n  if (mgr.isPrimary) {\r\n      mgr.fork();\r\n  }",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -330,6 +388,19 @@
 									"type": "*",
 									"required": "Yes",
 									"notes": "Message payload (must be serialisable)."
+								}
+							],
+							"example": "  mgr.broadcast('config:update', { maxConn: 100 });",
+							"examples": [
+								{
+									"code": "  mgr.broadcast('config:update', { maxConn: 100 });",
+									"lang": "javascript",
+									"title": "Primary"
+								},
+								{
+									"code": "  mgr.onMessage('config:update', (data) => {\r\n      console.log('new config:', data);\r\n  });",
+									"lang": "javascript",
+									"title": "Worker"
 								}
 							]
 						},
@@ -375,6 +446,14 @@
 									"required": "Yes",
 									"notes": "Message payload."
 								}
+							],
+							"example": "  mgr.sendToPrimary('metrics', { reqCount: 150 });",
+							"examples": [
+								{
+									"code": "  mgr.sendToPrimary('metrics', { reqCount: 150 });",
+									"lang": "javascript",
+									"title": "In a Worker"
+								}
 							]
 						},
 						{
@@ -398,7 +477,14 @@
 							"methodReturns": {
 								"type": "ClusterManager",
 								"description": "this"
-							}
+							},
+							"example": "  mgr.onMessage('metrics', (data, worker) => {\r\n      console.log('worker', worker.id, 'reports:', data);\r\n  });",
+							"examples": [
+								{
+									"code": "  mgr.onMessage('metrics', (data, worker) => {\r\n      console.log('worker', worker.id, 'reports:', data);\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -434,7 +520,14 @@
 							"methodReturns": {
 								"type": "ClusterManager",
 								"description": "this"
-							}
+							},
+							"example": "  const { MetricsRegistry, cluster } = require('zero-http');\r\n  const registry = new MetricsRegistry();\r\n\n  cluster((mgr) => {\r\n      const app = createApp();\r\n      app.use(metricsMiddleware({ registry }));\r\n      mgr.enableMetrics(registry, { interval: 3000 });\r\n      app.listen(3000);\r\n  });",
+							"examples": [
+								{
+									"code": "  const { MetricsRegistry, cluster } = require('zero-http');\r\n  const registry = new MetricsRegistry();\r\n\n  cluster((mgr) => {\r\n      const app = createApp();\r\n      app.use(metricsMiddleware({ registry }));\r\n      mgr.enableMetrics(registry, { interval: 3000 });\r\n      app.listen(3000);\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "disableMetrics",
@@ -475,7 +568,14 @@
 							"methodReturns": {
 								"type": "ClusterManager",
 								"description": "this"
-							}
+							},
+							"example": "  if (mgr.isPrimary) {\r\n      const server = http.createServer();\r\n      mgr.enableSticky(server);\r\n      server.listen(3000);\r\n  }",
+							"examples": [
+								{
+									"code": "  if (mgr.isPrimary) {\r\n      const server = http.createServer();\r\n      mgr.enableSticky(server);\r\n      server.listen(3000);\r\n  }",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -489,7 +589,14 @@
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": "Resolves when all workers have been replaced."
-							}
+							},
+							"example": "  process.on('SIGHUP', () => mgr.reload());",
+							"examples": [
+								{
+									"code": "  process.on('SIGHUP', () => mgr.reload());",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "shutdown",
@@ -514,7 +621,14 @@
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": "Resolves when all workers have exited."
-							}
+							},
+							"example": "  process.on('SIGTERM', async () => {\r\n      await mgr.shutdown({ timeout: 10000 });\r\n      process.exit(0);\r\n  });",
+							"examples": [
+								{
+									"code": "  process.on('SIGTERM', async () => {\r\n      await mgr.shutdown({ timeout: 10000 });\r\n      process.exit(0);\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -542,7 +656,14 @@
 							"methodReturns": {
 								"type": "ClusterManager",
 								"description": "The cluster manager instance (on both primary and workers)."
-							}
+							},
+							"example": "  const { cluster } = require('zero-http');\r\n\n  cluster((mgr) => {\r\n      const app = createApp();\r\n      app.get('/', (req, res) => res.json({ pid: process.pid }));\r\n      app.listen(3000);\r\n  }, { workers: 4 });",
+							"examples": [
+								{
+									"code": "  const { cluster } = require('zero-http');\r\n\n  cluster((mgr) => {\r\n      const app = createApp();\r\n      app.get('/', (req, res) => res.json({ pid: process.pid }));\r\n      app.listen(3000);\r\n  }, { workers: 4 });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}

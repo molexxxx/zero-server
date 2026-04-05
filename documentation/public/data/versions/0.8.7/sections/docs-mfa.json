@@ -1,0 +1,883 @@
+{
+	"section": "Multi-Factor Auth",
+	"icon": "key",
+	"items": [
+		{
+			"name": "twoFactor",
+			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages.",
+			"example": "  const { twoFactor } = require('zero-http');\r\n\n  app.post('/2fa/setup', async (req, res) => {\r\n      const secret = twoFactor.generateSecret();\r\n      const uri    = twoFactor.otpauthURI({ secret, issuer: 'MyApp', account: req.user.email });\r\n      // Store secret.base32 in your database (encrypted)\r\n      res.json({ secret: secret.base32, uri });\r\n  });",
+			"examples": [
+				{
+					"code": "  const { twoFactor } = require('zero-http');\r\n\n  app.post('/2fa/setup', async (req, res) => {\r\n      const secret = twoFactor.generateSecret();\r\n      const uri    = twoFactor.otpauthURI({ secret, issuer: 'MyApp', account: req.user.email });\r\n      // Store secret.base32 in your database (encrypted)\r\n      res.json({ secret: secret.base32, uri });\r\n  });",
+					"lang": "javascript",
+					"title": "Setup 2FA for a user"
+				},
+				{
+					"code": "  app.post('/2fa/verify', async (req, res) => {\r\n      const user  = await db.users.findById(req.user.sub);\r\n      const valid = twoFactor.verifyTOTP(req.body.code, user.totpSecret);\r\n      if (!valid) return res.status(401).json({ error: 'Invalid code' });\r\n      req.session.set('twoFactorVerified', true);\r\n      res.json({ ok: true });\r\n  });",
+					"lang": "javascript",
+					"title": "Verify a TOTP code"
+				},
+				{
+					"code": "  app.use('/admin', twoFactor.require2FA(), adminRouter);",
+					"lang": "javascript",
+					"title": "Protect routes with 2FA middleware"
+				},
+				{
+					"code": "  const { codes, hashes } = twoFactor.generateBackupCodes(10);\r\n  // Store hashes in DB; give codes to user once\r\n  const ok = await twoFactor.verifyBackupCode(inputCode, storedHashes);",
+					"lang": "javascript",
+					"title": "Generate and redeem backup codes"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "TOTP Replay Prevention (RFC 6238 §5.2)",
+					"methods": [
+						{
+							"method": "get",
+							"signature": "get(userId)",
+							"description": "Get the last-used counter for a user.",
+							"methodParams": [
+								{
+									"param": "userId",
+									"type": "string",
+									"required": "Yes",
+									"notes": "User identifier."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<number | null>",
+								"description": "Last-used counter or null."
+							}
+						},
+						{
+							"method": "set",
+							"signature": "set(userId, counter, ttlMs)",
+							"description": "Store the last-used counter for a user with a TTL.",
+							"methodParams": [
+								{
+									"param": "userId",
+									"type": "string",
+									"required": "Yes",
+									"notes": "User identifier."
+								},
+								{
+									"param": "counter",
+									"type": "number",
+									"required": "Yes",
+									"notes": "The time-step counter that was used."
+								},
+								{
+									"param": "ttlMs",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Time-to-live in milliseconds."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						},
+						{
+							"method": "clear",
+							"signature": "clear()",
+							"description": "Clear all stored counters (for testing or user revocation)."
+						},
+						{
+							"method": "destroy",
+							"signature": "destroy()",
+							"description": "Destroy the store and stop periodic pruning."
+						}
+					]
+				},
+				{
+					"group": "TOTP (RFC 6238) Functions",
+					"methods": [
+						{
+							"method": "generateSecret",
+							"signature": "generateSecret([bytes])",
+							"description": "Generate a cryptographically random TOTP secret.",
+							"methodParams": [
+								{
+									"param": "bytes",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of random bytes (default 20 = 160-bit, per RFC 4226)."
+								}
+							],
+							"methodReturns": {
+								"type": "{ raw: Buffer, base32: string, hex: string }",
+								"description": "Secret in multiple formats."
+							},
+							"example": "  const secret = generateSecret();\r\n  console.log(secret.base32); // \"JBSWY3DPEHPK3PXP...\"\r\n  // Store secret.base32 in database (encrypted at rest)",
+							"examples": [
+								{
+									"code": "  const secret = generateSecret();\r\n  console.log(secret.base32); // \"JBSWY3DPEHPK3PXP...\"\r\n  // Store secret.base32 in database (encrypted at rest)",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "generateTOTP",
+							"signature": "generateTOTP(secret, [opts])",
+							"description": "Generate a TOTP code for the current (or given) time.",
+							"methodParams": [
+								{
+									"param": "secret",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Base32-encoded string or raw Buffer."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "period",
+									"type": "number",
+									"default": "30",
+									"notes": "Time step in seconds."
+								},
+								{
+									"option": "digits",
+									"type": "number",
+									"default": "6",
+									"notes": "Code length."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'sha1'",
+									"notes": "HMAC algorithm (sha1, sha256, sha512)."
+								},
+								{
+									"option": "time",
+									"type": "number",
+									"default": "—",
+									"notes": "Unix timestamp in seconds (defaults to now)."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "TOTP code string."
+							},
+							"example": "  const code = generateTOTP('JBSWY3DPEHPK3PXP');\r\n  // '482913'",
+							"examples": [
+								{
+									"code": "  const code = generateTOTP('JBSWY3DPEHPK3PXP');\r\n  // '482913'",
+									"lang": "javascript"
+								},
+								{
+									"code": "  const code = generateTOTP(secret, { period: 60, algorithm: 'sha256', digits: 8 });",
+									"lang": "javascript",
+									"title": "Custom period and algorithm"
+								}
+							]
+						},
+						{
+							"method": "verifyTOTP",
+							"signature": "verifyTOTP(token, secret, [opts])",
+							"description": "Verify a user-supplied TOTP code against a shared secret. Checks within a configurable time-step window to handle clock drift.",
+							"methodParams": [
+								{
+									"param": "token",
+									"type": "string",
+									"required": "Yes",
+									"notes": "The 6/8-digit code submitted by the user."
+								},
+								{
+									"param": "secret",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Base32-encoded string or raw Buffer."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "period",
+									"type": "number",
+									"default": "30",
+									"notes": "Time step in seconds."
+								},
+								{
+									"option": "digits",
+									"type": "number",
+									"default": "6",
+									"notes": "Expected code length."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'sha1'",
+									"notes": "HMAC algorithm."
+								},
+								{
+									"option": "window",
+									"type": "number",
+									"default": "1",
+									"notes": "Number of periods to check before/after current."
+								},
+								{
+									"option": "time",
+									"type": "number",
+									"default": "—",
+									"notes": "Unix timestamp override (seconds)."
+								}
+							],
+							"methodReturns": {
+								"type": "{ valid: boolean, delta: number | null }",
+								"description": "Result with timing delta."
+							},
+							"example": "  const result = verifyTOTP('482913', userSecret);\r\n  if (result.valid) console.log('Authenticated!', result.delta);",
+							"examples": [
+								{
+									"code": "  const result = verifyTOTP('482913', userSecret);\r\n  if (result.valid) console.log('Authenticated!', result.delta);",
+									"lang": "javascript"
+								},
+								{
+									"code": "  const result = verifyTOTP(code, secret, { window: 2 });",
+									"lang": "javascript",
+									"title": "Wider window for unreliable clocks"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "OTPAuth URI",
+					"methods": [
+						{
+							"method": "otpauthURI",
+							"signature": "otpauthURI(opts)",
+							"description": "Generate an `otpauth://` URI for QR code enrollment. Compatible with Google Authenticator, Authy, 1Password, etc.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "URI options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "secret",
+									"type": "string | Buffer",
+									"default": "—",
+									"notes": "Base32-encoded secret or raw Buffer."
+								},
+								{
+									"option": "issuer",
+									"type": "string",
+									"default": "—",
+									"notes": "Application/company name (e.g. \"MyApp\")."
+								},
+								{
+									"option": "account",
+									"type": "string",
+									"default": "—",
+									"notes": "User identifier (e.g. email)."
+								},
+								{
+									"option": "period",
+									"type": "number",
+									"default": "30",
+									"notes": "Time step in seconds."
+								},
+								{
+									"option": "digits",
+									"type": "number",
+									"default": "6",
+									"notes": "Code length."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'sha1'",
+									"notes": "HMAC algorithm."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "`otpauth://totp/...` URI string."
+							},
+							"example": "  const uri = otpauthURI({\r\n      secret: 'JBSWY3DPEHPK3PXP',\r\n      issuer: 'MyApp',\r\n      account: 'user@example.com',\r\n  });\r\n  // \"otpauth://totp/MyApp:user%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=MyApp&algorithm=SHA1&digits=6&period=30\"",
+							"examples": [
+								{
+									"code": "  const uri = otpauthURI({\r\n      secret: 'JBSWY3DPEHPK3PXP',\r\n      issuer: 'MyApp',\r\n      account: 'user@example.com',\r\n  });\r\n  // \"otpauth://totp/MyApp:user%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=MyApp&algorithm=SHA1&digits=6&period=30\"",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Backup Codes",
+					"methods": [
+						{
+							"method": "generateBackupCodes",
+							"signature": "generateBackupCodes([count], [bytes])",
+							"description": "Generate a set of single-use backup/recovery codes. Returns both the plaintext codes (show once to user) and SHA-256 hashes (store in database).",
+							"methodParams": [
+								{
+									"param": "count",
+									"type": "number",
+									"required": "No",
+									"notes": "Number of codes to generate."
+								},
+								{
+									"param": "bytes",
+									"type": "number",
+									"required": "No",
+									"notes": "Random bytes per code (4 bytes → 8 hex chars)."
+								}
+							],
+							"methodReturns": {
+								"type": "{ codes: string[], hashes: string[] }",
+								"description": "Plaintext and hashed codes."
+							},
+							"example": "  const { codes, hashes } = generateBackupCodes(10);\r\n  // Show codes to user once: ['a1b2c3d4', 'e5f6a7b8', ...]\r\n  // Store hashes in DB:      ['sha256hex...', ...]",
+							"examples": [
+								{
+									"code": "  const { codes, hashes } = generateBackupCodes(10);\r\n  // Show codes to user once: ['a1b2c3d4', 'e5f6a7b8', ...]\r\n  // Store hashes in DB:      ['sha256hex...', ...]",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "verifyBackupCode",
+							"signature": "verifyBackupCode(code, hashes)",
+							"description": "Verify a backup code against stored hashes. On match, returns the index so the caller can remove/mark it as used.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "string",
+									"required": "Yes",
+									"notes": "User-supplied backup code."
+								},
+								{
+									"param": "hashes",
+									"type": "string[]",
+									"required": "Yes",
+									"notes": "Array of SHA-256 hex hashes stored in DB."
+								}
+							],
+							"methodReturns": {
+								"type": "{ valid: boolean, index: number | null }",
+								"description": "Match result with index."
+							},
+							"example": "  const result = verifyBackupCode('a1b2c3d4', storedHashes);\r\n  if (result.valid) {\r\n      storedHashes.splice(result.index, 1); // Remove used code\r\n      await user.save();\r\n  }",
+							"examples": [
+								{
+									"code": "  const result = verifyBackupCode('a1b2c3d4', storedHashes);\r\n  if (result.valid) {\r\n      storedHashes.splice(result.index, 1); // Remove used code\r\n      await user.save();\r\n  }",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Middleware",
+					"methods": [
+						{
+							"method": "require2FA",
+							"signature": "require2FA([opts])",
+							"description": "Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` — returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // — or — app.use(session({ secret })); app.use(require2FA());",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "sessionKey",
+									"type": "string",
+									"default": "'twoFactorVerified'",
+									"notes": "Session key to check."
+								},
+								{
+									"option": "errorMessage",
+									"type": "string",
+									"default": "'Two-factor authentication required'",
+									"notes": "Error body."
+								},
+								{
+									"option": "statusCode",
+									"type": "number",
+									"default": "403",
+									"notes": "HTTP status code on failure."
+								},
+								{
+									"option": "isEnabled",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => boolean|Promise<boolean>`.\nReturn `false` to skip the 2FA check for users who haven't enrolled.\nDefaults to always requiring 2FA."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							},
+							"example": "  app.use(require2FA());",
+							"examples": [
+								{
+									"code": "  app.use(require2FA());",
+									"lang": "javascript",
+									"title": "Basic — all authenticated users must complete 2FA"
+								},
+								{
+									"code": "  app.use(require2FA({\r\n      isEnabled: async (req) => {\r\n          const user = await db.users.findById(req.user.sub);\r\n          return !!user.totpSecret;\r\n      },\r\n  }));",
+									"lang": "javascript",
+									"title": "Only enforce for users who have enrolled"
+								},
+								{
+									"code": "  app.use(require2FA({ sessionKey: 'mfaComplete' }));",
+									"lang": "javascript",
+									"title": "Custom session key"
+								}
+							]
+						},
+						{
+							"method": "verifyTOTPMiddleware",
+							"signature": "verifyTOTPMiddleware(opts)",
+							"description": "Rate-limited TOTP verification middleware. Wraps `verifyTOTP` with attempt tracking to prevent brute-force attacks. Tracks attempts per-IP in memory with automatic expiry. Supports optional replay prevention (RFC 6238 §5.2) via a `replayStore`. When configured, each successfully verified TOTP counter is recorded and rejected on subsequent use within the validity window.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "getSecret",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string|Buffer|Promise<string|Buffer>`.\nRetrieves the user's TOTP secret from your database."
+								},
+								{
+									"option": "codeField",
+									"type": "string",
+									"default": "'code'",
+									"notes": "Request body field containing the code."
+								},
+								{
+									"option": "sessionKey",
+									"type": "string",
+									"default": "'twoFactorVerified'",
+									"notes": "Session key to set on success."
+								},
+								{
+									"option": "maxAttempts",
+									"type": "number",
+									"default": "5",
+									"notes": "Max failed attempts before lockout."
+								},
+								{
+									"option": "lockoutMs",
+									"type": "number",
+									"default": "900000",
+									"notes": "Lockout duration in ms (default 15 min)."
+								},
+								{
+									"option": "window",
+									"type": "number",
+									"default": "1",
+									"notes": "TOTP verification window."
+								},
+								{
+									"option": "period",
+									"type": "number",
+									"default": "30",
+									"notes": "TOTP period in seconds."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'sha1'",
+									"notes": "HMAC algorithm."
+								},
+								{
+									"option": "digits",
+									"type": "number",
+									"default": "6",
+									"notes": "Expected code length."
+								},
+								{
+									"option": "replayStore",
+									"type": "object",
+									"default": "—",
+									"notes": "Store for TOTP replay prevention.\nMust implement `get(userId): Promise<number|null>` and\n`set(userId, counter, ttlMs): Promise<void>`."
+								},
+								{
+									"option": "getUserId",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string|Promise<string>`.\nRequired when `replayStore` is set. Returns a unique user identifier."
+								},
+								{
+									"option": "onSuccess",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res) => void` called after verification."
+								},
+								{
+									"option": "onFailure",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res, attemptsLeft) => void` called on failure."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							},
+							"example": "  app.post('/2fa/verify', json(), verifyTOTPMiddleware({\r\n      getSecret: async (req) => {\r\n          const user = await db.users.findById(req.user.sub);\r\n          return user.totpSecret;\r\n      },\r\n  }));",
+							"examples": [
+								{
+									"code": "  app.post('/2fa/verify', json(), verifyTOTPMiddleware({\r\n      getSecret: async (req) => {\r\n          const user = await db.users.findById(req.user.sub);\r\n          return user.totpSecret;\r\n      },\r\n  }));",
+									"lang": "javascript"
+								},
+								{
+									"code": "  app.post('/2fa/verify', json(), verifyTOTPMiddleware({\r\n      getSecret: async (req) => req.user.totpSecret,\r\n      getUserId: (req) => req.user.id,\r\n      replayStore: new InMemoryReplayStore(),\r\n  }));",
+									"lang": "javascript",
+									"title": "With replay prevention"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Combined 2FA Verification Middleware",
+					"methods": [
+						{
+							"method": "verify2FA",
+							"signature": "verify2FA(opts)",
+							"description": "Combined verification middleware that auto-detects and handles TOTP codes, backup codes, or WebAuthn/passkey assertions from a single endpoint. Detection logic (based on request body shape): - `{ code: \"123456\" }` → TOTP verification - `{ backupCode: \"a1b2c3d4\" }` → Backup code redemption - `{ id, response: { authenticatorData, clientDataJSON, signature } }` → WebAuthn assertion Rate-limits across all methods using a shared per-IP attempt tracker.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "getSecret",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string|Buffer|Promise<string|Buffer>`. TOTP secret."
+								},
+								{
+									"option": "getBackupHashes",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string[]|Promise<string[]>`. Stored backup hashes."
+								},
+								{
+									"option": "onBackupUsed",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, index) => void|Promise<void>`.\nCalled when a backup code is redeemed so the caller can remove it."
+								},
+								{
+									"option": "getCredential",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, credId) => object|Promise<object>`.\nRetrieves a stored WebAuthn credential by ID. Return `{ publicKey, counter, ... }`."
+								},
+								{
+									"option": "updateCredentialCounter",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, credId, newCounter) => void|Promise<void>`.\nPersist the updated signature counter after WebAuthn verification."
+								},
+								{
+									"option": "expectedOrigin",
+									"type": "string",
+									"default": "—",
+									"notes": "Expected origin for WebAuthn (e.g. `'https://myapp.com'`)."
+								},
+								{
+									"option": "expectedRPID",
+									"type": "string",
+									"default": "—",
+									"notes": "Expected relying party ID for WebAuthn."
+								},
+								{
+									"option": "codeField",
+									"type": "string",
+									"default": "'code'",
+									"notes": "Body field for TOTP code."
+								},
+								{
+									"option": "backupField",
+									"type": "string",
+									"default": "'backupCode'",
+									"notes": "Body field for backup code."
+								},
+								{
+									"option": "sessionKey",
+									"type": "string",
+									"default": "'twoFactorVerified'",
+									"notes": "Session key to set on success."
+								},
+								{
+									"option": "maxAttempts",
+									"type": "number",
+									"default": "5",
+									"notes": "Max failed attempts before lockout."
+								},
+								{
+									"option": "lockoutMs",
+									"type": "number",
+									"default": "900000",
+									"notes": "Lockout duration in ms (default 15 min)."
+								},
+								{
+									"option": "window",
+									"type": "number",
+									"default": "1",
+									"notes": "TOTP window."
+								},
+								{
+									"option": "period",
+									"type": "number",
+									"default": "30",
+									"notes": "TOTP period."
+								},
+								{
+									"option": "algorithm",
+									"type": "string",
+									"default": "'sha1'",
+									"notes": "TOTP HMAC algorithm."
+								},
+								{
+									"option": "digits",
+									"type": "number",
+									"default": "6",
+									"notes": "TOTP code length."
+								},
+								{
+									"option": "replayStore",
+									"type": "object",
+									"default": "—",
+									"notes": "TOTP replay store."
+								},
+								{
+									"option": "getUserId",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req) => string`. Required with replayStore."
+								},
+								{
+									"option": "onSuccess",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res, method) => void`. Called on success with the method used."
+								},
+								{
+									"option": "onFailure",
+									"type": "Function",
+									"default": "—",
+									"notes": "`(req, res, attemptsLeft) => void`. Called on failure."
+								}
+							],
+							"methodReturns": {
+								"type": "Function",
+								"description": "Middleware `(req, res, next) => void`."
+							},
+							"example": "  app.post('/verify-2fa', json(), verify2FA({\r\n      getSecret: (req) => req.user.totpSecret,\r\n      getBackupHashes: (req) => req.user.backupHashes,\r\n      onBackupUsed: async (req, index) => {\r\n          req.user.backupHashes.splice(index, 1);\r\n          await req.user.save();\r\n      },\r\n  }));",
+							"examples": [
+								{
+									"code": "  app.post('/verify-2fa', json(), verify2FA({\r\n      getSecret: (req) => req.user.totpSecret,\r\n      getBackupHashes: (req) => req.user.backupHashes,\r\n      onBackupUsed: async (req, index) => {\r\n          req.user.backupHashes.splice(index, 1);\r\n          await req.user.save();\r\n      },\r\n  }));",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "webauthn",
+			"description": "Zero-dependency WebAuthn/FIDO2/Passkeys implementation. Supports registration (attestation) and authentication (assertion) ceremonies using only Node.js built-in `crypto`. Implements: - Challenge generation (cryptographically random, ≥16 bytes) - Registration options & verification (none, packed, fido-u2f attestation) - Authentication options & verification with counter validation - CBOR decoding for attestation objects and authenticator data - COSE key parsing (EC2/P-256, RSA, OKP/Ed25519) - ES256, RS256, EdDSA signature verification",
+			"params": [
+				{
+					"param": "buf",
+					"type": "Buffer",
+					"required": "Yes",
+					"notes": ""
+				}
+			],
+			"returns": {
+				"type": "*",
+				"description": "Decoded value"
+			},
+			"example": "  const { webauthn } = require('zero-http');\r\n  const options = webauthn.generateRegistrationOptions({\r\n      rpName: 'My App', rpId: 'myapp.com',\r\n      userId: user.id, userName: user.email,\r\n  });\r\n  // Send options to client, receive response from navigator.credentials.create()\r\n  const result = await webauthn.verifyRegistration({\r\n      response: clientResponse,\r\n      expectedChallenge: storedChallenge,\r\n      expectedOrigin: 'https://myapp.com',\r\n      expectedRPID: 'myapp.com',\r\n  });",
+			"examples": [
+				{
+					"code": "  const { webauthn } = require('zero-http');\r\n  const options = webauthn.generateRegistrationOptions({\r\n      rpName: 'My App', rpId: 'myapp.com',\r\n      userId: user.id, userName: user.email,\r\n  });\r\n  // Send options to client, receive response from navigator.credentials.create()\r\n  const result = await webauthn.verifyRegistration({\r\n      response: clientResponse,\r\n      expectedChallenge: storedChallenge,\r\n      expectedOrigin: 'https://myapp.com',\r\n      expectedRPID: 'myapp.com',\r\n  });",
+					"lang": "javascript",
+					"title": "Registration"
+				},
+				{
+					"code": "  const authOpts = webauthn.generateAuthenticationOptions({\r\n      rpId: 'myapp.com',\r\n      allowCredentials: user.credentials,\r\n  });\r\n  const authResult = await webauthn.verifyAuthentication({\r\n      response: clientResponse,\r\n      expectedChallenge: storedChallenge,\r\n      expectedOrigin: 'https://myapp.com',\r\n      expectedRPID: 'myapp.com',\r\n      credential: storedCredential,\r\n  });",
+					"lang": "javascript",
+					"title": "Authentication"
+				}
+			]
+		},
+		{
+			"name": "trustedDevice",
+			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage.",
+			"options": [
+				{
+					"option": "secret",
+					"type": "string",
+					"default": "—",
+					"notes": "Encryption secret (min 32 chars recommended)."
+				},
+				{
+					"option": "maxAge",
+					"type": "number",
+					"default": "2592000000",
+					"notes": "Trust duration in ms (default 30 days)."
+				},
+				{
+					"option": "cookieName",
+					"type": "string",
+					"default": "'_dt'",
+					"notes": "Cookie name."
+				},
+				{
+					"option": "fingerprint",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req) => string` device fingerprint.\nDefaults to User-Agent hash."
+				},
+				{
+					"option": "getUserId",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req) => string` user identifier.\nDefaults to `req.user.id || req.user.sub`."
+				}
+			],
+			"returns": {
+				"type": "Function",
+				"description": "Middleware `(req, res, next) => void`."
+			},
+			"example": "  const { trustedDevice, twoFactor } = require('zero-http');\r\n\n  app.post('/verify-2fa', twoFactor.verifyTOTPMiddleware({\r\n      getSecret: (req) => req.user.totpSecret,\r\n  }), trustedDevice.issue({\r\n      secret: process.env.DEVICE_TRUST_SECRET,\r\n  }));\r\n\n  app.use(twoFactor.require2FA({\r\n      isEnabled: (req) => req.user.totpEnabled,\r\n      trustedDevice: trustedDevice.verify({\r\n          secret: process.env.DEVICE_TRUST_SECRET,\r\n      }),\r\n  }));",
+			"examples": [
+				{
+					"code": "  const { trustedDevice, twoFactor } = require('zero-http');\r\n\n  app.post('/verify-2fa', twoFactor.verifyTOTPMiddleware({\r\n      getSecret: (req) => req.user.totpSecret,\r\n  }), trustedDevice.issue({\r\n      secret: process.env.DEVICE_TRUST_SECRET,\r\n  }));\r\n\n  app.use(twoFactor.require2FA({\r\n      isEnabled: (req) => req.user.totpEnabled,\r\n      trustedDevice: trustedDevice.verify({\r\n          secret: process.env.DEVICE_TRUST_SECRET,\r\n      }),\r\n  }));",
+					"lang": "javascript"
+				}
+			]
+		},
+		{
+			"name": "enrollment",
+			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account",
+			"options": [
+				{
+					"option": "saveSecret",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req, base32Secret, backupHashes) => Promise<void>`.\nPersist the verified TOTP secret and backup hashes."
+				},
+				{
+					"option": "removeSecret",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req) => Promise<void>`.\nRemove TOTP secret on disable."
+				},
+				{
+					"option": "issuer",
+					"type": "string",
+					"default": "'App'",
+					"notes": "Issuer name for the otpauth URI."
+				},
+				{
+					"option": "getAccount",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req) => string`. User label for QR code.\nDefaults to `req.user.email || req.user.id`."
+				},
+				{
+					"option": "sessionKey",
+					"type": "string",
+					"default": "'_2faEnrollment'",
+					"notes": "Session key for pending enrollment."
+				},
+				{
+					"option": "ttl",
+					"type": "number",
+					"default": "600000",
+					"notes": "Enrollment session TTL in ms (default 10 min)."
+				},
+				{
+					"option": "backupCount",
+					"type": "number",
+					"default": "10",
+					"notes": "Number of backup codes to generate."
+				},
+				{
+					"option": "window",
+					"type": "number",
+					"default": "1",
+					"notes": "TOTP verification window."
+				},
+				{
+					"option": "period",
+					"type": "number",
+					"default": "30",
+					"notes": "TOTP period in seconds."
+				},
+				{
+					"option": "algorithm",
+					"type": "string",
+					"default": "'sha1'",
+					"notes": "HMAC algorithm."
+				},
+				{
+					"option": "digits",
+					"type": "number",
+					"default": "6",
+					"notes": "Code length."
+				},
+				{
+					"option": "isEnabled",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(req) => boolean|Promise<boolean>`.\nCheck if 2FA is already enabled (for guarding start/disable)."
+				}
+			],
+			"returns": {
+				"type": "{ start: Function, verify: Function, complete: Function, disable: Function }",
+				"description": ""
+			},
+			"example": "  const { enrollment } = require('zero-http');\r\n  const flow = enrollment({\r\n      saveSecret: async (req, secret, backupHashes) => {\r\n          await db.users.update(req.user.id, { totpSecret: secret, backupHashes });\r\n      },\r\n      removeSecret: async (req) => {\r\n          await db.users.update(req.user.id, { totpSecret: null, backupHashes: [] });\r\n      },\r\n  });\r\n\n  app.post('/2fa/start',    json(), flow.start());\r\n  app.post('/2fa/verify',   json(), flow.verify());\r\n  app.post('/2fa/complete', json(), flow.complete());\r\n  app.post('/2fa/disable',  json(), flow.disable());",
+			"examples": [
+				{
+					"code": "  const { enrollment } = require('zero-http');\r\n  const flow = enrollment({\r\n      saveSecret: async (req, secret, backupHashes) => {\r\n          await db.users.update(req.user.id, { totpSecret: secret, backupHashes });\r\n      },\r\n      removeSecret: async (req) => {\r\n          await db.users.update(req.user.id, { totpSecret: null, backupHashes: [] });\r\n      },\r\n  });\r\n\n  app.post('/2fa/start',    json(), flow.start());\r\n  app.post('/2fa/verify',   json(), flow.verify());\r\n  app.post('/2fa/complete', json(), flow.complete());\r\n  app.post('/2fa/disable',  json(), flow.disable());",
+					"lang": "javascript",
+					"title": "Full enrollment flow"
+				}
+			]
+		}
+	]
+}

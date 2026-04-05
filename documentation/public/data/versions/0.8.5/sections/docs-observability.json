@@ -6,6 +6,22 @@
 			"name": "structuredLogger",
 			"description": "Structured, enterprise-grade request logger. Outputs JSON or pretty-text with consistent fields: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`. Correlates with the `requestId` middleware (`req.id`), supports child loggers with bound context, custom transports, and environment-aware log level defaults.",
 			"example": "  const { structuredLogger } = require('zero-http');\r\n  app.use(structuredLogger());",
+			"examples": [
+				{
+					"code": "  const { structuredLogger } = require('zero-http');\r\n  app.use(structuredLogger());",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.use(structuredLogger({\r\n      format: 'json',\r\n      transport: (entry) => myLogService.send(entry),\r\n  }));",
+					"lang": "javascript",
+					"title": "JSON Output with Custom Transport"
+				},
+				{
+					"code": "  app.get('/users/:id', (req, res) => {\r\n      const log = req.log.child({ userId: req.params.id });\r\n      log.info('fetching user');\r\n      log.warn('user has legacy data');\r\n  });",
+					"lang": "javascript",
+					"title": "Child Loggers with Bound Context"
+				}
+			],
 			"options": [
 				{
 					"option": "level",
@@ -69,7 +85,14 @@
 							"methodReturns": {
 								"type": "Logger",
 								"description": "New child logger instance."
-							}
+							},
+							"example": "  const child = logger.child({ userId: 42, action: 'checkout' });\r\n  child.info('processing payment');\r\n  // => { ..., userId: 42, action: 'checkout', message: 'processing payment' }",
+							"examples": [
+								{
+									"code": "  const child = logger.child({ userId: 42, action: 'checkout' });\r\n  child.info('processing payment');\r\n  // => { ..., userId: 42, action: 'checkout', message: 'processing payment' }",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "setLevel",
@@ -278,7 +301,25 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.use(structuredLogger());",
+							"examples": [
+								{
+									"code": "  app.use(structuredLogger());",
+									"lang": "javascript",
+									"title": "Auto-detect Format"
+								},
+								{
+									"code": "  const fs = require('fs');\r\n  const logStream = fs.createWriteStream('access.log', { flags: 'a' });\r\n  app.use(structuredLogger({ format: 'json', stream: logStream }));",
+									"lang": "javascript",
+									"title": "JSON to File Transport"
+								},
+								{
+									"code": "  app.use(structuredLogger({ skip: (req) => req.url === '/healthz' }));",
+									"lang": "javascript",
+									"title": "Skip Health Checks"
+								}
+							]
 						}
 					]
 				}
@@ -287,7 +328,24 @@
 		{
 			"name": "MetricsRegistry",
 			"description": "Zero-dependency metrics registry with Prometheus-compatible text exposition format. Provides Counter, Gauge, and Histogram metric types with label support, automatic HTTP instrumentation middleware, and a handler for `/metrics` endpoints.",
-			"example": "  const { MetricsRegistry, metricsMiddleware } = require('zero-http');\r\n\n  const registry = new MetricsRegistry();\r\n  app.use(metricsMiddleware({ registry }));\r\n  app.get('/metrics', (req, res) => {\r\n      res.set('Content-Type', 'text/plain; version=0.04');\r\n      res.send(registry.metrics());\r\n  });",
+			"example": "  const { createApp, metricsMiddleware } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // GET /metrics\r\n  app.health();            // GET /healthz\r\n  app.ready();             // GET /readyz\r\n  app.listen(3000);",
+			"examples": [
+				{
+					"code": "  const { createApp, metricsMiddleware } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // GET /metrics\r\n  app.health();            // GET /healthz\r\n  app.ready();             // GET /readyz\r\n  app.listen(3000);",
+					"lang": "javascript",
+					"title": "Quick Setup"
+				},
+				{
+					"code": "  scrape_configs:\r\n    - job_name: 'my-app'\r\n      scrape_interval: 5s\r\n      static_configs:\r\n        - targets: ['localhost:3000']",
+					"lang": "yaml",
+					"title": "prometheus.yml"
+				},
+				{
+					"code": "  const logins = app.metrics().counter({\r\n      name: 'user_logins_total',\r\n      help: 'Total user login attempts',\r\n      labels: ['provider', 'success'],\r\n  });\r\n  logins.inc({ provider: 'github', success: 'true' });",
+					"lang": "javascript",
+					"title": "Custom Metrics"
+				}
+			],
 			"options": [
 				{
 					"option": "name",
@@ -328,6 +386,13 @@
 									"type": "number",
 									"required": "No",
 									"notes": "Amount to increment (must be >= 0)."
+								}
+							],
+							"example": "  counter.inc();                                    // no labels, +1\r\n  counter.inc({ method: 'GET', status: '200' });   // with labels, +1\r\n  counter.inc({ method: 'POST' }, 5);              // with labels, +5",
+							"examples": [
+								{
+									"code": "  counter.inc();                                    // no labels, +1\r\n  counter.inc({ method: 'GET', status: '200' });   // with labels, +1\r\n  counter.inc({ method: 'POST' }, 5);              // with labels, +5",
+									"lang": "javascript"
 								}
 							]
 						},
@@ -383,6 +448,13 @@
 									"type": "number",
 									"required": "No",
 									"notes": "Gauge value."
+								}
+							],
+							"example": "  gauge.set(42);\r\n  gauge.set({ pool: 'primary' }, 10);",
+							"examples": [
+								{
+									"code": "  gauge.set(42);\r\n  gauge.set({ pool: 'primary' }, 10);",
+									"lang": "javascript"
 								}
 							]
 						},
@@ -477,6 +549,13 @@
 									"required": "No",
 									"notes": "Observed value."
 								}
+							],
+							"example": "  histogram.observe(0.235);                         // no labels\r\n  histogram.observe({ method: 'GET' }, 0.042);      // with labels",
+							"examples": [
+								{
+									"code": "  histogram.observe(0.235);                         // no labels\r\n  histogram.observe({ method: 'GET' }, 0.042);      // with labels",
+									"lang": "javascript"
+								}
 							]
 						},
 						{
@@ -494,7 +573,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Stop function — call it to record the duration."
-							}
+							},
+							"example": "  const end = histogram.startTimer({ method: 'GET' });\r\n  await doWork();\r\n  end(); // records duration",
+							"examples": [
+								{
+									"code": "  const end = histogram.startTimer({ method: 'GET' });\r\n  await doWork();\r\n  end(); // records duration",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "get",
@@ -567,7 +653,14 @@
 							"methodReturns": {
 								"type": "Counter",
 								"description": "The registered counter."
-							}
+							},
+							"example": "  const c = registry.counter({ name: 'http_requests_total', help: 'Total HTTP requests', labels: ['method', 'status'] });",
+							"examples": [
+								{
+									"code": "  const c = registry.counter({ name: 'http_requests_total', help: 'Total HTTP requests', labels: ['method', 'status'] });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "gauge",
@@ -610,7 +703,14 @@
 							"methodReturns": {
 								"type": "Gauge",
 								"description": "The registered gauge."
-							}
+							},
+							"example": "  const g = registry.gauge({ name: 'process_memory_bytes', help: 'Memory usage',\r\n      collect: (gauge) => gauge.set(process.memoryUsage().heapUsed) });",
+							"examples": [
+								{
+									"code": "  const g = registry.gauge({ name: 'process_memory_bytes', help: 'Memory usage',\r\n      collect: (gauge) => gauge.set(process.memoryUsage().heapUsed) });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "histogram",
@@ -653,7 +753,14 @@
 							"methodReturns": {
 								"type": "Histogram",
 								"description": "The registered histogram."
-							}
+							},
+							"example": "  const h = registry.histogram({ name: 'http_request_duration_seconds', help: 'Request duration', labels: ['method', 'route'] });",
+							"examples": [
+								{
+									"code": "  const h = registry.histogram({ name: 'http_request_duration_seconds', help: 'Request duration', labels: ['method', 'route'] });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "getMetric",
@@ -706,7 +813,14 @@
 							"methodReturns": {
 								"type": "string",
 								"description": "Multi-line Prometheus-compatible text."
-							}
+							},
+							"example": "  const text = registry.metrics();\r\n  // # HELP http_requests_total Total HTTP requests\r\n  // # TYPE http_requests_total counter\r\n  // http_requests_total{method=\"GET\",status=\"200\"} 42",
+							"examples": [
+								{
+									"code": "  const text = registry.metrics();\r\n  // # HELP http_requests_total Total HTTP requests\r\n  // # TYPE http_requests_total counter\r\n  // http_requests_total{method=\"GET\",status=\"200\"} 42",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "toJSON",
@@ -727,6 +841,13 @@
 									"type": "object",
 									"required": "Yes",
 									"notes": "Object from `toJSON()`."
+								}
+							],
+							"example": "  // On primary\r\n  mgr.onMessage('metrics:report', (data) => {\r\n      primaryRegistry.merge(data);\r\n  });",
+							"examples": [
+								{
+									"code": "  // On primary\r\n  mgr.onMessage('metrics:report', (data) => {\r\n      primaryRegistry.merge(data);\r\n  });",
+									"lang": "javascript"
 								}
 							]
 						}
@@ -792,7 +913,18 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  // Use with app.metrics() to share the registry\r\n  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // serves the same registry at GET /metrics",
+							"examples": [
+								{
+									"code": "  // Use with app.metrics() to share the registry\r\n  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // serves the same registry at GET /metrics",
+									"lang": "javascript"
+								},
+								{
+									"code": "  // Skip health check routes and use custom route labels\r\n  app.use(metricsMiddleware({\r\n      registry: app.metrics(),\r\n      skip: (req) => req.url === '/healthz',\r\n      routeLabel: (req) => req.route || req.url.split('?')[0],\r\n  }));",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "metricsEndpoint",
@@ -809,7 +941,18 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Route handler `(req, res) => void`."
-							}
+							},
+							"example": "  app.get('/metrics', metricsEndpoint(registry));",
+							"examples": [
+								{
+									"code": "  app.get('/metrics', metricsEndpoint(registry));",
+									"lang": "javascript"
+								},
+								{
+									"code": "  // Or use the app shorthand which creates the handler automatically\r\n  app.metricsEndpoint();              // GET /metrics\r\n  app.metricsEndpoint('/prometheus');  // GET /prometheus",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}
@@ -819,6 +962,16 @@
 			"name": "Tracer",
 			"description": "Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend.",
 			"example": "  const { tracingMiddleware, Tracer } = require('zero-http');\r\n\n  const tracer = new Tracer({ serviceName: 'my-api' });\r\n  app.use(tracingMiddleware({ tracer }));",
+			"examples": [
+				{
+					"code": "  const { tracingMiddleware, Tracer } = require('zero-http');\r\n\n  const tracer = new Tracer({ serviceName: 'my-api' });\r\n  app.use(tracingMiddleware({ tracer }));",
+					"lang": "javascript"
+				},
+				{
+					"code": "  // With exporter\r\n  const tracer = new Tracer({\r\n      serviceName: 'my-api',\r\n      exporter: (spans) => fetch('http://jaeger:4318/v1/traces', {\r\n          method: 'POST',\r\n          body: JSON.stringify(spans),\r\n      }),\r\n  });",
+					"lang": "javascript"
+				}
+			],
 			"options": [
 				{
 					"option": "name",
@@ -882,7 +1035,14 @@
 							"methodReturns": {
 								"type": "Span",
 								"description": "this"
-							}
+							},
+							"example": "  span.setAttribute('http.method', 'GET');\r\n  span.setAttribute('http.status_code', 200);",
+							"examples": [
+								{
+									"code": "  span.setAttribute('http.method', 'GET');\r\n  span.setAttribute('http.status_code', 200);",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "setAttributes",
@@ -922,7 +1082,14 @@
 							"methodReturns": {
 								"type": "Span",
 								"description": "this"
-							}
+							},
+							"example": "  span.addEvent('cache.miss', { key: 'user:123' });",
+							"examples": [
+								{
+									"code": "  span.addEvent('cache.miss', { key: 'user:123' });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "setOk",
@@ -1047,7 +1214,14 @@
 							"methodReturns": {
 								"type": "Span",
 								"description": "The new span."
-							}
+							},
+							"example": "  const span = tracer.startSpan('GET /users', {\r\n      attributes: { 'http.method': 'GET', 'http.url': '/users' },\r\n  });\r\n  try {\r\n      await handleRequest();\r\n      span.setOk();\r\n  } catch (err) {\r\n      span.recordException(err);\r\n  } finally {\r\n      span.end();\r\n  }",
+							"examples": [
+								{
+									"code": "  const span = tracer.startSpan('GET /users', {\r\n      attributes: { 'http.method': 'GET', 'http.url': '/users' },\r\n  });\r\n  try {\r\n      await handleRequest();\r\n      span.setOk();\r\n  } catch (err) {\r\n      span.recordException(err);\r\n  } finally {\r\n      span.end();\r\n  }",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "shouldSample",
@@ -1139,7 +1313,18 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.use(tracingMiddleware({ tracer }));",
+							"examples": [
+								{
+									"code": "  app.use(tracingMiddleware({ tracer }));",
+									"lang": "javascript"
+								},
+								{
+									"code": "  // With sampling\r\n  const tracer = new Tracer({ serviceName: 'api', sampleRate: 0.1 });\r\n  app.use(tracingMiddleware({ tracer }));",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "instrumentFetch",
@@ -1162,7 +1347,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Instrumented fetch with same signature."
-							}
+							},
+							"example": "  const { fetch, Tracer, instrumentFetch } = require('zero-http');\r\n  const tracer = new Tracer({ serviceName: 'my-api' });\r\n  const tracedFetch = instrumentFetch(fetch, tracer);\r\n\n  const res = await tracedFetch('https://api.example.com/data');",
+							"examples": [
+								{
+									"code": "  const { fetch, Tracer, instrumentFetch } = require('zero-http');\r\n  const tracer = new Tracer({ serviceName: 'my-api' });\r\n  const tracedFetch = instrumentFetch(fetch, tracer);\r\n\n  const res = await tracedFetch('https://api.example.com/data');",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}
@@ -1190,6 +1382,17 @@
 				"description": "Check function."
 			},
 			"example": "  const { healthCheck } = require('zero-http');\r\n\n  app.get('/healthz', healthCheck());\r\n  app.get('/readyz', healthCheck({\r\n      checks: {\r\n          database: () => db.ping(),\r\n          cache: () => redis.ping(),\r\n      },\r\n  }));",
+			"examples": [
+				{
+					"code": "  const { healthCheck } = require('zero-http');\r\n\n  app.get('/healthz', healthCheck());\r\n  app.get('/readyz', healthCheck({\r\n      checks: {\r\n          database: () => db.ping(),\r\n          cache: () => redis.ping(),\r\n      },\r\n  }));",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.health('/healthz');\r\n  app.ready('/readyz', {\r\n      database: () => db.ping(),\r\n  });",
+					"lang": "javascript",
+					"title": "Using the App Integration"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "Health Check Handler",
@@ -1235,7 +1438,23 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Route handler `(req, res) => void`."
-							}
+							},
+							"example": "  app.get('/healthz', healthCheck());",
+							"examples": [
+								{
+									"code": "  app.get('/healthz', healthCheck());",
+									"lang": "javascript"
+								},
+								{
+									"code": "  app.get('/readyz', healthCheck({\r\n      checks: {\r\n          database: async () => {\r\n              await db.ping();\r\n              return { healthy: true };\r\n          },\r\n          cache: () => ({ healthy: cacheClient.isConnected }),\r\n      },\r\n  }));",
+									"lang": "javascript"
+								},
+								{
+									"code": "  app.get('/readyz', healthCheck({\r\n      checks: {\r\n          lifecycle: () => ({ healthy: app.lifecycleState === 'running' }),\r\n      },\r\n  }));",
+									"lang": "javascript",
+									"title": "Auto-deregister from Load Balancer"
+								}
+							]
 						}
 					]
 				},
@@ -1283,7 +1502,14 @@
 							"methodReturns": {
 								"type": "{ health: Function, ready: Function }",
 								"description": "Route handlers."
-							}
+							},
+							"example": "  const { health, ready } = createHealthHandlers({\r\n      checks: { database: () => db.ping() },\r\n      includeMemory: true,\r\n  });\r\n  app.get('/healthz', health);\r\n  app.get('/readyz', ready);",
+							"examples": [
+								{
+									"code": "  const { health, ready } = createHealthHandlers({\r\n      checks: { database: () => db.ping() },\r\n      includeMemory: true,\r\n  });\r\n  app.get('/healthz', health);\r\n  app.get('/readyz', ready);",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -1313,7 +1539,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Check function."
-							}
+							},
+							"example": "  app.get('/healthz', healthCheck({\r\n      checks: { eventLoop: eventLoopCheck({ maxLagMs: 200 }) },\r\n  }));",
+							"examples": [
+								{
+									"code": "  app.get('/healthz', healthCheck({\r\n      checks: { eventLoop: eventLoopCheck({ maxLagMs: 200 }) },\r\n  }));",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "diskSpaceCheck",

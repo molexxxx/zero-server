@@ -1,0 +1,254 @@
+{
+	"version": "0.8.7",
+	"previousVersion": "0.8.5",
+	"date": "2026-04-05",
+	"changes": [
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "jwt",
+			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "session",
+			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authentication",
+			"name": "oauth",
+			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Authorization",
+			"name": "authorize",
+			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Multi-Factor Auth",
+			"name": "twoFactor",
+			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Multi-Factor Auth",
+			"name": "webauthn",
+			"description": "Zero-dependency WebAuthn/FIDO2/Passkeys implementation. Supports registration (attestation) and authentication (assertion) ceremonies using only Node.js built-in `crypto`. Implements: - Challenge generation (cryptographically random, ≥16 bytes) - Registration options & verification (none, packed, fido-u2f attestation) - Authentication options & verification with counter validation - CBOR decoding for attestation objects and authenticator data - COSE key parsing (EC2/P-256, RSA, OKP/Ed25519) - ES256, RS256, EdDSA signature verification"
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Multi-Factor Auth",
+			"name": "trustedDevice",
+			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "Multi-Factor Auth",
+			"name": "enrollment",
+			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account"
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Server",
+			"description": "gRPC server for zero-http. Intercepts HTTP/2 streams with `content-type: application/grpc`, routes by `:path` pseudo-header (`/package.Service/Method`), and dispatches to registered service handlers. Handles all four gRPC call types: - Unary (single request → single response) - Server streaming (single request → multiple responses) - Client streaming (multiple requests → single response) - Bidirectional streaming (multiple requests ↔ multiple responses) Supports interceptors (server-side middleware), deadline enforcement, message size limits, and graceful shutdown with call draining."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Client",
+			"description": "Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four call types (unary, server-streaming, client-streaming, bidirectional), metadata, deadlines, automatic reconnection, and keep-alive."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Call Objects",
+			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming"
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Proto3 Parser",
+			"description": "Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`"
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Protobuf Codec",
+			"description": "Zero-dependency Protocol Buffers wire-format encoder/decoder. Implements the proto3 binary encoding for all scalar types, nested messages, repeated fields, maps, oneofs, and enums. Wire types: - 0: Varint (int32, int64, uint32, uint64, sint32, sint64, bool, enum) - 1: 64-bit fixed (fixed64, sfixed64, double) - 2: Length-delimited (string, bytes, nested message, packed repeated) - 5: 32-bit fixed (fixed32, sfixed32, float)"
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Status Codes",
+			"description": "Standard gRPC status codes (as defined by the gRPC specification). Each code has a numeric value, a name, and a human-readable description. Used by both server and client to communicate call outcomes via trailers."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Metadata",
+			"description": "gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Framing",
+			"description": "gRPC length-prefixed message framing over HTTP/2. Each gRPC message on the wire has a 5-byte header: - Byte 0:   Compression flag (0 = uncompressed, 1 = compressed) - Bytes 1-4: Message length as 32-bit big-endian unsigned integer Followed by the protobuf-encoded message body. Also handles optional gzip compression/decompression."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Health Service",
+			"description": "gRPC Health Checking Protocol implementation (grpc.health.v1.Health). Supports `Check` (unary) and `Watch` (server-stream) RPCs. Required for production deployments behind Kubernetes, Envoy, AWS ALB, and any load balancer that uses standard gRPC health probes."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Reflection",
+			"description": "gRPC Server Reflection Protocol implementation (grpc.reflection.v1). Enables `grpcurl`, `grpcui`, Postman, and other debugging tools to introspect registered services without supplying `.proto` files."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Load Balancing",
+			"description": "Client-side load balancing for gRPC. Distributes requests across multiple backend addresses using pick-first (with failover) or round-robin policies. Manages subchannels (HTTP/2 connections) per backend with automatic reconnection, exponential backoff, and health awareness."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Credentials",
+			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "gRPC",
+			"name": "Proto Watcher",
+			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`."
+		},
+		{
+			"type": "removed",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "jwt",
+			"description": "Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) and RSA (RS256/384/512) algorithms, JWKS endpoint auto-fetching, token extraction from header/cookie/query, and configurable validation rules. Populates `req.user` with the decoded payload and `req.token` with the raw token string."
+		},
+		{
+			"type": "removed",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "session",
+			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server."
+		},
+		{
+			"type": "removed",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "oauth",
+			"description": "Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets for Google, GitHub, Microsoft, and Apple. Uses the Authorization Code flow with PKCE for maximum security."
+		},
+		{
+			"type": "removed",
+			"kind": "item",
+			"section": "Authentication & Sessions",
+			"name": "authorize",
+			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "grpc"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "grpcInterceptor"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "grpcHealth"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "setServiceStatus"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Core",
+			"name": "createApp",
+			"method": "grpcReflection"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "Lifecycle & Clustering",
+			"name": "LifecycleManager",
+			"method": "registerGrpc"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Authentication",
+			"name": "Authentication"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Authorization",
+			"name": "Authorization"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "Multi-Factor Auth",
+			"name": "Multi-Factor Auth"
+		},
+		{
+			"type": "added",
+			"kind": "section",
+			"section": "gRPC",
+			"name": "gRPC"
+		},
+		{
+			"type": "removed",
+			"kind": "section",
+			"section": "Authentication & Sessions",
+			"name": "Authentication & Sessions"
+		}
+	]
+}

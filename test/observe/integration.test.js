@@ -1,7 +1,7 @@
 const { ClusterManager, _defaultIpHash } = require('../../lib/cluster');
 const { MetricsRegistry } = require('../../lib/observe/metrics');
 
-// ── _defaultIpHash ───────────────────────────────────────────────
+// -- _defaultIpHash -----------------------------------------------
 
 describe('_defaultIpHash', () =>
 {
@@ -44,7 +44,7 @@ describe('_defaultIpHash', () =>
     });
 });
 
-// ── ClusterManager.enableMetrics ─────────────────────────────────
+// -- ClusterManager.enableMetrics ---------------------------------
 
 describe('ClusterManager metrics integration', () =>
 {
@@ -72,7 +72,7 @@ describe('ClusterManager metrics integration', () =>
     });
 });
 
-// ── ClusterManager.enableSticky ──────────────────────────────────
+// -- ClusterManager.enableSticky ----------------------------------
 
 describe('ClusterManager.enableSticky', () =>
 {
@@ -185,7 +185,7 @@ describe('ClusterManager.enableSticky', () =>
     });
 });
 
-// ── App Observability Integration ────────────────────────────────
+// -- App Observability Integration --------------------------------
 
 describe('App observability methods', () =>
 {

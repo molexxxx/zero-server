@@ -44,11 +44,16 @@
   - [cookieParser](#cookieparser)
   - [csrf](#csrf)
   - [validate](#validate)
-- [Authentication & Sessions](#authentication-sessions)
+- [Authentication](#authentication)
   - [jwt](#jwt)
   - [session](#session)
   - [oauth](#oauth)
-  - [authorize](#authorize)
+- [Authorization](#authorization)
+- [Multi-Factor Auth](#multi-factor-auth)
+  - [twoFactor](#twofactor)
+  - [webauthn](#webauthn)
+  - [trustedDevice](#trusteddevice)
+  - [enrollment](#enrollment)
 - [Environment](#environment)
   - [env](#env)
   - [.env File Format](#env-file-format)
@@ -57,6 +62,20 @@
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
   - [SSE (Server-Sent Events)](#sse-server-sent-events)
+- [gRPC](#grpc)
+  - [Server](#server)
+  - [Client](#client)
+  - [Call Objects](#call-objects)
+  - [Proto3 Parser](#proto3-parser)
+  - [Protobuf Codec](#protobuf-codec)
+  - [Status Codes](#status-codes)
+  - [Metadata](#metadata)
+  - [Framing](#framing)
+  - [Health Service](#health-service)
+  - [Reflection](#reflection)
+  - [Load Balancing](#load-balancing)
+  - [Credentials](#credentials)
+  - [Proto Watcher](#proto-watcher)
 - [Networking](#networking)
 - [ORM](#orm)
   - [Database](#database)
@@ -241,7 +260,7 @@ app.listen(3000, () => {
 
 ### createApp
 
-HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, and HTTP/1.1 support, built-in WebSocket upgrade handling, trust proxy resolution, and route introspection. Created via `createApp()` in the public API.
+HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, and HTTP/1.1 support, built-in WebSocket upgrade handling, gRPC service hosting, trust proxy resolution, and route introspection. Created via `createApp()` in the public API.
 
 #### Settings
 
@@ -276,7 +295,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 |---|---|---|
 | `listen` | `listen([port], [opts], [cb])` | Start listening for HTTP, HTTPS, or HTTP/2 connections. |
 | `close` | `close([cb])` | Gracefully close the server, stopping new connections. |
-| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Stops accepting new connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down registered databases. |
+| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Stops accepting new connections, drains in-flight requests, closes WebSocket, SSE, and gRPC connections, and shuts down registered databases. |
 
 
 #### Lifecycle Events
@@ -308,7 +327,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 | `ready` | `ready([path], [checks])` | Register a readiness health check endpoint. Returns `200` when all checks pass, `503` otherwise. |
 | `addHealthCheck` | `addHealthCheck(name, fn)` | Register a custom health check. |
 | `metrics` | `metrics()` | Get the application metrics registry. Lazily created on first access. Returns a `MetricsRegistry` instance for registering custom metrics. |
-| `metricsEndpoint` | `metricsEndpoint([path], [opts])` | Mount a Prometheus metrics endpoint. |
+| `metricsEndpoint` | `metricsEndpoint([path], [opts])` | Mount a Prometheus metrics endpoint. Pair with `metricsMiddleware()` to auto-instrument all HTTP traffic. |
 
 
 #### WebSocket Support
@@ -342,6 +361,17 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 | `group` | `group(prefix, ...middleware)` | Define a route group with shared middleware prefix. All routes registered inside the callback share the given path prefix and middleware stack. |
 
 
+#### gRPC Support
+
+| Method | Signature | Description |
+|---|---|---|
+| `grpc` | `grpc(schema, serviceName, handlers, [opts])` | Register a gRPC service handler. Accepts a parsed proto schema, a service name, and a map of method handlers. When the server is HTTP/2, incoming `application/grpc` requests are routed to the matching service method automatically. |
+| `grpcInterceptor` | `grpcInterceptor(fn)` | Add a global gRPC interceptor that runs before every gRPC call. |
+| `grpcHealth` | `grpcHealth()` | Enable the gRPC Health Checking Protocol (`grpc.health.v1.Health`). Registers the `Check` (unary) and `Watch` (server-stream) RPCs required by Kubernetes, Envoy, and standard gRPC health probes. Call `app.setServiceStatus(name, status)` to update individual services. Overall server health defaults to `SERVING`. |
+| `setServiceStatus` | `setServiceStatus(serviceName, status)` | Set the health status of a gRPC service. Requires `grpcHealth()` to have been called first. |
+| `grpcReflection` | `grpcReflection([opts])` | Enable gRPC Server Reflection (`grpc.reflection.v1.ServerReflection`). Allows `grpcurl`, `grpcui`, Postman, and other tools to introspect services. Disabled in production by default unless `opts.production` is `true`. Must be called AFTER all `app.grpc()` registrations so that all schemas are available for reflection. |
+
+
 #### Authentication & Sessions
 
 | Method | Signature | Description |
@@ -351,13 +381,32 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 | `oauth` | `oauth(opts)` | Create an OAuth2 client bound to this app. Returns the client — does NOT mount any middleware automatically. |
 
 
-```js
+```javascript
   const { createApp } = require('zero-http');
   const app = createApp();
 
   app.use(logger());
   app.get('/hello', (req, res) => res.json({ hello: 'world' }));
   app.listen(3000);
+```
+
+
+> **HTTP/2 with TLS**
+
+```javascript
+  const fs = require('fs');
+  app.listen(443, {
+      http2: true,
+      key: fs.readFileSync('key.pem'),
+      cert: fs.readFileSync('cert.pem'),
+  });
+```
+
+
+> **HTTP/2 Cleartext**
+
+```javascript
+  app.listen(3000, { http2: true });
 ```
 
 
@@ -396,7 +445,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 | `inspect` | `inspect([prefix])` | Return a flat list of all registered routes, including those in mounted child routers.  Useful for debugging or auto-documentation. |
 
 
-```js
+```javascript
   const { Router } = require('zero-http');
 
   const api = new Router();
@@ -517,7 +566,7 @@ JSON body-parsing middleware. Reads the request body, parses it as JSON, and set
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
-```js
+```javascript
   const { json } = require('zero-http');
 
   app.use(json({ limit: '500kb', strict: true }));
@@ -547,7 +596,7 @@ URL-encoded body-parsing middleware. Supports both flat (`URLSearchParams`) and 
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. |
 
 
-```js
+```javascript
   const { urlencoded } = require('zero-http');
 
   // Flat parsing (default)
@@ -579,7 +628,7 @@ Plain-text body-parsing middleware. Reads the request body as a string and sets 
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
-```js
+```javascript
   const { text } = require('zero-http');
 
   app.use(text({ type: 'text/plain', limit: '256kb' }));
@@ -606,7 +655,7 @@ Raw-buffer body-parsing middleware. Stores the full request body as a Buffer on 
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
-```js
+```javascript
   const { raw } = require('zero-http');
 
   app.use(raw({ type: 'application/octet-stream', limit: '5mb' }));
@@ -636,7 +685,7 @@ Streaming multipart/form-data parser. Writes uploaded files to a temp directory 
 | `maxTotalSize` | number | `—` | Maximum combined size of all uploaded files in bytes. |
 
 
-```js
+```javascript
   const { multipart } = require('zero-http');
 
   app.use(multipart({
@@ -676,7 +725,7 @@ starting with `'.'` for suffix matching. |
 | `maxAge` | number | `—` | Preflight cache duration in seconds. |
 
 
-```js
+```javascript
   app.use(cors());                                  // allow all origins
   app.use(cors({ origin: 'https://example.com' })); // single origin
   app.use(cors({                                     // fine-grained
@@ -701,7 +750,7 @@ Response compression middleware using Node's built-in `zlib`. Supports gzip, def
 | `filter` | Function | `—` | `(req, res) => boolean` — return false to skip compression. |
 
 
-```js
+```javascript
   const { createApp, compress } = require('zero-http');
   const app = createApp();
   app.use(compress());                // gzip/deflate/br auto-negotiated
@@ -734,7 +783,7 @@ Security headers middleware. Sets common security-related HTTP response headers 
 | `xssFilter` | boolean | `false` | Set X-XSS-Protection (legacy, off by default). |
 
 
-```js
+```javascript
   app.use(helmet());
   app.use(helmet({ frameguard: 'sameorigin', hsts: false }));
   app.use(helmet({
@@ -774,10 +823,19 @@ Static file-serving middleware with MIME detection, directory index files, exten
 (relative to root) to push when serving HTML files, or a function `(filePath) => string[]`. |
 
 
-```js
+```javascript
   app.use(serveStatic('public'));                            // serve ./public
   app.use(serveStatic('dist', { maxAge: 86400000 }));       // 1-day cache
   app.use(serveStatic('assets', { extensions: ['html'] })); // .html fallback
+```
+
+
+> **HTTP/2 Server Push**
+
+```javascript
+  app.use(serveStatic('public', {
+      pushAssets: ['/styles/main.css', '/modules/app.js'],
+  }));
 ```
 
 
@@ -798,7 +856,7 @@ In-memory rate-limiting middleware. Limits requests per IP address within a fixe
 | `handler` | function | `—` | (req, res) => void; custom handler for rate-limited requests. |
 
 
-```js
+```javascript
   app.use(rateLimit());                           // 100 req/min per IP
   app.use(rateLimit({ windowMs: 15 * 60000, max: 50 })); // 50 req per 15 min
   app.use(rateLimit({
@@ -828,7 +886,7 @@ Request timeout middleware. Automatically sends a 408 response if the handler do
 | `message` | string | `'Request Timeout'` | Error message body. |
 
 
-```js
+```javascript
   app.use(timeout(5000)); // 5 second timeout
   app.use(timeout(10000, { message: 'Too slow' }));
 ```
@@ -847,7 +905,7 @@ Request ID middleware. Assigns a unique identifier to each incoming request for 
 | `trustProxy` | boolean | `false` | Trust incoming X-Request-Id header from proxy. |
 
 
-```js
+```javascript
   app.use(requestId());
   app.get('/', (req, res) => {
       console.log(req.id); // e.g. '7f3a2b1c-...'
@@ -868,7 +926,7 @@ Simple request-logging middleware. Logs method, url, status code, and response t
 | `format` | string | `—` | 'tiny' \| 'short' \| 'dev' (default: 'dev'). |
 
 
-```js
+```javascript
   app.use(logger());                           // default 'dev' format
   app.use(logger({ format: 'tiny' }));          // minimal output
   app.use(logger({ colors: false, logger: msg => fs.appendFileSync('access.log', msg + '\n') }));
@@ -890,7 +948,7 @@ Configurable error-handling middleware that formats error responses based on env
 | `onError` | function | `—` | Callback on every error: (err, req, res) => void. |
 
 
-```js
+```javascript
   app.use(errorHandler());                       // dev-friendly by default
   app.use(errorHandler({ stack: false }));        // hide stack traces
   app.use(errorHandler({
@@ -933,7 +991,7 @@ Cookie parsing middleware. Parses the `Cookie` header and populates `req.cookies
 | `decode` | boolean | `true` | URI-decode cookie values. |
 
 
-```js
+```javascript
   app.use(cookieParser());
   app.use(cookieParser('my-secret'));
   app.use(cookieParser(['new-secret', 'old-secret'])); // key rotation
@@ -957,7 +1015,7 @@ CSRF (Cross-Site Request Forgery) protection middleware. Uses the double-submit 
 | `onError` | Function | `—` | Custom error handler `(req, res) => {}`. |
 
 
-```js
+```javascript
   const { createApp, csrf } = require('zero-http');
   const app = createApp();
 
@@ -1001,7 +1059,7 @@ Request validation middleware. Validates `req.body`, `req.query`, and `req.param
 | `onError` | Function | `—` | Custom error handler `(errors, req, res) => {}`. |
 
 
-```js
+```javascript
   const { createApp, validate } = require('zero-http');
   const app = createApp();
 
@@ -1023,7 +1081,7 @@ Request validation middleware. Validates `req.body`, `req.query`, and `req.param
 
 ---
 
-## Authentication & Sessions
+## Authentication
 
 ### jwt
 
@@ -1066,7 +1124,7 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
 | `createRefreshToken` | `createRefreshToken(payload, secret, [opts])` | Generate a signed refresh token. Refresh tokens are long-lived and should be stored securely. |
 
 
-```js
+```javascript
   const { createApp, json, jwt, jwtSign, Router } = require('zero-http');
   const app = createApp();
   const SECRET = process.env.JWT_SECRET;
@@ -1087,6 +1145,27 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
   api.use(jwt({ secret: SECRET }));
   api.get('/me', (req, res) => res.json({ id: req.user.sub, role: req.user.role }));
   app.use('/api', api);
+```
+
+
+> **RSA with JWKS Auto-fetch**
+
+```javascript
+  app.use(jwt({
+      jwksUri: 'https://auth.example.com/.well-known/jwks.json',
+      audience: 'my-api',
+      issuer: 'https://auth.example.com',
+  }));
+```
+
+
+> **Extract from Cookie**
+
+```javascript
+  app.use(jwt({
+      secret: 'my-secret',
+      getToken: (req) => req.cookies?.access_token,
+  }));
 ```
 
 
@@ -1138,7 +1217,7 @@ Zero-dependency session middleware. Supports encrypted cookie sessions (stateles
 | `session` | `session(opts)` | Create session middleware. Two modes: 1. **Cookie session** (no `store`): Entire session encrypted in a cookie. Great for small payloads (< 4 KB). Zero server state. 2. **Server-side session** (with `store`): Only session ID in cookie, data lives in the store. Scales to large payloads. |
 
 
-```js
+```javascript
   const { createApp, json, session } = require('zero-http');
   const app = createApp();
 
@@ -1162,6 +1241,17 @@ Zero-dependency session middleware. Supports encrypted cookie sessions (stateles
       req.session.destroy();
       res.json({ ok: true });
   });
+```
+
+
+> **Server-side Session with Memory Store**
+
+```javascript
+  app.use(session({
+      secret: process.env.SESSION_SECRET,
+      store: new MemoryStore(),
+      cookie: { maxAge: 3600000 },
+  }));
 ```
 
 
@@ -1190,7 +1280,7 @@ Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets fo
 | `generateState` | `generateState([bytes])` | Generate a cryptographically random state parameter. |
 
 
-```js
+```javascript
   const { oauth } = require('zero-http');
   const github = oauth({
       provider: 'github',
@@ -1217,7 +1307,10 @@ Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets fo
 ```
 
 
-### authorize
+
+---
+
+## authorize
 
 Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.
 
@@ -1251,7 +1344,7 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 | `attachUserHelpers` | `attachUserHelpers()` | Attach convenience authorization methods to `req.user`. Call this middleware after JWT/session middleware. Adds: - `req.user.is(...roles)` — check roles - `req.user.can(...perms)` — check permissions |
 
 
-```js
+```javascript
   const { createApp, jwt, authorize, can, canAny, Policy, gate,
       attachUserHelpers, Router } = require('zero-http');
   const app = createApp();
@@ -1298,6 +1391,233 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 ```
 
 
+---
+
+## Multi-Factor Auth
+
+### twoFactor
+
+Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages.
+
+#### TOTP Replay Prevention (RFC 6238 §5.2)
+
+| Method | Signature | Description |
+|---|---|---|
+| `get` | `get(userId)` | Get the last-used counter for a user. |
+| `set` | `set(userId, counter, ttlMs)` | Store the last-used counter for a user with a TTL. |
+| `clear` | `clear()` | Clear all stored counters (for testing or user revocation). |
+| `destroy` | `destroy()` | Destroy the store and stop periodic pruning. |
+
+
+#### TOTP (RFC 6238) Functions
+
+| Method | Signature | Description |
+|---|---|---|
+| `generateSecret` | `generateSecret([bytes])` | Generate a cryptographically random TOTP secret. |
+| `generateTOTP` | `generateTOTP(secret, [opts])` | Generate a TOTP code for the current (or given) time. |
+| `verifyTOTP` | `verifyTOTP(token, secret, [opts])` | Verify a user-supplied TOTP code against a shared secret. Checks within a configurable time-step window to handle clock drift. |
+
+
+#### OTPAuth URI
+
+| Method | Signature | Description |
+|---|---|---|
+| `otpauthURI` | `otpauthURI(opts)` | Generate an `otpauth://` URI for QR code enrollment. Compatible with Google Authenticator, Authy, 1Password, etc. |
+
+
+#### Backup Codes
+
+| Method | Signature | Description |
+|---|---|---|
+| `generateBackupCodes` | `generateBackupCodes([count], [bytes])` | Generate a set of single-use backup/recovery codes. Returns both the plaintext codes (show once to user) and SHA-256 hashes (store in database). |
+| `verifyBackupCode` | `verifyBackupCode(code, hashes)` | Verify a backup code against stored hashes. On match, returns the index so the caller can remove/mark it as used. |
+
+
+#### Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `require2FA` | `require2FA([opts])` | Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` — returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // — or — app.use(session({ secret })); app.use(require2FA()); |
+| `verifyTOTPMiddleware` | `verifyTOTPMiddleware(opts)` | Rate-limited TOTP verification middleware. Wraps `verifyTOTP` with attempt tracking to prevent brute-force attacks. Tracks attempts per-IP in memory with automatic expiry. Supports optional replay prevention (RFC 6238 §5.2) via a `replayStore`. When configured, each successfully verified TOTP counter is recorded and rejected on subsequent use within the validity window. |
+
+
+#### Combined 2FA Verification Middleware
+
+| Method | Signature | Description |
+|---|---|---|
+| `verify2FA` | `verify2FA(opts)` | Combined verification middleware that auto-detects and handles TOTP codes, backup codes, or WebAuthn/passkey assertions from a single endpoint. Detection logic (based on request body shape): - `{ code: "123456" }` → TOTP verification - `{ backupCode: "a1b2c3d4" }` → Backup code redemption - `{ id, response: { authenticatorData, clientDataJSON, signature } }` → WebAuthn assertion Rate-limits across all methods using a shared per-IP attempt tracker. |
+
+
+> **Setup 2FA for a user**
+
+```javascript
+  const { twoFactor } = require('zero-http');
+
+  app.post('/2fa/setup', async (req, res) => {
+      const secret = twoFactor.generateSecret();
+      const uri    = twoFactor.otpauthURI({ secret, issuer: 'MyApp', account: req.user.email });
+      // Store secret.base32 in your database (encrypted)
+      res.json({ secret: secret.base32, uri });
+  });
+```
+
+
+> **Verify a TOTP code**
+
+```javascript
+  app.post('/2fa/verify', async (req, res) => {
+      const user  = await db.users.findById(req.user.sub);
+      const valid = twoFactor.verifyTOTP(req.body.code, user.totpSecret);
+      if (!valid) return res.status(401).json({ error: 'Invalid code' });
+      req.session.set('twoFactorVerified', true);
+      res.json({ ok: true });
+  });
+```
+
+
+> **Protect routes with 2FA middleware**
+
+```javascript
+  app.use('/admin', twoFactor.require2FA(), adminRouter);
+```
+
+
+> **Generate and redeem backup codes**
+
+```javascript
+  const { codes, hashes } = twoFactor.generateBackupCodes(10);
+  // Store hashes in DB; give codes to user once
+  const ok = await twoFactor.verifyBackupCode(inputCode, storedHashes);
+```
+
+
+### webauthn
+
+Zero-dependency WebAuthn/FIDO2/Passkeys implementation. Supports registration (attestation) and authentication (assertion) ceremonies using only Node.js built-in `crypto`. Implements: - Challenge generation (cryptographically random, ≥16 bytes) - Registration options & verification (none, packed, fido-u2f attestation) - Authentication options & verification with counter validation - CBOR decoding for attestation objects and authenticator data - COSE key parsing (EC2/P-256, RSA, OKP/Ed25519) - ES256, RS256, EdDSA signature verification
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `buf` | Buffer | Yes |  |
+
+
+> **Registration**
+
+```javascript
+  const { webauthn } = require('zero-http');
+  const options = webauthn.generateRegistrationOptions({
+      rpName: 'My App', rpId: 'myapp.com',
+      userId: user.id, userName: user.email,
+  });
+  // Send options to client, receive response from navigator.credentials.create()
+  const result = await webauthn.verifyRegistration({
+      response: clientResponse,
+      expectedChallenge: storedChallenge,
+      expectedOrigin: 'https://myapp.com',
+      expectedRPID: 'myapp.com',
+  });
+```
+
+
+> **Authentication**
+
+```javascript
+  const authOpts = webauthn.generateAuthenticationOptions({
+      rpId: 'myapp.com',
+      allowCredentials: user.credentials,
+  });
+  const authResult = await webauthn.verifyAuthentication({
+      response: clientResponse,
+      expectedChallenge: storedChallenge,
+      expectedOrigin: 'https://myapp.com',
+      expectedRPID: 'myapp.com',
+      credential: storedCredential,
+  });
+```
+
+
+### trustedDevice
+
+Trusted Device / "Remember Me" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage.
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `secret` | string | `—` | Encryption secret (min 32 chars recommended). |
+| `maxAge` | number | `2592000000` | Trust duration in ms (default 30 days). |
+| `cookieName` | string | `'_dt'` | Cookie name. |
+| `fingerprint` | Function | `—` | `(req) => string` device fingerprint.
+Defaults to User-Agent hash. |
+| `getUserId` | Function | `—` | `(req) => string` user identifier.
+Defaults to `req.user.id \|\| req.user.sub`. |
+
+
+```javascript
+  const { trustedDevice, twoFactor } = require('zero-http');
+
+  app.post('/verify-2fa', twoFactor.verifyTOTPMiddleware({
+      getSecret: (req) => req.user.totpSecret,
+  }), trustedDevice.issue({
+      secret: process.env.DEVICE_TRUST_SECRET,
+  }));
+
+  app.use(twoFactor.require2FA({
+      isEnabled: (req) => req.user.totpEnabled,
+      trustedDevice: trustedDevice.verify({
+          secret: process.env.DEVICE_TRUST_SECRET,
+      }),
+  }));
+```
+
+
+### enrollment
+
+2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `saveSecret` | Function | `—` | `(req, base32Secret, backupHashes) => Promise<void>`.
+Persist the verified TOTP secret and backup hashes. |
+| `removeSecret` | Function | `—` | `(req) => Promise<void>`.
+Remove TOTP secret on disable. |
+| `issuer` | string | `'App'` | Issuer name for the otpauth URI. |
+| `getAccount` | Function | `—` | `(req) => string`. User label for QR code.
+Defaults to `req.user.email \|\| req.user.id`. |
+| `sessionKey` | string | `'_2faEnrollment'` | Session key for pending enrollment. |
+| `ttl` | number | `600000` | Enrollment session TTL in ms (default 10 min). |
+| `backupCount` | number | `10` | Number of backup codes to generate. |
+| `window` | number | `1` | TOTP verification window. |
+| `period` | number | `30` | TOTP period in seconds. |
+| `algorithm` | string | `'sha1'` | HMAC algorithm. |
+| `digits` | number | `6` | Code length. |
+| `isEnabled` | Function | `—` | `(req) => boolean\|Promise<boolean>`.
+Check if 2FA is already enabled (for guarding start/disable). |
+
+
+> **Full enrollment flow**
+
+```javascript
+  const { enrollment } = require('zero-http');
+  const flow = enrollment({
+      saveSecret: async (req, secret, backupHashes) => {
+          await db.users.update(req.user.id, { totpSecret: secret, backupHashes });
+      },
+      removeSecret: async (req) => {
+          await db.users.update(req.user.id, { totpSecret: null, backupHashes: [] });
+      },
+  });
+
+  app.post('/2fa/start',    json(), flow.start());
+  app.post('/2fa/verify',   json(), flow.verify());
+  app.post('/2fa/complete', json(), flow.complete());
+  app.post('/2fa/disable',  json(), flow.disable());
+```
+
+
 
 ---
 
@@ -1320,7 +1640,7 @@ Zero-dependency typed environment variable system. Loads `.env` files, validates
 | `parse` | `parse(src)` | Parse a `.env` file string into key-value pairs. Supports `#` comments, single/double/backtick quotes, multiline values, inline comments, interpolation `${VAR}`, and `export` prefix. |
 
 
-```js
+```javascript
   const { env } = require('zero-http');
 
   env.load({
@@ -1537,7 +1857,7 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
 | `keepAliveComment` | string | `—` | Comment text for keep-alive pings (default `'ping'`). |
 
 
-```js
+```javascript
   app.get('/events', (req, res) => {
       const stream = res.sse();           // opens SSE connection
 
@@ -1550,6 +1870,702 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
           console.log('client disconnected after', stream.uptime, 'ms');
       });
   });
+```
+
+
+
+---
+
+## gRPC
+
+### Server
+
+gRPC server for zero-http. Intercepts HTTP/2 streams with `content-type: application/grpc`, routes by `:path` pseudo-header (`/package.Service/Method`), and dispatches to registered service handlers. Handles all four gRPC call types: - Unary (single request → single response) - Server streaming (single request → multiple responses) - Client streaming (multiple requests → single response) - Bidirectional streaming (multiple requests ↔ multiple responses) Supports interceptors (server-side middleware), deadline enforcement, message size limits, and graceful shutdown with call draining.
+
+#### Service Registry
+
+| Method | Signature | Description |
+|---|---|---|
+| `addService` | `addService(schema, serviceName, handlers, [opts])` | Register a service with its handlers. |
+| `addInterceptor` | `addInterceptor(fn)` | Add a global interceptor that runs before every gRPC call. Interceptors receive `(call, next)` and must call `next()` to continue. |
+| `handleStream` | `handleStream(stream, headers)` | Handle an incoming HTTP/2 stream. Determines if it's a gRPC call, routes to the correct handler, and manages the call lifecycle. |
+| `drain` | `drain([timeout])` | Begin draining — reject new calls and wait for active calls to finish. |
+| `routes` | `routes()` | Get all registered routes for introspection. |
+
+
+```javascript
+  const { createApp, parseProto } = require('zero-http');
+  const app = createApp();
+  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));
+
+  app.grpc(schema, 'Greeter', {
+      SayHello(call) {
+          return { message: 'Hello ' + call.request.name };
+      },
+  });
+
+  app.listen(50051, { http2: true });
+```
+
+
+> **Server streaming**
+
+```javascript
+  app.grpc(schema, 'DataService', {
+      StreamData(call) {
+          for (let i = 0; i < 100; i++) {
+              call.write({ seq: i, payload: 'chunk-' + i });
+          }
+          call.end();
+      },
+  });
+```
+
+
+> **Bidirectional streaming with interceptors**
+
+```javascript
+  app.grpc(schema, 'ChatService', {
+      Chat(call) {
+          for await (const msg of call) {
+              call.write({ echo: msg.text, ts: Date.now() });
+          }
+          call.end();
+      },
+  }, {
+      interceptors: [authInterceptor, loggingInterceptor],
+  });
+```
+
+
+### Client
+
+Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four call types (unary, server-streaming, client-streaming, bidirectional), metadata, deadlines, automatic reconnection, and keep-alive.
+
+#### Unary Call
+
+| Method | Signature | Description |
+|---|---|---|
+| `call` | `call(methodName, request, [opts])` | Make a unary gRPC call — send one message, receive one response. |
+
+
+#### Server Streaming
+
+| Method | Signature | Description |
+|---|---|---|
+| `serverStream` | `serverStream(methodName, request, [opts])` | Make a server-streaming gRPC call — send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages. |
+
+
+#### Client Streaming
+
+| Method | Signature | Description |
+|---|---|---|
+| `clientStream` | `clientStream(methodName, [opts])` | Make a client-streaming gRPC call — send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise. |
+
+
+#### Bidirectional Streaming
+
+| Method | Signature | Description |
+|---|---|---|
+| `bidiStream` | `bidiStream(methodName, [opts])` | Make a bidirectional streaming gRPC call — send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable. |
+
+
+#### Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `close` | `close()` | Close the client connection. |
+| `connected` | `connected()` | Check if the client is connected. |
+
+
+> **Unary call**
+
+```javascript
+  const { GrpcClient, parseProto } = require('zero-http');
+  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));
+
+  const client = new GrpcClient('http://localhost:50051', schema, 'Greeter');
+  const reply = await client.call('SayHello', { name: 'World' });
+  console.log(reply.message); // => 'Hello World'
+  client.close();
+```
+
+
+> **Server streaming**
+
+```javascript
+  const stream = client.serverStream('ListUsers', { pageSize: 10 });
+  for await (const user of stream) {
+      console.log(user.name);
+  }
+```
+
+
+> **Bidirectional streaming**
+
+```javascript
+  const bidi = client.bidiStream('Chat');
+  bidi.write({ text: 'hello' });
+  for await (const reply of bidi) {
+      console.log(reply.text);
+  }
+  bidi.end();
+```
+
+
+> **With TLS and metadata**
+
+```javascript
+  const client = new GrpcClient('https://api.example.com:443', schema, 'MyService', {
+      ca: fs.readFileSync('ca.pem'),
+      metadata: { authorization: 'Bearer <token>' },
+  });
+```
+
+
+### Call Objects
+
+gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `stream` | import('http2').Http2Stream | Yes | The HTTP/2 stream for this call. |
+| `methodDef` | object | Yes | Method descriptor from the proto schema. |
+| `messageTypes` | object | Yes | Map of all message descriptors. |
+| `metadata` | Metadata | Yes | Initial metadata from the client. |
+
+
+#### Metadata Sending
+
+| Method | Signature | Description |
+|---|---|---|
+| `sendMetadata` | `sendMetadata([md])` | Send initial response metadata (HTTP/2 headers). Must be called before writing any messages. If not called explicitly, headers are sent automatically on the first write. |
+
+
+#### Status / End
+
+| Method | Signature | Description |
+|---|---|---|
+| `sendStatus` | `sendStatus(code, [message])` | Send a gRPC status and close the call. Trailers carry `grpc-status` and optionally `grpc-message`. |
+| `sendError` | `sendError(code, message)` | Send an error status and close the call. Convenience wrapper around `sendStatus`. |
+
+
+#### Writing
+
+| Method | Signature | Description |
+|---|---|---|
+| `write` | `write(message)` | Write a response message. The object is encoded to protobuf, framed, and sent on the HTTP/2 stream. |
+
+
+#### Deadline
+
+| Method | Signature | Description |
+|---|---|---|
+| `cancelled` | `cancelled()` | Check if the call has been cancelled. |
+| `cancel` | `cancel()` | Cancel the call from the server side. |
+
+
+#### Server Streaming Call
+
+| Method | Signature | Description |
+|---|---|---|
+| `end` | `end()` | End the server stream with OK status. |
+
+
+#### Bidirectional Streaming Call
+
+| Method | Signature | Description |
+|---|---|---|
+| `end` | `end()` | End the bidirectional stream with OK status. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxMessageSize` | number | `—` | Max message size in bytes. |
+| `compress` | boolean | `false` | Whether to compress outgoing messages. |
+
+
+> **Unary handler**
+
+```javascript
+  async function GetUser(call) {
+      const user = await db.findById(call.request.id);
+      return user; // auto-encoded and sent
+  }
+```
+
+
+> **Server streaming handler**
+
+```javascript
+  async function ListUsers(call) {
+      for (const user of users) {
+          call.write(user);
+      }
+      call.end();
+  }
+```
+
+
+> **Bidirectional streaming handler**
+
+```javascript
+  async function Chat(call) {
+      for await (const msg of call) {
+          call.write({ echo: msg.text, ts: Date.now() });
+      }
+  }
+```
+
+
+### Proto3 Parser
+
+Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = "proto3";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `source` | string | Yes | Proto3 source text. |
+
+
+#### File Loader
+
+| Method | Signature | Description |
+|---|---|---|
+| `parseProtoFile` | `parseProtoFile(filePath, [opts])` | Parse a `.proto` file from disk. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `filename` | string | `—` | File name for error messages. |
+| `basePath` | string | `—` | Base directory for resolving imports. |
+| `resolveImports` | boolean | `false` | Whether to recursively parse imported files. |
+
+
+```javascript
+  const { parseProto } = require('./proto');
+  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));
+  // schema.messages  — { MessageName: { fields: [...] } }
+  // schema.enums     — { EnumName: { values: { ... } } }
+  // schema.services  — { ServiceName: { methods: { ... } } }
+```
+
+
+### Protobuf Codec
+
+Zero-dependency Protocol Buffers wire-format encoder/decoder. Implements the proto3 binary encoding for all scalar types, nested messages, repeated fields, maps, oneofs, and enums. Wire types: - 0: Varint (int32, int64, uint32, uint64, sint32, sint64, bool, enum) - 1: 64-bit fixed (fixed64, sfixed64, double) - 2: Length-delimited (string, bytes, nested message, packed repeated) - 5: 32-bit fixed (fixed32, sfixed32, float)
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `buffer` | Buffer | Yes | Protobuf wire-format data. |
+
+
+#### Low-Level Primitives
+
+| Method | Signature | Description |
+|---|---|---|
+| `writeRaw` | `writeRaw(buf)` | Write raw bytes. |
+| `writeVarint` | `writeVarint(value)` | Write a varint (variable-length integer) using LEB128 encoding. Handles values up to 2^53 safely (JavaScript number precision limit). |
+| `writeSVarint` | `writeSVarint(value)` | Write a signed varint using ZigZag encoding (sint32/sint64). |
+| `writeFixed32` | `writeFixed32(value)` | Write a 32-bit fixed integer (little-endian). |
+| `writeSFixed32` | `writeSFixed32(value)` | Write a 32-bit signed fixed integer (little-endian). |
+| `writeFixed64` | `writeFixed64(value)` | Write a 64-bit fixed integer (little-endian) from a BigInt or number. |
+| `writeSFixed64` | `writeSFixed64(value)` | Write a 64-bit signed fixed integer (little-endian). |
+| `writeFloat` | `writeFloat(value)` | Write a 32-bit IEEE 754 float. |
+| `writeDouble` | `writeDouble(value)` | Write a 64-bit IEEE 754 double. |
+| `writeBool` | `writeBool(value)` | Write a boolean as a single-byte varint. |
+| `writeString` | `writeString(value)` | Write a UTF-8 string (length-prefixed). |
+| `writeBytes` | `writeBytes(value)` | Write raw bytes (length-prefixed). |
+| `writeTag` | `writeTag(fieldNumber, wireType)` | Write a field tag (field number + wire type). |
+| `finish` | `finish()` | Finalize and return the complete encoded buffer. |
+| `length` | `length()` | Get the total byte size of all written data. |
+| `readVarint` | `readVarint()` | Read a varint (LEB128-encoded variable-length integer). Returns a JavaScript number (safe for values up to 2^53). |
+| `readSVarint` | `readSVarint()` | Read a signed varint using ZigZag decoding (sint32/sint64). |
+| `readFixed32` | `readFixed32()` | Read a 32-bit fixed unsigned integer (little-endian). |
+| `readSFixed32` | `readSFixed32()` | Read a 32-bit fixed signed integer (little-endian). |
+| `readFixed64` | `readFixed64()` | Read a 64-bit fixed unsigned integer (little-endian). Returns a number (precision loss above 2^53). |
+| `readSFixed64` | `readSFixed64()` | Read a 64-bit fixed signed integer (little-endian). |
+| `readFloat` | `readFloat()` | Read a 32-bit IEEE 754 float. |
+| `readDouble` | `readDouble()` | Read a 64-bit IEEE 754 double. |
+| `readBool` | `readBool()` | Read a boolean varint. |
+| `readString` | `readString()` | Read a length-prefixed UTF-8 string. |
+| `readBytes` | `readBytes()` | Read length-prefixed raw bytes. |
+| `readTag` | `readTag()` | Read a field tag and decode field number + wire type. |
+| `skipField` | `skipField(wireType)` | Skip a field value based on its wire type (for unknown fields). |
+| `readSubReader` | `readSubReader()` | Create a sub-reader for a length-delimited embedded message. |
+
+
+#### Field-level convenience methods (tag + value)
+
+| Method | Signature | Description |
+|---|---|---|
+| `string` | `string(fieldNumber, value)` | Write a string field (tag + length-delimited string). |
+| `bytes` | `bytes(fieldNumber, value)` | Write a bytes/embedded-message field (tag + length-delimited bytes). |
+| `int32` | `int32(fieldNumber, value)` | Write an int32/enum field (tag + varint). |
+| `bool` | `bool(fieldNumber, value)` | Write a bool field (tag + varint 0/1). |
+
+
+#### Reader
+
+| Method | Signature | Description |
+|---|---|---|
+| `remaining` | `remaining()` | Number of bytes remaining to be read. |
+| `done` | `done()` | Whether all bytes have been consumed. |
+| `position` | `position()` | Current read position (byte offset). |
+
+
+#### Message Codec
+
+| Method | Signature | Description |
+|---|---|---|
+| `encode` | `encode(obj, messageDesc, allMessages, [depth])` | Encode a JavaScript object to protobuf binary using a message descriptor. |
+| `decode` | `decode(buffer, messageDesc, allMessages, [depth])` | Decode protobuf binary into a JavaScript object using a message descriptor. |
+
+
+#### Scalar Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `isPackable` | `isPackable(type)` | Check if a protobuf type can be packed (numeric/bool scalars only). |
+
+
+### Status Codes
+
+Standard gRPC status codes (as defined by the gRPC specification). Each code has a numeric value, a name, and a human-readable description. Used by both server and client to communicate call outcomes via trailers.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `grpcCode` | number | Yes | gRPC status code. |
+
+
+#### Status Codes
+
+| Method | Signature | Description |
+|---|---|---|
+| `statusName` | `statusName(code)` | Get the human-readable name for a gRPC status code. |
+
+
+### Metadata
+
+gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.
+
+#### Core Operations
+
+| Method | Signature | Description |
+|---|---|---|
+| `set` | `set(key, value)` | Set a metadata key to a single value, replacing any existing values. Binary keys (ending in `-bin`) accept Buffer values; all others accept strings. |
+| `add` | `add(key, value)` | Add a value to a metadata key without replacing existing values. Allows multi-valued metadata (e.g. multiple tags or roles). |
+| `get` | `get(key)` | Get the first value for a metadata key. |
+| `getAll` | `getAll(key)` | Get all values for a metadata key. |
+| `has` | `has(key)` | Check whether a metadata key has been set. |
+| `remove` | `remove(key)` | Remove a metadata key and all its values. |
+| `clear` | `clear()` | Remove all metadata entries. |
+| `size` | `size()` | Return the number of distinct metadata keys. |
+
+
+#### Serialization
+
+| Method | Signature | Description |
+|---|---|---|
+| `toHeaders` | `toHeaders()` | Convert metadata to a plain object suitable for HTTP/2 headers/trailers. Multi-valued keys are joined with `, `. Binary values are base64-encoded. |
+| `merge` | `merge(other)` | Merge entries from another Metadata instance or plain object. |
+| `clone` | `clone()` | Create a shallow clone of this Metadata. |
+| `entries` | `entries()` | Return all entries as an array of `[key, value]` pairs. |
+| `keys` | `keys()` | Return all distinct keys. |
+
+
+#### Static Helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `fromHeaders` | `fromHeaders(headers, [opts])` | Create a Metadata instance from HTTP/2 headers, extracting only user metadata (skipping pseudo-headers, gRPC internal headers, and standard HTTP headers). |
+
+
+#### Utility Functions
+
+| Method | Signature | Description |
+|---|---|---|
+| `isBinaryKey` | `isBinaryKey(key)` | Check if a metadata key is a binary key (ends with `-bin`). |
+| `normalizeKey` | `normalizeKey(key)` | Normalize a metadata key to lowercase. |
+
+
+```javascript
+  const md = new Metadata();
+  md.set('x-request-id', '123');
+  md.add('x-tags', 'alpha');
+  md.add('x-tags', 'beta');
+  md.getAll('x-tags');  // ['alpha', 'beta']
+```
+
+
+> **Binary metadata**
+
+```javascript
+  md.set('icon-bin', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  md.get('icon-bin');  // <Buffer 89 50 4e 47>
+```
+
+
+### Framing
+
+gRPC length-prefixed message framing over HTTP/2. Each gRPC message on the wire has a 5-byte header: - Byte 0:   Compression flag (0 = uncompressed, 1 = compressed) - Bytes 1-4: Message length as 32-bit big-endian unsigned integer Followed by the protobuf-encoded message body. Also handles optional gzip compression/decompression.
+
+#### Frame Encoder
+
+| Method | Signature | Description |
+|---|---|---|
+| `frameEncode` | `frameEncode(message, [opts])` | Encode a protobuf message buffer into a gRPC framed message. |
+
+
+#### Frame Decoder
+
+| Method | Signature | Description |
+|---|---|---|
+| `push` | `push(chunk)` | Feed a data chunk to the parser. May trigger zero or more `onMessage` callbacks. |
+| `reset` | `reset()` | Reset the parser state, discarding any buffered data. |
+| `destroy` | `destroy()` | Destroy the parser, preventing further processing. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxMessageSize` | number | `16777216` | Max message size. |
+| `allowCompressed` | boolean | `true` | Accept gzip frames. |
+
+
+### Health Service
+
+gRPC Health Checking Protocol implementation (grpc.health.v1.Health). Supports `Check` (unary) and `Watch` (server-stream) RPCs. Required for production deployments behind Kubernetes, Envoy, AWS ALB, and any load balancer that uses standard gRPC health probes.
+
+#### Health Service Manager
+
+| Method | Signature | Description |
+|---|---|---|
+| `setStatus` | `setStatus(serviceName, status)` | Set the health status for a service. |
+| `getStatus` | `getStatus(serviceName)` | Get the current status for a service. |
+| `setAllNotServing` | `setAllNotServing()` | Set all registered services to NOT_SERVING for graceful shutdown. |
+| `Check` | `Check(call)` | Handle a Check RPC — unary request for current health of a service. |
+| `Watch` | `Watch(call)` | Handle a Watch RPC — server-stream that pushes status changes. Sends the current status immediately, then pushes on every change. |
+| `getSchema` | `getSchema()` | Get the schema object needed for server registration. Avoids requiring proto parsing — returns descriptors directly. |
+| `getHandlers` | `getHandlers()` | Get the handler map for server registration. Binds methods to this instance. |
+
+
+```javascript
+  const { createApp } = require('zero-http');
+  const app = createApp();
+  app.grpcHealth();
+  app.listen(50051, { http2: true });
+```
+
+
+> **Per-service health status**
+
+```javascript
+  app.grpcHealth();
+  app.setServiceStatus('myapp.UserService', 'SERVING');
+  app.setServiceStatus('myapp.OrderService', 'NOT_SERVING');
+```
+
+
+### Reflection
+
+gRPC Server Reflection Protocol implementation (grpc.reflection.v1). Enables `grpcurl`, `grpcui`, Postman, and other debugging tools to introspect registered services without supplying `.proto` files.
+
+#### Reflection Service
+
+| Method | Signature | Description |
+|---|---|---|
+| `addSchema` | `addSchema(schema, [filename])` | Register a schema for reflection. Builds and caches the FileDescriptorProto at registration time. |
+| `getSchema` | `getSchema()` | Get the schema for server registration. |
+| `getHandlers` | `getHandlers()` | Get the handler map. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `production` | boolean | `false` | Enable in production. |
+
+
+```javascript
+  const app = createApp();
+  app.grpc(schema, 'Greeter', handlers);
+  app.grpcReflection();  // dev-only by default
+  app.listen(50051, { http2: true });
+```
+
+
+### Load Balancing
+
+Client-side load balancing for gRPC. Distributes requests across multiple backend addresses using pick-first (with failover) or round-robin policies. Manages subchannels (HTTP/2 connections) per backend with automatic reconnection, exponential backoff, and health awareness.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `address` | string | Yes | Backend address (host:port or full URL). |
+| `connectOpts` | object | No | HTTP/2 connection options (TLS, etc.). |
+
+
+#### Subchannel
+
+| Method | Signature | Description |
+|---|---|---|
+| `connect` | `connect()` | Connect to the backend. |
+| `getSession` | `getSession()` | Get the session, connecting if needed. |
+| `isReady` | `isReady()` | Whether this subchannel is ready to serve requests. |
+| `isHealthy` | `isHealthy()` | Whether this subchannel is considered healthy. |
+| `shutdown` | `shutdown()` | Shut down this subchannel. |
+
+
+#### Load Balancing Policies
+
+| Method | Signature | Description |
+|---|---|---|
+| `pick` | `pick(subchannels)` | Pick the next subchannel. |
+
+
+#### Balancer
+
+| Method | Signature | Description |
+|---|---|---|
+| `pick` | `pick()` | Pick a subchannel for the next request. |
+| `getSession` | `getSession()` | Get an HTTP/2 session from the selected subchannel. |
+| `shutdown` | `shutdown()` | Shut down all subchannels. |
+
+
+```javascript
+  const { GrpcClient, parseProto } = require('zero-http');
+  const schema = parseProto(protoSource);
+
+  const client = new GrpcClient({
+      addresses: ['backend-1:50051', 'backend-2:50051', 'backend-3:50051'],
+      loadBalancing: 'round-robin',
+  }, schema, 'Greeter');
+
+  const reply = await client.call('SayHello', { name: 'World' });
+```
+
+
+### Credentials
+
+Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages.
+
+#### ChannelCredentials Class
+
+| Method | Signature | Description |
+|---|---|---|
+| `createInsecure` | `createInsecure()` | Create insecure (plaintext) credentials. No TLS — suitable for development or service-mesh environments where transport security is handled by the infrastructure. |
+| `createSsl` | `createSsl([rootCerts], [clientKey], [clientCert], [opts])` | Create SSL/TLS credentials. |
+| `createSslFromFiles` | `createSslFromFiles([caPath], [keyPath], [certPath], [opts])` | Create SSL credentials from PEM file paths. Files are read once at creation time. |
+| `createFromMetadata` | `createFromMetadata(metadataGenerator)` | Create per-call metadata credentials. The generator function is called before each RPC to produce metadata headers (e.g. authorization tokens). |
+| `combine` | `combine(...credentials)` | Combine multiple credentials into one. At most one channel credential (insecure/SSL) and any number of call credentials (metadata) can be combined. |
+| `isSecure` | `isSecure()` | Whether this credential uses TLS. |
+| `getConnectionOptions` | `getConnectionOptions()` | Get the TLS connection options for `http2.connect()`. Returns `null` for insecure/metadata-only credentials. |
+| `generateMetadata` | `generateMetadata([params])` | Generate per-call metadata by running all metadata generators. |
+
+
+#### Certificate Rotation Helper
+
+| Method | Signature | Description |
+|---|---|---|
+| `createRotatingCredentials` | `createRotatingCredentials(opts)` | Create SSL credentials with automatic certificate rotation. Watches certificate files for changes and reloads them. Returns a credentials-like object with `getCurrent()` to get the latest credentials and `stop()` to cease watching. |
+
+
+> **Insecure (plaintext)**
+
+```javascript
+  const { ChannelCredentials, GrpcClient } = require('zero-http');
+  const creds = ChannelCredentials.createInsecure();
+  const client = new GrpcClient({ address: 'http://localhost:50051', credentials: creds }, schema, 'Greeter');
+```
+
+
+> **Server-only TLS**
+
+```javascript
+  const creds = ChannelCredentials.createSsl(fs.readFileSync('ca.pem'));
+```
+
+
+> **Mutual TLS (mTLS)**
+
+```javascript
+  const creds = ChannelCredentials.createSsl(
+      fs.readFileSync('ca.pem'),
+      fs.readFileSync('client-key.pem'),
+      fs.readFileSync('client-cert.pem'),
+  );
+```
+
+
+> **Metadata credentials (e.g. Bearer token)**
+
+```javascript
+  const creds = ChannelCredentials.createFromMetadata((params) => ({
+      authorization: 'Bearer ' + getToken(),
+  }));
+```
+
+
+> **Composed credentials (TLS + per-call metadata)**
+
+```javascript
+  const creds = ChannelCredentials.combine(
+      ChannelCredentials.createSsl(ca),
+      ChannelCredentials.createFromMetadata(() => ({ authorization: 'Bearer ' + token })),
+  );
+```
+
+
+### Proto Watcher
+
+Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `app` | object | Yes | The zero-http App instance. |
+| `protoPath` | string | Yes | Path to the `.proto` file. |
+| `serviceName` | string | Yes | Service name to register. |
+| `handlers` | Object<string, Function> | Yes | Method handlers map. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `interceptors` | Function[] | `—` | Per-service interceptors. |
+| `maxMessageSize` | number | `—` | Max incoming message size. |
+| `compress` | boolean | `false` | Compress outgoing messages. |
+| `debounce` | number | `300` | Debounce interval in ms. |
+| `production` | boolean | `false` | Allow in production. |
+| `onReload` | Function | `—` | `(schema) => void` callback after reload. |
+| `onError` | Function | `—` | `(err) => void` callback on parse/reload error. |
+
+
+```javascript
+  const { createApp, watchProto } = require('zero-http');
+  const app = createApp();
+
+  watchProto(app, './protos/greeter.proto', 'Greeter', handlers, {
+      onReload: (schema) => console.log('Reloaded!'),
+  });
+
+  app.listen(50051, { http2: true });
 ```
 
 
@@ -1592,7 +2608,7 @@ Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS,
 | `maxVersion` | string | `—` | Maximum TLS version. |
 
 
-```js
+```javascript
   const res = await fetch('https://api.example.com/data');
   const body = await res.json();
 
@@ -1675,7 +2691,7 @@ ORM entry point.  Provides the `Database` factory that creates a connection to a
 | `connectWithReplicas` | `connectWithReplicas(type, primaryOpts, [replicaConfigs], [options])` | Create a Database with read replica support. Automatically sets up a ReplicaManager with the primary and replica adapters. |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('memory');
@@ -1804,7 +2820,7 @@ Base Model class for defining database-backed entities. Provides static CRUD met
 | `descendants` | `descendants([foreignKey])` | Get all descendants of this instance in a self-referential tree. |
 
 
-```js
+```javascript
   const { Model, Database } = require('zero-http');
 
   class User extends Model {
@@ -1857,7 +2873,7 @@ Schema definition and validation for ORM models. Validates data against column d
 | `validateCheck` | `validateCheck(expr)` | Validate a CHECK expression for dangerous SQL patterns. |
 
 
-```js
+```javascript
   const { TYPES, validate } = require('zero-http').Schema;
 
   const columns = {
@@ -2180,7 +3196,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 | `whereRaw` | `whereRaw(sql, ...params)` | Inject a raw WHERE clause for SQL adapters. Ignored by non-SQL adapters (memory, json, mongo). |
 
 
-```js
+```javascript
   const users = await User.query()
       .where('age', '>', 18)
       .where('role', 'admin')
@@ -2282,7 +3298,7 @@ SQLite adapter using the optional `better-sqlite3` driver. Requires: `npm instal
 | `pragmas.locking_mode` | string | `—` | NORMAL or EXCLUSIVE. |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
@@ -2396,7 +3412,7 @@ MySQL / MariaDB adapter using the optional `mysql2` driver. Requires: `npm insta
 | `ssl` | string | `—` | SSL profile or options object. |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('mysql', {
@@ -2513,7 +3529,7 @@ PostgreSQL adapter using the optional `pg` driver. Requires: `npm install pg`
 | `statement_timeout` | number | `—` | Statement timeout in ms. |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('postgres', {
@@ -2628,7 +3644,7 @@ MongoDB adapter using the optional `mongodb` driver. Requires: `npm install mong
 | `clientOptions` | object | `—` | Extra MongoClient options (passed directly). |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('mongo', {
@@ -2817,7 +3833,7 @@ Redis database adapter for the zero-http ORM. Uses `ioredis` as the driver. Stor
 | `connectTimeout` | number | `10000` | Connection timeout in ms. |
 
 
-```js
+```javascript
   // Connect by host/port
   const db = Database.connect('redis', { host: '127.0.0.1', port: 6379 });
 
@@ -2879,7 +3895,7 @@ In-memory database adapter. Zero-dependency, perfect for testing, prototyping, a
 | `clear` | `clear()` | Clear all data (for testing). |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('memory');
@@ -2941,7 +3957,7 @@ JSON file-backed database adapter. Persists data to JSON files on disk — one f
 | `autoFlush` | boolean | `true` | Automatically flush writes (set false for manual flush()). |
 
 
-```js
+```javascript
   const { Database, Model, TYPES } = require('zero-http');
 
   const db = Database.connect('json', { directory: './data' });
@@ -2997,7 +4013,7 @@ Versioned migration framework for the zero-http ORM. Supports up/down migrations
 | `table` | string | `'_migrations'` | Migration tracking table name. |
 
 
-```js
+```javascript
   const { Database, Migrator } = require('zero-http');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
@@ -3064,7 +4080,7 @@ Query caching layer for the zero-http ORM. Provides an in-memory LRU cache with 
 | `redis` | object | `—` | Redis adapter instance for distributed caching. |
 
 
-```js
+```javascript
   const { Database, QueryCache } = require('zero-http');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
@@ -3280,7 +4296,7 @@ Base Seeder class and SeederRunner for orchestrating database seeding operations
 | `enumValue` | `enumValue(values)` | Random element from an enum-like array, validated at call time. |
 
 
-```js
+```javascript
   class UserSeeder extends Seeder {
       async run(db) {
           const factory = new Factory(User);
@@ -3324,7 +4340,7 @@ Query profiling, slow query detection, and automatic N+1 detection. Attach to a 
 | `onN1` | Function | `—` | Callback on N+1 detection: (info) => {}. |
 
 
-```js
+```javascript
   const { Database, QueryProfiler } = require('zero-http');
 
   const db = Database.connect('memory');
@@ -3369,7 +4385,7 @@ Read replica management with automatic read/write splitting, round-robin and ran
 | `stickyWindow` | number | `1000` | Duration (ms) to read from primary after a write. |
 
 
-```js
+```javascript
   const { Database, ReplicaManager } = require('zero-http');
 
   const db = Database.connectWithReplicas('postgres',
@@ -3420,7 +4436,7 @@ Database view management for the ORM. Supports creating, dropping, and querying 
 | `materialized` | boolean | `false` | Whether to create a materialized view (PostgreSQL only). |
 
 
-```js
+```javascript
   const { DatabaseView } = require('zero-http');
 
   // Define a view
@@ -3471,7 +4487,7 @@ Full-text search integration for the ORM. Provides a unified API across PostgreS
 | `indexName` | string | `—` | Custom index name. |
 
 
-```js
+```javascript
   const { FullTextSearch } = require('zero-http');
 
   // Create a search index
@@ -3523,7 +4539,7 @@ Geo-spatial query support for the ORM. Provides distance calculations, bounding 
 | `unit` | string | `'km'` | Distance unit: 'km' or 'mi'. |
 
 
-```js
+```javascript
   const { GeoQuery } = require('zero-http');
 
   // Create a geo query helper for a model
@@ -3607,7 +4623,7 @@ Multi-tenancy support for the ORM. Provides schema-based tenancy (PostgreSQL) an
 | `schemaPrefix` | string | `'tenant_'` | Schema name prefix (schema strategy). |
 
 
-```js
+```javascript
   const { TenantManager } = require('zero-http');
 
   // Row-level tenancy
@@ -3681,7 +4697,7 @@ Automatic audit logging for the ORM. Tracks who changed what and when, with diff
 | `diffs` | boolean | `true` | Store field-level diffs for updates. |
 
 
-```js
+```javascript
   const { AuditLog } = require('zero-http');
 
   const audit = new AuditLog(db, {
@@ -3746,7 +4762,7 @@ Plugin system for the zero-http ORM. Provides a registration API, lifecycle hook
 | `size` | `size()` | Number of registered plugins. |
 
 
-```js
+```javascript
   const { PluginManager } = require('zero-http');
 
   // Define a plugin
@@ -3820,7 +4836,7 @@ Stored procedures, functions, and trigger management for the ORM. Provides a cro
 | `options` | object | `—` | Adapter-specific options. |
 
 
-```js
+```javascript
   const { StoredProcedure, StoredFunction, TriggerManager } = require('zero-http');
 
   // Define a procedure
@@ -3884,9 +4900,30 @@ Structured, enterprise-grade request logger. Outputs JSON or pretty-text with co
 | `stream` | WritableStream | `—` | Output stream (default: stdout/stderr). |
 
 
-```js
+```javascript
   const { structuredLogger } = require('zero-http');
   app.use(structuredLogger());
+```
+
+
+> **JSON Output with Custom Transport**
+
+```javascript
+  app.use(structuredLogger({
+      format: 'json',
+      transport: (entry) => myLogService.send(entry),
+  }));
+```
+
+
+> **Child Loggers with Bound Context**
+
+```javascript
+  app.get('/users/:id', (req, res) => {
+      const log = req.log.child({ userId: req.params.id });
+      log.info('fetching user');
+      log.warn('user has legacy data');
+  });
 ```
 
 
@@ -3967,21 +5004,46 @@ Zero-dependency metrics registry with Prometheus-compatible text exposition form
 | `labels` | string[] | `[` | ] - Label names. |
 
 
-```js
-  const { MetricsRegistry, metricsMiddleware } = require('zero-http');
+> **Quick Setup**
 
-  const registry = new MetricsRegistry();
-  app.use(metricsMiddleware({ registry }));
-  app.get('/metrics', (req, res) => {
-      res.set('Content-Type', 'text/plain; version=0.04');
-      res.send(registry.metrics());
+```javascript
+  const { createApp, metricsMiddleware } = require('zero-http');
+  const app = createApp();
+
+  app.use(metricsMiddleware({ registry: app.metrics() }));
+  app.metricsEndpoint();   // GET /metrics
+  app.health();            // GET /healthz
+  app.ready();             // GET /readyz
+  app.listen(3000);
+```
+
+
+> **prometheus.yml**
+
+```yaml
+  scrape_configs:
+    - job_name: 'my-app'
+      scrape_interval: 5s
+      static_configs:
+        - targets: ['localhost:3000']
+```
+
+
+> **Custom Metrics**
+
+```javascript
+  const logins = app.metrics().counter({
+      name: 'user_logins_total',
+      help: 'Total user login attempts',
+      labels: ['provider', 'success'],
   });
+  logins.inc({ provider: 'github', success: 'true' });
 ```
 
 
 ### Tracer
 
-Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend.
+Zero-dependency distributed tracing with W3C Trace Context propagation. Provides span creation, context propagation via `traceparent`/`tracestate` headers, and auto-instrumentation middleware for HTTP, ORM queries, WebSocket, SSE, gRPC, and outbound fetch calls. Compatible with OpenTelemetry: spans export in OTLP-like format and support configurable exporters for Jaeger, Zipkin, or any custom backend.
 
 #### Span
 
@@ -4030,11 +5092,23 @@ Zero-dependency distributed tracing with W3C Trace Context propagation. Provides
 | `tracer` | Tracer | `—` | Tracer instance for export. |
 
 
-```js
+```javascript
   const { tracingMiddleware, Tracer } = require('zero-http');
 
   const tracer = new Tracer({ serviceName: 'my-api' });
   app.use(tracingMiddleware({ tracer }));
+```
+
+
+```javascript
+  // With exporter
+  const tracer = new Tracer({
+      serviceName: 'my-api',
+      exporter: (spans) => fetch('http://jaeger:4318/v1/traces', {
+          method: 'POST',
+          body: JSON.stringify(spans),
+      }),
+  });
 ```
 
 
@@ -4072,7 +5146,7 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 | `maxRssBytes` | number | `—` | Max RSS in bytes. |
 
 
-```js
+```javascript
   const { healthCheck } = require('zero-http');
 
   app.get('/healthz', healthCheck());
@@ -4085,6 +5159,16 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 ```
 
 
+> **Using the App Integration**
+
+```javascript
+  app.health('/healthz');
+  app.ready('/readyz', {
+      database: () => db.ping(),
+  });
+```
+
+
 
 ---
 
@@ -4092,7 +5176,7 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 
 ### LifecycleManager
 
-Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting.
+Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket, SSE, and gRPC connections, and shuts down ORM databases before exiting.
 
 #### Parameters
 
@@ -4119,6 +5203,7 @@ Graceful shutdown manager for zero-http applications. Tracks active connections,
 | `unregisterPool` | `unregisterPool(pool)` | Unregister a WebSocket pool. |
 | `trackSSE` | `trackSSE(stream)` | Track an active SSE stream for graceful shutdown. |
 | `registerDatabase` | `registerDatabase(db)` | Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown. |
+| `registerGrpc` | `registerGrpc(registry)` | Register the gRPC service registry for graceful shutdown. Active gRPC calls are drained before the server closes. |
 | `unregisterDatabase` | `unregisterDatabase(db)` | Unregister an ORM Database instance. |
 
 
@@ -4134,12 +5219,12 @@ Graceful shutdown manager for zero-http applications. Tracks active connections,
 
 | Method | Signature | Description |
 |---|---|---|
-| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Wait for in-flight HTTP requests to complete (with timeout) 6. Close all registered ORM database connections 7. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated. |
+| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Drain active gRPC calls 6. Wait for in-flight HTTP requests to complete (with timeout) 7. Close all registered ORM database connections 8. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated. |
 | `isDraining` | `isDraining()` | Whether the server is currently draining (rejecting new requests). |
 | `isClosed` | `isClosed()` | Whether the server has fully shut down. |
 
 
-```js
+```javascript
   const app = createApp();
   app.listen(3000);
 
@@ -4187,7 +5272,7 @@ Clustering support for zero-http applications. Forks worker processes, manages a
 
 | Method | Signature | Description |
 |---|---|---|
-| `enableSticky` | `enableSticky(server, [opts])` | Enable sticky sessions by hashing client IP addresses to specific workers. Ensures WebSocket and SSE connections from the same client always land on the same worker for proper room/state management. Must be called on the primary BEFORE listen(). Replaces the default round-robin OS scheduling with a custom `connection` listener that distributes sockets to workers based on IP hash. |
+| `enableSticky` | `enableSticky(server, [opts])` | Enable sticky sessions by hashing client IP addresses to specific workers. Ensures WebSocket, SSE, and gRPC connections from the same client always land on the same worker for proper room/state management. Must be called on the primary BEFORE listen(). Replaces the default round-robin OS scheduling with a custom `connection` listener that distributes sockets to workers based on IP hash. |
 
 
 #### Graceful Restart & Shutdown
@@ -4216,13 +5301,28 @@ Clustering support for zero-http applications. Forks worker processes, manages a
 | `backoffFactor` | number | `2` | Multiplier for exponential backoff. |
 
 
-```js
+```javascript
   const { createApp, cluster } = require('zero-http');
 
   cluster((worker) => {
       const app = createApp();
       app.get('/', (req, res) => res.json({ pid: process.pid }));
       app.listen(3000);
+  });
+```
+
+
+> **With Options**
+
+```javascript
+  cluster((worker) => {
+      const app = createApp();
+      app.listen(3000);
+  }, {
+      workers: 4,
+      respawn: true,
+      respawnDelay: 1000,
+      maxRespawnDelay: 30000,
   });
 ```
 
@@ -4305,7 +5405,7 @@ HTTP error classes with status codes, error codes, and structured details. Every
 | `isHttpError` | `isHttpError(err)` | Check if a value is an HttpError (or duck-typed equivalent). |
 
 
-```js
+```javascript
   const { NotFoundError, ValidationError, createError } = require('zero-http');
 
   // Throw a named error class
@@ -4355,7 +5455,7 @@ Specialized error classes for framework internals, ORM operations, and infrastru
 | `CacheError` | `new CacheError([message], [opts])` | Cache error — caching layer failures. |
 
 
-```js
+```javascript
   const { NotFoundError, ValidationError, createError } = require('zero-http');
 
   // Throw a named error class
@@ -4393,7 +5493,7 @@ Configurable error-handling middleware that formats error responses based on env
 | `onError` | function | `—` | Callback on every error: (err, req, res) => void. |
 
 
-```js
+```javascript
   app.use(errorHandler());                       // dev-friendly by default
   app.use(errorHandler({ stack: false }));        // hide stack traces
   app.use(errorHandler({
@@ -4428,7 +5528,7 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 | `reset` | `reset()` | Reset all settings to defaults. |
 
 
-```js
+```javascript
   const debug = require('zero-http').debug;
   const log = debug('app:routes');
 

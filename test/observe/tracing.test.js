@@ -4,7 +4,7 @@ const {
     tracingMiddleware, instrumentFetch,
 } = require('../../lib/observe/tracing');
 
-// ── parseTraceparent ─────────────────────────────────────────────
+// -- parseTraceparent ---------------------------------------------
 
 describe('parseTraceparent', () =>
 {
@@ -77,7 +77,7 @@ describe('parseTraceparent', () =>
     });
 });
 
-// ── formatTraceparent ────────────────────────────────────────────
+// -- formatTraceparent --------------------------------------------
 
 describe('formatTraceparent', () =>
 {
@@ -100,7 +100,7 @@ describe('formatTraceparent', () =>
     });
 });
 
-// ── Span ─────────────────────────────────────────────────────────
+// -- Span ---------------------------------------------------------
 
 describe('Span', () =>
 {
@@ -256,7 +256,7 @@ describe('Span', () =>
     });
 });
 
-// ── Tracer ───────────────────────────────────────────────────────
+// -- Tracer -------------------------------------------------------
 
 describe('Tracer', () =>
 {
@@ -419,7 +419,7 @@ describe('Tracer', () =>
     });
 });
 
-// ── tracingMiddleware ────────────────────────────────────────────
+// -- tracingMiddleware --------------------------------------------
 
 describe('tracingMiddleware', () =>
 {
@@ -605,7 +605,7 @@ describe('tracingMiddleware', () =>
     });
 });
 
-// ── instrumentFetch ──────────────────────────────────────────────
+// -- instrumentFetch ----------------------------------------------
 
 describe('instrumentFetch', () =>
 {

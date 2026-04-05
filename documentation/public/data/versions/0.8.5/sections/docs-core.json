@@ -6,6 +6,22 @@
 			"name": "createApp",
 			"description": "HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, and HTTP/1.1 support, built-in WebSocket upgrade handling, trust proxy resolution, and route introspection. Created via `createApp()` in the public API.",
 			"example": "  const { createApp } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(logger());\r\n  app.get('/hello', (req, res) => res.json({ hello: 'world' }));\r\n  app.listen(3000);",
+			"examples": [
+				{
+					"code": "  const { createApp } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(logger());\r\n  app.get('/hello', (req, res) => res.json({ hello: 'world' }));\r\n  app.listen(3000);",
+					"lang": "javascript"
+				},
+				{
+					"code": "  const fs = require('fs');\r\n  app.listen(443, {\r\n      http2: true,\r\n      key: fs.readFileSync('key.pem'),\r\n      cert: fs.readFileSync('cert.pem'),\r\n  });",
+					"lang": "javascript",
+					"title": "HTTP/2 with TLS"
+				},
+				{
+					"code": "  app.listen(3000, { http2: true });",
+					"lang": "javascript",
+					"title": "HTTP/2 Cleartext"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "Settings",
@@ -31,7 +47,14 @@
 							"methodReturns": {
 								"type": "* | App",
 								"description": "The stored value (getter) or `this` (setter)."
-							}
+							},
+							"example": "  app.set('trust proxy', true);\r\n  app.set('json spaces', 2);\r\n  app.set('env');             // => undefined (or previously set value)",
+							"examples": [
+								{
+									"code": "  app.set('trust proxy', true);\r\n  app.set('json spaces', 2);\r\n  app.set('env');             // => undefined (or previously set value)",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "enable",
@@ -48,7 +71,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.enable('trust proxy');",
+							"examples": [
+								{
+									"code": "  app.enable('trust proxy');",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "disable",
@@ -65,7 +95,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.disable('etag');",
+							"examples": [
+								{
+									"code": "  app.disable('etag');",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "enabled",
@@ -159,7 +196,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.param('userId', async (req, res, next, id) => {\r\n      req.locals.user = await db.users.findById(id);\r\n      if (!req.locals.user) return res.status(404).json({ error: 'User not found' });\r\n      next();\r\n  });",
+							"examples": [
+								{
+									"code": "  app.param('userId', async (req, res, next, id) => {\r\n      req.locals.user = await db.users.findById(id);\r\n      if (!req.locals.user) return res.status(404).json({ error: 'User not found' });\r\n      next();\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -261,7 +305,30 @@
 							"methodReturns": {
 								"type": "import('http').Server | import('https').Server | import('http2').Http2SecureServer | import('http2').Http2Server",
 								"description": ""
-							}
+							},
+							"example": "  app.listen(3000, () => console.log('HTTP on 3000'));",
+							"examples": [
+								{
+									"code": "  app.listen(3000, () => console.log('HTTP on 3000'));",
+									"lang": "javascript",
+									"title": "Plain HTTP"
+								},
+								{
+									"code": "  app.listen(443, { key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem') });",
+									"lang": "javascript",
+									"title": "HTTPS"
+								},
+								{
+									"code": "  app.listen(443, { http2: true, key: fs.readFileSync('key.pem'), cert: fs.readFileSync('cert.pem') });",
+									"lang": "javascript",
+									"title": "HTTP/2 with TLS and ALPN"
+								},
+								{
+									"code": "  app.listen(3000, { http2: true });",
+									"lang": "javascript",
+									"title": "HTTP/2 Cleartext"
+								}
+							]
 						},
 						{
 							"method": "close",
@@ -299,7 +366,14 @@
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": "Resolves when shutdown is complete."
-							}
+							},
+							"example": "  await app.shutdown();\r\n  // or with custom timeout\r\n  await app.shutdown({ timeout: 5000 });",
+							"examples": [
+								{
+									"code": "  await app.shutdown();\r\n  // or with custom timeout\r\n  await app.shutdown({ timeout: 5000 });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -327,7 +401,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.on('beforeShutdown', async () => {\r\n      await saveMetrics();\r\n  });\r\n\n  app.on('shutdown', () => {\r\n      console.log('goodbye');\r\n  });",
+							"examples": [
+								{
+									"code": "  app.on('beforeShutdown', async () => {\r\n      await saveMetrics();\r\n  });\r\n\n  app.on('shutdown', () => {\r\n      console.log('goodbye');\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "off",
@@ -372,7 +453,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  const pool = new WebSocketPool();\r\n  app.registerPool(pool);",
+							"examples": [
+								{
+									"code": "  const pool = new WebSocketPool();\r\n  app.registerPool(pool);",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "unregisterPool",
@@ -423,7 +511,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  const db = new Database({ adapter: 'memory' });\r\n  app.registerDatabase(db);",
+							"examples": [
+								{
+									"code": "  const db = new Database({ adapter: 'memory' });\r\n  app.registerDatabase(db);",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "unregisterDatabase",
@@ -457,7 +552,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.shutdownTimeout(10000); // 10s",
+							"examples": [
+								{
+									"code": "  app.shutdownTimeout(10000); // 10s",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "lifecycleState",
@@ -490,7 +592,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.health();                                    // GET /healthz\r\n  app.health('/alive');                             // GET /alive\r\n  app.health('/healthz', { memory: memoryCheck() });",
+							"examples": [
+								{
+									"code": "  app.health();                                    // GET /healthz\r\n  app.health('/alive');                             // GET /alive\r\n  app.health('/healthz', { memory: memoryCheck() });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "ready",
@@ -513,7 +622,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.ready('/readyz', {\r\n      database: () => db.ping(),\r\n      cache: () => ({ healthy: redis.isConnected }),\r\n  });",
+							"examples": [
+								{
+									"code": "  app.ready('/readyz', {\r\n      database: () => db.ping(),\r\n      cache: () => ({ healthy: redis.isConnected }),\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "addHealthCheck",
@@ -536,7 +652,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.addHealthCheck('redis', async () => {\r\n      await redis.ping();\r\n      return { healthy: true };\r\n  });",
+							"examples": [
+								{
+									"code": "  app.addHealthCheck('redis', async () => {\r\n      await redis.ping();\r\n      return { healthy: true };\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "metrics",
@@ -545,12 +668,19 @@
 							"methodReturns": {
 								"type": "import('./observe/metrics').MetricsRegistry",
 								"description": "The metrics registry."
-							}
+							},
+							"example": "  const counter = app.metrics().counter({\r\n      name: 'custom_events_total',\r\n      help: 'Custom events',\r\n  });\r\n  counter.inc();",
+							"examples": [
+								{
+									"code": "  const counter = app.metrics().counter({\r\n      name: 'custom_events_total',\r\n      help: 'Custom events',\r\n  });\r\n  counter.inc();",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "metricsEndpoint",
 							"signature": "metricsEndpoint([path], [opts])",
-							"description": "Mount a Prometheus metrics endpoint.",
+							"description": "Mount a Prometheus metrics endpoint. Pair with `metricsMiddleware()` to auto-instrument all HTTP traffic.",
 							"methodParams": [
 								{
 									"param": "path",
@@ -576,7 +706,30 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // GET /metrics\r\n  app.health();            // GET /healthz\r\n  app.ready();             // GET /readyz",
+							"examples": [
+								{
+									"code": "  app.use(metricsMiddleware({ registry: app.metrics() }));\r\n  app.metricsEndpoint();   // GET /metrics\r\n  app.health();            // GET /healthz\r\n  app.ready();             // GET /readyz",
+									"lang": "javascript",
+									"title": "Full Observability Setup"
+								},
+								{
+									"code": "  scrape_configs:\r\n    - job_name: 'my-app'\r\n      scrape_interval: 5s\r\n      static_configs:\r\n        - targets: ['localhost:3000']",
+									"lang": "yaml",
+									"title": "prometheus.yml"
+								},
+								{
+									"code": "  $ docker run -d -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus",
+									"lang": "shell",
+									"title": "Start Prometheus"
+								},
+								{
+									"code": "",
+									"lang": "javascript",
+									"title": "Custom Path"
+								}
+							]
 						}
 					]
 				},
@@ -626,6 +779,19 @@
 									"default": "—",
 									"notes": "`(req) => boolean` — return false to reject the upgrade."
 								}
+							],
+							"example": "  app.ws('/chat', (ws, req) => {\r\n      ws.on('message', data => ws.send('echo: ' + data));\r\n  });",
+							"examples": [
+								{
+									"code": "  app.ws('/chat', (ws, req) => {\r\n      ws.on('message', data => ws.send('echo: ' + data));\r\n  });",
+									"lang": "javascript",
+									"title": "Simple"
+								},
+								{
+									"code": "  app.ws('/feed', { maxPayload: 64 * 1024, pingInterval: 15000 }, (ws, req) => {\r\n      console.log('client', ws.id, 'from', ws.ip);\r\n      ws.sendJSON({ hello: 'world' });\r\n  });",
+									"lang": "javascript",
+									"title": "With Options"
+								}
 							]
 						}
 					]
@@ -640,7 +806,14 @@
 							"methodReturns": {
 								"type": "{ method: string, path: string }[]",
 								"description": "Flat array of route entries including WebSocket handlers."
-							}
+							},
+							"example": "  app.routes().forEach(r => console.log(r.method, r.path));\r\n  // GET  /users\r\n  // POST /users\r\n  // GET  /api/v1/items/:id",
+							"examples": [
+								{
+									"code": "  app.routes().forEach(r => console.log(r.method, r.path));\r\n  // GET  /users\r\n  // POST /users\r\n  // GET  /api/v1/items/:id",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -871,7 +1044,14 @@
 							"methodReturns": {
 								"type": "object",
 								"description": "Chain object with HTTP verb methods."
-							}
+							},
+							"example": "  app.chain('/users')\r\n    .get((req, res) => res.json(users))\r\n    .post((req, res) => res.json({ created: true }));",
+							"examples": [
+								{
+									"code": "  app.chain('/users')\r\n    .get((req, res) => res.json(users))\r\n    .post((req, res) => res.json({ created: true }));",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "group",
@@ -894,7 +1074,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.group('/api/v1', authMiddleware, (router) => {\r\n      router.get('/users', listUsers);\r\n      router.post('/users', createUser);\r\n      router.get('/users/:id', getUser);\r\n  });",
+							"examples": [
+								{
+									"code": "  app.group('/api/v1', authMiddleware, (router) => {\r\n      router.get('/users', listUsers);\r\n      router.post('/users', createUser);\r\n      router.get('/users/:id', getUser);\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -916,7 +1103,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.jwt({ secret: process.env.JWT_SECRET });\r\n  app.jwt({ jwksUri: 'https://auth.example.com/.well-known/jwks.json' });",
+							"examples": [
+								{
+									"code": "  app.jwt({ secret: process.env.JWT_SECRET });\r\n  app.jwt({ jwksUri: 'https://auth.example.com/.well-known/jwks.json' });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "sessions",
@@ -933,7 +1127,14 @@
 							"methodReturns": {
 								"type": "App",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  app.sessions({ secret: process.env.SESSION_SECRET });",
+							"examples": [
+								{
+									"code": "  app.sessions({ secret: process.env.SESSION_SECRET });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "oauth",
@@ -950,7 +1151,14 @@
 							"methodReturns": {
 								"type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function }",
 								"description": ""
-							}
+							},
+							"example": "  const github = app.oauth({\r\n      provider: 'github',\r\n      clientId: process.env.GITHUB_CLIENT_ID,\r\n      clientSecret: process.env.GITHUB_CLIENT_SECRET,\r\n      callbackUrl: '/auth/github/callback',\r\n  });",
+							"examples": [
+								{
+									"code": "  const github = app.oauth({\r\n      provider: 'github',\r\n      clientId: process.env.GITHUB_CLIENT_ID,\r\n      clientSecret: process.env.GITHUB_CLIENT_SECRET,\r\n      callbackUrl: '/auth/github/callback',\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}
@@ -960,6 +1168,12 @@
 			"name": "Router",
 			"description": "Full-featured pattern-matching router with named parameters, wildcard catch-alls, sequential handler chains, sub-router mounting, and route introspection.",
 			"example": "  const { Router } = require('zero-http');\r\n\n  const api = new Router();\r\n\n  api.get('/users/:id', (req, res) => {\r\n      res.json({ id: req.params.id });\r\n  });\r\n\n  api.route('/posts')\r\n      .get((req, res) => res.json([]))\r\n      .post((req, res) => res.json({ created: true }));\r\n\n  app.use('/api', api);",
+			"examples": [
+				{
+					"code": "  const { Router } = require('zero-http');\r\n\n  const api = new Router();\r\n\n  api.get('/users/:id', (req, res) => {\r\n      res.json({ id: req.params.id });\r\n  });\r\n\n  api.route('/posts')\r\n      .get((req, res) => res.json([]))\r\n      .post((req, res) => res.json({ created: true }));\r\n\n  app.use('/api', api);",
+					"lang": "javascript"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "Core",
@@ -1249,7 +1463,14 @@
 							"methodReturns": {
 								"type": "{ get, post, put, delete, patch, options, head, all: Function }",
 								"description": "Chain object with HTTP verb methods."
-							}
+							},
+							"example": "  router.route('/users')\r\n    .get((req, res) => { ... })\r\n    .post((req, res) => { ... });",
+							"examples": [
+								{
+									"code": "  router.route('/users')\r\n    .get((req, res) => { ... })\r\n    .post((req, res) => { ... });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -1387,7 +1608,14 @@
 							"methodReturns": {
 								"type": "string | false",
 								"description": "Best matching type, or `false`."
-							}
+							},
+							"example": "  req.accepts('json', 'html') // => 'json' or 'html' or false",
+							"examples": [
+								{
+									"code": "  req.accepts('json', 'html') // => 'json' or 'html' or false",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "fresh",
@@ -1499,7 +1727,20 @@
 							"methodReturns": {
 								"type": "import('http2').ServerHttp2Stream | null",
 								"description": "The push stream, or `null` if push is not supported."
-							}
+							},
+							"example": "  app.get('/', (req, res) => {\r\n      res.push('/styles.css', { filePath: path.join(__dirname, 'public/styles.css') });\r\n      res.html('<link rel=\"stylesheet\" href=\"/styles.css\"><h1>Hello</h1>');\r\n  });",
+							"examples": [
+								{
+									"code": "  app.get('/', (req, res) => {\r\n      res.push('/styles.css', { filePath: path.join(__dirname, 'public/styles.css') });\r\n      res.html('<link rel=\"stylesheet\" href=\"/styles.css\"><h1>Hello</h1>');\r\n  });",
+									"lang": "javascript",
+									"title": "Push a CSS File"
+								},
+								{
+									"code": "  app.get('/', (req, res) => {\r\n      const pushStream = res.push('/api/data', {\r\n          contentType: 'application/json',\r\n      });\r\n      if (pushStream) {\r\n          pushStream.end(JSON.stringify({ preloaded: true }));\r\n      }\r\n      res.html('<h1>Data preloaded</h1>');\r\n  });",
+									"lang": "javascript",
+									"title": "Manual Push Stream"
+								}
+							]
 						},
 						{
 							"method": "supportsPush",
@@ -1576,7 +1817,14 @@
 							"methodReturns": {
 								"type": "SSEStream",
 								"description": "SSE controller."
-							}
+							},
+							"example": "  app.get('/events', (req, res) => {\r\n      const sse = res.sse({ retry: 5000, keepAlive: 30000, autoId: true });\r\n      sse.send('hello');                         // id: 1, data: hello\r\n      sse.event('update', { x: 1 });             // id: 2, event: update\r\n      sse.comment('debug note');                  // : debug note\r\n      sse.on('close', () => console.log('gone'));\r\n  });",
+							"examples": [
+								{
+									"code": "  app.get('/events', (req, res) => {\r\n      const sse = res.sse({ retry: 5000, keepAlive: 30000, autoId: true });\r\n      sse.send('hello');                         // id: 1, data: hello\r\n      sse.event('update', { x: 1 });             // id: 2, event: update\r\n      sse.comment('debug note');                  // : debug note\r\n      sse.on('close', () => console.log('gone'));\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -1948,7 +2196,14 @@
 							"methodReturns": {
 								"type": "Response",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  res.cookie('name', 'value');\r\n  res.cookie('prefs', { theme: 'dark' });           // auto JSON cookie\r\n  res.cookie('token', 'abc', { signed: true });     // auto-signed\r\n  res.cookie('sid', 'xyz', { secure: true, sameSite: 'Strict' });",
+							"examples": [
+								{
+									"code": "  res.cookie('name', 'value');\r\n  res.cookie('prefs', { theme: 'dark' });           // auto JSON cookie\r\n  res.cookie('token', 'abc', { signed: true });     // auto-signed\r\n  res.cookie('sid', 'xyz', { secure: true, sameSite: 'Strict' });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "clearCookie",
@@ -2010,6 +2265,13 @@
 									"required": "Yes",
 									"notes": "Map of MIME types to handler functions."
 								}
+							],
+							"example": "  res.format({\r\n      'text/html': () => res.html('<h1>Hello</h1>'),\r\n      'application/json': () => res.json({ hello: 'world' }),\r\n      default: () => res.status(406).send('Not Acceptable'),\r\n  });",
+							"examples": [
+								{
+									"code": "  res.format({\r\n      'text/html': () => res.html('<h1>Hello</h1>'),\r\n      'application/json': () => res.json({ hello: 'world' }),\r\n      default: () => res.status(406).send('Not Acceptable'),\r\n  });",
+									"lang": "javascript"
+								}
 							]
 						},
 						{
@@ -2027,7 +2289,14 @@
 							"methodReturns": {
 								"type": "Response",
 								"description": "`this` for chaining."
-							}
+							},
+							"example": "  res.links({\r\n      next: '/api/users?page=2',\r\n      last: '/api/users?page=5',\r\n  });\r\n  // Link: </api/users?page=2>; rel=\"next\", </api/users?page=5>; rel=\"last\"",
+							"examples": [
+								{
+									"code": "  res.links({\r\n      next: '/api/users?page=2',\r\n      last: '/api/users?page=5',\r\n  });\r\n  // Link: </api/users?page=2>; rel=\"next\", </api/users?page=5>; rel=\"last\"",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "location",

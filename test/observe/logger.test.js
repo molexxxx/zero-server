@@ -1,6 +1,6 @@
 const { Logger, structuredLogger, LEVELS, LEVEL_NAMES } = require('../../lib/observe/logger');
 
-// ── Logger Core ─────────────────────────────────────────────────
+// -- Logger Core -------------------------------------------------
 
 describe('Logger', () =>
 {
@@ -275,7 +275,7 @@ describe('Logger', () =>
     });
 });
 
-// ── Structured Logger Middleware ─────────────────────────────────
+// -- Structured Logger Middleware ---------------------------------
 
 describe('structuredLogger middleware', () =>
 {
@@ -470,7 +470,7 @@ describe('structuredLogger middleware', () =>
     });
 });
 
-// ── Constants ────────────────────────────────────────────────────
+// -- Constants ----------------------------------------------------
 
 describe('Logger constants', () =>
 {

@@ -11,6 +11,7 @@ import { WebSocketHandler, WebSocketOptions, WebSocketPool } from './websocket';
 import { SSEStream } from './sse';
 import { LifecycleState } from './lifecycle';
 import { MetricsRegistry, HealthCheckResult } from './observe';
+import { ProtoSchema, GrpcServiceOptions, GrpcInterceptor, GrpcHandler } from './grpc';
 
 export interface ListenOptions {
     /** Create an HTTP/2 server. Combined with TLS options for h2 over TLS, or h2c (cleartext) otherwise. */
@@ -141,6 +142,16 @@ export interface App {
      */
     ws(path: string, handler: WebSocketHandler): void;
     ws(path: string, opts: WebSocketOptions, handler: WebSocketHandler): void;
+
+    /**
+     * Register a gRPC service with handlers.
+     */
+    grpc(schema: ProtoSchema, serviceName: string, handlers: Record<string, GrpcHandler>, opts?: GrpcServiceOptions): App;
+
+    /**
+     * Add a global gRPC interceptor.
+     */
+    grpcInterceptor(fn: GrpcInterceptor): App;
 
     /**
      * Return a flat list of all registered routes.

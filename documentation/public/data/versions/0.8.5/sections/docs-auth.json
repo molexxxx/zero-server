@@ -18,6 +18,22 @@
 				"description": ""
 			},
 			"example": "  const { createApp, json, jwt, jwtSign, Router } = require('zero-http');\r\n  const app = createApp();\r\n  const SECRET = process.env.JWT_SECRET;\r\n\n  // Public — issue tokens\r\n  app.post('/login', json(), async (req, res) => {\r\n      const { email, password } = req.body;\r\n      const user = await db.users.findOne({ email });\r\n      if (!user || !await verify(password, user.hash))\r\n          return res.status(401).json({ error: 'Invalid credentials' });\r\n\n      const token = jwtSign({ sub: user.id, role: user.role }, SECRET, { expiresIn: 3600 });\r\n      res.json({ token });\r\n  });\r\n\n  // Protected — everything under /api requires a valid token\r\n  const api = Router();\r\n  api.use(jwt({ secret: SECRET }));\r\n  api.get('/me', (req, res) => res.json({ id: req.user.sub, role: req.user.role }));\r\n  app.use('/api', api);",
+			"examples": [
+				{
+					"code": "  const { createApp, json, jwt, jwtSign, Router } = require('zero-http');\r\n  const app = createApp();\r\n  const SECRET = process.env.JWT_SECRET;\r\n\n  // Public — issue tokens\r\n  app.post('/login', json(), async (req, res) => {\r\n      const { email, password } = req.body;\r\n      const user = await db.users.findOne({ email });\r\n      if (!user || !await verify(password, user.hash))\r\n          return res.status(401).json({ error: 'Invalid credentials' });\r\n\n      const token = jwtSign({ sub: user.id, role: user.role }, SECRET, { expiresIn: 3600 });\r\n      res.json({ token });\r\n  });\r\n\n  // Protected — everything under /api requires a valid token\r\n  const api = Router();\r\n  api.use(jwt({ secret: SECRET }));\r\n  api.get('/me', (req, res) => res.json({ id: req.user.sub, role: req.user.role }));\r\n  app.use('/api', api);",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.use(jwt({\r\n      jwksUri: 'https://auth.example.com/.well-known/jwks.json',\r\n      audience: 'my-api',\r\n      issuer: 'https://auth.example.com',\r\n  }));",
+					"lang": "javascript",
+					"title": "RSA with JWKS Auto-fetch"
+				},
+				{
+					"code": "  app.use(jwt({\r\n      secret: 'my-secret',\r\n      getToken: (req) => req.cookies?.access_token,\r\n  }));",
+					"lang": "javascript",
+					"title": "Extract from Cookie"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "JWT Middleware",
@@ -141,7 +157,30 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.use(jwt({ secret: 'my-secret' }));",
+							"examples": [
+								{
+									"code": "  app.use(jwt({ secret: 'my-secret' }));",
+									"lang": "javascript",
+									"title": "Simple HMAC"
+								},
+								{
+									"code": "  app.use(jwt({ secret: 'my-secret', credentialsRequired: false }));",
+									"lang": "javascript",
+									"title": "Optional Auth"
+								},
+								{
+									"code": "  app.use(jwt({\r\n      secret: 'my-secret',\r\n      getToken: (req) => req.cookies?.access_token || req.get('x-auth-token'),\r\n  }));",
+									"lang": "javascript",
+									"title": "Custom Token Location"
+								},
+								{
+									"code": "  const revokedTokens = new Set();\r\n  app.use(jwt({\r\n      secret: 'my-secret',\r\n      isRevoked: async (payload) => {\r\n          return revokedTokens.has(payload.jti);\r\n      },\r\n  }));",
+									"lang": "javascript",
+									"title": "With Revocation Check"
+								}
+							]
 						}
 					]
 				},
@@ -219,7 +258,19 @@
 							"methodReturns": {
 								"type": "string",
 								"description": "Signed JWT."
-							}
+							},
+							"example": "  const token = sign({ userId: 42 }, 'my-secret', { expiresIn: 3600 });",
+							"examples": [
+								{
+									"code": "  const token = sign({ userId: 42 }, 'my-secret', { expiresIn: 3600 });",
+									"lang": "javascript"
+								},
+								{
+									"code": "  const rsaPrivateKey = fs.readFileSync('private.pem');\r\n  const token = sign({ userId: 42 }, rsaPrivateKey, { algorithm: 'RS256' });",
+									"lang": "javascript",
+									"title": "RSA Signing"
+								}
+							]
 						},
 						{
 							"method": "verify",
@@ -292,7 +343,14 @@
 							"methodReturns": {
 								"type": "{ header: object, payload: object }",
 								"description": "Decoded and verified token."
-							}
+							},
+							"example": "  try {\r\n      const { payload } = verify(token, secret);\r\n      console.log(payload.userId);\r\n  } catch (err) {\r\n      console.error(err.code); // 'TOKEN_EXPIRED', 'INVALID_SIGNATURE', etc.\r\n  }",
+							"examples": [
+								{
+									"code": "  try {\r\n      const { payload } = verify(token, secret);\r\n      console.log(payload.userId);\r\n  } catch (err) {\r\n      console.error(err.code); // 'TOKEN_EXPIRED', 'INVALID_SIGNATURE', etc.\r\n  }",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -340,7 +398,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "`async (header) => publicKey` — resolves the signing key for a JWT header."
-							}
+							},
+							"example": "  const getKey = jwks('https://auth.example.com/.well-known/jwks.json');\r\n  app.use(jwt({ getKey }));",
+							"examples": [
+								{
+									"code": "  const getKey = jwks('https://auth.example.com/.well-known/jwks.json');\r\n  app.use(jwt({ getKey }));",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -394,7 +459,14 @@
 							"methodReturns": {
 								"type": "{ generateTokens: Function, verifyRefreshToken: Function, verifyAccessToken: Function }",
 								"description": ""
-							}
+							},
+							"example": "  const tokens = tokenPair({\r\n      accessSecret: process.env.JWT_SECRET,\r\n      refreshSecret: process.env.REFRESH_SECRET,\r\n      accessExpiresIn: 900,\r\n      refreshExpiresIn: 86400 * 30,\r\n  });\r\n\n  // Login route\r\n  app.post('/login', async (req, res) => {\r\n      const user = await authenticate(req.body);\r\n      const { accessToken, refreshToken } = tokens.generateTokens({ sub: user.id });\r\n      res.json({ accessToken, refreshToken });\r\n  });\r\n\n  // Refresh route\r\n  app.post('/refresh', async (req, res) => {\r\n      const { payload } = tokens.verifyRefreshToken(req.body.refreshToken);\r\n      const { accessToken, refreshToken } = tokens.generateTokens({ sub: payload.sub });\r\n      res.json({ accessToken, refreshToken });\r\n  });",
+							"examples": [
+								{
+									"code": "  const tokens = tokenPair({\r\n      accessSecret: process.env.JWT_SECRET,\r\n      refreshSecret: process.env.REFRESH_SECRET,\r\n      accessExpiresIn: 900,\r\n      refreshExpiresIn: 86400 * 30,\r\n  });\r\n\n  // Login route\r\n  app.post('/login', async (req, res) => {\r\n      const user = await authenticate(req.body);\r\n      const { accessToken, refreshToken } = tokens.generateTokens({ sub: user.id });\r\n      res.json({ accessToken, refreshToken });\r\n  });\r\n\n  // Refresh route\r\n  app.post('/refresh', async (req, res) => {\r\n      const { payload } = tokens.verifyRefreshToken(req.body.refreshToken);\r\n      const { accessToken, refreshToken } = tokens.generateTokens({ sub: payload.sub });\r\n      res.json({ accessToken, refreshToken });\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "createRefreshToken",
@@ -437,7 +509,14 @@
 							"methodReturns": {
 								"type": "string",
 								"description": "Signed refresh token (JWT)."
-							}
+							},
+							"example": "  const refreshToken = createRefreshToken(\r\n      { sub: user.id, jti: crypto.randomUUID() },\r\n      process.env.REFRESH_SECRET,\r\n      { expiresIn: 30 * 86400 }, // 30 days\r\n  );",
+							"examples": [
+								{
+									"code": "  const refreshToken = createRefreshToken(\r\n      { sub: user.id, jti: crypto.randomUUID() },\r\n      process.env.REFRESH_SECRET,\r\n      { expiresIn: 30 * 86400 }, // 30 days\r\n  );",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}
@@ -447,6 +526,17 @@
 			"name": "session",
 			"description": "Zero-dependency session middleware. Supports encrypted cookie sessions (stateless, AES-256-GCM) and server-side session stores (memory and custom adapters). Cookie sessions embed the entire session in an encrypted cookie, so no server-side storage is needed.  Server-side sessions store only a session ID in the cookie, keeping data on the server.",
 			"example": "  const { createApp, json, session } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(session({ secret: process.env.SESSION_SECRET }));\r\n\n  app.post('/login', json(), async (req, res) => {\r\n      const user = await db.users.findOne({ email: req.body.email });\r\n      if (!user) return res.status(401).json({ error: 'Invalid credentials' });\r\n      req.session.set('userId', user.id);\r\n      req.session.set('role', user.role);\r\n      res.json({ ok: true });\r\n  });\r\n\n  app.get('/dashboard', (req, res) => {\r\n      if (!req.session.get('userId'))\r\n          return res.status(401).json({ error: 'Not logged in' });\r\n      res.json({ userId: req.session.get('userId'), role: req.session.get('role') });\r\n  });\r\n\n  app.post('/logout', (req, res) => {\r\n      req.session.destroy();\r\n      res.json({ ok: true });\r\n  });",
+			"examples": [
+				{
+					"code": "  const { createApp, json, session } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(session({ secret: process.env.SESSION_SECRET }));\r\n\n  app.post('/login', json(), async (req, res) => {\r\n      const user = await db.users.findOne({ email: req.body.email });\r\n      if (!user) return res.status(401).json({ error: 'Invalid credentials' });\r\n      req.session.set('userId', user.id);\r\n      req.session.set('role', user.role);\r\n      res.json({ ok: true });\r\n  });\r\n\n  app.get('/dashboard', (req, res) => {\r\n      if (!req.session.get('userId'))\r\n          return res.status(401).json({ error: 'Not logged in' });\r\n      res.json({ userId: req.session.get('userId'), role: req.session.get('role') });\r\n  });\r\n\n  app.post('/logout', (req, res) => {\r\n      req.session.destroy();\r\n      res.json({ ok: true });\r\n  });",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.use(session({\r\n      secret: process.env.SESSION_SECRET,\r\n      store: new MemoryStore(),\r\n      cookie: { maxAge: 3600000 },\r\n  }));",
+					"lang": "javascript",
+					"title": "Server-side Session with Memory Store"
+				}
+			],
 			"params": [
 				{
 					"param": "id",
@@ -597,7 +687,14 @@
 							"methodReturns": {
 								"type": "Session",
 								"description": ""
-							}
+							},
+							"example": "  req.session.flash('success', 'Post created!');\r\n  // Next request:\r\n  req.session.flashes('success'); // ['Post created!']",
+							"examples": [
+								{
+									"code": "  req.session.flash('success', 'Post created!');\r\n  // Next request:\r\n  req.session.flashes('success'); // ['Post created!']",
+									"lang": "javascript"
+								}
+							]
 						},
 						{
 							"method": "flashes",
@@ -778,7 +875,20 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.use(session({\r\n      secret: ['new-key', 'old-key'],\r\n      cookie: { maxAge: 3600000, secure: true },\r\n  }));",
+							"examples": [
+								{
+									"code": "  app.use(session({\r\n      secret: ['new-key', 'old-key'],\r\n      cookie: { maxAge: 3600000, secure: true },\r\n  }));",
+									"lang": "javascript",
+									"title": "Cookie Session with Rotation"
+								},
+								{
+									"code": "  const store = new MemoryStore({ ttl: 3600000 });\r\n  app.use(session({ secret: 'key', store, rolling: true }));",
+									"lang": "javascript",
+									"title": "Server-side with Memory Store"
+								}
+							]
 						}
 					]
 				}
@@ -800,6 +910,12 @@
 				"description": ""
 			},
 			"example": "  const { oauth } = require('zero-http');\r\n  const github = oauth({\r\n      provider: 'github',\r\n      clientId: process.env.GITHUB_CLIENT_ID,\r\n      clientSecret: process.env.GITHUB_CLIENT_SECRET,\r\n      callbackUrl: 'https://myapp.com/auth/github/callback',\r\n  });\r\n\n  app.get('/auth/github', (req, res) => {\r\n      const { url, state, codeVerifier } = github.authorize({ scope: 'user:email' });\r\n      req.session.set('oauth_state', state);\r\n      req.session.set('oauth_verifier', codeVerifier);\r\n      res.redirect(url);\r\n  });\r\n\n  app.get('/auth/github/callback', async (req, res) => {\r\n      const tokens = await github.callback(req.query, {\r\n          state: req.session.get('oauth_state'),\r\n          codeVerifier: req.session.get('oauth_verifier'),\r\n      });\r\n      const user = await github.userInfo(tokens.access_token);\r\n      res.json(user);\r\n  });",
+			"examples": [
+				{
+					"code": "  const { oauth } = require('zero-http');\r\n  const github = oauth({\r\n      provider: 'github',\r\n      clientId: process.env.GITHUB_CLIENT_ID,\r\n      clientSecret: process.env.GITHUB_CLIENT_SECRET,\r\n      callbackUrl: 'https://myapp.com/auth/github/callback',\r\n  });\r\n\n  app.get('/auth/github', (req, res) => {\r\n      const { url, state, codeVerifier } = github.authorize({ scope: 'user:email' });\r\n      req.session.set('oauth_state', state);\r\n      req.session.set('oauth_verifier', codeVerifier);\r\n      res.redirect(url);\r\n  });\r\n\n  app.get('/auth/github/callback', async (req, res) => {\r\n      const tokens = await github.callback(req.query, {\r\n          state: req.session.get('oauth_state'),\r\n          codeVerifier: req.session.get('oauth_verifier'),\r\n      });\r\n      const user = await github.userInfo(tokens.access_token);\r\n      res.json(user);\r\n  });",
+					"lang": "javascript"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "OAuth2 Client",
@@ -893,7 +1009,14 @@
 							"methodReturns": {
 								"type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function }",
 								"description": ""
-							}
+							},
+							"example": "  const client = oauth({\r\n      provider: 'google',\r\n      clientId: 'xxx',\r\n      clientSecret: 'yyy',\r\n      callbackUrl: 'https://app.com/callback',\r\n  });\r\n\n  // Build auth URL\r\n  const { url, state, codeVerifier } = client.authorize();\r\n\n  // Exchange code for tokens\r\n  const tokens = await client.callback(req.query, { state: savedState, codeVerifier });",
+							"examples": [
+								{
+									"code": "  const client = oauth({\r\n      provider: 'google',\r\n      clientId: 'xxx',\r\n      clientSecret: 'yyy',\r\n      callbackUrl: 'https://app.com/callback',\r\n  });\r\n\n  // Build auth URL\r\n  const { url, state, codeVerifier } = client.authorize();\r\n\n  // Exchange code for tokens\r\n  const tokens = await client.callback(req.query, { state: savedState, codeVerifier });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -925,6 +1048,12 @@
 			"name": "authorize",
 			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.",
 			"example": "  const { createApp, jwt, authorize, can, canAny, Policy, gate,\r\n      attachUserHelpers, Router } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(jwt({ secret: process.env.JWT_SECRET }));\r\n  app.use(attachUserHelpers());\r\n\n  // Role-based — only admins and editors can modify posts\r\n  app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {\r\n      res.json({ updated: true });\r\n  });\r\n\n  // Permission-based — require ALL listed permissions\r\n  app.delete('/users/:id', can('users:read', 'users:delete'), (req, res) => {\r\n      res.json({ deleted: true });\r\n  });\r\n\n  // ANY permission — useful for overlapping access\r\n  app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {\r\n      res.json({ reports: [] });\r\n  });\r\n\n  // Policy class — resource-level authorization\r\n  class PostPolicy extends Policy {\r\n      before(user) { if (user.role === 'superadmin') return true; }\r\n      update(user, post) { return user.id === post.authorId || user.role === 'admin'; }\r\n      delete(user, post) { return user.role === 'admin'; }\r\n  }\r\n\n  app.put('/posts/:id', gate(new PostPolicy(), 'update', async (req) => {\r\n      return await Post.findById(req.params.id);\r\n  }), (req, res) => {\r\n      // req.resource is auto-populated by gate()\r\n      res.json({ updated: req.resource });\r\n  });\r\n\n  // Inline checks via attachUserHelpers()\r\n  app.get('/dashboard', (req, res) => {\r\n      const data = { user: req.user.sub };\r\n      if (req.user.is('admin')) data.adminPanel = true;\r\n      if (req.user.can('reports:export')) data.canExport = true;\r\n      res.json(data);\r\n  });",
+			"examples": [
+				{
+					"code": "  const { createApp, jwt, authorize, can, canAny, Policy, gate,\r\n      attachUserHelpers, Router } = require('zero-http');\r\n  const app = createApp();\r\n\n  app.use(jwt({ secret: process.env.JWT_SECRET }));\r\n  app.use(attachUserHelpers());\r\n\n  // Role-based — only admins and editors can modify posts\r\n  app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {\r\n      res.json({ updated: true });\r\n  });\r\n\n  // Permission-based — require ALL listed permissions\r\n  app.delete('/users/:id', can('users:read', 'users:delete'), (req, res) => {\r\n      res.json({ deleted: true });\r\n  });\r\n\n  // ANY permission — useful for overlapping access\r\n  app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {\r\n      res.json({ reports: [] });\r\n  });\r\n\n  // Policy class — resource-level authorization\r\n  class PostPolicy extends Policy {\r\n      before(user) { if (user.role === 'superadmin') return true; }\r\n      update(user, post) { return user.id === post.authorId || user.role === 'admin'; }\r\n      delete(user, post) { return user.role === 'admin'; }\r\n  }\r\n\n  app.put('/posts/:id', gate(new PostPolicy(), 'update', async (req) => {\r\n      return await Post.findById(req.params.id);\r\n  }), (req, res) => {\r\n      // req.resource is auto-populated by gate()\r\n      res.json({ updated: req.resource });\r\n  });\r\n\n  // Inline checks via attachUserHelpers()\r\n  app.get('/dashboard', (req, res) => {\r\n      const data = { user: req.user.sub };\r\n      if (req.user.is('admin')) data.adminPanel = true;\r\n      if (req.user.can('reports:export')) data.canExport = true;\r\n      res.json(data);\r\n  });",
+					"lang": "javascript"
+				}
+			],
 			"methodGroups": [
 				{
 					"group": "Role-Based Access Control",
@@ -944,7 +1073,19 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.get('/admin', authorize('admin'), (req, res) => {\r\n      res.json({ message: 'Welcome, admin!' });\r\n  });",
+							"examples": [
+								{
+									"code": "  app.get('/admin', authorize('admin'), (req, res) => {\r\n      res.json({ message: 'Welcome, admin!' });\r\n  });",
+									"lang": "javascript"
+								},
+								{
+									"code": "  app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {\r\n      res.json({ updated: true });\r\n  });",
+									"lang": "javascript",
+									"title": "Multiple Roles"
+								}
+							]
 						}
 					]
 				},
@@ -966,7 +1107,25 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  app.post('/posts', can('posts:write'), (req, res) => {\r\n      res.status(201).json(req.body);\r\n  });",
+							"examples": [
+								{
+									"code": "  app.post('/posts', can('posts:write'), (req, res) => {\r\n      res.status(201).json(req.body);\r\n  });",
+									"lang": "javascript",
+									"title": "Require Specific Permission"
+								},
+								{
+									"code": "  app.put('/users/:id', can('users:read', 'users:write'), (req, res) => {\r\n      res.json({ updated: true });\r\n  });",
+									"lang": "javascript",
+									"title": "Require ALL Permissions"
+								},
+								{
+									"code": "  app.get('/dashboard', canAny('admin:read', 'reports:read'), (req, res) => {\r\n      res.json({ dashboard: true });\r\n  });",
+									"lang": "javascript",
+									"title": "Require ANY Permission"
+								}
+							]
 						},
 						{
 							"method": "canAny",
@@ -983,7 +1142,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware."
-							}
+							},
+							"example": "  app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {\r\n      res.json({ reports: [] });\r\n  });",
+							"examples": [
+								{
+									"code": "  app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {\r\n      res.json({ reports: [] });\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -1046,7 +1212,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware `(req, res, next) => void`."
-							}
+							},
+							"example": "  const postPolicy = new PostPolicy();\r\n\n  // With resource loader\r\n  app.put('/posts/:id', gate(postPolicy, 'update', async (req) => {\r\n      return await Post.findById(req.params.id);\r\n  }), (req, res) => {\r\n      res.json({ updated: req.resource });\r\n  });\r\n\n  // Without resource (for create/list actions)\r\n  app.post('/posts', gate(postPolicy, 'create'), (req, res) => {\r\n      res.status(201).json(req.body);\r\n  });",
+							"examples": [
+								{
+									"code": "  const postPolicy = new PostPolicy();\r\n\n  // With resource loader\r\n  app.put('/posts/:id', gate(postPolicy, 'update', async (req) => {\r\n      return await Post.findById(req.params.id);\r\n  }), (req, res) => {\r\n      res.json({ updated: req.resource });\r\n  });\r\n\n  // Without resource (for create/list actions)\r\n  app.post('/posts', gate(postPolicy, 'create'), (req, res) => {\r\n      res.status(201).json(req.body);\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				},
@@ -1060,7 +1233,14 @@
 							"methodReturns": {
 								"type": "Function",
 								"description": "Middleware."
-							}
+							},
+							"example": "  app.use(jwt({ secret }));\r\n  app.use(attachUserHelpers());\r\n\n  app.get('/dashboard', (req, res) => {\r\n      if (req.user.is('admin')) {\r\n          // admin view\r\n      }\r\n      if (req.user.can('reports:export')) {\r\n          // show export button\r\n      }\r\n  });",
+							"examples": [
+								{
+									"code": "  app.use(jwt({ secret }));\r\n  app.use(attachUserHelpers());\r\n\n  app.get('/dashboard', (req, res) => {\r\n      if (req.user.is('admin')) {\r\n          // admin view\r\n      }\r\n      if (req.user.can('reports:export')) {\r\n          // show export button\r\n      }\r\n  });",
+									"lang": "javascript"
+								}
+							]
 						}
 					]
 				}

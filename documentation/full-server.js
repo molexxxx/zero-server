@@ -8,7 +8,7 @@ process.on('uncaughtException', (err) => { console.error('[UNCAUGHT]', err); });
 process.on('unhandledRejection', (err) => { console.error('[UNHANDLED]', err); });
 
 const path = require('path');
-const { createApp, env, fetch } = require('..');
+const { createApp, env, fetch, metricsMiddleware } = require('..');
 
 // --- Environment ---
 env.load(__dirname);
@@ -19,6 +19,12 @@ const app = createApp();
 // --- Middleware ---
 const { applyMiddleware } = require('./config/middleware');
 applyMiddleware(app);
+
+// --- Observability ---
+app.use(metricsMiddleware({ registry: app.metrics() }));
+app.metricsEndpoint();
+app.health();
+app.ready();
 
 // --- Routes ---
 require('./routes/core')(app);
