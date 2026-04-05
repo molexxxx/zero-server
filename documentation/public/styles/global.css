@@ -1309,6 +1309,7 @@ button.site-badge{cursor:pointer;border:none;background:none;padding:0;font-fami
 .pn-group-title{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .pn-group-title.pn-added span{color:#3fb950}
 .pn-group-title.pn-removed span{color:#f85149}
+.pn-group-title.pn-moved span{color:#58a6ff}
 .pn-list{display:flex;flex-direction:column;gap:4px}
 .pn-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:12.5px;color:var(--text);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);transition:background .1s}
 .pn-item:hover{background:rgba(255,255,255,0.04)}
