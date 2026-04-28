@@ -1199,7 +1199,7 @@ describe('Docs — Middleware: static', () => {
 			dotfiles: 'ignore',
 			extensions: ['html', 'htm'],
 			setHeaders: (res, filePath) => {
-				res.raw.setHeader('X-Served-By', 'zero-http');
+				res.raw.setHeader('X-Served-By', 'zero-server');
 			},
 		}));
 
@@ -1236,7 +1236,7 @@ describe('Docs — Middleware: static', () => {
 
 	it('sets custom headers via setHeaders', async () => {
 		const r = await fetch(`${base}/data.txt`);
-		expect(r.headers.get('x-served-by')).toBe('zero-http');
+		expect(r.headers.get('x-served-by')).toBe('zero-server');
 	});
 
 	it('sets Cache-Control max-age', async () => {

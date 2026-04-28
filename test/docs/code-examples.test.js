@@ -256,7 +256,7 @@ describe('JSON Adapter (doc examples)', () =>
 
     beforeEach(() =>
     {
-        tmpDir = path.join(os.tmpdir(), 'zero-http-json-test-' + Date.now());
+        tmpDir = path.join(os.tmpdir(), 'zero-server-json-test-' + Date.now());
         db = Database.connect('json', {
             dir: tmpDir,
             pretty: true,

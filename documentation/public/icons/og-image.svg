@@ -111,7 +111,7 @@
   </g>
 
   <!-- Title text -->
-  <text x="620" y="235" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="88" font-weight="800" fill="white" filter="url(#text-glow)">zero-http</text>
+  <text x="620" y="235" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="88" font-weight="800" fill="white" filter="url(#text-glow)">zero-server</text>
 
   <!-- Divider line -->
   <line x1="620" y1="265" x2="1080" y2="265" stroke="url(#line-grad)" stroke-width="2"/>

@@ -43,7 +43,7 @@
     "jwt",
     "oauth",
     "zero-server",
-    "zero-http"
+    "zero-server"
   ],
   "author": "Anthony Wiedman",
   "license": "MIT",

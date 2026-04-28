@@ -1169,7 +1169,7 @@ describe('Response — sendFile()', () =>
 
     beforeAll(() =>
     {
-        tmpFile = path.join(os.tmpdir(), 'zero-http-res-test-' + process.pid + '.txt');
+        tmpFile = path.join(os.tmpdir(), 'zero-server-res-test-' + process.pid + '.txt');
         fs.writeFileSync(tmpFile, 'hello world');
     });
 
@@ -1293,7 +1293,7 @@ describe('Response — download()', () =>
     let tmpFile;
     beforeAll(() =>
     {
-        tmpFile = path.join(os.tmpdir(), 'zero-http-dl-' + process.pid + '.bin');
+        tmpFile = path.join(os.tmpdir(), 'zero-server-dl-' + process.pid + '.bin');
         fs.writeFileSync(tmpFile, Buffer.from([0xDE, 0xAD]));
     });
     afterAll(() => { try { fs.unlinkSync(tmpFile); } catch {} });
@@ -1392,7 +1392,7 @@ describe('Response — sendFile() opts.headers and stream error', () =>
 
     beforeAll(() =>
     {
-        tmpFile = path.join(os.tmpdir(), 'zero-http-opts-headers-' + process.pid + '.txt');
+        tmpFile = path.join(os.tmpdir(), 'zero-server-opts-headers-' + process.pid + '.txt');
         fs.writeFileSync(tmpFile, 'opts-headers-test');
     });
 

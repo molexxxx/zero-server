@@ -64,7 +64,7 @@ for (const scope of scopes) {
         name: `@zero-server/${scope.name}`,
         version: sdkVersion,
         description: scope.summary,
-        keywords: ['zero-server', 'zero-http', scope.name],
+        keywords: ['zero-server', 'zero-server', scope.name],
         author: PKG.author,
         license: PKG.license,
         main: './index.js',

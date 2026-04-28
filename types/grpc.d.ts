@@ -1,4 +1,4 @@
-// Type definitions for zero-http gRPC module
+// Type definitions for zero-server gRPC module
 
 /// <reference types="node" />
 

@@ -35,7 +35,7 @@ function mockRes()
         getHeader(k) { return this._headers[k.toLowerCase()]; },
         end(body) { this._body = body; this.headersSent = true; },
     };
-    // middleware uses res.raw || res — simulate zero-http wrapping
+    // middleware uses res.raw || res — simulate zero-server wrapping
     res.raw = res;
     return res;
 }
