@@ -65,23 +65,27 @@ jobs:
           fi
 
       - name: Publish @zero-server/sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            npm publish --dry-run --provenance --access public --tag "${{ steps.tag.outputs.tag }}"
+            npm publish --dry-run --access public --tag "${{ steps.tag.outputs.tag }}"
           else
-            npm publish --provenance --access public --tag "${{ steps.tag.outputs.tag }}"
+            npm publish --access public --tag "${{ steps.tag.outputs.tag }}"
           fi
 
       - name: Publish @zero-server/* scoped stubs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for dir in packages/*/; do
             name=$(node -p "require('./$dir/package.json').name")
             version=$(node -p "require('./$dir/package.json').version")
             echo "Publishing $name@$version with tag ${{ steps.tag.outputs.tag }}"
             if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-              ( cd "$dir" && npm publish --dry-run --provenance --access public --tag "${{ steps.tag.outputs.tag }}" )
+              ( cd "$dir" && npm publish --dry-run --access public --tag "${{ steps.tag.outputs.tag }}" )
             else
-              ( cd "$dir" && npm publish --provenance --access public --tag "${{ steps.tag.outputs.tag }}" )
+              ( cd "$dir" && npm publish --access public --tag "${{ steps.tag.outputs.tag }}" )
             fi
           done
 
