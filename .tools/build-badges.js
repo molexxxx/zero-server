@@ -74,10 +74,15 @@ if (fs.existsSync(coveragePath)) {
 const allPassed = tests.failed === 0 && tests.total > 0;
 
 /* -- 3. Build badge URLs -------------------------------------------- */
-function shieldUrl(label, message, color) {
+function shieldUrl(label, message, color, opts = {}) {
     const l = encodeURIComponent(label);
     const m = encodeURIComponent(message);
-    return `https://img.shields.io/badge/${l}-${m}-${color}.svg`;
+    const params = [];
+    if (opts.style) params.push(`style=${opts.style}`);
+    if (opts.logo) params.push(`logo=${opts.logo}`);
+    if (opts.logoColor) params.push(`logoColor=${opts.logoColor}`);
+    const qs = params.length ? `?${params.join('&')}` : '';
+    return `https://img.shields.io/badge/${l}-${m}-${color}${qs}`;
 }
 
 function coverageColor(pct) {
@@ -88,18 +93,24 @@ function coverageColor(pct) {
     return 'red';
 }
 
+const BADGE_STYLE = { style: 'flat-square', logo: 'vitest', logoColor: 'white' };
+
+const testsMessage = allPassed ? `${tests.passed} passing` : `${tests.failed}/${tests.total} failed`;
+const testsColor   = allPassed ? 'brightgreen' : 'red';
+const covColor     = coverageColor(coverage.statements);
+
 const badges = {
     tests: {
         label: 'tests',
-        message: allPassed ? `${tests.passed} passed` : `${tests.failed}/${tests.total} failed`,
-        color: allPassed ? 'brightgreen' : 'red',
-        url: shieldUrl('tests', allPassed ? `${tests.passed} passed` : `${tests.failed}/${tests.total} failed`, allPassed ? 'brightgreen' : 'red'),
+        message: testsMessage,
+        color: testsColor,
+        url: shieldUrl('tests', testsMessage, testsColor, BADGE_STYLE),
     },
     coverage: {
         label: 'coverage',
         message: `${coverage.statements}%`,
-        color: coverageColor(coverage.statements),
-        url: shieldUrl('coverage', `${coverage.statements}%`, coverageColor(coverage.statements)),
+        color: covColor,
+        url: shieldUrl('coverage', `${coverage.statements}%`, covColor, BADGE_STYLE),
     },
     /* raw numbers for website display */
     raw: { tests, coverage, testSuites, coverageFiles },
@@ -113,22 +124,15 @@ console.log(`Wrote ${path.relative(root, badgesOut)}`);
 /* -- 5. Update README.md -------------------------------------------- */
 let readme = fs.readFileSync(readmePath, 'utf8');
 
-const testsBadge   = `[![Tests](${badges.tests.url})](https://github.com/tonywied17/zero-server/actions)`;
-const covBadge     = `[![Coverage](${badges.coverage.url})](https://github.com/tonywied17/zero-server)`;
+// Replace inline <img> badge rows for tests and coverage (flat-square style)
+const testsImgRe = /<img src="https:\/\/img\.shields\.io\/badge\/tests-[^"]+" alt="tests">/;
+const covImgRe   = /<img src="https:\/\/img\.shields\.io\/badge\/coverage-[^"]+" alt="coverage">/;
 
-// Replace or insert the test/coverage badge lines
-const badgeRowRe = /\[!\[Tests\][^\n]*\r?\n\[!\[Coverage\][^\n]*\r?\n/
-const newBadgeRow = `${testsBadge}\n${covBadge}\n`;
+const testsImg = `<img src="${badges.tests.url}" alt="tests">`;
+const covImg   = `<img src="${badges.coverage.url}" alt="coverage">`;
 
-if (badgeRowRe.test(readme)) {
-    readme = readme.replace(badgeRowRe, newBadgeRow);
-} else {
-    // Insert after the Dependencies badge line
-    readme = readme.replace(
-        /([^\n]*\[!\[Dependencies\][^\n]*\r?\n)/,
-        `$1${testsBadge}\n${covBadge}\n`
-    );
-}
+if (testsImgRe.test(readme)) readme = readme.replace(testsImgRe, testsImg);
+if (covImgRe.test(readme))   readme = readme.replace(covImgRe, covImg);
 
 fs.writeFileSync(readmePath, readme, 'utf8');
 console.log(`Updated README.md — tests: ${tests.passed}/${tests.total}, coverage: ${coverage.statements}%`);

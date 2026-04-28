@@ -4,14 +4,20 @@
 
 <h1 align="center">zero-server</h1>
 
-[![npm version](https://img.shields.io/npm/v/%40zero-server%2Fsdk.svg)](https://www.npmjs.com/package/@zero-server/sdk)
-[![npm downloads](https://img.shields.io/npm/dm/%40zero-server%2Fsdk.svg)](https://www.npmjs.com/package/@zero-server/sdk)
-[![GitHub](https://img.shields.io/badge/GitHub-zero--server-blue.svg)](https://github.com/tonywied17/zero-server)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
-[![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-7385%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-server/actions)
-[![Coverage](https://img.shields.io/badge/coverage-97.01%25-brightgreen.svg)](https://github.com/tonywied17/zero-server)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/badge/%40zero--server%2Fsdk-000?style=flat-square&logo=npm&logoColor=white" alt="@zero-server/sdk"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/npm/v/%40zero-server%2Fsdk?style=flat-square&logo=npm&logoColor=white&label=&color=00d8e0" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/npm/dm/%40zero-server%2Fsdk?style=flat-square&logo=npm&logoColor=white&label=downloads&color=ff6b35" alt="npm downloads"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7385%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
+  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-97.01%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
+  <a href="https://z-server.com"><img src="https://img.shields.io/badge/docs-z--server.com-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
+</p>
 
 > **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware from a single `require`.**
 
