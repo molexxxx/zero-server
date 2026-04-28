@@ -2,8 +2,8 @@
 /**
  * build-api-md.js — Generate API.md from split section files
  *
- * Reads documentation/public/data/docs-manifest.json and the corresponding
- * per-section files in documentation/public/data/sections/ to produce a
+ * Reads website-docs/public/data/docs-manifest.json and the corresponding
+ * per-section files in website-docs/public/data/sections/ to produce a
  * comprehensive Markdown API reference.
  *
  * READ-ONLY — never modifies docs.json or any section file.
@@ -15,7 +15,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const ROOT         = path.resolve(__dirname, '..');
-const DATA_DIR     = path.join(ROOT, 'documentation', 'public', 'data');
+const DATA_DIR     = path.join(ROOT, 'website-docs', 'public', 'data');
 const ver          = process.argv[2] || '';
 const BASE_DIR     = ver ? path.join(DATA_DIR, 'versions', ver) : DATA_DIR;
 const MANIFEST     = path.join(BASE_DIR, 'docs-manifest.json');
@@ -26,7 +26,7 @@ const OUTPUT       = path.join(ROOT, 'API.md');
 
 const HEADER = `<p align="center">
   <a href="https://z-server.dev">
-    <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
+    <img src="website-docs/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
   </a>
 </p>
 

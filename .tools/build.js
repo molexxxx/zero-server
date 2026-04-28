@@ -25,11 +25,11 @@ const ROOT          = path.resolve(__dirname, '..');
 const PKG           = require(path.join(ROOT, 'package.json'));
 const version       = PKG.version;
 
-const DATA_DIR      = path.join(ROOT, 'documentation', 'public', 'data');
+const DATA_DIR      = path.join(ROOT, 'website-docs', 'public', 'data');
 const VERSIONS_DIR  = path.join(DATA_DIR, 'versions');
 const VERSIONS_JSON = path.join(DATA_DIR, 'versions.json');
 const BADGES_FILE   = path.join(DATA_DIR, 'badges.json');
-const HTML_PATH     = path.join(ROOT, 'documentation', 'public', 'index.html');
+const HTML_PATH     = path.join(ROOT, 'website-docs', 'public', 'index.html');
 
 /* ======================================================================
  *  JSDoc Parser

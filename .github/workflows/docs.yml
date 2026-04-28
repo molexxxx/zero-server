@@ -47,7 +47,7 @@ jobs:
       - name: Stage public site
         run: |
           mkdir -p site
-          cp -R documentation/public/. site/
+          cp -R website-docs/public/. site/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

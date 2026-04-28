@@ -3,7 +3,7 @@ const path = require('path');
 const vm = require('vm');
 const zeroHttp = require('../../');
 
-const DATA_DIR    = path.join(__dirname, '..', '..', 'documentation', 'public', 'data');
+const DATA_DIR    = path.join(__dirname, '..', '..', 'website-docs', 'public', 'data');
 const version     = require('../../package.json').version;
 const VERSION_DIR = path.join(DATA_DIR, 'versions', version);
 const manifest    = JSON.parse(fs.readFileSync(path.join(VERSION_DIR, 'docs-manifest.json'), 'utf8'));

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="300" height="300">
+  <img src="website-docs/public/icons/logo-animated.svg" alt="zero-server logo" width="300" height="300">
 </p>
 
 <h1 align="center">zero-server</h1>
@@ -396,7 +396,7 @@ const {
 ### Run docs locally
 
 ```bash
-cp documentation/.env.example documentation/.env
+cp website-docs/.env.example website-docs/.env
 npm run docs
 # open http://localhost:7273
 ```
@@ -427,7 +427,7 @@ lib/
   sse/                — SSE stream controller
   ws/                 — WebSocket connection, handshake, and room management
 types/                — full TypeScript definitions
-documentation/        — live demo server, controllers, and playground UI
+website-docs/         — live demo server, controllers, and playground UI
 test/                 — vitest test suite (6000+ tests, 95%+ coverage)
 ```
 

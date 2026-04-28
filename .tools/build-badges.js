@@ -1,7 +1,7 @@
 /**
  * build-badges.js
  * Runs the test suite with coverage, then:
- *   1. Writes documentation/public/data/badges.json  (consumed by website)
+ *   1. Writes website-docs/public/data/badges.json  (consumed by website)
  *   2. Updates README.md badge row with live counts
  *
  * Usage:  npm run badges
@@ -15,7 +15,7 @@ const root     = path.join(__dirname, '..');
 const readmePath = path.join(root, 'README.md');
 const resultsPath = path.join(root, 'test-results.json');
 const coveragePath = path.join(root, 'coverage', 'coverage-summary.json');
-const badgesOut  = path.join(root, 'documentation', 'public', 'data', 'badges.json');
+const badgesOut  = path.join(root, 'website-docs', 'public', 'data', 'badges.json');
 
 /* -- 1. Run tests with coverage + JSON reporter --------------------- */
 console.log('Running tests with coverage…');

@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://z-server.dev">
-    <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
+    <img src="website-docs/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
   </a>
 </p>
 

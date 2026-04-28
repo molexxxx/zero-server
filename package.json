@@ -16,8 +16,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "start": "node documentation/full-server.js",
-    "docs": "node documentation/full-server.js",
+    "start": "node website-docs/full-server.js",
+    "docs": "node website-docs/full-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

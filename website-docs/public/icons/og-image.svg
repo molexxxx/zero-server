@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1114"/>
+      <stop offset="50%" stop-color="#13161b"/>
+      <stop offset="100%" stop-color="#0e1114"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="50%" stop-color="#5865f2"/>
+      <stop offset="100%" stop-color="#3ec6ff"/>
+    </linearGradient>
+    <linearGradient id="accent-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="50%" stop-color="#5865f2"/>
+      <stop offset="100%" stop-color="#3ec6ff"/>
+    </linearGradient>
+
+    <linearGradient id="ns-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+
+    <linearGradient id="logo-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="50%" stop-color="#5865f2"/>
+      <stop offset="100%" stop-color="#3ec6ff"/>
+    </linearGradient>
+    <linearGradient id="logo-hi" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+    <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5865f2" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0e1114" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hero-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5865f2" stop-opacity="0.28"/>
+      <stop offset="40%" stop-color="#5865f2" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#0e1114" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#5865f2" flood-opacity="0.35"/>
+    </filter>
+    <filter id="bolt-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="text-glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#5865f2" flood-opacity="0.4" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#5865f2" stroke-width="0.5" opacity="0.08"/>
+    </pattern>
+
+    <linearGradient id="line-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7b61ff" stop-opacity="0"/>
+      <stop offset="20%" stop-color="#7b61ff" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#5865f2" stop-opacity="0.8"/>
+      <stop offset="80%" stop-color="#3ec6ff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#3ec6ff" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="pill-a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(123,97,255,0.22)"/>
+      <stop offset="100%" stop-color="rgba(123,97,255,0.08)"/>
+    </linearGradient>
+    <linearGradient id="pill-b" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(88,101,242,0.22)"/>
+      <stop offset="100%" stop-color="rgba(88,101,242,0.08)"/>
+    </linearGradient>
+    <linearGradient id="pill-c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(62,198,255,0.22)"/>
+      <stop offset="100%" stop-color="rgba(62,198,255,0.08)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Ambient glows -->
+  <circle cx="260" cy="315" r="340" fill="url(#hero-glow)"/>
+  <circle cx="940" cy="490" r="260" fill="url(#hero-glow)" opacity="0.5"/>
+
+  <!-- Decorative dots -->
+  <circle cx="130" cy="120" r="4" fill="#7b61ff" opacity="0.4"/>
+  <circle cx="1060" cy="520" r="4" fill="#3ec6ff" opacity="0.4"/>
+  <circle cx="180" cy="500" r="3" fill="#5865f2" opacity="0.3"/>
+  <circle cx="1020" cy="140" r="3" fill="#67e8f9" opacity="0.3"/>
+  <circle cx="520" cy="80" r="2.5" fill="#a78bfa" opacity="0.25"/>
+  <circle cx="900" cy="560" r="2.5" fill="#3ec6ff" opacity="0.25"/>
+  <line x1="80" y1="560" x2="140" y2="580" stroke="#3ec6ff" stroke-width="1.5" opacity="0.1" stroke-linecap="round"/>
+  <line x1="1040" y1="80" x2="1100" y2="100" stroke="#7b61ff" stroke-width="1.5" opacity="0.1" stroke-linecap="round"/>
+
+  <!-- Logo (vertically centered, smaller, tighter to left) -->
+  <g transform="translate(80, 175) scale(0.55)">
+    <circle cx="256" cy="256" r="200" fill="url(#bg-glow)"/>
+    <circle cx="256" cy="256" r="195" fill="none" stroke="url(#logo-grad)" stroke-width="24" stroke-linecap="round" opacity="0.15"/>
+    <circle cx="256" cy="256" r="170" fill="none" stroke="url(#logo-grad)" stroke-width="32" stroke-linecap="round" filter="url(#logo-shadow)"/>
+    <path d="M 140,175 A 170,170 0 0,1 330,100" fill="none" stroke="url(#logo-hi)" stroke-width="14" stroke-linecap="round" opacity="0.6"/>
+    <g filter="url(#bolt-glow)">
+      <path d="M 222 82 L 186 242 L 252 242 L 182 435 L 330 205 L 258 205 L 296 82 Z" fill="url(#logo-grad)"/>
+      <path d="M 228 100 L 202 238 L 252 238 L 204 395 L 318 212 L 262 212 L 288 100 Z" fill="url(#logo-hi)" opacity="0.5"/>
+    </g>
+    <circle cx="100" cy="155" r="8" fill="#7b61ff" opacity="0.7"/>
+    <circle cx="410" cy="360" r="8" fill="#3ec6ff" opacity="0.7"/>
+  </g>
+
+  <!-- ───────── Right panel (x=400) ───────── -->
+
+  <!-- Eyebrow / namespace tag -->
+  <g transform="translate(400, 110)">
+    <rect x="0" y="0" width="180" height="32" rx="16" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+    <circle cx="18" cy="16" r="4" fill="#a78bfa"/>
+    <text x="32" y="21" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#cfb8ff" letter-spacing="1.2">NPM · NODE 18+</text>
+  </g>
+
+  <!-- Title -->
+  <text x="400" y="208" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="64" font-weight="800" fill="#ffffff" filter="url(#text-glow)">
+    <tspan fill="url(#ns-grad)">@zero-server</tspan><tspan fill="#ffffff">/sdk</tspan>
+  </text>
+
+  <!-- Divider line -->
+  <line x1="400" y1="232" x2="1120" y2="232" stroke="url(#line-grad)" stroke-width="2"/>
+
+  <!-- Subtitle -->
+  <text x="400" y="270" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="22" font-weight="500" fill="#d4dae6" letter-spacing="0.3">Zero-dependency backend SDK for Node.js</text>
+  <text x="400" y="297" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="17" font-weight="400" fill="#8a93a4" letter-spacing="0.2">HTTP · ORM · Auth · Realtime · gRPC · Observability</text>
+
+  <!-- Scope pills -->
+  <g font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">
+
+    <!-- Row 1 (purple) — y=335 -->
+    <g>
+      <rect x="400" y="335" width="60"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="430" y="355" fill="#cfb8ff" text-anchor="middle">core</text>
+
+      <rect x="468" y="335" width="60"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="498" y="355" fill="#cfb8ff" text-anchor="middle">auth</text>
+
+      <rect x="536" y="335" width="60"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="566" y="355" fill="#cfb8ff" text-anchor="middle">body</text>
+
+      <rect x="604" y="335" width="55"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="631.5" y="355" fill="#cfb8ff" text-anchor="middle">env</text>
+
+      <rect x="667" y="335" width="72"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="703" y="355" fill="#cfb8ff" text-anchor="middle">errors</text>
+
+      <rect x="747" y="335" width="50"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="772" y="355" fill="#cfb8ff" text-anchor="middle">cli</text>
+
+      <rect x="805" y="335" width="55"  height="30" rx="6" fill="url(#pill-a)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+      <text x="832.5" y="355" fill="#cfb8ff" text-anchor="middle">orm</text>
+    </g>
+
+    <!-- Row 2 (indigo) — y=375 -->
+    <g>
+      <rect x="400" y="375" width="68"  height="30" rx="6" fill="url(#pill-b)" stroke="rgba(88,101,242,0.4)" stroke-width="1"/>
+      <text x="434" y="395" fill="#bcc7ff" text-anchor="middle">fetch</text>
+
+      <rect x="476" y="375" width="60"  height="30" rx="6" fill="url(#pill-b)" stroke="rgba(88,101,242,0.4)" stroke-width="1"/>
+      <text x="506" y="395" fill="#bcc7ff" text-anchor="middle">grpc</text>
+
+      <rect x="544" y="375" width="115" height="30" rx="6" fill="url(#pill-b)" stroke="rgba(88,101,242,0.4)" stroke-width="1"/>
+      <text x="601.5" y="395" fill="#bcc7ff" text-anchor="middle">middleware</text>
+
+      <rect x="667" y="375" width="100" height="30" rx="6" fill="url(#pill-b)" stroke="rgba(88,101,242,0.4)" stroke-width="1"/>
+      <text x="717" y="395" fill="#bcc7ff" text-anchor="middle">lifecycle</text>
+
+      <rect x="775" y="375" width="90"  height="30" rx="6" fill="url(#pill-b)" stroke="rgba(88,101,242,0.4)" stroke-width="1"/>
+      <text x="820" y="395" fill="#bcc7ff" text-anchor="middle">observe</text>
+    </g>
+
+    <!-- Row 3 (cyan) — y=415 -->
+    <g>
+      <rect x="400" y="415" width="100" height="30" rx="6" fill="url(#pill-c)" stroke="rgba(62,198,255,0.4)" stroke-width="1"/>
+      <text x="450" y="435" fill="#9be9ff" text-anchor="middle">realtime</text>
+
+      <rect x="508" y="415" width="170" height="30" rx="6" fill="url(#pill-c)" stroke="rgba(62,198,255,0.4)" stroke-width="1"/>
+      <text x="593" y="435" fill="#9be9ff" text-anchor="middle">WebSocket · SSE</text>
+
+      <rect x="686" y="415" width="170" height="30" rx="6" fill="url(#pill-c)" stroke="rgba(62,198,255,0.4)" stroke-width="1"/>
+      <text x="771" y="435" fill="#9be9ff" text-anchor="middle">JWT · OAuth · 2FA</text>
+    </g>
+  </g>
+
+  <!-- Stats strip (two columns, no overlap) -->
+  <g font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+    <g transform="translate(400, 478)">
+      <text x="0" y="14" font-size="13" font-weight="700" fill="#67e8f9" letter-spacing="1.5">13 SCOPED PACKAGES</text>
+      <text x="0" y="36" font-size="13" font-weight="500" fill="#8a93a4">Routing · Models · Migrations</text>
+      <text x="0" y="55" font-size="13" font-weight="500" fill="#8a93a4">Cache · Search · Geo · Audit</text>
+    </g>
+    <g transform="translate(770, 478)">
+      <text x="0" y="14" font-size="13" font-weight="700" fill="#a78bfa" letter-spacing="1.5">ZERO RUNTIME DEPS</text>
+      <text x="0" y="36" font-size="13" font-weight="500" fill="#8a93a4">CORS · Helmet · CSRF</text>
+      <text x="0" y="55" font-size="13" font-weight="500" fill="#8a93a4">Rate-limit · Compress · Static</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="600" y="585" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#5865f2" text-anchor="middle" letter-spacing="0.5">z-server.dev</text>
+  <text x="600" y="608" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#5a6373" text-anchor="middle" letter-spacing="2">npm i @zero-server/sdk</text>
+
+  <!-- Border + top accent -->
+  <rect x="0" y="0" width="1200" height="630" fill="none" stroke="url(#accent)" stroke-width="2" opacity="0.15"/>
+  <rect x="0" y="0" width="1200" height="3" fill="url(#accent-h)" opacity="0.6"/>
+</svg>

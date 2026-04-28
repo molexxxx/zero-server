@@ -13,7 +13,7 @@ function walk(rel) {
         if (e.isDirectory()) {
             if (['node_modules', '.git', 'coverage', '.myshit'].includes(e.name)) continue;
             // Skip historical versioned data archives — keep them frozen
-            if (relP.replace(/\\/g, '/').startsWith('documentation/public/data/versions')) continue;
+            if (relP.replace(/\\/g, '/').startsWith('website-docs/public/data/versions')) continue;
             walk(relP);
         } else if (/\.(js|mjs|md|html|css|json|d\.ts)$/.test(e.name)) {
             targets.push(p);
@@ -24,7 +24,7 @@ function walk(rel) {
 walk('lib');
 walk('types');
 walk('test');
-walk('documentation');
+walk('website-docs');
 walk('.tools');
 for (const f of ['index.js', 'README.md', 'API.md']) {
     targets.push(path.join(ROOT, f));
