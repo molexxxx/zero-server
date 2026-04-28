@@ -1,10 +1,11 @@
 {
-  "name": "zero-http",
-  "version": "0.8.7",
-  "description": "Zero-dependency backend framework with routing, ORM, WebSocket, SSE, security middleware, and more",
+  "name": "@zero-server/sdk",
+  "version": "0.9.1",
+  "description": "Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, gRPC, observability, and 20+ middleware. Distributed as a single SDK and as scoped @zero-server/* packages.",
   "main": "index.js",
   "bin": {
-    "zh": "lib/cli.js"
+    "zh": "lib/cli.js",
+    "zs": "lib/cli.js"
   },
   "types": "types/index.d.ts",
   "files": [
@@ -19,8 +20,13 @@
     "docs": "node documentation/full-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "build": "node .tools/build.js",
-    "build:api": "node .tools/build-api-md.js"
+    "build:api": "node .tools/build-api-md.js",
+    "packages:generate": "node .tools/generate-package-stubs.js",
+    "packages:docs": "node .tools/generate-scope-docs.js",
+    "packages:publish": "node .tools/publish-package-stubs.js",
+    "ci": "npm test && npm run build && npm run packages:generate && npm run packages:docs"
   },
   "keywords": [
     "http",
@@ -30,22 +36,30 @@
     "fetch",
     "multipart",
     "static",
+    "websocket",
+    "sse",
+    "grpc",
+    "orm",
+    "jwt",
+    "oauth",
+    "zero-server",
     "zero-http"
   ],
   "author": "Anthony Wiedman",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonywied17/zero-http.git"
+    "url": "git+https://github.com/tonywied17/zero-server.git"
   },
   "bugs": {
-    "url": "https://github.com/tonywied17/zero-http/issues"
+    "url": "https://github.com/tonywied17/zero-server/issues"
   },
-  "homepage": "https://z-http.com",
+  "homepage": "https://z-server.com",
   "engines": {
     "node": ">=18.0.0"
   },
   "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
   "devDependencies": {

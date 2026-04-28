@@ -73,7 +73,7 @@ describe('CLI — help / version', () =>
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         cli._version();
         const output = log.mock.calls[0][0];
-        expect(output).toMatch(/zh v\d+\.\d+\.\d+ \(zero-http\)/);
+        expect(output).toMatch(/zh v\d+\.\d+\.\d+ \(zero-server\)/);
         log.mockRestore();
     });
 });

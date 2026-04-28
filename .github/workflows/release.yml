@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "npm dist-tag to publish under (latest, alpha, beta, next...)"
+        required: true
+        default: alpha
+      dry_run:
+        description: "Run npm publish with --dry-run only"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @zero-server/* to npmjs (OIDC)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build documentation data
+        run: npm run build
+
+      - name: Generate scoped package stubs
+        run: npm run packages:generate
+
+      - name: Generate scoped package docs
+        run: npm run packages:docs
+
+      - name: Resolve dist-tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VER="${{ github.event.release.tag_name }}"
+            if echo "$VER" | grep -qE 'alpha|beta|rc|next|dev|pre'; then
+              echo "tag=alpha" >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=latest" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish @zero-server/sdk
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --provenance --access public --tag "${{ steps.tag.outputs.tag }}"
+          else
+            npm publish --provenance --access public --tag "${{ steps.tag.outputs.tag }}"
+          fi
+
+      - name: Publish @zero-server/* scoped stubs
+        run: |
+          for dir in packages/*/; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            echo "Publishing $name@$version with tag ${{ steps.tag.outputs.tag }}"
+            if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+              ( cd "$dir" && npm publish --dry-run --provenance --access public --tag "${{ steps.tag.outputs.tag }}" )
+            else
+              ( cd "$dir" && npm publish --provenance --access public --tag "${{ steps.tag.outputs.tag }}" )
+            fi
+          done
+
+      - name: Summary
+        run: |
+          {
+            echo "## Released ${{ steps.tag.outputs.tag }}"
+            echo ""
+            echo "- @zero-server/sdk"
+            for dir in packages/*/; do
+              name=$(node -p "require('./$dir/package.json').name")
+              echo "- $name"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

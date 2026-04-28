@@ -8,7 +8,7 @@ import { histPushModal, histCloseModal, histDismissModal, histPushHash } from '.
 import { expandTocForId } from './shell.js';
 import { getSelectedVersion, initSearchVersionBadge } from './version-selector.js';
 
-const RECENT_KEY = 'zero-http-search-recent';
+const RECENT_KEY = 'zero-server-search-recent';
 const MAX_RECENT = 8;
 
 function _resolveTopOffset()

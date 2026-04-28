@@ -1,14 +1,14 @@
 <p align="center">
-  <a href="https://z-http.com">
-    <img src="documentation/public/icons/logo-animated.svg" alt="zero-http logo" width="120" height="120">
+  <a href="https://z-server.com">
+    <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
   </a>
 </p>
 
-<h1 align="center">zero-http — API Reference</h1>
+<h1 align="center">zero-server — API Reference</h1>
 
 <p align="center">
   <strong>
-    <a href="https://z-http.com">📖 Interactive docs, live playground, and searchable reference at z-http.com →</a>
+    <a href="https://z-server.com">📖 Interactive docs, live playground, and searchable reference at z-server.com →</a>
   </strong>
 </p>
 
@@ -19,6 +19,9 @@
 - [Exports](#exports)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
+- [Scoped Packages](#scoped-packages)
+  - [Overview](#overview)
+  - [Package Map](#package-map)
 - [Core](#core)
   - [createApp](#createapp)
   - [Router](#router)
@@ -139,7 +142,7 @@ const {
   ConnectionError, MigrationError, TransactionError, QueryError, AdapterError, CacheError,
   debug, version,
   WebSocketConnection, WebSocketPool, SSEStream
-} = require('zero-http')
+} = require('@zero-server/sdk')
 ```
 
 | Export | Type | Description |
@@ -215,14 +218,14 @@ const {
 
 ## Installation
 
-Install zero-http from npm. No external dependencies are required — everything is built in.
+Install the @zero-server/sdk meta-package from npm — it ships every module. Or install only the scoped packages you need (e.g. @zero-server/core, @zero-server/orm). No external dependencies are required — everything is built in.
 
 ```bash
-npm install zero-http
+npm install @zero-server/sdk
 ```
 
 
-> **Tip:** zero-http has zero runtime dependencies — npm install is all you need.
+> **Tip:** @zero-server/sdk has zero runtime dependencies — npm install is all you need.
 > **Tip:** Requires Node.js 18+ (uses crypto.randomUUID, structuredClone, etc.).
 > **Tip:** TypeScript definitions are included in the package under types/.
 
@@ -234,7 +237,7 @@ npm install zero-http
 Create a minimal server with JSON parsing and static file serving in under 10 lines.
 
 ```js
-const { createApp, json, static: serveStatic } = require('zero-http')
+const { createApp, json, static: serveStatic } = require('@zero-server/sdk')
 const path = require('path')
 const app = createApp()
 
@@ -252,6 +255,63 @@ app.listen(3000, () => {
 > **Tip:** Middleware runs in registration order — add parsers before route handlers.
 > **Tip:** All route methods (get, post, put, etc.) return the app, so you can chain them.
 > **Tip:** Use app.onError() to register a global error handler for uncaught errors.
+
+
+---
+
+## Scoped Packages
+
+### Overview
+
+The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow scoped package that re-exports just its surface from the SDK and pins to the same version. Mix and match freely.
+
+```bash
+# Everything (one install)
+npm install @zero-server/sdk
+
+# Or only what you need
+npm install @zero-server/core @zero-server/body @zero-server/middleware
+npm install @zero-server/orm @zero-server/auth @zero-server/observe
+```
+
+
+> **Tip:** All scoped packages depend on `@zero-server/sdk` at the exact same version, so versions stay in lock-step.
+> **Tip:** You can always import from `@zero-server/sdk` directly even if you also have scoped packages installed.
+
+
+### Package Map
+
+Every published `@zero-server/*` package and the surface it narrows to. The full list of exports per package is generated from `.tools/scope-manifest.js` and published to `docs/scopes/<name>.md`.
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `@zero-server/sdk` | meta | `all` | Re-exports everything below from a single package. |
+| `@zero-server/core` | core | `—` | createApp, Router, Request, Response. |
+| `@zero-server/body` | parsers | `—` | json, urlencoded, text, raw, multipart. |
+| `@zero-server/middleware` | middleware | `—` | cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static. |
+| `@zero-server/auth` | auth | `—` | jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment. |
+| `@zero-server/orm` | orm | `—` | Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins. |
+| `@zero-server/realtime` | realtime | `—` | WebSocketConnection, WebSocketPool, SSEStream. |
+| `@zero-server/grpc` | grpc | `—` | GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials. |
+| `@zero-server/observe` | observability | `—` | MetricsRegistry, Tracer, structured Logger, healthCheck. |
+| `@zero-server/lifecycle` | lifecycle | `—` | LifecycleManager, ClusterManager, clusterize. |
+| `@zero-server/env` | env | `—` | Typed `.env` loader and accessor. |
+| `@zero-server/fetch` | http-client | `—` | Server-side fetch with mTLS, timeouts, AbortSignal. |
+| `@zero-server/errors` | errors | `—` | HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError. |
+
+
+```js
+// Identical at runtime — pick whichever import surface you prefer
+const fromSdk  = require('@zero-server/sdk').createApp;
+const fromCore = require('@zero-server/core').createApp;
+```
+
+
+> **Tip:** Use the meta-package in apps that touch most of the surface; use scoped packages in libraries or microservices that only need a slice.
+> **Tip:** Per-package READMEs and full export tables live under `docs/scopes/` in the repo and are linked from each npm page.
+
 
 
 ---
@@ -382,7 +442,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 
 
 ```javascript
-  const { createApp } = require('zero-http');
+  const { createApp } = require('@zero-server/sdk');
   const app = createApp();
 
   app.use(logger());
@@ -446,7 +506,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 
 
 ```javascript
-  const { Router } = require('zero-http');
+  const { Router } = require('@zero-server/sdk');
 
   const api = new Router();
 
@@ -567,7 +627,7 @@ JSON body-parsing middleware. Reads the request body, parses it as JSON, and set
 
 
 ```javascript
-  const { json } = require('zero-http');
+  const { json } = require('@zero-server/sdk');
 
   app.use(json({ limit: '500kb', strict: true }));
 
@@ -597,7 +657,7 @@ URL-encoded body-parsing middleware. Supports both flat (`URLSearchParams`) and 
 
 
 ```javascript
-  const { urlencoded } = require('zero-http');
+  const { urlencoded } = require('@zero-server/sdk');
 
   // Flat parsing (default)
   app.use(urlencoded({ limit: '100kb' }));
@@ -629,7 +689,7 @@ Plain-text body-parsing middleware. Reads the request body as a string and sets 
 
 
 ```javascript
-  const { text } = require('zero-http');
+  const { text } = require('@zero-server/sdk');
 
   app.use(text({ type: 'text/plain', limit: '256kb' }));
 
@@ -656,7 +716,7 @@ Raw-buffer body-parsing middleware. Stores the full request body as a Buffer on 
 
 
 ```javascript
-  const { raw } = require('zero-http');
+  const { raw } = require('@zero-server/sdk');
 
   app.use(raw({ type: 'application/octet-stream', limit: '5mb' }));
 
@@ -686,7 +746,7 @@ Streaming multipart/form-data parser. Writes uploaded files to a temp directory 
 
 
 ```javascript
-  const { multipart } = require('zero-http');
+  const { multipart } = require('@zero-server/sdk');
 
   app.use(multipart({
       dir: './uploads',
@@ -751,7 +811,7 @@ Response compression middleware using Node's built-in `zlib`. Supports gzip, def
 
 
 ```javascript
-  const { createApp, compress } = require('zero-http');
+  const { createApp, compress } = require('@zero-server/sdk');
   const app = createApp();
   app.use(compress());                // gzip/deflate/br auto-negotiated
   app.use(compress({ threshold: 0 })) // compress everything
@@ -1016,7 +1076,7 @@ CSRF (Cross-Site Request Forgery) protection middleware. Uses the double-submit 
 
 
 ```javascript
-  const { createApp, csrf } = require('zero-http');
+  const { createApp, csrf } = require('@zero-server/sdk');
   const app = createApp();
 
   app.use(csrf());                   // default options
@@ -1060,7 +1120,7 @@ Request validation middleware. Validates `req.body`, `req.query`, and `req.param
 
 
 ```javascript
-  const { createApp, validate } = require('zero-http');
+  const { createApp, validate } = require('@zero-server/sdk');
   const app = createApp();
 
   app.post('/users', validate({
@@ -1125,7 +1185,7 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
 
 
 ```javascript
-  const { createApp, json, jwt, jwtSign, Router } = require('zero-http');
+  const { createApp, json, jwt, jwtSign, Router } = require('@zero-server/sdk');
   const app = createApp();
   const SECRET = process.env.JWT_SECRET;
 
@@ -1218,7 +1278,7 @@ Zero-dependency session middleware. Supports encrypted cookie sessions (stateles
 
 
 ```javascript
-  const { createApp, json, session } = require('zero-http');
+  const { createApp, json, session } = require('@zero-server/sdk');
   const app = createApp();
 
   app.use(session({ secret: process.env.SESSION_SECRET }));
@@ -1281,7 +1341,7 @@ Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets fo
 
 
 ```javascript
-  const { oauth } = require('zero-http');
+  const { oauth } = require('@zero-server/sdk');
   const github = oauth({
       provider: 'github',
       clientId: process.env.GITHUB_CLIENT_ID,
@@ -1346,7 +1406,7 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 
 ```javascript
   const { createApp, jwt, authorize, can, canAny, Policy, gate,
-      attachUserHelpers, Router } = require('zero-http');
+      attachUserHelpers, Router } = require('@zero-server/sdk');
   const app = createApp();
 
   app.use(jwt({ secret: process.env.JWT_SECRET }));
@@ -1451,7 +1511,7 @@ Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 623
 > **Setup 2FA for a user**
 
 ```javascript
-  const { twoFactor } = require('zero-http');
+  const { twoFactor } = require('@zero-server/sdk');
 
   app.post('/2fa/setup', async (req, res) => {
       const secret = twoFactor.generateSecret();
@@ -1505,7 +1565,7 @@ Zero-dependency WebAuthn/FIDO2/Passkeys implementation. Supports registration (a
 > **Registration**
 
 ```javascript
-  const { webauthn } = require('zero-http');
+  const { webauthn } = require('@zero-server/sdk');
   const options = webauthn.generateRegistrationOptions({
       rpName: 'My App', rpId: 'myapp.com',
       userId: user.id, userName: user.email,
@@ -1555,7 +1615,7 @@ Defaults to `req.user.id \|\| req.user.sub`. |
 
 
 ```javascript
-  const { trustedDevice, twoFactor } = require('zero-http');
+  const { trustedDevice, twoFactor } = require('@zero-server/sdk');
 
   app.post('/verify-2fa', twoFactor.verifyTOTPMiddleware({
       getSecret: (req) => req.user.totpSecret,
@@ -1601,7 +1661,7 @@ Check if 2FA is already enabled (for guarding start/disable). |
 > **Full enrollment flow**
 
 ```javascript
-  const { enrollment } = require('zero-http');
+  const { enrollment } = require('@zero-server/sdk');
   const flow = enrollment({
       saveSecret: async (req, secret, backupHashes) => {
           await db.users.update(req.user.id, { totpSecret: secret, backupHashes });
@@ -1641,7 +1701,7 @@ Zero-dependency typed environment variable system. Loads `.env` files, validates
 
 
 ```javascript
-  const { env } = require('zero-http');
+  const { env } = require('@zero-server/sdk');
 
   env.load({
       PORT:            { type: 'port',    default: 3000 },
@@ -1880,7 +1940,7 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
 
 ### Server
 
-gRPC server for zero-http. Intercepts HTTP/2 streams with `content-type: application/grpc`, routes by `:path` pseudo-header (`/package.Service/Method`), and dispatches to registered service handlers. Handles all four gRPC call types: - Unary (single request → single response) - Server streaming (single request → multiple responses) - Client streaming (multiple requests → single response) - Bidirectional streaming (multiple requests ↔ multiple responses) Supports interceptors (server-side middleware), deadline enforcement, message size limits, and graceful shutdown with call draining.
+gRPC server for zero-server. Intercepts HTTP/2 streams with `content-type: application/grpc`, routes by `:path` pseudo-header (`/package.Service/Method`), and dispatches to registered service handlers. Handles all four gRPC call types: - Unary (single request → single response) - Server streaming (single request → multiple responses) - Client streaming (multiple requests → single response) - Bidirectional streaming (multiple requests ↔ multiple responses) Supports interceptors (server-side middleware), deadline enforcement, message size limits, and graceful shutdown with call draining.
 
 #### Service Registry
 
@@ -1894,7 +1954,7 @@ gRPC server for zero-http. Intercepts HTTP/2 streams with `content-type: applica
 
 
 ```javascript
-  const { createApp, parseProto } = require('zero-http');
+  const { createApp, parseProto } = require('@zero-server/sdk');
   const app = createApp();
   const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));
 
@@ -1981,7 +2041,7 @@ Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four c
 > **Unary call**
 
 ```javascript
-  const { GrpcClient, parseProto } = require('zero-http');
+  const { GrpcClient, parseProto } = require('@zero-server/sdk');
   const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));
 
   const client = new GrpcClient('http://localhost:50051', schema, 'Greeter');
@@ -2363,7 +2423,7 @@ gRPC Health Checking Protocol implementation (grpc.health.v1.Health). Supports `
 
 
 ```javascript
-  const { createApp } = require('zero-http');
+  const { createApp } = require('@zero-server/sdk');
   const app = createApp();
   app.grpcHealth();
   app.listen(50051, { http2: true });
@@ -2447,7 +2507,7 @@ Client-side load balancing for gRPC. Distributes requests across multiple backen
 
 
 ```javascript
-  const { GrpcClient, parseProto } = require('zero-http');
+  const { GrpcClient, parseProto } = require('@zero-server/sdk');
   const schema = parseProto(protoSource);
 
   const client = new GrpcClient({
@@ -2487,7 +2547,7 @@ Channel credentials for gRPC connections. Provides factory functions for creatin
 > **Insecure (plaintext)**
 
 ```javascript
-  const { ChannelCredentials, GrpcClient } = require('zero-http');
+  const { ChannelCredentials, GrpcClient } = require('@zero-server/sdk');
   const creds = ChannelCredentials.createInsecure();
   const client = new GrpcClient({ address: 'http://localhost:50051', credentials: creds }, schema, 'Greeter');
 ```
@@ -2538,7 +2598,7 @@ Proto file hot-reload for development. Watches `.proto` files for changes using 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `app` | object | Yes | The zero-http App instance. |
+| `app` | object | Yes | The zero-server App instance. |
 | `protoPath` | string | Yes | Path to the `.proto` file. |
 | `serviceName` | string | Yes | Service name to register. |
 | `handlers` | Object<string, Function> | Yes | Method handlers map. |
@@ -2558,7 +2618,7 @@ Proto file hot-reload for development. Watches `.proto` files for changes using 
 
 
 ```javascript
-  const { createApp, watchProto } = require('zero-http');
+  const { createApp, watchProto } = require('@zero-server/sdk');
   const app = createApp();
 
   watchProto(app, './protos/greeter.proto', 'Greeter', handlers, {
@@ -2692,7 +2752,7 @@ ORM entry point.  Provides the `Database` factory that creates a connection to a
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('memory');
 
@@ -2821,7 +2881,7 @@ Base Model class for defining database-backed entities. Provides static CRUD met
 
 
 ```javascript
-  const { Model, Database } = require('zero-http');
+  const { Model, Database } = require('@zero-server/sdk');
 
   class User extends Model {
       static table = 'users';
@@ -2874,7 +2934,7 @@ Schema definition and validation for ORM models. Validates data against column d
 
 
 ```javascript
-  const { TYPES, validate } = require('zero-http').Schema;
+  const { TYPES, validate } = require('@zero-server/sdk').Schema;
 
   const columns = {
       name:  { type: TYPES.STRING, required: true, minLength: 1 },
@@ -2977,7 +3037,7 @@ Column type constants for ORM schema definitions. Use these when defining model 
 
 
 ```js
-const { TYPES } = require('zero-http')
+const { TYPES } = require('@zero-server/sdk')
 
 const schema = {
 	name:    { type: TYPES.STRING,  required: true },
@@ -3299,7 +3359,7 @@ SQLite adapter using the optional `better-sqlite3` driver. Requires: `npm instal
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
 
@@ -3413,7 +3473,7 @@ MySQL / MariaDB adapter using the optional `mysql2` driver. Requires: `npm insta
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('mysql', {
       host: '127.0.0.1',
@@ -3530,7 +3590,7 @@ PostgreSQL adapter using the optional `pg` driver. Requires: `npm install pg`
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('postgres', {
       host: '127.0.0.1',
@@ -3645,7 +3705,7 @@ MongoDB adapter using the optional `mongodb` driver. Requires: `npm install mong
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('mongo', {
       url: 'mongodb://localhost:27017',
@@ -3672,7 +3732,7 @@ MongoDB adapter using the optional `mongodb` driver. Requires: `npm install mong
 
 ### Redis Adapter
 
-Redis database adapter for the zero-http ORM. Uses `ioredis` as the driver. Stores table data as Redis hashes with sorted-set indexes for ordering and filtering. Bring-your-own-driver: `npm install ioredis` Supports full ORM CRUD, key-value operations, pub/sub, pipelines, TTL, and all DDL/migration methods.
+Redis database adapter for the zero-server ORM. Uses `ioredis` as the driver. Stores table data as Redis hashes with sorted-set indexes for ordering and filtering. Bring-your-own-driver: `npm install ioredis` Supports full ORM CRUD, key-value operations, pub/sub, pipelines, TTL, and all DDL/migration methods.
 
 #### Table Management
 
@@ -3896,7 +3956,7 @@ In-memory database adapter. Zero-dependency, perfect for testing, prototyping, a
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('memory');
 
@@ -3958,7 +4018,7 @@ JSON file-backed database adapter. Persists data to JSON files on disk — one f
 
 
 ```javascript
-  const { Database, Model, TYPES } = require('zero-http');
+  const { Database, Model, TYPES } = require('@zero-server/sdk');
 
   const db = Database.connect('json', { directory: './data' });
 
@@ -3980,7 +4040,7 @@ JSON file-backed database adapter. Persists data to JSON files on disk — one f
 
 ### Migrator
 
-Versioned migration framework for the zero-http ORM. Supports up/down migrations, batch tracking, rollback, status reporting, and full reset/fresh operations.
+Versioned migration framework for the zero-server ORM. Supports up/down migrations, batch tracking, rollback, status reporting, and full reset/fresh operations.
 
 #### Parameters
 
@@ -4014,7 +4074,7 @@ Versioned migration framework for the zero-http ORM. Supports up/down migrations
 
 
 ```javascript
-  const { Database, Migrator } = require('zero-http');
+  const { Database, Migrator } = require('@zero-server/sdk');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
 
@@ -4051,7 +4111,7 @@ Versioned migration framework for the zero-http ORM. Supports up/down migrations
 
 ### QueryCache
 
-Query caching layer for the zero-http ORM. Provides an in-memory LRU cache with TTL support. Can also delegate to a Redis adapter for distributed caching.
+Query caching layer for the zero-server ORM. Provides an in-memory LRU cache with TTL support. Can also delegate to a Redis adapter for distributed caching.
 
 #### Methods
 
@@ -4081,7 +4141,7 @@ Query caching layer for the zero-http ORM. Provides an in-memory LRU cache with 
 
 
 ```javascript
-  const { Database, QueryCache } = require('zero-http');
+  const { Database, QueryCache } = require('@zero-server/sdk');
 
   const db = Database.connect('sqlite', { filename: './app.db' });
   const cache = new QueryCache({ maxEntries: 500, defaultTTL: 60 });
@@ -4341,7 +4401,7 @@ Query profiling, slow query detection, and automatic N+1 detection. Attach to a 
 
 
 ```javascript
-  const { Database, QueryProfiler } = require('zero-http');
+  const { Database, QueryProfiler } = require('@zero-server/sdk');
 
   const db = Database.connect('memory');
   const profiler = db.enableProfiling({ slowThreshold: 100 });
@@ -4386,7 +4446,7 @@ Read replica management with automatic read/write splitting, round-robin and ran
 
 
 ```javascript
-  const { Database, ReplicaManager } = require('zero-http');
+  const { Database, ReplicaManager } = require('@zero-server/sdk');
 
   const db = Database.connectWithReplicas('postgres',
       { host: 'primary.db', database: 'app' },
@@ -4437,7 +4497,7 @@ Database view management for the ORM. Supports creating, dropping, and querying 
 
 
 ```javascript
-  const { DatabaseView } = require('zero-http');
+  const { DatabaseView } = require('@zero-server/sdk');
 
   // Define a view
   const activeUsers = new DatabaseView('active_users', {
@@ -4488,7 +4548,7 @@ Full-text search integration for the ORM. Provides a unified API across PostgreS
 
 
 ```javascript
-  const { FullTextSearch } = require('zero-http');
+  const { FullTextSearch } = require('@zero-server/sdk');
 
   // Create a search index
   const search = new FullTextSearch(Article, {
@@ -4540,7 +4600,7 @@ Geo-spatial query support for the ORM. Provides distance calculations, bounding 
 
 
 ```javascript
-  const { GeoQuery } = require('zero-http');
+  const { GeoQuery } = require('@zero-server/sdk');
 
   // Create a geo query helper for a model
   const geo = new GeoQuery(Store, {
@@ -4624,7 +4684,7 @@ Multi-tenancy support for the ORM. Provides schema-based tenancy (PostgreSQL) an
 
 
 ```javascript
-  const { TenantManager } = require('zero-http');
+  const { TenantManager } = require('@zero-server/sdk');
 
   // Row-level tenancy
   const tenants = new TenantManager(db, {
@@ -4698,7 +4758,7 @@ Automatic audit logging for the ORM. Tracks who changed what and when, with diff
 
 
 ```javascript
-  const { AuditLog } = require('zero-http');
+  const { AuditLog } = require('@zero-server/sdk');
 
   const audit = new AuditLog(db, {
       actorField: 'userId',       // field on req/context identifying the actor
@@ -4715,7 +4775,7 @@ Automatic audit logging for the ORM. Tracks who changed what and when, with diff
 
 ### PluginManager
 
-Plugin system for the zero-http ORM. Provides a registration API, lifecycle hooks, and a standard interface for extending the framework.
+Plugin system for the zero-server ORM. Provides a registration API, lifecycle hooks, and a standard interface for extending the framework.
 
 #### Parameters
 
@@ -4763,7 +4823,7 @@ Plugin system for the zero-http ORM. Provides a registration API, lifecycle hook
 
 
 ```javascript
-  const { PluginManager } = require('zero-http');
+  const { PluginManager } = require('@zero-server/sdk');
 
   // Define a plugin
   const timestampPlugin = {
@@ -4837,7 +4897,7 @@ Stored procedures, functions, and trigger management for the ORM. Provides a cro
 
 
 ```javascript
-  const { StoredProcedure, StoredFunction, TriggerManager } = require('zero-http');
+  const { StoredProcedure, StoredFunction, TriggerManager } = require('@zero-server/sdk');
 
   // Define a procedure
   const proc = new StoredProcedure('update_balance', {
@@ -4855,7 +4915,7 @@ Stored procedures, functions, and trigger management for the ORM. Provides a cro
 
 ### CLI
 
-CLI tool for zero-http ORM operations. Provides commands for migrations, seeding, and scaffolding. Requires a `zero.config.js` (or `.zero-http.js`) in your project root that exports your database adapter and connection settings.
+CLI tool for zero-server ORM operations. Provides commands for migrations, seeding, and scaffolding. Requires a `zero.config.js` (or `.zero-server.js` / legacy `.zero-http.js`) in your project root that exports your database adapter and connection settings.
 
 
 ---
@@ -4901,7 +4961,7 @@ Structured, enterprise-grade request logger. Outputs JSON or pretty-text with co
 
 
 ```javascript
-  const { structuredLogger } = require('zero-http');
+  const { structuredLogger } = require('@zero-server/sdk');
   app.use(structuredLogger());
 ```
 
@@ -5007,7 +5067,7 @@ Zero-dependency metrics registry with Prometheus-compatible text exposition form
 > **Quick Setup**
 
 ```javascript
-  const { createApp, metricsMiddleware } = require('zero-http');
+  const { createApp, metricsMiddleware } = require('@zero-server/sdk');
   const app = createApp();
 
   app.use(metricsMiddleware({ registry: app.metrics() }));
@@ -5077,7 +5137,7 @@ Zero-dependency distributed tracing with W3C Trace Context propagation. Provides
 | Method | Signature | Description |
 |---|---|---|
 | `tracingMiddleware` | `tracingMiddleware([opts])` | Create HTTP tracing middleware. Automatically creates a span for each request, extracts incoming `traceparent`/`tracestate` headers, and sets outgoing `traceparent`. |
-| `instrumentFetch` | `instrumentFetch(fetchFn, tracer)` | Instrument outbound fetch calls with tracing. Wraps the zero-http fetch to inject `traceparent` headers and create client spans. |
+| `instrumentFetch` | `instrumentFetch(fetchFn, tracer)` | Instrument outbound fetch calls with tracing. Wraps the zero-server fetch to inject `traceparent` headers and create client spans. |
 
 
 #### Options
@@ -5093,7 +5153,7 @@ Zero-dependency distributed tracing with W3C Trace Context propagation. Provides
 
 
 ```javascript
-  const { tracingMiddleware, Tracer } = require('zero-http');
+  const { tracingMiddleware, Tracer } = require('@zero-server/sdk');
 
   const tracer = new Tracer({ serviceName: 'my-api' });
   app.use(tracingMiddleware({ tracer }));
@@ -5147,7 +5207,7 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 
 
 ```javascript
-  const { healthCheck } = require('zero-http');
+  const { healthCheck } = require('@zero-server/sdk');
 
   app.get('/healthz', healthCheck());
   app.get('/readyz', healthCheck({
@@ -5176,7 +5236,7 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 
 ### LifecycleManager
 
-Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket, SSE, and gRPC connections, and shuts down ORM databases before exiting.
+Graceful shutdown manager for zero-server applications. Tracks active connections, drains in-flight requests, closes WebSocket, SSE, and gRPC connections, and shuts down ORM databases before exiting.
 
 #### Parameters
 
@@ -5236,7 +5296,7 @@ Graceful shutdown manager for zero-http applications. Tracks active connections,
 
 ### ClusterManager
 
-Clustering support for zero-http applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers.
+Clustering support for zero-server applications. Forks worker processes, manages automatic restarts with backoff, and provides IPC messaging between the primary and workers.
 
 #### Cluster Manager
 
@@ -5302,7 +5362,7 @@ Clustering support for zero-http applications. Forks worker processes, manages a
 
 
 ```javascript
-  const { createApp, cluster } = require('zero-http');
+  const { createApp, cluster } = require('@zero-server/sdk');
 
   cluster((worker) => {
       const app = createApp();
@@ -5406,7 +5466,7 @@ HTTP error classes with status codes, error codes, and structured details. Every
 
 
 ```javascript
-  const { NotFoundError, ValidationError, createError } = require('zero-http');
+  const { NotFoundError, ValidationError, createError } = require('@zero-server/sdk');
 
   // Throw a named error class
   throw new NotFoundError('User not found');
@@ -5456,7 +5516,7 @@ Specialized error classes for framework internals, ORM operations, and infrastru
 
 
 ```javascript
-  const { NotFoundError, ValidationError, createError } = require('zero-http');
+  const { NotFoundError, ValidationError, createError } = require('@zero-server/sdk');
 
   // Throw a named error class
   throw new NotFoundError('User not found');
@@ -5529,7 +5589,7 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 
 
 ```javascript
-  const debug = require('zero-http').debug;
+  const debug = require('@zero-server/sdk').debug;
   const log = debug('app:routes');
 
   log.info('server started on port %d', 3000);
@@ -5553,7 +5613,7 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
 ### WebSocket Chat with Rooms
 
 ```js
-const { createApp, WebSocketPool } = require('zero-http')
+const { createApp, WebSocketPool } = require('@zero-server/sdk')
 const app = createApp()
 const pool = new WebSocketPool()
 
@@ -5580,7 +5640,7 @@ app.listen(3000)
 ### Real-Time Dashboard with SSE
 
 ```js
-const { createApp, helmet, compress } = require('zero-http')
+const { createApp, helmet, compress } = require('@zero-server/sdk')
 const app = createApp()
 app.use(helmet())
 app.use(compress())
@@ -5604,7 +5664,7 @@ app.listen(3000)
 ### File Upload API
 
 ```js
-const { createApp, json, multipart } = require('zero-http')
+const { createApp, json, multipart } = require('@zero-server/sdk')
 const app = createApp()
 app.use(json())
 

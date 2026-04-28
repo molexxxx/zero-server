@@ -1,6 +1,6 @@
 /**
  * core/highlight.js
- * Native syntax highlighter for the zero-http docs.
+ * Native syntax highlighter for the zero-server docs.
  *
  * Supported languages: javascript, html, css, json, yaml, bash
  *

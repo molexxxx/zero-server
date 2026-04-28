@@ -39,14 +39,14 @@ for (const section of docs) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Extract all destructured names from `require('zero-http')` statements.
- *   const { a, b: c, static: d } = require('zero-http')
+ * Extract all destructured names from `require('@zero-server/sdk')` statements.
+ *   const { a, b: c, static: d } = require('@zero-server/sdk')
  *   → ['a', 'b', 'static']       (the *source-side* binding names)
  */
 function extractImports(code) {
     const imports = [];
-    // Match:  { ... } = require('zero-http')  OR  require('zero-http')
-    const re = /\{([^}]+)\}\s*=\s*require\(\s*['"]zero-http['"]\s*\)/g;
+    // Match:  { ... } = require('@zero-server/sdk')  OR  require('@zero-server/sdk')
+    const re = /\{([^}]+)\}\s*=\s*require\(\s*['"](?:@zero-server\/sdk|zero-http)['"]\s*\)/g;
     let m;
     while ((m = re.exec(code)) !== null) {
         const inner = m[1];
@@ -171,7 +171,7 @@ describe('Documentation Examples', () => {
     });
 
     /* --- Import checks -------------------------------------------- */
-    describe('Imports from zero-http', () => {
+    describe('Imports from @zero-server/sdk', () => {
         for (const ex of examples) {
             if (ex.lang !== 'javascript') continue;
 

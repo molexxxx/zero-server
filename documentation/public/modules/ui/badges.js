@@ -24,9 +24,9 @@ export function initBadges()
         strip.innerHTML = '';
 
         const items = [
-            { label: 'license',      value: 'MIT',  color: 'blue',  href: 'https://github.com/tonywied17/zero-http/blob/main/LICENSE' },
+            { label: 'license',      value: 'MIT',  color: 'blue',  href: 'https://github.com/tonywied17/zero-server/blob/main/LICENSE' },
             { label: 'node',         value: '≥ 18', color: 'green', href: 'https://nodejs.org' },
-            { label: 'dependencies', value: '0',    color: 'green', href: 'https://www.npmjs.com/package/zero-http?activeTab=dependencies' },
+            { label: 'dependencies', value: '0',    color: 'green', href: 'https://www.npmjs.com/package/@zero-server/sdk?activeTab=dependencies' },
         ];
 
         if (badgeData)
