@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 20
+          - 22
+          - 24
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Test
+        run: npm test
+
+      - name: Build documentation data
+        run: npm run build
+
+      - name: Generate scoped package stubs
+        run: npm run packages:generate
+
+      - name: Generate scoped package docs
+        run: npm run packages:docs
+
+      - name: Pack dry run (SDK)
+        run: npm pack --dry-run
+
+      - name: Pack dry run (each scoped stub)
+        run: |
+          for dir in packages/*/; do
+            (cd "$dir" && npm pack --dry-run)
+          done

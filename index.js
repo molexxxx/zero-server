@@ -1,6 +1,6 @@
 /**
- * @module zero-http
- * @description Public entry point for the zero-http package.
+ * @module @zero-server/sdk
+ * @description Public entry point for the @zero-server/sdk package.
  *              Re-exports every middleware, the app factory, and the fetch helper.
  */
 const App = require('./lib/app');

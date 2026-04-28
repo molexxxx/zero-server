@@ -1,23 +1,23 @@
 <p align="center">
-  <img src="documentation/public/icons/logo-animated.svg" alt="zero-http logo" width="300" height="300">
+  <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="300" height="300">
 </p>
 
-<h1 align="center">zero-http</h1>
+<h1 align="center">zero-server</h1>
 
-[![npm version](https://img.shields.io/npm/v/zero-http.svg)](https://www.npmjs.com/package/zero-http)
-[![npm downloads](https://img.shields.io/npm/dm/zero-http.svg)](https://www.npmjs.com/package/zero-http)
-[![GitHub](https://img.shields.io/badge/GitHub-zero--http--npm-blue.svg)](https://github.com/tonywied17/zero-http)
+[![npm version](https://img.shields.io/npm/v/%40zero-server%2Fsdk.svg)](https://www.npmjs.com/package/@zero-server/sdk)
+[![npm downloads](https://img.shields.io/npm/dm/%40zero-server%2Fsdk.svg)](https://www.npmjs.com/package/@zero-server/sdk)
+[![GitHub](https://img.shields.io/badge/GitHub-zero--server-blue.svg)](https://github.com/tonywied17/zero-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](package.json)
-[![Tests](https://img.shields.io/badge/tests-7384%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-http/actions)
-[![Coverage](https://img.shields.io/badge/coverage-97.01%25-brightgreen.svg)](https://github.com/tonywied17/zero-http)
+[![Tests](https://img.shields.io/badge/tests-7385%20passed-brightgreen.svg)](https://github.com/tonywied17/zero-server/actions)
+[![Coverage](https://img.shields.io/badge/coverage-97.01%25-brightgreen.svg)](https://github.com/tonywied17/zero-server)
 
 > **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware from a single `require`.**
 
 <p align="center">
   <strong>
-    <a href="https://z-http.com">📖 Full Documentation &amp; Live Playground →</a>
+    <a href="https://z-server.com">📖 Full Documentation &amp; Live Playground →</a>
   </strong>
 </p>
 
@@ -26,17 +26,42 @@
 ## Install
 
 ```bash
-npm install zero-http
+npm install @zero-server/sdk
 ```
 
 Requires Node.js 18+. No external dependencies — everything is built on Node.js core APIs.
+
+### Or install only what you need (scoped packages)
+
+`@zero-server/sdk` is the meta-package that re-exports every module. If you want a smaller install footprint, every section of the SDK is also published as its own scoped package and re-exports just that surface from the SDK:
+
+| Package | Surface |
+|---|---|
+| `@zero-server/core` | `createApp`, `Router`, `Request`, `Response` |
+| `@zero-server/body` | `json`, `urlencoded`, `text`, `raw`, `multipart` |
+| `@zero-server/middleware` | `cors`, `helmet`, `compress`, `rateLimit`, `logger`, `timeout`, `requestId`, `cookieParser`, `csrf`, `validate`, `errorHandler`, `static` |
+| `@zero-server/auth` | `jwt`, `session`, `oauth`, `authorize`, `twoFactor`, `webauthn`, `trustedDevice`, `enrollment` |
+| `@zero-server/orm` | `Database`, `Model`, `Query`, `TYPES`, migrations, seeders, replicas, search, geo, tenancy, audit |
+| `@zero-server/realtime` | `WebSocketConnection`, `WebSocketPool`, `SSEStream` |
+| `@zero-server/grpc` | gRPC server, client, codec, status, metadata, framing, health, reflection, balancer |
+| `@zero-server/observe` | `MetricsRegistry`, `Tracer`, structured `Logger`, health checks |
+| `@zero-server/lifecycle` | `LifecycleManager`, `ClusterManager`, `clusterize` |
+| `@zero-server/env` | typed `.env` loader |
+| `@zero-server/fetch` | server-side `fetch` client |
+| `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
+
+```bash
+npm install @zero-server/core @zero-server/body @zero-server/middleware
+```
+
+> All scoped packages depend on `@zero-server/sdk` and pin to the same version, so mixing-and-matching is safe.
 
 ---
 
 ## Quick Start
 
 ```js
-const { createApp, json } = require('zero-http')
+const { createApp, json } = require('@zero-server/sdk')
 const app = createApp()
 
 app.use(json())
@@ -89,7 +114,7 @@ Full auth stack with no external libraries:
 Full-featured ORM with 7 adapters — memory, JSON file, SQLite, MySQL, PostgreSQL, MongoDB, and Redis:
 
 ```js
-const { Database, Model, TYPES } = require('zero-http')
+const { Database, Model, TYPES } = require('@zero-server/sdk')
 
 const db = Database.connect('sqlite', { filename: 'app.db' })
 
@@ -137,7 +162,7 @@ const users = await User.find({ name: 'Alice' })
 Built-in Prometheus metrics, health checks, distributed tracing, and structured logging — zero dependencies.
 
 ```js
-const { createApp, metricsMiddleware } = require('zero-http')
+const { createApp, metricsMiddleware } = require('@zero-server/sdk')
 const app = createApp()
 
 // Auto-instrument all HTTP requests (counters, histograms, active connections)
@@ -236,7 +261,7 @@ const {
   static: serveStatic, rateLimit, jwt, session,
   Database, Model, TYPES, env, clusterize,
   WebSocketPool,
-} = require('zero-http')
+} = require('@zero-server/sdk')
 
 env.load({
   PORT:       { type: 'port', default: 3000 },
@@ -350,7 +375,7 @@ const {
 
   // CLI
   CLI, runCLI,
-} = require('zero-http')
+} = require('@zero-server/sdk')
 ```
 
 ---
@@ -359,7 +384,7 @@ const {
 
 | Resource | Description |
 |---|---|
-| **[z-http.com](https://z-http.com)** | Interactive documentation with live playground, search, and examples |
+| **[z-server.com](https://z-server.com)** | Interactive documentation with live playground, search, and examples |
 | **[API.md](API.md)** | Full API reference with tables, examples, and options for every export |
 
 ### Run docs locally

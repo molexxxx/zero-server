@@ -1,5 +1,5 @@
 // Type definitions for zero-http
-// Project: https://github.com/tonywied17/zero-http
+// Project: https://github.com/tonywied17/zero-server
 // Definitions by: zero-http contributors
 
 /// <reference types="node" />
