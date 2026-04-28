@@ -52,7 +52,7 @@ for (const f of targets) {
     s = s.replace(/github\.com\/tonywied17\/zero-http\b/g, 'github.com/tonywied17/zero-server');
     s = s.replace(/zero-http\.git/g, 'zero-server.git');
     s = s.replace(/zero-server/g, 'zero-server');
-    s = s.replace(/z-http\.com/g, 'z-server.com');
+    s = s.replace(/z-http\.com/g, 'z-server.dev');
 
     // Brand text replacements (descriptions, titles, comments, doc strings)
     s = s.replace(/zero-server is a zero-dependency/gi, 'zero-server is a zero-dependency');

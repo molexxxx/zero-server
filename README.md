@@ -14,7 +14,7 @@
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7385%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
   <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-97.01%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
-  <a href="https://z-server.com"><img src="https://img.shields.io/badge/docs-z--server.com-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
+  <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.com-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
@@ -23,7 +23,7 @@
 
 <p align="center">
   <strong>
-    <a href="https://z-server.com">📖 Full Documentation &amp; Live Playground →</a>
+    <a href="https://z-server.dev">📖 Full Documentation &amp; Live Playground →</a>
   </strong>
 </p>
 
@@ -390,7 +390,7 @@ const {
 
 | Resource | Description |
 |---|---|
-| **[z-server.com](https://z-server.com)** | Interactive documentation with live playground, search, and examples |
+| **[z-server.dev](https://z-server.dev)** | Interactive documentation with live playground, search, and examples |
 | **[API.md](API.md)** | Full API reference with tables, examples, and options for every export |
 
 ### Run docs locally

@@ -54,7 +54,7 @@
   "bugs": {
     "url": "https://github.com/tonywied17/zero-server/issues"
   },
-  "homepage": "https://z-server.com",
+  "homepage": "https://z-server.dev",
   "engines": {
     "node": ">=18.0.0"
   },

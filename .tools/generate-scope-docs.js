@@ -78,7 +78,7 @@ for (const scope of scopes) {
         '',
         '- [Top-level README](../../README.md)',
         '- [Full API reference](../../API.md)',
-        `- [Live docs site](https://z-server.com)`,
+        `- [Live docs site](https://z-server.dev)`,
         `- [\`packages/${scope.name}\`](../../packages/${scope.name})`,
         '',
     ].join('\n');
@@ -119,7 +119,7 @@ for (const scope of scopes) {
             '',
             '- [Scope page](https://github.com/tonywied17/zero-server/blob/main/docs/scopes/' + scope.name + '.md)',
             '- [Full API reference](https://github.com/tonywied17/zero-server/blob/main/API.md)',
-            '- [Live docs](https://z-server.com)',
+            '- [Live docs](https://z-server.dev)',
             '',
             '## License',
             '',

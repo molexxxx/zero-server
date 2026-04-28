@@ -69,5 +69,5 @@ const { createError } = require('@zero-server/errors')
 
 - [Top-level README](../../README.md)
 - [Full API reference](../../API.md)
-- [Live docs site](https://z-server.com)
+- [Live docs site](https://z-server.dev)
 - [`packages/errors`](../../packages/errors)

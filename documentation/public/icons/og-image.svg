@@ -147,7 +147,7 @@
   </g>
 
   <!-- URL at bottom -->
-  <text x="600" y="560" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#5865f2" text-anchor="middle">z-http.com</text>
+  <text x="600" y="560" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#5865f2" text-anchor="middle">z-server.dev</text>
 
   <!-- Subtle border -->
   <rect x="0" y="0" width="1200" height="630" fill="none" stroke="url(#accent)" stroke-width="2" rx="0" opacity="0.15"/>

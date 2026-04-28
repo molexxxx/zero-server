@@ -38,5 +38,5 @@ const { createApp } = require('@zero-server/core')
 
 - [Top-level README](../../README.md)
 - [Full API reference](../../API.md)
-- [Live docs site](https://z-server.com)
+- [Live docs site](https://z-server.dev)
 - [`packages/core`](../../packages/core)

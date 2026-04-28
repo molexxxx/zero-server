@@ -25,7 +25,7 @@ const OUTPUT       = path.join(ROOT, 'API.md');
 // -- Static content ------------------------------------------
 
 const HEADER = `<p align="center">
-  <a href="https://z-server.com">
+  <a href="https://z-server.dev">
     <img src="documentation/public/icons/logo-animated.svg" alt="zero-server logo" width="120" height="120">
   </a>
 </p>
@@ -34,7 +34,7 @@ const HEADER = `<p align="center">
 
 <p align="center">
   <strong>
-    <a href="https://z-server.com">📖 Interactive docs, live playground, and searchable reference at z-server.com →</a>
+    <a href="https://z-server.dev">📖 Interactive docs, live playground, and searchable reference at z-server.dev →</a>
   </strong>
 </p>
 

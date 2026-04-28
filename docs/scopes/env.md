@@ -36,5 +36,5 @@ const { env } = require('@zero-server/env')
 
 - [Top-level README](../../README.md)
 - [Full API reference](../../API.md)
-- [Live docs site](https://z-server.com)
+- [Live docs site](https://z-server.dev)
 - [`packages/env`](../../packages/env)

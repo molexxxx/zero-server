@@ -69,5 +69,5 @@ const { Database, Model, TYPES } = require('@zero-server/orm')
 
 - [Top-level README](../../README.md)
 - [Full API reference](../../API.md)
-- [Live docs site](https://z-server.com)
+- [Live docs site](https://z-server.dev)
 - [`packages/orm`](../../packages/orm)
