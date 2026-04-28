@@ -1,0 +1,2467 @@
+{
+	"section": "gRPC",
+	"icon": "radio",
+	"items": [
+		{
+			"name": "Server",
+			"description": "gRPC server for zero-server. Intercepts HTTP/2 streams with `content-type: application/grpc`, routes by `:path` pseudo-header (`/package.Service/Method`), and dispatches to registered service handlers. Handles all four gRPC call types: - Unary (single request → single response) - Server streaming (single request → multiple responses) - Client streaming (multiple requests → single response) - Bidirectional streaming (multiple requests ↔ multiple responses) Supports interceptors (server-side middleware), deadline enforcement, message size limits, and graceful shutdown with call draining.",
+			"example": "  const { createApp, parseProto } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));\r\n\n  app.grpc(schema, 'Greeter', {\r\n      SayHello(call) {\r\n          return { message: 'Hello ' + call.request.name };\r\n      },\r\n  });\r\n\n  app.listen(50051, { http2: true });",
+			"examples": [
+				{
+					"code": "  const { createApp, parseProto } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));\r\n\n  app.grpc(schema, 'Greeter', {\r\n      SayHello(call) {\r\n          return { message: 'Hello ' + call.request.name };\r\n      },\r\n  });\r\n\n  app.listen(50051, { http2: true });",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.grpc(schema, 'DataService', {\r\n      StreamData(call) {\r\n          for (let i = 0; i < 100; i++) {\r\n              call.write({ seq: i, payload: 'chunk-' + i });\r\n          }\r\n          call.end();\r\n      },\r\n  });",
+					"lang": "javascript",
+					"title": "Server streaming"
+				},
+				{
+					"code": "  app.grpc(schema, 'ChatService', {\r\n      Chat(call) {\r\n          for await (const msg of call) {\r\n              call.write({ echo: msg.text, ts: Date.now() });\r\n          }\r\n          call.end();\r\n      },\r\n  }, {\r\n      interceptors: [authInterceptor, loggingInterceptor],\r\n  });",
+					"lang": "javascript",
+					"title": "Bidirectional streaming with interceptors"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Service Registry",
+					"methods": [
+						{
+							"method": "addService",
+							"signature": "addService(schema, serviceName, handlers, [opts])",
+							"description": "Register a service with its handlers.",
+							"methodParams": [
+								{
+									"param": "schema",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Parsed proto schema from `parseProto()`."
+								},
+								{
+									"param": "serviceName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Name of the service as defined in the proto file."
+								},
+								{
+									"param": "handlers",
+									"type": "Object<string, Function>",
+									"required": "Yes",
+									"notes": "Map of method names to handler functions."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Service options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "interceptors",
+									"type": "Function[]",
+									"default": "—",
+									"notes": "Per-service interceptors."
+								},
+								{
+									"option": "maxMessageSize",
+									"type": "number",
+									"default": "—",
+									"notes": "Max incoming message size in bytes."
+								},
+								{
+									"option": "compress",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Whether to compress outgoing messages."
+								}
+							],
+							"example": "  registry.addService(schema, 'Greeter', {\r\n      SayHello(call) { return { message: 'Hello ' + call.request.name }; },\r\n  });",
+							"examples": [
+								{
+									"code": "  registry.addService(schema, 'Greeter', {\r\n      SayHello(call) { return { message: 'Hello ' + call.request.name }; },\r\n  });",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "addInterceptor",
+							"signature": "addInterceptor(fn)",
+							"description": "Add a global interceptor that runs before every gRPC call. Interceptors receive `(call, next)` and must call `next()` to continue.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "Interceptor function `(call, next) => void`."
+								}
+							],
+							"example": "  registry.addInterceptor(async (call, next) => {\r\n      const token = call.metadata.get('authorization');\r\n      if (!token) return call.sendError(GrpcStatus.UNAUTHENTICATED, 'Missing auth');\r\n      await next();\r\n  });",
+							"examples": [
+								{
+									"code": "  registry.addInterceptor(async (call, next) => {\r\n      const token = call.metadata.get('authorization');\r\n      if (!token) return call.sendError(GrpcStatus.UNAUTHENTICATED, 'Missing auth');\r\n      await next();\r\n  });",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "handleStream",
+							"signature": "handleStream(stream, headers)",
+							"description": "Handle an incoming HTTP/2 stream. Determines if it's a gRPC call, routes to the correct handler, and manages the call lifecycle.",
+							"methodParams": [
+								{
+									"param": "stream",
+									"type": "import('http2').Http2Stream",
+									"required": "Yes",
+									"notes": "The HTTP/2 stream."
+								},
+								{
+									"param": "headers",
+									"type": "object",
+									"required": "Yes",
+									"notes": "HTTP/2 headers from the stream event."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if this was handled as a gRPC call."
+							}
+						},
+						{
+							"method": "drain",
+							"signature": "drain([timeout])",
+							"description": "Begin draining — reject new calls and wait for active calls to finish.",
+							"methodParams": [
+								{
+									"param": "timeout",
+									"type": "number",
+									"required": "No",
+									"notes": "Maximum time to wait in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						},
+						{
+							"method": "routes",
+							"signature": "routes()",
+							"description": "Get all registered routes for introspection.",
+							"methodReturns": {
+								"type": "{ method: string, path: string, type: string }[]",
+								"description": ""
+							},
+							"example": "  registry.routes();\r\n  // [{ method: 'GRPC', path: '/myapp.Greeter/SayHello', type: 'unary' }]",
+							"examples": [
+								{
+									"code": "  registry.routes();\r\n  // [{ method: 'GRPC', path: '/myapp.Greeter/SayHello', type: 'unary' }]",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Client",
+			"description": "Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four call types (unary, server-streaming, client-streaming, bidirectional), metadata, deadlines, automatic reconnection, and keep-alive.",
+			"example": "  const { GrpcClient, parseProto } = require('@zero-server/sdk');\r\n  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));\r\n\n  const client = new GrpcClient('http://localhost:50051', schema, 'Greeter');\r\n  const reply = await client.call('SayHello', { name: 'World' });\r\n  console.log(reply.message); // => 'Hello World'\r\n  client.close();",
+			"examples": [
+				{
+					"code": "  const { GrpcClient, parseProto } = require('@zero-server/sdk');\r\n  const schema = parseProto(fs.readFileSync('hello.proto', 'utf8'));\r\n\n  const client = new GrpcClient('http://localhost:50051', schema, 'Greeter');\r\n  const reply = await client.call('SayHello', { name: 'World' });\r\n  console.log(reply.message); // => 'Hello World'\r\n  client.close();",
+					"lang": "javascript",
+					"title": "Unary call"
+				},
+				{
+					"code": "  const stream = client.serverStream('ListUsers', { pageSize: 10 });\r\n  for await (const user of stream) {\r\n      console.log(user.name);\r\n  }",
+					"lang": "javascript",
+					"title": "Server streaming"
+				},
+				{
+					"code": "  const bidi = client.bidiStream('Chat');\r\n  bidi.write({ text: 'hello' });\r\n  for await (const reply of bidi) {\r\n      console.log(reply.text);\r\n  }\r\n  bidi.end();",
+					"lang": "javascript",
+					"title": "Bidirectional streaming"
+				},
+				{
+					"code": "  const client = new GrpcClient('https://api.example.com:443', schema, 'MyService', {\r\n      ca: fs.readFileSync('ca.pem'),\r\n      metadata: { authorization: 'Bearer <token>' },\r\n  });",
+					"lang": "javascript",
+					"title": "With TLS and metadata"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Unary Call",
+					"methods": [
+						{
+							"method": "call",
+							"signature": "call(methodName, request, [opts])",
+							"description": "Make a unary gRPC call — send one message, receive one response.",
+							"methodParams": [
+								{
+									"param": "methodName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "RPC method name as defined in the proto service."
+								},
+								{
+									"param": "request",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Request message object."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Call options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "metadata",
+									"type": "Metadata | object",
+									"default": "—",
+									"notes": "Per-call metadata."
+								},
+								{
+									"option": "deadline",
+									"type": "number",
+									"default": "—",
+									"notes": "Deadline in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<object>",
+								"description": "The decoded response message."
+							},
+							"example": "  const reply = await client.call('SayHello', { name: 'World' });",
+							"examples": [
+								{
+									"code": "  const reply = await client.call('SayHello', { name: 'World' });",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Server Streaming",
+					"methods": [
+						{
+							"method": "serverStream",
+							"signature": "serverStream(methodName, request, [opts])",
+							"description": "Make a server-streaming gRPC call — send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages.",
+							"methodParams": [
+								{
+									"param": "methodName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "RPC method name."
+								},
+								{
+									"param": "request",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Request message object."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Call options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "metadata",
+									"type": "Metadata | object",
+									"default": "—",
+									"notes": "Per-call metadata."
+								},
+								{
+									"option": "deadline",
+									"type": "number",
+									"default": "—",
+									"notes": "Deadline in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "AsyncIterable<object> & { cancel: Function }",
+								"description": "Async iterable of response messages."
+							},
+							"example": "  const stream = client.serverStream('ListUsers', { filter: 'active' });\r\n  for await (const user of stream) {\r\n      console.log(user);\r\n  }",
+							"examples": [
+								{
+									"code": "  const stream = client.serverStream('ListUsers', { filter: 'active' });\r\n  for await (const user of stream) {\r\n      console.log(user);\r\n  }",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Client Streaming",
+					"methods": [
+						{
+							"method": "clientStream",
+							"signature": "clientStream(methodName, [opts])",
+							"description": "Make a client-streaming gRPC call — send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise.",
+							"methodParams": [
+								{
+									"param": "methodName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "RPC method name."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Call options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "metadata",
+									"type": "Metadata | object",
+									"default": "—",
+									"notes": "Per-call metadata."
+								},
+								{
+									"option": "deadline",
+									"type": "number",
+									"default": "—",
+									"notes": "Deadline in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "{ write: Function, end: Function, response: Promise<object> }",
+								"description": ""
+							},
+							"example": "  const cs = client.clientStream('UploadChunks');\r\n  cs.write({ data: chunk1 });\r\n  cs.write({ data: chunk2 });\r\n  cs.end();\r\n  const result = await cs.response;",
+							"examples": [
+								{
+									"code": "  const cs = client.clientStream('UploadChunks');\r\n  cs.write({ data: chunk1 });\r\n  cs.write({ data: chunk2 });\r\n  cs.end();\r\n  const result = await cs.response;",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Bidirectional Streaming",
+					"methods": [
+						{
+							"method": "bidiStream",
+							"signature": "bidiStream(methodName, [opts])",
+							"description": "Make a bidirectional streaming gRPC call — send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable.",
+							"methodParams": [
+								{
+									"param": "methodName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "RPC method name."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Call options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "metadata",
+									"type": "Metadata | object",
+									"default": "—",
+									"notes": "Per-call metadata."
+								},
+								{
+									"option": "deadline",
+									"type": "number",
+									"default": "—",
+									"notes": "Deadline in ms."
+								}
+							],
+							"methodReturns": {
+								"type": "AsyncIterable<object> & { write: Function, end: Function, cancel: Function }",
+								"description": ""
+							},
+							"example": "  const bidi = client.bidiStream('Chat');\r\n  bidi.write({ text: 'Hello' });\r\n  for await (const reply of bidi) {\r\n      console.log(reply.text);\r\n      bidi.write({ text: 'got it' });\r\n  }\r\n  bidi.end();",
+							"examples": [
+								{
+									"code": "  const bidi = client.bidiStream('Chat');\r\n  bidi.write({ text: 'Hello' });\r\n  for await (const reply of bidi) {\r\n      console.log(reply.text);\r\n      bidi.write({ text: 'got it' });\r\n  }\r\n  bidi.end();",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Lifecycle",
+					"methods": [
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Close the client connection."
+						},
+						{
+							"method": "connected",
+							"signature": "connected()",
+							"description": "Check if the client is connected.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Call Objects",
+			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming",
+			"example": "  async function GetUser(call) {\r\n      const user = await db.findById(call.request.id);\r\n      return user; // auto-encoded and sent\r\n  }",
+			"examples": [
+				{
+					"code": "  async function GetUser(call) {\r\n      const user = await db.findById(call.request.id);\r\n      return user; // auto-encoded and sent\r\n  }",
+					"lang": "javascript",
+					"title": "Unary handler"
+				},
+				{
+					"code": "  async function ListUsers(call) {\r\n      for (const user of users) {\r\n          call.write(user);\r\n      }\r\n      call.end();\r\n  }",
+					"lang": "javascript",
+					"title": "Server streaming handler"
+				},
+				{
+					"code": "  async function Chat(call) {\r\n      for await (const msg of call) {\r\n          call.write({ echo: msg.text, ts: Date.now() });\r\n      }\r\n  }",
+					"lang": "javascript",
+					"title": "Bidirectional streaming handler"
+				}
+			],
+			"options": [
+				{
+					"option": "maxMessageSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Max message size in bytes."
+				},
+				{
+					"option": "compress",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Whether to compress outgoing messages."
+				}
+			],
+			"params": [
+				{
+					"param": "stream",
+					"type": "import('http2').Http2Stream",
+					"required": "Yes",
+					"notes": "The HTTP/2 stream for this call."
+				},
+				{
+					"param": "methodDef",
+					"type": "object",
+					"required": "Yes",
+					"notes": "Method descriptor from the proto schema."
+				},
+				{
+					"param": "messageTypes",
+					"type": "object",
+					"required": "Yes",
+					"notes": "Map of all message descriptors."
+				},
+				{
+					"param": "metadata",
+					"type": "Metadata",
+					"required": "Yes",
+					"notes": "Initial metadata from the client."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Metadata Sending",
+					"methods": [
+						{
+							"method": "sendMetadata",
+							"signature": "sendMetadata([md])",
+							"description": "Send initial response metadata (HTTP/2 headers). Must be called before writing any messages. If not called explicitly, headers are sent automatically on the first write.",
+							"methodParams": [
+								{
+									"param": "md",
+									"type": "Metadata | object",
+									"required": "No",
+									"notes": "Additional metadata to merge into the response headers."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Status / End",
+					"methods": [
+						{
+							"method": "sendStatus",
+							"signature": "sendStatus(code, [message])",
+							"description": "Send a gRPC status and close the call. Trailers carry `grpc-status` and optionally `grpc-message`.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "Yes",
+									"notes": "gRPC status code."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "No",
+									"notes": "Human-readable status message."
+								}
+							]
+						},
+						{
+							"method": "sendError",
+							"signature": "sendError(code, message)",
+							"description": "Send an error status and close the call. Convenience wrapper around `sendStatus`.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "Yes",
+									"notes": "gRPC status code."
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Error description."
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Writing",
+					"methods": [
+						{
+							"method": "write",
+							"signature": "write(message)",
+							"description": "Write a response message. The object is encoded to protobuf, framed, and sent on the HTTP/2 stream.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "object",
+									"required": "Yes",
+									"notes": "JavaScript object matching the output message schema."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`false` if the stream is not writable."
+							}
+						}
+					]
+				},
+				{
+					"group": "Deadline",
+					"methods": [
+						{
+							"method": "cancelled",
+							"signature": "cancelled()",
+							"description": "Check if the call has been cancelled.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "cancel",
+							"signature": "cancel()",
+							"description": "Cancel the call from the server side."
+						}
+					]
+				},
+				{
+					"group": "Server Streaming Call",
+					"methods": [
+						{
+							"method": "end",
+							"signature": "end()",
+							"description": "End the server stream with OK status."
+						}
+					]
+				},
+				{
+					"group": "Bidirectional Streaming Call",
+					"methods": [
+						{
+							"method": "end",
+							"signature": "end()",
+							"description": "End the bidirectional stream with OK status."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Proto3 Parser",
+			"description": "Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`",
+			"options": [
+				{
+					"option": "filename",
+					"type": "string",
+					"default": "—",
+					"notes": "File name for error messages."
+				},
+				{
+					"option": "basePath",
+					"type": "string",
+					"default": "—",
+					"notes": "Base directory for resolving imports."
+				},
+				{
+					"option": "resolveImports",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Whether to recursively parse imported files."
+				}
+			],
+			"params": [
+				{
+					"param": "source",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Proto3 source text."
+				}
+			],
+			"returns": {
+				"type": "ProtoSchema",
+				"description": "Parsed schema with messages, enums, and services."
+			},
+			"example": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  — { MessageName: { fields: [...] } }\r\n  // schema.enums     — { EnumName: { values: { ... } } }\r\n  // schema.services  — { ServiceName: { methods: { ... } } }",
+			"examples": [
+				{
+					"code": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  — { MessageName: { fields: [...] } }\r\n  // schema.enums     — { EnumName: { values: { ... } } }\r\n  // schema.services  — { ServiceName: { methods: { ... } } }",
+					"lang": "javascript"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "File Loader",
+					"methods": [
+						{
+							"method": "parseProtoFile",
+							"signature": "parseProtoFile(filePath, [opts])",
+							"description": "Parse a `.proto` file from disk.",
+							"methodParams": [
+								{
+									"param": "filePath",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Path to the `.proto` file."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Parser options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "resolveImports",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Whether to recursively resolve imports."
+								}
+							],
+							"methodReturns": {
+								"type": "ProtoSchema",
+								"description": "Parsed schema."
+							},
+							"example": "  const schema = parseProtoFile('./protos/chat.proto');",
+							"examples": [
+								{
+									"code": "  const schema = parseProtoFile('./protos/chat.proto');",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Protobuf Codec",
+			"description": "Zero-dependency Protocol Buffers wire-format encoder/decoder. Implements the proto3 binary encoding for all scalar types, nested messages, repeated fields, maps, oneofs, and enums. Wire types: - 0: Varint (int32, int64, uint32, uint64, sint32, sint64, bool, enum) - 1: 64-bit fixed (fixed64, sfixed64, double) - 2: Length-delimited (string, bytes, nested message, packed repeated) - 5: 32-bit fixed (fixed32, sfixed32, float)",
+			"params": [
+				{
+					"param": "buffer",
+					"type": "Buffer",
+					"required": "Yes",
+					"notes": "Protobuf wire-format data."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Low-Level Primitives",
+					"methods": [
+						{
+							"method": "writeRaw",
+							"signature": "writeRaw(buf)",
+							"description": "Write raw bytes.",
+							"methodParams": [
+								{
+									"param": "buf",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "writeVarint",
+							"signature": "writeVarint(value)",
+							"description": "Write a varint (variable-length integer) using LEB128 encoding. Handles values up to 2^53 safely (JavaScript number precision limit).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Non-negative integer."
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "writeSVarint",
+							"signature": "writeSVarint(value)",
+							"description": "Write a signed varint using ZigZag encoding (sint32/sint64).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Signed integer."
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeFixed32",
+							"signature": "writeFixed32(value)",
+							"description": "Write a 32-bit fixed integer (little-endian).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeSFixed32",
+							"signature": "writeSFixed32(value)",
+							"description": "Write a 32-bit signed fixed integer (little-endian).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeFixed64",
+							"signature": "writeFixed64(value)",
+							"description": "Write a 64-bit fixed integer (little-endian) from a BigInt or number.",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number | BigInt",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeSFixed64",
+							"signature": "writeSFixed64(value)",
+							"description": "Write a 64-bit signed fixed integer (little-endian).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number | BigInt",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeFloat",
+							"signature": "writeFloat(value)",
+							"description": "Write a 32-bit IEEE 754 float.",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeDouble",
+							"signature": "writeDouble(value)",
+							"description": "Write a 64-bit IEEE 754 double.",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeBool",
+							"signature": "writeBool(value)",
+							"description": "Write a boolean as a single-byte varint.",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "boolean",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeString",
+							"signature": "writeString(value)",
+							"description": "Write a UTF-8 string (length-prefixed).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeBytes",
+							"signature": "writeBytes(value)",
+							"description": "Write raw bytes (length-prefixed).",
+							"methodParams": [
+								{
+									"param": "value",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "writeTag",
+							"signature": "writeTag(fieldNumber, wireType)",
+							"description": "Write a field tag (field number + wire type).",
+							"methodParams": [
+								{
+									"param": "fieldNumber",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Protobuf field number."
+								},
+								{
+									"param": "wireType",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Wire type (0-5)."
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "finish",
+							"signature": "finish()",
+							"description": "Finalize and return the complete encoded buffer.",
+							"methodReturns": {
+								"type": "Buffer",
+								"description": "Concatenated protobuf binary."
+							}
+						},
+						{
+							"method": "length",
+							"signature": "length()",
+							"description": "Get the total byte size of all written data.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readVarint",
+							"signature": "readVarint()",
+							"description": "Read a varint (LEB128-encoded variable-length integer). Returns a JavaScript number (safe for values up to 2^53).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readSVarint",
+							"signature": "readSVarint()",
+							"description": "Read a signed varint using ZigZag decoding (sint32/sint64).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readFixed32",
+							"signature": "readFixed32()",
+							"description": "Read a 32-bit fixed unsigned integer (little-endian).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readSFixed32",
+							"signature": "readSFixed32()",
+							"description": "Read a 32-bit fixed signed integer (little-endian).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readFixed64",
+							"signature": "readFixed64()",
+							"description": "Read a 64-bit fixed unsigned integer (little-endian). Returns a number (precision loss above 2^53).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readSFixed64",
+							"signature": "readSFixed64()",
+							"description": "Read a 64-bit fixed signed integer (little-endian).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readFloat",
+							"signature": "readFloat()",
+							"description": "Read a 32-bit IEEE 754 float.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readDouble",
+							"signature": "readDouble()",
+							"description": "Read a 64-bit IEEE 754 double.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "readBool",
+							"signature": "readBool()",
+							"description": "Read a boolean varint.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "readString",
+							"signature": "readString()",
+							"description": "Read a length-prefixed UTF-8 string.",
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							}
+						},
+						{
+							"method": "readBytes",
+							"signature": "readBytes()",
+							"description": "Read length-prefixed raw bytes.",
+							"methodReturns": {
+								"type": "Buffer",
+								"description": ""
+							}
+						},
+						{
+							"method": "readTag",
+							"signature": "readTag()",
+							"description": "Read a field tag and decode field number + wire type.",
+							"methodReturns": {
+								"type": "{ fieldNumber: number, wireType: number }",
+								"description": ""
+							}
+						},
+						{
+							"method": "skipField",
+							"signature": "skipField(wireType)",
+							"description": "Skip a field value based on its wire type (for unknown fields).",
+							"methodParams": [
+								{
+									"param": "wireType",
+									"type": "number",
+									"required": "Yes",
+									"notes": "Wire type to skip."
+								}
+							]
+						},
+						{
+							"method": "readSubReader",
+							"signature": "readSubReader()",
+							"description": "Create a sub-reader for a length-delimited embedded message.",
+							"methodReturns": {
+								"type": "Reader",
+								"description": "A new Reader limited to the embedded message bytes."
+							}
+						}
+					]
+				},
+				{
+					"group": "Field-level convenience methods (tag + value)",
+					"methods": [
+						{
+							"method": "string",
+							"signature": "string(fieldNumber, value)",
+							"description": "Write a string field (tag + length-delimited string).",
+							"methodParams": [
+								{
+									"param": "fieldNumber",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "value",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "bytes",
+							"signature": "bytes(fieldNumber, value)",
+							"description": "Write a bytes/embedded-message field (tag + length-delimited bytes).",
+							"methodParams": [
+								{
+									"param": "fieldNumber",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "value",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "int32",
+							"signature": "int32(fieldNumber, value)",
+							"description": "Write an int32/enum field (tag + varint).",
+							"methodParams": [
+								{
+									"param": "fieldNumber",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "value",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						},
+						{
+							"method": "bool",
+							"signature": "bool(fieldNumber, value)",
+							"description": "Write a bool field (tag + varint 0/1).",
+							"methodParams": [
+								{
+									"param": "fieldNumber",
+									"type": "number",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "value",
+									"type": "boolean",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Writer",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Reader",
+					"methods": [
+						{
+							"method": "remaining",
+							"signature": "remaining()",
+							"description": "Number of bytes remaining to be read.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						},
+						{
+							"method": "done",
+							"signature": "done()",
+							"description": "Whether all bytes have been consumed.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "position",
+							"signature": "position()",
+							"description": "Current read position (byte offset).",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Message Codec",
+					"methods": [
+						{
+							"method": "encode",
+							"signature": "encode(obj, messageDesc, allMessages, [depth])",
+							"description": "Encode a JavaScript object to protobuf binary using a message descriptor.",
+							"methodParams": [
+								{
+									"param": "obj",
+									"type": "object",
+									"required": "Yes",
+									"notes": "The JavaScript object to encode."
+								},
+								{
+									"param": "messageDesc",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Message descriptor from the proto parser."
+								},
+								{
+									"param": "allMessages",
+									"type": "Object<string, object>",
+									"required": "Yes",
+									"notes": "Map of all message descriptors (for nested types)."
+								},
+								{
+									"param": "depth",
+									"type": "number",
+									"required": "No",
+									"notes": "Current recursion depth (stack overflow protection)."
+								}
+							],
+							"methodReturns": {
+								"type": "Buffer",
+								"description": "Encoded protobuf binary."
+							},
+							"example": "  const buf = encode({ name: 'Alice', age: 30 }, personDesc, allMessages);",
+							"examples": [
+								{
+									"code": "  const buf = encode({ name: 'Alice', age: 30 }, personDesc, allMessages);",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "decode",
+							"signature": "decode(buffer, messageDesc, allMessages, [depth])",
+							"description": "Decode protobuf binary into a JavaScript object using a message descriptor.",
+							"methodParams": [
+								{
+									"param": "buffer",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "Protobuf wire-format data."
+								},
+								{
+									"param": "messageDesc",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Message descriptor from the proto parser."
+								},
+								{
+									"param": "allMessages",
+									"type": "Object<string, object>",
+									"required": "Yes",
+									"notes": "Map of all message descriptors."
+								},
+								{
+									"param": "depth",
+									"type": "number",
+									"required": "No",
+									"notes": "Current recursion depth."
+								}
+							],
+							"methodReturns": {
+								"type": "object",
+								"description": "Decoded JavaScript object."
+							},
+							"example": "  const person = decode(buffer, personDesc, allMessages);",
+							"examples": [
+								{
+									"code": "  const person = decode(buffer, personDesc, allMessages);",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Scalar Helpers",
+					"methods": [
+						{
+							"method": "isPackable",
+							"signature": "isPackable(type)",
+							"description": "Check if a protobuf type can be packed (numeric/bool scalars only).",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Protobuf type name."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Status Codes",
+			"description": "Standard gRPC status codes (as defined by the gRPC specification). Each code has a numeric value, a name, and a human-readable description. Used by both server and client to communicate call outcomes via trailers.",
+			"params": [
+				{
+					"param": "grpcCode",
+					"type": "number",
+					"required": "Yes",
+					"notes": "gRPC status code."
+				}
+			],
+			"returns": {
+				"type": "number",
+				"description": "Corresponding HTTP status code."
+			},
+			"methodGroups": [
+				{
+					"group": "Status Codes",
+					"methods": [
+						{
+							"method": "statusName",
+							"signature": "statusName(code)",
+							"description": "Get the human-readable name for a gRPC status code.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "Yes",
+									"notes": "gRPC status code."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "Status name or 'UNKNOWN'."
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Metadata",
+			"description": "gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.",
+			"example": "  const md = new Metadata();\r\n  md.set('x-request-id', '123');\r\n  md.add('x-tags', 'alpha');\r\n  md.add('x-tags', 'beta');\r\n  md.getAll('x-tags');  // ['alpha', 'beta']",
+			"examples": [
+				{
+					"code": "  const md = new Metadata();\r\n  md.set('x-request-id', '123');\r\n  md.add('x-tags', 'alpha');\r\n  md.add('x-tags', 'beta');\r\n  md.getAll('x-tags');  // ['alpha', 'beta']",
+					"lang": "javascript"
+				},
+				{
+					"code": "  md.set('icon-bin', Buffer.from([0x89, 0x50, 0x4e, 0x47]));\r\n  md.get('icon-bin');  // <Buffer 89 50 4e 47>",
+					"lang": "javascript",
+					"title": "Binary metadata"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Core Operations",
+					"methods": [
+						{
+							"method": "set",
+							"signature": "set(key, value)",
+							"description": "Set a metadata key to a single value, replacing any existing values. Binary keys (ending in `-bin`) accept Buffer values; all others accept strings.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key (lowercase, no whitespace)."
+								},
+								{
+									"param": "value",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "The value to store."
+								}
+							],
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "`this` for chaining."
+							},
+							"example": "  md.set('x-request-id', 'abc-123');",
+							"examples": [
+								{
+									"code": "  md.set('x-request-id', 'abc-123');",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "add",
+							"signature": "add(key, value)",
+							"description": "Add a value to a metadata key without replacing existing values. Allows multi-valued metadata (e.g. multiple tags or roles).",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								},
+								{
+									"param": "value",
+									"type": "string | Buffer",
+									"required": "Yes",
+									"notes": "Value to append."
+								}
+							],
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "`this` for chaining."
+							},
+							"example": "  md.add('x-roles', 'admin');\r\n  md.add('x-roles', 'editor');\r\n  md.getAll('x-roles');  // ['admin', 'editor']",
+							"examples": [
+								{
+									"code": "  md.add('x-roles', 'admin');\r\n  md.add('x-roles', 'editor');\r\n  md.getAll('x-roles');  // ['admin', 'editor']",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "get",
+							"signature": "get(key)",
+							"description": "Get the first value for a metadata key.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								}
+							],
+							"methodReturns": {
+								"type": "string | Buffer | undefined",
+								"description": "First value, or undefined if not set."
+							},
+							"example": "  md.get('x-request-id');  // 'abc-123'",
+							"examples": [
+								{
+									"code": "  md.get('x-request-id');  // 'abc-123'",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "getAll",
+							"signature": "getAll(key)",
+							"description": "Get all values for a metadata key.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								}
+							],
+							"methodReturns": {
+								"type": "Array<string | Buffer>",
+								"description": "Array of values (empty if key not set)."
+							},
+							"example": "  md.getAll('x-roles');  // ['admin', 'editor']",
+							"examples": [
+								{
+									"code": "  md.getAll('x-roles');  // ['admin', 'editor']",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "has",
+							"signature": "has(key)",
+							"description": "Check whether a metadata key has been set.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "remove",
+							"signature": "remove(key)",
+							"description": "Remove a metadata key and all its values.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if the key existed and was removed."
+							}
+						},
+						{
+							"method": "clear",
+							"signature": "clear()",
+							"description": "Remove all metadata entries.",
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "size",
+							"signature": "size()",
+							"description": "Return the number of distinct metadata keys.",
+							"methodReturns": {
+								"type": "number",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Serialization",
+					"methods": [
+						{
+							"method": "toHeaders",
+							"signature": "toHeaders()",
+							"description": "Convert metadata to a plain object suitable for HTTP/2 headers/trailers. Multi-valued keys are joined with `, `. Binary values are base64-encoded.",
+							"methodReturns": {
+								"type": "Object<string, string>",
+								"description": "Header-compatible object."
+							},
+							"example": "  md.toHeaders();\r\n  // { 'x-request-id': 'abc-123', 'x-roles': 'admin, editor' }",
+							"examples": [
+								{
+									"code": "  md.toHeaders();\r\n  // { 'x-request-id': 'abc-123', 'x-roles': 'admin, editor' }",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "merge",
+							"signature": "merge(other)",
+							"description": "Merge entries from another Metadata instance or plain object.",
+							"methodParams": [
+								{
+									"param": "other",
+									"type": "Metadata | Object<string, string | string[]>",
+									"required": "Yes",
+									"notes": "Source to merge from."
+								}
+							],
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "`this` for chaining."
+							}
+						},
+						{
+							"method": "clone",
+							"signature": "clone()",
+							"description": "Create a shallow clone of this Metadata.",
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "New Metadata instance with the same entries."
+							}
+						},
+						{
+							"method": "entries",
+							"signature": "entries()",
+							"description": "Return all entries as an array of `[key, value]` pairs.",
+							"methodReturns": {
+								"type": "Array<[string, string | Buffer]>",
+								"description": ""
+							}
+						},
+						{
+							"method": "keys",
+							"signature": "keys()",
+							"description": "Return all distinct keys.",
+							"methodReturns": {
+								"type": "string[]",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Static Helpers",
+					"methods": [
+						{
+							"method": "fromHeaders",
+							"signature": "fromHeaders(headers, [opts])",
+							"description": "Create a Metadata instance from HTTP/2 headers, extracting only user metadata (skipping pseudo-headers, gRPC internal headers, and standard HTTP headers).",
+							"methodParams": [
+								{
+									"param": "headers",
+									"type": "Object<string, string | string[]>",
+									"required": "Yes",
+									"notes": "HTTP/2 headers object."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "maxSize",
+									"type": "number",
+									"default": "8192",
+									"notes": "Maximum metadata size."
+								}
+							],
+							"methodReturns": {
+								"type": "Metadata",
+								"description": "Populated metadata instance."
+							},
+							"example": "  const md = Metadata.fromHeaders(stream.headers);",
+							"examples": [
+								{
+									"code": "  const md = Metadata.fromHeaders(stream.headers);",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Utility Functions",
+					"methods": [
+						{
+							"method": "isBinaryKey",
+							"signature": "isBinaryKey(key)",
+							"description": "Check if a metadata key is a binary key (ends with `-bin`).",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Metadata key."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "normalizeKey",
+							"signature": "normalizeKey(key)",
+							"description": "Normalize a metadata key to lowercase.",
+							"methodParams": [
+								{
+									"param": "key",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Framing",
+			"description": "gRPC length-prefixed message framing over HTTP/2. Each gRPC message on the wire has a 5-byte header: - Byte 0:   Compression flag (0 = uncompressed, 1 = compressed) - Bytes 1-4: Message length as 32-bit big-endian unsigned integer Followed by the protobuf-encoded message body. Also handles optional gzip compression/decompression.",
+			"options": [
+				{
+					"option": "maxMessageSize",
+					"type": "number",
+					"default": "16777216",
+					"notes": "Max message size."
+				},
+				{
+					"option": "allowCompressed",
+					"type": "boolean",
+					"default": "true",
+					"notes": "Accept gzip frames."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Frame Encoder",
+					"methods": [
+						{
+							"method": "frameEncode",
+							"signature": "frameEncode(message, [opts])",
+							"description": "Encode a protobuf message buffer into a gRPC framed message.",
+							"methodParams": [
+								{
+									"param": "message",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "Protobuf-encoded message data."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Framing options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "compress",
+									"type": "boolean",
+									"default": "false",
+									"notes": "Whether to gzip-compress the message."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<Buffer> | Buffer",
+								"description": "Framed message (async if compressing)."
+							},
+							"example": "  const frame = frameEncode(protobufBytes);\r\n  stream.write(frame);",
+							"examples": [
+								{
+									"code": "  const frame = frameEncode(protobufBytes);\r\n  stream.write(frame);",
+									"lang": "javascript"
+								},
+								{
+									"code": "  const frame = await frameEncode(protobufBytes, { compress: true });",
+									"lang": "javascript",
+									"title": "With compression"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Frame Decoder",
+					"methods": [
+						{
+							"method": "push",
+							"signature": "push(chunk)",
+							"description": "Feed a data chunk to the parser. May trigger zero or more `onMessage` callbacks.",
+							"methodParams": [
+								{
+									"param": "chunk",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "Raw bytes from the HTTP/2 stream."
+								}
+							]
+						},
+						{
+							"method": "reset",
+							"signature": "reset()",
+							"description": "Reset the parser state, discarding any buffered data."
+						},
+						{
+							"method": "destroy",
+							"signature": "destroy()",
+							"description": "Destroy the parser, preventing further processing."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Health Service",
+			"description": "gRPC Health Checking Protocol implementation (grpc.health.v1.Health). Supports `Check` (unary) and `Watch` (server-stream) RPCs. Required for production deployments behind Kubernetes, Envoy, AWS ALB, and any load balancer that uses standard gRPC health probes.",
+			"example": "  const { createApp } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n  app.grpcHealth();\r\n  app.listen(50051, { http2: true });",
+			"examples": [
+				{
+					"code": "  const { createApp } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n  app.grpcHealth();\r\n  app.listen(50051, { http2: true });",
+					"lang": "javascript"
+				},
+				{
+					"code": "  app.grpcHealth();\r\n  app.setServiceStatus('myapp.UserService', 'SERVING');\r\n  app.setServiceStatus('myapp.OrderService', 'NOT_SERVING');",
+					"lang": "javascript",
+					"title": "Per-service health status"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Health Service Manager",
+					"methods": [
+						{
+							"method": "setStatus",
+							"signature": "setStatus(serviceName, status)",
+							"description": "Set the health status for a service.",
+							"methodParams": [
+								{
+									"param": "serviceName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Service name (empty string for overall)."
+								},
+								{
+									"param": "status",
+									"type": "number | string",
+									"required": "Yes",
+									"notes": "Status value or name."
+								}
+							]
+						},
+						{
+							"method": "getStatus",
+							"signature": "getStatus(serviceName)",
+							"description": "Get the current status for a service.",
+							"methodParams": [
+								{
+									"param": "serviceName",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Service name."
+								}
+							],
+							"methodReturns": {
+								"type": "number",
+								"description": "Status code, or SERVICE_UNKNOWN if not registered."
+							}
+						},
+						{
+							"method": "setAllNotServing",
+							"signature": "setAllNotServing()",
+							"description": "Set all registered services to NOT_SERVING for graceful shutdown."
+						},
+						{
+							"method": "Check",
+							"signature": "Check(call)",
+							"description": "Handle a Check RPC — unary request for current health of a service.",
+							"methodParams": [
+								{
+									"param": "call",
+									"type": "import('./call').UnaryCall",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "Watch",
+							"signature": "Watch(call)",
+							"description": "Handle a Watch RPC — server-stream that pushes status changes. Sends the current status immediately, then pushes on every change.",
+							"methodParams": [
+								{
+									"param": "call",
+									"type": "import('./call').ServerStreamCall",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "getSchema",
+							"signature": "getSchema()",
+							"description": "Get the schema object needed for server registration. Avoids requiring proto parsing — returns descriptors directly.",
+							"methodReturns": {
+								"type": "object",
+								"description": "Schema compatible with GrpcServiceRegistry.addService"
+							}
+						},
+						{
+							"method": "getHandlers",
+							"signature": "getHandlers()",
+							"description": "Get the handler map for server registration. Binds methods to this instance.",
+							"methodReturns": {
+								"type": "Object<string, Function>",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Reflection",
+			"description": "gRPC Server Reflection Protocol implementation (grpc.reflection.v1). Enables `grpcurl`, `grpcui`, Postman, and other debugging tools to introspect registered services without supplying `.proto` files.",
+			"example": "  const app = createApp();\r\n  app.grpc(schema, 'Greeter', handlers);\r\n  app.grpcReflection();  // dev-only by default\r\n  app.listen(50051, { http2: true });",
+			"examples": [
+				{
+					"code": "  const app = createApp();\r\n  app.grpc(schema, 'Greeter', handlers);\r\n  app.grpcReflection();  // dev-only by default\r\n  app.listen(50051, { http2: true });",
+					"lang": "javascript"
+				}
+			],
+			"options": [
+				{
+					"option": "production",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Enable in production."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Reflection Service",
+					"methods": [
+						{
+							"method": "addSchema",
+							"signature": "addSchema(schema, [filename])",
+							"description": "Register a schema for reflection. Builds and caches the FileDescriptorProto at registration time.",
+							"methodParams": [
+								{
+									"param": "schema",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Parsed proto schema."
+								},
+								{
+									"param": "filename",
+									"type": "string",
+									"required": "No",
+									"notes": "Filename to use. Defaults to schema package or '<inline>'."
+								}
+							]
+						},
+						{
+							"method": "getSchema",
+							"signature": "getSchema()",
+							"description": "Get the schema for server registration.",
+							"methodReturns": {
+								"type": "object",
+								"description": ""
+							}
+						},
+						{
+							"method": "getHandlers",
+							"signature": "getHandlers()",
+							"description": "Get the handler map.",
+							"methodReturns": {
+								"type": "Object<string, Function>",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Load Balancing",
+			"description": "Client-side load balancing for gRPC. Distributes requests across multiple backend addresses using pick-first (with failover) or round-robin policies. Manages subchannels (HTTP/2 connections) per backend with automatic reconnection, exponential backoff, and health awareness.",
+			"example": "  const { GrpcClient, parseProto } = require('@zero-server/sdk');\r\n  const schema = parseProto(protoSource);\r\n\n  const client = new GrpcClient({\r\n      addresses: ['backend-1:50051', 'backend-2:50051', 'backend-3:50051'],\r\n      loadBalancing: 'round-robin',\r\n  }, schema, 'Greeter');\r\n\n  const reply = await client.call('SayHello', { name: 'World' });",
+			"examples": [
+				{
+					"code": "  const { GrpcClient, parseProto } = require('@zero-server/sdk');\r\n  const schema = parseProto(protoSource);\r\n\n  const client = new GrpcClient({\r\n      addresses: ['backend-1:50051', 'backend-2:50051', 'backend-3:50051'],\r\n      loadBalancing: 'round-robin',\r\n  }, schema, 'Greeter');\r\n\n  const reply = await client.call('SayHello', { name: 'World' });",
+					"lang": "javascript"
+				}
+			],
+			"params": [
+				{
+					"param": "address",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Backend address (host:port or full URL)."
+				},
+				{
+					"param": "connectOpts",
+					"type": "object",
+					"required": "No",
+					"notes": "HTTP/2 connection options (TLS, etc.)."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Subchannel",
+					"methods": [
+						{
+							"method": "connect",
+							"signature": "connect()",
+							"description": "Connect to the backend.",
+							"methodReturns": {
+								"type": "import('http2').ClientHttp2Session | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "getSession",
+							"signature": "getSession()",
+							"description": "Get the session, connecting if needed.",
+							"methodReturns": {
+								"type": "import('http2').ClientHttp2Session | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "isReady",
+							"signature": "isReady()",
+							"description": "Whether this subchannel is ready to serve requests.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "isHealthy",
+							"signature": "isHealthy()",
+							"description": "Whether this subchannel is considered healthy.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "shutdown",
+							"signature": "shutdown()",
+							"description": "Shut down this subchannel."
+						}
+					]
+				},
+				{
+					"group": "Load Balancing Policies",
+					"methods": [
+						{
+							"method": "pick",
+							"signature": "pick(subchannels)",
+							"description": "Pick the next subchannel.",
+							"methodParams": [
+								{
+									"param": "subchannels",
+									"type": "Subchannel[]",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Subchannel | null",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Balancer",
+					"methods": [
+						{
+							"method": "pick",
+							"signature": "pick()",
+							"description": "Pick a subchannel for the next request.",
+							"methodReturns": {
+								"type": "Subchannel | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "getSession",
+							"signature": "getSession()",
+							"description": "Get an HTTP/2 session from the selected subchannel.",
+							"methodReturns": {
+								"type": "import('http2').ClientHttp2Session | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "shutdown",
+							"signature": "shutdown()",
+							"description": "Shut down all subchannels."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Credentials",
+			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages.",
+			"example": "  const { ChannelCredentials, GrpcClient } = require('@zero-server/sdk');\r\n  const creds = ChannelCredentials.createInsecure();\r\n  const client = new GrpcClient({ address: 'http://localhost:50051', credentials: creds }, schema, 'Greeter');",
+			"examples": [
+				{
+					"code": "  const { ChannelCredentials, GrpcClient } = require('@zero-server/sdk');\r\n  const creds = ChannelCredentials.createInsecure();\r\n  const client = new GrpcClient({ address: 'http://localhost:50051', credentials: creds }, schema, 'Greeter');",
+					"lang": "javascript",
+					"title": "Insecure (plaintext)"
+				},
+				{
+					"code": "  const creds = ChannelCredentials.createSsl(fs.readFileSync('ca.pem'));",
+					"lang": "javascript",
+					"title": "Server-only TLS"
+				},
+				{
+					"code": "  const creds = ChannelCredentials.createSsl(\r\n      fs.readFileSync('ca.pem'),\r\n      fs.readFileSync('client-key.pem'),\r\n      fs.readFileSync('client-cert.pem'),\r\n  );",
+					"lang": "javascript",
+					"title": "Mutual TLS (mTLS)"
+				},
+				{
+					"code": "  const creds = ChannelCredentials.createFromMetadata((params) => ({\r\n      authorization: 'Bearer ' + getToken(),\r\n  }));",
+					"lang": "javascript",
+					"title": "Metadata credentials (e.g. Bearer token)"
+				},
+				{
+					"code": "  const creds = ChannelCredentials.combine(\r\n      ChannelCredentials.createSsl(ca),\r\n      ChannelCredentials.createFromMetadata(() => ({ authorization: 'Bearer ' + token })),\r\n  );",
+					"lang": "javascript",
+					"title": "Composed credentials (TLS + per-call metadata)"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "ChannelCredentials Class",
+					"methods": [
+						{
+							"method": "createInsecure",
+							"signature": "createInsecure()",
+							"description": "Create insecure (plaintext) credentials. No TLS — suitable for development or service-mesh environments where transport security is handled by the infrastructure.",
+							"methodReturns": {
+								"type": "ChannelCredentials",
+								"description": ""
+							}
+						},
+						{
+							"method": "createSsl",
+							"signature": "createSsl([rootCerts], [clientKey], [clientCert], [opts])",
+							"description": "Create SSL/TLS credentials.",
+							"methodParams": [
+								{
+									"param": "rootCerts",
+									"type": "Buffer | string | null",
+									"required": "No",
+									"notes": "Root CA certificate(s) in PEM format.\nIf null, uses the system default trust store."
+								},
+								{
+									"param": "clientKey",
+									"type": "Buffer | string | null",
+									"required": "No",
+									"notes": "Client private key in PEM format (for mTLS)."
+								},
+								{
+									"param": "clientCert",
+									"type": "Buffer | string | null",
+									"required": "No",
+									"notes": "Client certificate in PEM format (for mTLS)."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "rejectUnauthorized",
+									"type": "boolean",
+									"default": "true",
+									"notes": "Reject connections with invalid certs."
+								}
+							],
+							"methodReturns": {
+								"type": "ChannelCredentials",
+								"description": ""
+							},
+							"example": "  const creds = ChannelCredentials.createSsl(fs.readFileSync('ca.pem'));",
+							"examples": [
+								{
+									"code": "  const creds = ChannelCredentials.createSsl(fs.readFileSync('ca.pem'));",
+									"lang": "javascript",
+									"title": "Server-only TLS"
+								},
+								{
+									"code": "  const creds = ChannelCredentials.createSsl(caPem, keyPem, certPem);",
+									"lang": "javascript",
+									"title": "Mutual TLS"
+								}
+							]
+						},
+						{
+							"method": "createSslFromFiles",
+							"signature": "createSslFromFiles([caPath], [keyPath], [certPath], [opts])",
+							"description": "Create SSL credentials from PEM file paths. Files are read once at creation time.",
+							"methodParams": [
+								{
+									"param": "caPath",
+									"type": "string | null",
+									"required": "No",
+									"notes": "Path to CA certificate file."
+								},
+								{
+									"param": "keyPath",
+									"type": "string | null",
+									"required": "No",
+									"notes": "Path to client key file."
+								},
+								{
+									"param": "certPath",
+									"type": "string | null",
+									"required": "No",
+									"notes": "Path to client certificate file."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "Additional options."
+								}
+							],
+							"methodReturns": {
+								"type": "ChannelCredentials",
+								"description": ""
+							},
+							"example": "  const creds = ChannelCredentials.createSslFromFiles('./certs/ca.pem', './certs/client.key', './certs/client.pem');",
+							"examples": [
+								{
+									"code": "  const creds = ChannelCredentials.createSslFromFiles('./certs/ca.pem', './certs/client.key', './certs/client.pem');",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "createFromMetadata",
+							"signature": "createFromMetadata(metadataGenerator)",
+							"description": "Create per-call metadata credentials. The generator function is called before each RPC to produce metadata headers (e.g. authorization tokens).",
+							"methodParams": [
+								{
+									"param": "metadataGenerator",
+									"type": "Function",
+									"required": "Yes",
+									"notes": "`(params?) => object|Promise<object>`.\nReturns key-value pairs to merge into call metadata.\n`params` includes `{ serviceUrl, methodName }`."
+								}
+							],
+							"methodReturns": {
+								"type": "ChannelCredentials",
+								"description": ""
+							},
+							"example": "  const creds = ChannelCredentials.createFromMetadata(async () => ({\r\n      authorization: 'Bearer ' + await getAccessToken(),\r\n  }));",
+							"examples": [
+								{
+									"code": "  const creds = ChannelCredentials.createFromMetadata(async () => ({\r\n      authorization: 'Bearer ' + await getAccessToken(),\r\n  }));",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "combine",
+							"signature": "combine(...credentials)",
+							"description": "Combine multiple credentials into one. At most one channel credential (insecure/SSL) and any number of call credentials (metadata) can be combined.",
+							"methodParams": [
+								{
+									"param": "credentials",
+									"type": "ChannelCredentials",
+									"required": "Yes",
+									"notes": "Credentials to combine."
+								}
+							],
+							"methodReturns": {
+								"type": "ChannelCredentials",
+								"description": ""
+							},
+							"example": "  const creds = ChannelCredentials.combine(\r\n      ChannelCredentials.createSsl(ca),\r\n      ChannelCredentials.createFromMetadata(() => ({ 'x-api-key': apiKey })),\r\n      ChannelCredentials.createFromMetadata(async () => ({ authorization: 'Bearer ' + token })),\r\n  );",
+							"examples": [
+								{
+									"code": "  const creds = ChannelCredentials.combine(\r\n      ChannelCredentials.createSsl(ca),\r\n      ChannelCredentials.createFromMetadata(() => ({ 'x-api-key': apiKey })),\r\n      ChannelCredentials.createFromMetadata(async () => ({ authorization: 'Bearer ' + token })),\r\n  );",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "isSecure",
+							"signature": "isSecure()",
+							"description": "Whether this credential uses TLS.",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "getConnectionOptions",
+							"signature": "getConnectionOptions()",
+							"description": "Get the TLS connection options for `http2.connect()`. Returns `null` for insecure/metadata-only credentials.",
+							"methodReturns": {
+								"type": "object | null",
+								"description": "TLS options `{ ca, key, cert, rejectUnauthorized }`."
+							}
+						},
+						{
+							"method": "generateMetadata",
+							"signature": "generateMetadata([params])",
+							"description": "Generate per-call metadata by running all metadata generators.",
+							"methodParams": [
+								{
+									"param": "params",
+									"type": "object",
+									"required": "No",
+									"notes": "Call parameters `{ serviceUrl, methodName }`."
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<object>",
+								"description": "Merged metadata key-value pairs."
+							}
+						}
+					]
+				},
+				{
+					"group": "Certificate Rotation Helper",
+					"methods": [
+						{
+							"method": "createRotatingCredentials",
+							"signature": "createRotatingCredentials(opts)",
+							"description": "Create SSL credentials with automatic certificate rotation. Watches certificate files for changes and reloads them. Returns a credentials-like object with `getCurrent()` to get the latest credentials and `stop()` to cease watching.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "Options."
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "caPath",
+									"type": "string",
+									"default": "—",
+									"notes": "Path to CA certificate file."
+								},
+								{
+									"option": "keyPath",
+									"type": "string",
+									"default": "—",
+									"notes": "Path to client key file (for mTLS)."
+								},
+								{
+									"option": "certPath",
+									"type": "string",
+									"default": "—",
+									"notes": "Path to client certificate file (for mTLS)."
+								},
+								{
+									"option": "pollInterval",
+									"type": "number",
+									"default": "30000",
+									"notes": "Check interval in ms (default 30s)."
+								},
+								{
+									"option": "sslOpts",
+									"type": "object",
+									"default": "—",
+									"notes": "Additional SSL options."
+								}
+							],
+							"methodReturns": {
+								"type": "{ getCurrent: () => ChannelCredentials, stop: () => void }",
+								"description": ""
+							},
+							"example": "  const rotating = createRotatingCredentials({\r\n      caPath: '/certs/ca.pem',\r\n      keyPath: '/certs/client.key',\r\n      certPath: '/certs/client.pem',\r\n  });\r\n  // Use rotating.getCurrent() when creating clients\r\n  const client = new GrpcClient({ address, credentials: rotating.getCurrent() }, schema, service);\r\n  // Stop watching on shutdown\r\n  rotating.stop();",
+							"examples": [
+								{
+									"code": "  const rotating = createRotatingCredentials({\r\n      caPath: '/certs/ca.pem',\r\n      keyPath: '/certs/client.key',\r\n      certPath: '/certs/client.pem',\r\n  });\r\n  // Use rotating.getCurrent() when creating clients\r\n  const client = new GrpcClient({ address, credentials: rotating.getCurrent() }, schema, service);\r\n  // Stop watching on shutdown\r\n  rotating.stop();",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Proto Watcher",
+			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`.",
+			"options": [
+				{
+					"option": "interceptors",
+					"type": "Function[]",
+					"default": "—",
+					"notes": "Per-service interceptors."
+				},
+				{
+					"option": "maxMessageSize",
+					"type": "number",
+					"default": "—",
+					"notes": "Max incoming message size."
+				},
+				{
+					"option": "compress",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Compress outgoing messages."
+				},
+				{
+					"option": "debounce",
+					"type": "number",
+					"default": "300",
+					"notes": "Debounce interval in ms."
+				},
+				{
+					"option": "production",
+					"type": "boolean",
+					"default": "false",
+					"notes": "Allow in production."
+				},
+				{
+					"option": "onReload",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(schema) => void` callback after reload."
+				},
+				{
+					"option": "onError",
+					"type": "Function",
+					"default": "—",
+					"notes": "`(err) => void` callback on parse/reload error."
+				}
+			],
+			"params": [
+				{
+					"param": "app",
+					"type": "object",
+					"required": "Yes",
+					"notes": "The zero-server App instance."
+				},
+				{
+					"param": "protoPath",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Path to the `.proto` file."
+				},
+				{
+					"param": "serviceName",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Service name to register."
+				},
+				{
+					"param": "handlers",
+					"type": "Object<string, Function>",
+					"required": "Yes",
+					"notes": "Method handlers map."
+				}
+			],
+			"returns": {
+				"type": "{ stop: () => void, schema: object }",
+				"description": "Controller with `stop()` and current schema."
+			},
+			"example": "  const { createApp, watchProto } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n\n  watchProto(app, './protos/greeter.proto', 'Greeter', handlers, {\r\n      onReload: (schema) => console.log('Reloaded!'),\r\n  });\r\n\n  app.listen(50051, { http2: true });",
+			"examples": [
+				{
+					"code": "  const { createApp, watchProto } = require('@zero-server/sdk');\r\n  const app = createApp();\r\n\n  watchProto(app, './protos/greeter.proto', 'Greeter', handlers, {\r\n      onReload: (schema) => console.log('Reloaded!'),\r\n  });\r\n\n  app.listen(50051, { http2: true });",
+					"lang": "javascript"
+				}
+			]
+		}
+	]
+}
