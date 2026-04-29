@@ -12,8 +12,8 @@
 
 <p align="center">
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
-  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-13%2F7443%20failed-red?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
-  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-0%25-red?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7443%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
+  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-97.01%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
   <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.dev-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>

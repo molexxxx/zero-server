@@ -28,49 +28,49 @@
         "file": "app/api-helpers.test.js",
         "status": "passed",
         "tests": 28,
-        "duration": 61
+        "duration": 72
       },
       {
         "file": "app/cluster-coverage.test.js",
         "status": "passed",
         "tests": 25,
-        "duration": 116
+        "duration": 110
       },
       {
         "file": "app/cluster.test.js",
         "status": "passed",
         "tests": 59,
-        "duration": 189
+        "duration": 217
       },
       {
         "file": "app/cookies-orm.test.js",
         "status": "passed",
         "tests": 66,
-        "duration": 128
+        "duration": 155
       },
       {
         "file": "app/exports.test.js",
         "status": "passed",
         "tests": 40,
-        "duration": 11
+        "duration": 10
       },
       {
         "file": "app/lifecycle-coverage.test.js",
         "status": "passed",
         "tests": 29,
-        "duration": 132
+        "duration": 126
       },
       {
         "file": "app/lifecycle.test.js",
         "status": "passed",
         "tests": 53,
-        "duration": 8723
+        "duration": 8738
       },
       {
         "file": "auth/authorize.test.js",
         "status": "passed",
         "tests": 29,
-        "duration": 53
+        "duration": 60
       },
       {
         "file": "auth/enrollment.test.js",
@@ -82,25 +82,25 @@
         "file": "auth/integration.test.js",
         "status": "passed",
         "tests": 17,
-        "duration": 60
+        "duration": 63
       },
       {
         "file": "auth/jwt.test.js",
         "status": "passed",
         "tests": 79,
-        "duration": 143
+        "duration": 119
       },
       {
         "file": "auth/oauth.test.js",
         "status": "passed",
         "tests": 37,
-        "duration": 11
+        "duration": 12
       },
       {
         "file": "auth/replayStore.test.js",
         "status": "passed",
         "tests": 14,
-        "duration": 22
+        "duration": 27
       },
       {
         "file": "auth/session.test.js",
@@ -112,13 +112,13 @@
         "file": "auth/trustedDevice.test.js",
         "status": "passed",
         "tests": 42,
-        "duration": 10
+        "duration": 11
       },
       {
         "file": "auth/twoFactor.test.js",
         "status": "passed",
         "tests": 86,
-        "duration": 136
+        "duration": 131
       },
       {
         "file": "auth/verify2fa.test.js",
@@ -130,103 +130,103 @@
         "file": "auth/webauthn.test.js",
         "status": "passed",
         "tests": 93,
-        "duration": 52
+        "duration": 48
       },
       {
         "file": "body/multipart-branches.test.js",
         "status": "passed",
         "tests": 29,
-        "duration": 1269
+        "duration": 1296
       },
       {
         "file": "body/parsers-features.test.js",
         "status": "passed",
         "tests": 101,
-        "duration": 281
+        "duration": 253
       },
       {
         "file": "body/parsers.test.js",
         "status": "passed",
         "tests": 59,
-        "duration": 134
+        "duration": 151
       },
       {
         "file": "body/security.test.js",
         "status": "passed",
         "tests": 157,
-        "duration": 1117
+        "duration": 1133
       },
       {
         "file": "body/urlencoded.test.js",
         "status": "passed",
         "tests": 36,
-        "duration": 41
+        "duration": 45
       },
       {
         "file": "docs/code-examples.test.js",
         "status": "passed",
         "tests": 268,
-        "duration": 374
+        "duration": 408
       },
       {
         "file": "docs/integration.test.js",
         "status": "passed",
         "tests": 242,
-        "duration": 2995
+        "duration": 3051
       },
       {
         "file": "docs/manifest-validation.test.js",
         "status": "passed",
         "tests": 242,
-        "duration": 65
+        "duration": 76
       },
       {
         "file": "env/env.test.js",
         "status": "passed",
         "tests": 80,
-        "duration": 163
+        "duration": 198
       },
       {
         "file": "errors/debug-coverage.test.js",
         "status": "passed",
         "tests": 29,
-        "duration": 15
+        "duration": 13
       },
       {
         "file": "errors/errors-coverage.test.js",
         "status": "passed",
         "tests": 40,
-        "duration": 6
+        "duration": 5
       },
       {
         "file": "errors/errors.test.js",
         "status": "passed",
         "tests": 96,
-        "duration": 78
+        "duration": 80
       },
       {
         "file": "errors/subsystem-errors.test.js",
         "status": "passed",
         "tests": 43,
-        "duration": 207
+        "duration": 284
       },
       {
         "file": "grpc/balancer.test.js",
         "status": "passed",
         "tests": 53,
-        "duration": 40
+        "duration": 42
       },
       {
         "file": "grpc/credentials.test.js",
         "status": "passed",
         "tests": 35,
-        "duration": 17
+        "duration": 16
       },
       {
         "file": "grpc/grpc.test.js",
         "status": "passed",
         "tests": 380,
-        "duration": 7826
+        "duration": 7791
       },
       {
         "file": "grpc/health.test.js",
@@ -238,271 +238,271 @@
         "file": "grpc/reflection.test.js",
         "status": "passed",
         "tests": 32,
-        "duration": 10
+        "duration": 11
       },
       {
         "file": "grpc/watch.test.js",
         "status": "passed",
         "tests": 12,
-        "duration": 1505
+        "duration": 1508
       },
       {
         "file": "http/fetch-coverage.test.js",
         "status": "passed",
         "tests": 26,
-        "duration": 175
+        "duration": 304
       },
       {
         "file": "http/fetch.test.js",
         "status": "passed",
         "tests": 17,
-        "duration": 220
+        "duration": 227
       },
       {
         "file": "http/http2.test.js",
         "status": "passed",
         "tests": 37,
-        "duration": 1173
+        "duration": 1140
       },
       {
         "file": "http/integration.test.js",
         "status": "passed",
         "tests": 58,
-        "duration": 1934
+        "duration": 1942
       },
       {
         "file": "http/req-res-branches.test.js",
         "status": "passed",
         "tests": 163,
-        "duration": 159
+        "duration": 169
       },
       {
         "file": "http/request.test.js",
         "status": "passed",
         "tests": 58,
-        "duration": 99
+        "duration": 122
       },
       {
         "file": "http/response.test.js",
         "status": "passed",
         "tests": 57,
-        "duration": 106
+        "duration": 135
       },
       {
         "file": "http/trust-proxy.test.js",
         "status": "passed",
         "tests": 91,
-        "duration": 57
+        "duration": 66
       },
       {
         "file": "middleware/csrf-validator.test.js",
         "status": "passed",
         "tests": 42,
-        "duration": 76
+        "duration": 100
       },
       {
         "file": "middleware/integration.test.js",
         "status": "passed",
         "tests": 73,
-        "duration": 943
+        "duration": 971
       },
       {
         "file": "middleware/security.test.js",
         "status": "passed",
         "tests": 127,
-        "duration": 186
+        "duration": 357
       },
       {
         "file": "middleware/static.test.js",
         "status": "passed",
         "tests": 31,
-        "duration": 115
+        "duration": 158
       },
       {
         "file": "middleware/unit.test.js",
         "status": "passed",
         "tests": 244,
-        "duration": 1913
+        "duration": 1891
       },
       {
         "file": "observe/health.test.js",
         "status": "passed",
         "tests": 31,
-        "duration": 39
+        "duration": 28
       },
       {
         "file": "observe/integration.test.js",
         "status": "passed",
         "tests": 27,
-        "duration": 34
+        "duration": 31
       },
       {
         "file": "observe/logger.test.js",
         "status": "passed",
         "tests": 38,
-        "duration": 12
+        "duration": 11
       },
       {
         "file": "observe/metrics.test.js",
         "status": "passed",
         "tests": 57,
-        "duration": 18
+        "duration": 25
       },
       {
         "file": "observe/tracing.test.js",
         "status": "passed",
         "tests": 66,
-        "duration": 16
+        "duration": 17
       },
       {
         "file": "orm/adapters/constructors.test.js",
         "status": "passed",
         "tests": 77,
-        "duration": 412
+        "duration": 456
       },
       {
         "file": "orm/adapters/initialization.test.js",
         "status": "passed",
         "tests": 80,
-        "duration": 247
+        "duration": 370
       },
       {
         "file": "orm/adapters/methods.test.js",
         "status": "passed",
         "tests": 66,
-        "duration": 286
+        "duration": 314
       },
       {
         "file": "orm/adapters/mongo.test.js",
         "status": "passed",
         "tests": 63,
-        "duration": 239
+        "duration": 282
       },
       {
         "file": "orm/adapters/mysql.test.js",
         "status": "passed",
         "tests": 88,
-        "duration": 160
+        "duration": 218
       },
       {
         "file": "orm/adapters/postgres-coverage.test.js",
         "status": "passed",
         "tests": 92,
-        "duration": 117
+        "duration": 160
       },
       {
         "file": "orm/adapters/postgres.test.js",
         "status": "passed",
         "tests": 83,
-        "duration": 130
+        "duration": 152
       },
       {
         "file": "orm/adapters/redis.test.js",
         "status": "passed",
         "tests": 168,
-        "duration": 69
+        "duration": 73
       },
       {
         "file": "orm/adapters/sql-base.test.js",
         "status": "passed",
         "tests": 49,
-        "duration": 8
+        "duration": 7
       },
       {
         "file": "orm/adapters/sqlite-coverage.test.js",
         "status": "passed",
         "tests": 48,
-        "duration": 51
+        "duration": 62
       },
       {
         "file": "orm/adapters/sqlite.test.js",
         "status": "passed",
         "tests": 50,
-        "duration": 114
+        "duration": 163
       },
       {
         "file": "orm/audit.test.js",
         "status": "passed",
         "tests": 80,
-        "duration": 100
+        "duration": 88
       },
       {
         "file": "orm/branches.test.js",
         "status": "passed",
         "tests": 776,
-        "duration": 216
+        "duration": 236
       },
       {
         "file": "orm/cache-redis.test.js",
         "status": "passed",
         "tests": 17,
-        "duration": 9
+        "duration": 7
       },
       {
         "file": "orm/cache.test.js",
         "status": "passed",
         "tests": 47,
-        "duration": 483
+        "duration": 505
       },
       {
         "file": "orm/cli-coverage.test.js",
         "status": "passed",
         "tests": 28,
-        "duration": 89
+        "duration": 116
       },
       {
         "file": "orm/cli.test.js",
         "status": "passed",
         "tests": 47,
-        "duration": 106
+        "duration": 127
       },
       {
         "file": "orm/computed-casts.test.js",
         "status": "passed",
         "tests": 31,
-        "duration": 13
+        "duration": 14
       },
       {
         "file": "orm/database-schema.test.js",
         "status": "passed",
         "tests": 34,
-        "duration": 294
+        "duration": 271
       },
       {
         "file": "orm/events-observers.test.js",
         "status": "passed",
         "tests": 30,
-        "duration": 12
+        "duration": 13
       },
       {
         "file": "orm/geo.test.js",
         "status": "passed",
         "tests": 49,
-        "duration": 20
+        "duration": 16
       },
       {
         "file": "orm/linq.test.js",
         "status": "passed",
         "tests": 201,
-        "duration": 203
+        "duration": 205
       },
       {
         "file": "orm/migrate.test.js",
         "status": "passed",
         "tests": 31,
-        "duration": 14
+        "duration": 15
       },
       {
         "file": "orm/model.test.js",
         "status": "passed",
         "tests": 104,
-        "duration": 44
+        "duration": 56
       },
       {
         "file": "orm/performance.test.js",
         "status": "passed",
         "tests": 54,
-        "duration": 135
+        "duration": 141
       },
       {
         "file": "orm/plugin.test.js",
@@ -514,13 +514,13 @@
         "file": "orm/procedures-coverage.test.js",
         "status": "passed",
         "tests": 63,
-        "duration": 15
+        "duration": 16
       },
       {
         "file": "orm/procedures.test.js",
         "status": "passed",
         "tests": 71,
-        "duration": 14
+        "duration": 13
       },
       {
         "file": "orm/relationships.test.js",
@@ -532,61 +532,61 @@
         "file": "orm/schema.test.js",
         "status": "passed",
         "tests": 57,
-        "duration": 42
+        "duration": 54
       },
       {
         "file": "orm/search.test.js",
         "status": "passed",
         "tests": 45,
-        "duration": 18
+        "duration": 22
       },
       {
         "file": "orm/seed-fake.test.js",
         "status": "passed",
         "tests": 249,
-        "duration": 33
+        "duration": 35
       },
       {
         "file": "orm/seed.test.js",
         "status": "passed",
         "tests": 75,
-        "duration": 115
+        "duration": 120
       },
       {
         "file": "orm/snapshot.test.js",
         "status": "passed",
         "tests": 45,
-        "duration": 62
+        "duration": 95
       },
       {
         "file": "orm/tenancy-coverage.test.js",
         "status": "passed",
         "tests": 24,
-        "duration": 15
+        "duration": 13
       },
       {
         "file": "orm/tenancy.test.js",
         "status": "passed",
         "tests": 46,
-        "duration": 20
+        "duration": 18
       },
       {
         "file": "orm/views-coverage.test.js",
         "status": "passed",
         "tests": 18,
-        "duration": 29
+        "duration": 36
       },
       {
         "file": "orm/views.test.js",
         "status": "passed",
         "tests": 42,
-        "duration": 19
+        "duration": 16
       },
       {
         "file": "packages/scopes.test.js",
         "status": "passed",
         "tests": 58,
-        "duration": 113
+        "duration": 149
       },
       {
         "file": "realtime/connection.test.js",
@@ -598,19 +598,19 @@
         "file": "realtime/sse.test.js",
         "status": "passed",
         "tests": 41,
-        "duration": 830
+        "duration": 823
       },
       {
         "file": "realtime/websocket.test.js",
         "status": "passed",
         "tests": 42,
-        "duration": 870
+        "duration": 877
       },
       {
         "file": "routing/router.test.js",
         "status": "passed",
         "tests": 35,
-        "duration": 58
+        "duration": 69
       }
     ],
     "coverageFiles": [
