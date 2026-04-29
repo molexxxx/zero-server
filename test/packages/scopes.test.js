@@ -145,12 +145,20 @@ describe('scoped packages — generated stubs', () => {
                 expect(extras).toEqual([]);
             });
 
-            it('index.d.ts re-exports the manifest surface from the SDK', () => {
+            it('index.d.ts re-exports from bundled ./types/ (no SDK ref)', () => {
                 const dts = fs.readFileSync(path.join(dir, 'index.d.ts'), 'utf8');
-                expect(dts).toMatch(/from\s+["']@zero-server\/sdk["']/);
-                for (const name of scope.exports) {
-                    // Word-boundary match avoids false positives on substrings.
-                    expect(dts).toMatch(new RegExp(`\\b${name}\\b`));
+                // Must NOT reference the SDK package
+                expect(dts).not.toMatch(/from\s+["']@zero-server\/sdk["']/);
+                // Must reference a local ./types/<file> path
+                if (scope.typesFiles && scope.typesFiles.length > 0) {
+                    expect(dts).toMatch(/from\s+['"]\.\/types\//);
+                    // Each referenced types file must actually exist in the package
+                    for (const tf of scope.typesFiles) {
+                        const typesFile = path.join(dir, 'types', `${tf}.d.ts`);
+                        expect(fs.existsSync(typesFile), `missing ${tf}.d.ts in types/`).toBe(true);
+                    }
+                } else {
+                    expect(dts).toContain('export {};');
                 }
             });
         });

@@ -97,6 +97,7 @@ const scopes = [
             { file: 'auth/session.js',       content: "module.exports = require('@zero-server/auth');\n" },
             { file: 'auth/oauth.js',         content: "module.exports = require('@zero-server/auth');\n" },
         ],
+        typesFiles: ['app', 'router'],
         pkgDependencies: {
             '@zero-server/realtime':  true,
             '@zero-server/grpc':      true,
@@ -135,6 +136,7 @@ const scopes = [
         requireRewrites: {},
         pkgDependencies: {},
         localMap: {},
+        typesFiles: ['body'],
     },
 
     // -------------------------------------------------------------------------
@@ -164,6 +166,7 @@ const scopes = [
             '@zero-server/errors': true,
         },
         localMap: {},
+        typesFiles: ['middleware'],
     },
 
     // -------------------------------------------------------------------------
@@ -203,6 +206,7 @@ const scopes = [
             jwtDecode:     'decode',
             OAUTH_PROVIDERS: 'PROVIDERS',
         },
+        typesFiles: ['auth'],
     },
 
     // -------------------------------------------------------------------------
@@ -240,6 +244,7 @@ const scopes = [
             '@zero-server/errors': true,
         },
         localMap: {},
+        typesFiles: ['orm'],
     },
 
     // -------------------------------------------------------------------------
@@ -263,6 +268,7 @@ const scopes = [
         bundleDebug: true,
         requireRewrites: {},
         pkgDependencies: {},
+        typesFiles: ['sse', 'websocket'],
         indexJs: [
             "'use strict';",
             "const ws  = require('./lib/ws');",
@@ -306,6 +312,7 @@ const scopes = [
         bundleDebug: true,
         requireRewrites: {},
         pkgDependencies: {},
+        typesFiles: ['grpc'],
         // lib/grpc/index.js exports under internal names; the SDK aliased them
         localMap: {
             grpcStatusName:       'statusName',
@@ -351,6 +358,7 @@ const scopes = [
         requireRewrites: {},
         pkgDependencies: {},
         localMap: {},
+        typesFiles: ['observe'],
     },
 
     // -------------------------------------------------------------------------
@@ -372,6 +380,7 @@ const scopes = [
         bundleDebug: true,
         requireRewrites: {},
         pkgDependencies: {},
+        typesFiles: ['lifecycle', 'cluster'],
         // Two separate modules — must use explicit indexJs
         indexJs: [
             "'use strict';",
@@ -405,6 +414,7 @@ const scopes = [
         requireRewrites: {},
         pkgDependencies: {},
         localMap: {},
+        typesFiles: ['env'],
         // lib/env/index.js exports the env object as module.exports directly
         indexJs: [
             "'use strict';",
@@ -431,6 +441,7 @@ const scopes = [
         requireRewrites: {},
         pkgDependencies: {},
         localMap: {},
+        typesFiles: ['fetch'],
         // lib/fetch/index.js exports the fetch function as module.exports directly
         indexJs: [
             "'use strict';",
@@ -471,6 +482,7 @@ const scopes = [
         bundleDebug: true,
         requireRewrites: {},
         pkgDependencies: {},
+        typesFiles: ['errors'],
         // errors is a single module; debug is a separate file — explicit indexJs
         indexJs: [
             "'use strict';",
@@ -539,6 +551,7 @@ const scopes = [
             '@zero-server/orm': true,
         },
         localMap: {},
+        typesFiles: ['cli'],
     },
 ];
 

@@ -12,7 +12,7 @@
  *   packages/<name>/lib/debug.js     (only when bundleDebug: true)
  *   packages/<name>/lib/<shim>       extra shim files (from extraShims)
  *   packages/<name>/index.js         CJS entry — requires from ./lib/, not the SDK
- *   packages/<name>/index.d.ts       TypeScript re-export from @zero-server/sdk types
+ *   packages/<name>/index.d.ts       TypeScript re-exports from bundled ./types/<scope>.d.ts
  *   packages/<name>/package.json     proper deps (no SDK runtime dep)
  *   packages/<name>/LICENSE          copied from root
  *
@@ -146,7 +146,7 @@ function buildPackageJson(scope) {
             },
             './package.json': './package.json',
         },
-        files: ['lib', 'index.js', 'index.d.ts', 'README.md', 'LICENSE'],
+        files: ['lib', 'types', 'index.js', 'index.d.ts', 'README.md', 'LICENSE'],
         repository: {
             type:      'git',
             url:       'git+https://github.com/tonywied17/zero-server.git',
@@ -167,7 +167,7 @@ function buildPackageJson(scope) {
     }
 
     // @zero-server/sdk is OPTIONAL — only needed by TypeScript users for type
-    // declarations (index.d.ts re-exports from sdk types).
+    // declarations (index.d.ts re-exports from bundled types/).
     pkg.peerDependencies = { [sdkName]: `>=${sdkVersion}` };
     pkg.peerDependenciesMeta = { [sdkName]: { optional: true } };
 
@@ -178,15 +178,21 @@ function buildPackageJson(scope) {
 //  TypeScript declaration builder (unchanged — re-exports from SDK types)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  TypeScript declaration builder — emits export * from local ./types/<file>
+// ─────────────────────────────────────────────────────────────────────────────
+
 function buildDts(scope) {
-    const valueNames = scope.exports.filter((n) => sdkValueNames.has(n));
-    return [
-        BANNER.trimEnd(),
-        valueNames.length > 0
-            ? `export { ${valueNames.join(', ')} } from ${JSON.stringify(sdkName)};`
-            : 'export {};',
-        '',
-    ].join('\n');
+    const files = scope.typesFiles;
+    if (!files || files.length === 0) {
+        return BANNER.trimEnd() + '\nexport {};\n';
+    }
+    const lines = [BANNER.trimEnd()];
+    for (const tf of files) {
+        lines.push(`export * from './types/${tf}';`);
+    }
+    lines.push('');
+    return lines.join('\n');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,10 +292,20 @@ for (const scope of scopes) {
         JSON.stringify(buildPackageJson(scope), null, 2) + '\n'
     );
 
-    // ── 7. index.d.ts ─────────────────────────────────────────────────────
+    // ── 7. Copy types/*.d.ts ───────────────────────────────────────────────
+    const typesDir = path.join(dir, 'types');
+    fs.mkdirSync(typesDir, { recursive: true });
+    const srcTypesDir = path.join(ROOT, 'types');
+    for (const entry of fs.readdirSync(srcTypesDir)) {
+        if (entry.endsWith('.d.ts')) {
+            fs.copyFileSync(path.join(srcTypesDir, entry), path.join(typesDir, entry));
+        }
+    }
+
+    // ── 8. index.d.ts ─────────────────────────────────────────────────────
     fs.writeFileSync(path.join(dir, 'index.d.ts'), buildDts(scope));
 
-    // ── 8. LICENSE ────────────────────────────────────────────────────────
+    // ── 9. LICENSE ────────────────────────────────────────────────────────
     if (licenseSource) {
         fs.writeFileSync(path.join(dir, 'LICENSE'), licenseSource);
     }
