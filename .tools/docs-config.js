@@ -61,7 +61,7 @@ module.exports = [
 			{
 				name: 'Overview',
 				static: true,
-				description: 'The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow scoped package that re-exports just its surface from the SDK and pins to the same version. Mix and match freely.',
+				description: 'The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.',
 				example: [
 					'# Everything (one install)',
 					'npm install @zero-server/sdk',
@@ -72,8 +72,8 @@ module.exports = [
 				].join('\n'),
 				exampleLang: 'bash',
 				tips: [
-					'All scoped packages depend on `@zero-server/sdk` at the exact same version, so versions stay in lock-step.',
-					'You can always import from `@zero-server/sdk` directly even if you also have scoped packages installed.',
+					'Scoped packages are standalone at runtime and can be installed independently.',
+					'Each scoped package keeps an optional `@zero-server/sdk` peer for TypeScript users who want central type resolution.',
 				],
 			},
 			{
@@ -81,7 +81,7 @@ module.exports = [
 				static: true,
 				description: 'Every published `@zero-server/*` package and the surface it narrows to. The full list of exports per package is generated from `.tools/scope-manifest.js` and published to `docs/scopes/<name>.md`.',
 				options: [
-					{ option: '@zero-server/sdk',        type: 'meta',       default: 'all',    notes: 'Re-exports everything below from a single package.' },
+					{ option: '@zero-server/sdk',        type: 'meta',       default: 'all',    notes: 'Single full-SDK install with the complete public surface.' },
 					{ option: '@zero-server/core',       type: 'core',       default: '—',     notes: 'createApp, Router, Request, Response.' },
 					{ option: '@zero-server/body',       type: 'parsers',    default: '—',     notes: 'json, urlencoded, text, raw, multipart.' },
 					{ option: '@zero-server/middleware', type: 'middleware', default: '—',     notes: 'cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static.' },

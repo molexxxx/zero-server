@@ -26,7 +26,7 @@ const { createDefaultMetrics } = require('@zero-server/observe')
 
 ## Public surface
 
-`@zero-server/observe` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/observe` exports the following public names:
 
 | Symbol |
 | --- |

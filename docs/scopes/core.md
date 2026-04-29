@@ -26,7 +26,7 @@ const { createApp } = require('@zero-server/core')
 
 ## Public surface
 
-`@zero-server/core` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/core` exports the following public names:
 
 | Symbol |
 | --- |

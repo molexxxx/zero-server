@@ -26,7 +26,7 @@ const { fetch } = require('@zero-server/fetch')
 
 ## Public surface
 
-`@zero-server/fetch` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/fetch` exports the following public names:
 
 | Symbol |
 | --- |

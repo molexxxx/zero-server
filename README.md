@@ -19,7 +19,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
 
-> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware from a single `require`.**
+> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
 
 <p align="center">
   <strong>
@@ -39,7 +39,7 @@ Requires Node.js 18+. No external dependencies — everything is built on Node.j
 
 ### Or install only what you need (scoped packages)
 
-`@zero-server/sdk` is the meta-package that re-exports every module. If you want a smaller install footprint, every section of the SDK is also published as its own scoped package and re-exports just that surface from the SDK:
+`@zero-server/sdk` is the full meta-package with every module. If you want a smaller install footprint, every section is also published as its own standalone scoped package:
 
 | Package | Surface |
 |---|---|
@@ -61,7 +61,7 @@ Requires Node.js 18+. No external dependencies — everything is built on Node.j
 npm install @zero-server/core @zero-server/body @zero-server/middleware
 ```
 
-> All scoped packages depend on `@zero-server/sdk` and pin to the same version, so mixing-and-matching is safe.
+> Scoped packages are standalone at runtime and can be installed independently. They stay version-aligned across the `@zero-server/*` release set, and keep an optional `@zero-server/sdk` peer for TypeScript type resolution.
 
 ---
 

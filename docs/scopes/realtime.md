@@ -21,16 +21,17 @@ Real-time primitives: RFC 6455 WebSocket connection wrapper, a `WebSocketPool` f
 ## Usage
 
 ```js
-const { WebSocketConnection, WebSocketPool, SSEStream } = require('@zero-server/realtime')
+const { WebSocketConnection, handleUpgrade, WebSocketPool } = require('@zero-server/realtime')
 ```
 
 ## Public surface
 
-`@zero-server/realtime` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/realtime` exports the following public names:
 
 | Symbol |
 | --- |
 | `WebSocketConnection` |
+| `handleUpgrade` |
 | `WebSocketPool` |
 | `SSEStream` |
 

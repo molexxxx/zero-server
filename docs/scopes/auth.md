@@ -26,7 +26,7 @@ const { createRefreshToken } = require('@zero-server/auth')
 
 ## Public surface
 
-`@zero-server/auth` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/auth` exports the following public names:
 
 | Symbol |
 | --- |

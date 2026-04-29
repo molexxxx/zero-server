@@ -26,7 +26,7 @@ const { Database, Model, TYPES } = require('@zero-server/orm')
 
 ## Public surface
 
-`@zero-server/orm` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/orm` exports the following public names:
 
 | Symbol |
 | --- |

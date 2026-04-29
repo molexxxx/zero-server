@@ -16,7 +16,7 @@ npm install @zero-server/sdk
 
 ## Overview
 
-Every typed error class shipped by the SDK: HTTP status errors, framework errors (configuration / middleware / routing / timeout), ORM errors (database / connection / migration / transaction / query / adapter / cache), and the Phase 4 errors (tenancy / audit / plugin / procedure). Plus the `createError` factory and `isHttpError` guard.
+Every typed error class shipped by the SDK: HTTP status errors, framework errors (configuration / middleware / routing / timeout), ORM errors (database / connection / migration / transaction / query / adapter / cache), and the Phase 4 errors (tenancy / audit / plugin / procedure). Plus the `createError` factory, `isHttpError` guard, and the lightweight `debug` logger.
 
 ## Usage
 
@@ -26,7 +26,7 @@ const { createError } = require('@zero-server/errors')
 
 ## Public surface
 
-`@zero-server/errors` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/errors` exports the following public names:
 
 | Symbol |
 | --- |

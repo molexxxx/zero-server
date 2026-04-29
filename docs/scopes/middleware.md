@@ -26,7 +26,7 @@ const { cors, helmet, compress } = require('@zero-server/middleware')
 
 ## Public surface
 
-`@zero-server/middleware` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/middleware` exports the following public names:
 
 | Symbol |
 | --- |

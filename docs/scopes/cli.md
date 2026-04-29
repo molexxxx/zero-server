@@ -26,7 +26,7 @@ const { CLI, runCLI } = require('@zero-server/cli')
 
 ## Public surface
 
-`@zero-server/cli` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/cli` exports the following public names:
 
 | Symbol |
 | --- |

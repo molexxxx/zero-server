@@ -26,7 +26,7 @@ const { env } = require('@zero-server/env')
 
 ## Public surface
 
-`@zero-server/env` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/env` exports the following public names:
 
 | Symbol |
 | --- |

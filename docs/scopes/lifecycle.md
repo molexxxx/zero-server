@@ -26,7 +26,7 @@ const { LifecycleManager, LIFECYCLE_STATE, ClusterManager } = require('@zero-ser
 
 ## Public surface
 
-`@zero-server/lifecycle` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/lifecycle` exports the following public names:
 
 | Symbol |
 | --- |

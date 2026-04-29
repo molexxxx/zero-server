@@ -26,7 +26,7 @@ const { json, urlencoded, text } = require('@zero-server/body')
 
 ## Public surface
 
-`@zero-server/body` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/body` exports the following public names:
 
 | Symbol |
 | --- |

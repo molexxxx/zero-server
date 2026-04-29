@@ -263,7 +263,7 @@ app.listen(3000, () => {
 
 ### Overview
 
-The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow scoped package that re-exports just its surface from the SDK and pins to the same version. Mix and match freely.
+The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.
 
 ```bash
 # Everything (one install)
@@ -275,8 +275,8 @@ npm install @zero-server/orm @zero-server/auth @zero-server/observe
 ```
 
 
-> **Tip:** All scoped packages depend on `@zero-server/sdk` at the exact same version, so versions stay in lock-step.
-> **Tip:** You can always import from `@zero-server/sdk` directly even if you also have scoped packages installed.
+> **Tip:** Scoped packages are standalone at runtime and can be installed independently.
+> **Tip:** Each scoped package keeps an optional `@zero-server/sdk` peer for TypeScript users who want central type resolution.
 
 
 ### Package Map
@@ -287,7 +287,7 @@ Every published `@zero-server/*` package and the surface it narrows to. The full
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `@zero-server/sdk` | meta | `all` | Re-exports everything below from a single package. |
+| `@zero-server/sdk` | meta | `all` | Single full-SDK install with the complete public surface. |
 | `@zero-server/core` | core | `—` | createApp, Router, Request, Response. |
 | `@zero-server/body` | parsers | `—` | json, urlencoded, text, raw, multipart. |
 | `@zero-server/middleware` | middleware | `—` | cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static. |

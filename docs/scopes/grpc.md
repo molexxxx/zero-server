@@ -26,7 +26,7 @@ const { createRotatingCredentials } = require('@zero-server/grpc')
 
 ## Public surface
 
-`@zero-server/grpc` re-exports the following names from [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk):
+`@zero-server/grpc` exports the following public names:
 
 | Symbol |
 | --- |
