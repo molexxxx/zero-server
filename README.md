@@ -14,7 +14,7 @@
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7385%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
   <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-97.01%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
-  <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.com-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
+  <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.dev-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
@@ -55,6 +55,7 @@ Requires Node.js 18+. No external dependencies — everything is built on Node.j
 | `@zero-server/env` | typed `.env` loader |
 | `@zero-server/fetch` | server-side `fetch` client |
 | `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
+| `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zh` / `zs` |
 
 ```bash
 npm install @zero-server/core @zero-server/body @zero-server/middleware
@@ -367,6 +368,15 @@ const {
   // Real-time
   WebSocketConnection, WebSocketPool, SSEStream,
 
+  // gRPC
+  GrpcStatus, grpcToHttp, grpcStatusName, GRPC_STATUS_NAMES,
+  GrpcMetadata, ProtoWriter, ProtoReader, protoEncode, protoDecode,
+  parseProto, parseProtoFile, frameEncode, FrameParser,
+  GrpcServiceRegistry, GrpcClient,
+  GrpcHealthService, GrpcServingStatus, GrpcReflectionService,
+  GrpcLoadBalancer, GrpcSubchannel, GrpcSubchannelState,
+  ChannelCredentials, createRotatingCredentials, watchProto,
+
   // Utilities
   fetch, env, debug,
   ClusterManager, clusterize,
@@ -408,17 +418,19 @@ npm run docs
 ```
 lib/
   app.js              — App class (middleware, routing, listen, ws upgrade, lifecycle)
-  auth/               — JWT, OAuth 2.0, sessions, and authorization policies
+  auth/               — JWT, OAuth 2.0, sessions, MFA (TOTP/WebAuthn), authorization
   body/               — body parsers (json, urlencoded, text, raw, multipart)
   cli.js              — CLI runner (migrate, seed, scaffold commands)
   cluster.js          — multi-worker clustering with auto-respawn
   debug.js            — namespaced debug logger
   env/                — typed .env loader with schema validation
-  errors.js           — 20+ HttpError classes and factory
-  fetch/              — HTTP/HTTPS client
+  errors.js           — 25+ HttpError / framework / ORM error classes
+  fetch/              — HTTP/HTTPS client (mTLS, AbortSignal, retries)
+  grpc/               — HTTP/2 gRPC stack: server, client, codec, framing,
+                         status, metadata, health, reflection, balancer, watch
   http/               — Request & Response wrappers
   lifecycle.js        — graceful shutdown and lifecycle management
-  middleware/          — cors, helmet, logger, rateLimit, compress, static, timeout,
+  middleware/         — cors, helmet, logger, rateLimit, compress, static, timeout,
                          requestId, cookieParser, csrf, validate, errorHandler
   observe/            — Prometheus metrics, W3C tracing, health checks, structured logging
   orm/                — Database, Model, Query, adapters, migrations, seeds, cache,
@@ -426,9 +438,14 @@ lib/
   router/             — Router with sub-app mounting and pattern matching
   sse/                — SSE stream controller
   ws/                 — WebSocket connection, handshake, and room management
+packages/             — generated scoped @zero-server/* re-exports (one dir per scope)
+.tools/
+  scope-manifest.js   — single source of truth for scoped packages & their surface
+  generate-package-stubs.js
+  generate-scope-docs.js
 types/                — full TypeScript definitions
 website-docs/         — live demo server, controllers, and playground UI
-test/                 — vitest test suite (6000+ tests, 95%+ coverage)
+test/                 — vitest test suite (7000+ tests, 95%+ coverage)
 ```
 
 ## Testing
