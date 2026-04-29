@@ -1,6 +1,6 @@
 {
   "name": "@zero-server/sdk",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, gRPC, observability, and 20+ middleware. Distributed as a single SDK and as scoped @zero-server/* packages.",
   "main": "index.js",
   "bin": {
