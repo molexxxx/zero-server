@@ -22,14 +22,16 @@ describe('middleware/index exports', () =>
         expect(typeof middleware.requestId).toBe('function');
         expect(typeof middleware.cookieParser).toBe('function');
         expect(typeof middleware.errorHandler).toBe('function');
+        expect(typeof middleware.csrf).toBe('function');
+        expect(typeof middleware.validate).toBe('function');
     });
 
     it('exports exactly the expected keys', () =>
     {
         const keys = Object.keys(middleware).sort();
         expect(keys).toEqual([
-            'compress', 'cookieParser', 'cors', 'errorHandler',
-            'helmet', 'logger', 'rateLimit', 'requestId', 'static', 'timeout',
+            'compress', 'cookieParser', 'cors', 'csrf', 'errorHandler',
+            'helmet', 'logger', 'rateLimit', 'requestId', 'static', 'timeout', 'validate',
         ]);
     });
 });
@@ -395,4 +397,4 @@ describe('orm index — deep branch coverage', () => {
 		const has = await db.hasTable(tableName);
 		expect(has).toBe(true);
 	});
-});
+});

@@ -42,7 +42,7 @@ jobs:
       - name: Test (re-run after build to ensure version archive present)
         run: npm test
 
-      - name: Generate scoped package stubs
+      - name: Generate scoped package bundles
         run: npm run packages:generate
 
       - name: Generate scoped package docs

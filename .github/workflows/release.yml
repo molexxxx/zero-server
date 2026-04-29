@@ -44,7 +44,7 @@ jobs:
       - name: Build documentation data
         run: npm run build
 
-      - name: Generate scoped package stubs
+      - name: Generate scoped package bundles
         run: npm run packages:generate
 
       - name: Generate scoped package docs
@@ -74,7 +74,7 @@ jobs:
             npm publish --access public --tag "${{ steps.tag.outputs.tag }}"
           fi
 
-      - name: Publish @zero-server/* scoped stubs
+      - name: Publish @zero-server/* scoped bundles
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |

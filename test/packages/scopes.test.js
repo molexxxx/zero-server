@@ -6,9 +6,10 @@
  *     by hand instead of re-running `npm run packages:generate`).
  *   - package.json metadata regressions (wrong name, missing dep, etc.).
  *
- * The runtime `require('@zero-server/sdk')` inside each package stub is
- * intercepted so the tests work without an `npm install` of the published
- * scoped packages.
+ * Each scoped package is now a TRUE STANDALONE bundle — it ships its own copy
+ * of the lib/ source and has NO runtime dep on @zero-server/sdk.  Cross-scope
+ * deps (e.g. @zero-server/auth → @zero-server/fetch) are redirected to local
+ * packages/ so the test works without a real npm install.
  */
 'use strict';
 
@@ -22,15 +23,19 @@ const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 const sdk = require(path.join(ROOT, 'index.js'));
 const { scopes } = require(path.join(ROOT, '.tools', 'scope-manifest.js'));
 
-// Intercept `require('@zero-server/sdk')` from inside each package stub so we
-// don't need a real install.
+// Redirect ALL @zero-server/* requires to local packages/ so cross-scope deps
+// resolve without a real npm install.
+const PACKAGES_DIR = path.join(ROOT, 'packages');
 const origResolve = Module._resolveFilename;
 Module._resolveFilename = function patchedResolve(request, parent, ...rest) {
     if (request === '@zero-server/sdk') return path.join(ROOT, 'index.js');
+    if (request.startsWith('@zero-server/')) {
+        const name = request.slice('@zero-server/'.length);
+        const local = path.join(PACKAGES_DIR, name, 'index.js');
+        if (fs.existsSync(local)) return local;
+    }
     return origResolve.call(this, request, parent, ...rest);
 };
-
-const PACKAGES_DIR = path.join(ROOT, 'packages');
 
 // `packages/` is git-ignored (regenerated on every release). Make sure stubs
 // exist before the assertions run so the test passes on a fresh CI checkout.
@@ -102,24 +107,39 @@ describe('scoped packages — generated stubs', () => {
                 expect(pkg.version).toBe(PKG.version);
                 expect(pkg.main).toBe('./index.js');
                 expect(pkg.types).toBe('./index.d.ts');
-                expect(pkg.dependencies).toBeDefined();
-                expect(pkg.dependencies['@zero-server/sdk']).toBe(PKG.version);
                 expect(pkg.engines && pkg.engines.node).toBe('>=18.0.0');
+                // SDK must NOT be a hard runtime dependency anymore — it is an
+                // optional peerDependency used only for TypeScript types.
+                expect(pkg.dependencies && pkg.dependencies['@zero-server/sdk']).toBeUndefined();
+                expect(pkg.peerDependencies && pkg.peerDependencies['@zero-server/sdk']).toBeDefined();
+                expect(pkg.peerDependenciesMeta?.['@zero-server/sdk']?.optional).toBe(true);
+                // Scopes that have cross-scope deps must list them correctly
+                if (scope.pkgDependencies) {
+                    for (const [dep, val] of Object.entries(scope.pkgDependencies)) {
+                        const expected = val === true ? PKG.version : val;
+                        expect(pkg.dependencies && pkg.dependencies[dep]).toBe(expected);
+                    }
+                }
             });
 
             it('index.js loads and re-exports exactly the manifest surface', () => {
-                // Bust the cache so we get a clean require with the patched resolver.
+                // Bust the require cache so we get a clean load with the patched resolver.
                 const entry = path.join(dir, 'index.js');
-                delete require.cache[entry];
+                // Clear this package and anything in its lib/ from the cache
+                for (const key of Object.keys(require.cache)) {
+                    if (key.startsWith(dir)) delete require.cache[key];
+                }
                 const mod = require(entry);
 
-                // Every manifest export must be present and deeply identical to the SDK's.
+                // Every manifest export must be present and have the same type as the SDK's.
                 for (const name of scope.exports) {
                     expect(mod[name], `missing ${scope.name}.${name}`).toBeDefined();
-                    expect(mod[name]).toBe(sdk[name]);
+                    // Standalone packages load their own module instances so strict
+                    // identity (===) won't hold; check type equality instead.
+                    expect(typeof mod[name]).toBe(typeof sdk[name]);
                 }
 
-                // Stub must not leak surface from other scopes.
+                // Package must not leak surface from other scopes.
                 const expected = new Set(scope.exports);
                 const extras = Object.keys(mod).filter((k) => !expected.has(k));
                 expect(extras).toEqual([]);

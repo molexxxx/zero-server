@@ -19,7 +19,7 @@ const cookieParser = require('./lib/middleware/cookieParser');
 const csrf = require('./lib/middleware/csrf');
 const validate = require('./lib/middleware/validator');
 const errorHandler = require('./lib/middleware/errorHandler');
-const { WebSocketConnection, WebSocketPool } = require('./lib/ws');
+const { WebSocketConnection, handleUpgrade, WebSocketPool } = require('./lib/ws');
 const { SSEStream } = require('./lib/sse');
 const env = require('./lib/env');
 const { Database, Model, TYPES, Query, validateFKAction, validateCheck, Migrator, defineMigration, QueryCache, Seeder, SeederRunner, Factory, Fake, QueryProfiler, ReplicaManager, DatabaseView, FullTextSearch, GeoQuery, EARTH_RADIUS_KM, EARTH_RADIUS_MI, TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager, buildSnapshot, loadSnapshot, saveSnapshot, diffSnapshots, hasNoChanges, generateMigrationCode, discoverModels, SNAPSHOT_FILE } = require('./lib/orm');
@@ -232,6 +232,8 @@ module.exports = {
     // classes (for advanced / direct usage)
     /** @see module:ws/connection */
     WebSocketConnection,
+    /** @see module:ws/handshake */
+    handleUpgrade,
     /** @see module:ws/room */
     WebSocketPool,
     /** @see module:sse/stream */

@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 /**
- * publish-package-stubs.js — Publish every packages/* stub to npm.
+ * publish-package-stubs.js — Publish every packages/* standalone bundle to npm.
  *
- * The SDK (@zero-server/sdk) must already be published at the same version,
- * because each stub depends on it. The CI workflow publishes the SDK first,
- * then runs this.
+ * Each scoped package is a true standalone bundle — it ships its own copy of the
+ * relevant lib/ source files and has NO runtime dependency on @zero-server/sdk.
+ * The SDK is listed only as an optional peerDependency for TypeScript types.
+ *
+ * Publishing the SDK first is still recommended so TypeScript consumers can
+ * immediately resolve types via the peer, but it is no longer a hard requirement
+ * for the bundles to function at runtime.
  *
  * Usage:
- *   node .tools/publish-package-stubs.js              # publish all stubs
+ *   node .tools/publish-package-stubs.js              # publish all bundles
  *   node .tools/publish-package-stubs.js --dry-run    # pack + show metadata
  *   node .tools/publish-package-stubs.js --tag next   # publish under a dist-tag
  */
@@ -39,7 +43,7 @@ const dirs = fs.readdirSync(PACKAGES_DIR).filter((entry) => {
     return fs.statSync(p).isDirectory() && fs.existsSync(path.join(p, 'package.json'));
 });
 
-console.log(`Publishing ${dirs.length} stubs from packages/*${dryRun ? ' (DRY RUN)' : ''}.`);
+console.log(`Publishing ${dirs.length} standalone bundles from packages/*${dryRun ? ' (DRY RUN)' : ''}.`);
 
 for (const entry of dirs) {
     const dir = path.join(PACKAGES_DIR, entry);
