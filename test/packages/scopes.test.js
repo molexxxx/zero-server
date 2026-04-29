@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const Module = require('module');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -30,6 +31,24 @@ Module._resolveFilename = function patchedResolve(request, parent, ...rest) {
 };
 
 const PACKAGES_DIR = path.join(ROOT, 'packages');
+
+// `packages/` is git-ignored (regenerated on every release). Make sure stubs
+// exist before the assertions run so the test passes on a fresh CI checkout.
+beforeAll(() => {
+    const needsGenerate = scopes.some((s) => {
+        const dir = path.join(PACKAGES_DIR, s.name);
+        return !fs.existsSync(path.join(dir, 'index.js'))
+            || !fs.existsSync(path.join(dir, 'index.d.ts'))
+            || !fs.existsSync(path.join(dir, 'package.json'));
+    });
+    if (needsGenerate) {
+        execFileSync(
+            process.execPath,
+            [path.join(ROOT, '.tools', 'generate-package-stubs.js')],
+            { cwd: ROOT, stdio: 'inherit' },
+        );
+    }
+});
 
 describe('scoped packages — manifest', () => {
     it('manifest defines at least one scope', () => {
