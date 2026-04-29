@@ -4,6 +4,9 @@ on:
   release:
     types:
       - published
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
@@ -55,6 +58,12 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             VER="${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            VER="${{ github.ref_name }}"
+          else
+            VER=""
+          fi
+          if [ -n "$VER" ]; then
             if echo "$VER" | grep -qE 'alpha|beta|rc|next|dev|pre'; then
               echo "tag=alpha" >> "$GITHUB_OUTPUT"
             else
