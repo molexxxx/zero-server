@@ -109,7 +109,7 @@
 						{
 							"method": "use",
 							"signature": "use(pathOrFn, [fn])",
-							"description": "Register middleware or mount a sub-router. - `use(fn)` — global middleware applied to every request. - `use('/prefix', fn)` — path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` — mount a Router sub-app at the given prefix.",
+							"description": "Register middleware or mount a sub-router. - `use(fn)` - global middleware applied to every request. - `use('/prefix', fn)` - path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` - mount a Router sub-app at the given prefix.",
 							"methodParams": [
 								{
 									"param": "pathOrFn",
@@ -218,19 +218,19 @@
 								{
 									"option": "key",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "Private key for TLS."
 								},
 								{
 									"option": "cert",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "Certificate for TLS."
 								},
 								{
 									"option": "pfx",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "PFX/PKCS12 bundle (alternative to key+cert)."
 								}
 							],
@@ -297,8 +297,8 @@
 								{
 									"option": "verifyClient",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => boolean` — return false to reject the upgrade."
+									"default": "-",
+									"notes": "`(req) => boolean` - return false to reject the upgrade."
 								}
 							]
 						}
@@ -533,7 +533,7 @@
 						{
 							"method": "chain",
 							"signature": "chain(path)",
-							"description": "Chainable route builder — register multiple methods on the same path.",
+							"description": "Chainable route builder - register multiple methods on the same path.",
 							"methodParams": [
 								{
 									"param": "path",
@@ -616,7 +616,7 @@
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "When `true`, route matches only HTTPS requests;\nwhen `false`, only HTTP. Omit to match both."
 								}
 							]
@@ -855,7 +855,7 @@
 						{
 							"method": "route",
 							"signature": "route(path)",
-							"description": "Chainable route builder — register multiple methods on the same path.",
+							"description": "Chainable route builder - register multiple methods on the same path.",
 							"methodParams": [
 								{
 									"param": "path",
@@ -973,7 +973,7 @@
 						{
 							"method": "accepts",
 							"signature": "accepts(...types)",
-							"description": "Content negotiation — check if the client accepts the given type(s). Returns the best match, or `false` if none match.",
+							"description": "Content negotiation - check if the client accepts the given type(s). Returns the best match, or `false` if none match.",
 							"methodParams": [
 								{
 									"param": "types",
@@ -1066,13 +1066,13 @@
 								{
 									"option": "retry",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Reconnection interval hint (ms) sent to client."
 								},
 								{
 									"option": "headers",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional headers to set on the response."
 								},
 								{
@@ -1354,13 +1354,13 @@
 								{
 									"option": "headers",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional headers to set."
 								},
 								{
 									"option": "root",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Root directory for relative paths."
 								}
 							],
@@ -1426,7 +1426,7 @@
 								{
 									"option": "domain",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cookie domain."
 								},
 								{
@@ -1438,13 +1438,13 @@
 								{
 									"option": "expires",
 									"type": "Date | number",
-									"default": "—",
+									"default": "-",
 									"notes": "Expiration date."
 								},
 								{
 									"option": "maxAge",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Max-Age in seconds."
 								},
 								{
@@ -1456,7 +1456,7 @@
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Secure flag."
 								},
 								{
@@ -1468,19 +1468,19 @@
 								{
 									"option": "signed",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Sign the cookie value using req.secret."
 								},
 								{
 									"option": "priority",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Priority attribute (Low, Medium, High)."
 								},
 								{
 									"option": "partitioned",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Partitioned/CHIPS attribute."
 								}
 							],
@@ -1517,19 +1517,19 @@
 								{
 									"option": "domain",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cookie domain (must match the original)."
 								},
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Secure flag."
 								},
 								{
 									"option": "sameSite",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "SameSite attribute."
 								}
 							],

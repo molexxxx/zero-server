@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 // --- constructor options --------------------------------------------------
-describe('SQLite adapter — constructor options', () => {
+describe('SQLite adapter - constructor options', () => {
     it('verbose option enables console logging', () => {
         db = Database.connect('sqlite', { verbose: true });
         expect(db.adapter).toBeDefined();
@@ -51,7 +51,7 @@ describe('SQLite adapter — constructor options', () => {
 });
 
 // --- stmt cache LRU eviction ----------------------------------------------
-describe('SQLite adapter — stmt cache LRU', () => {
+describe('SQLite adapter - stmt cache LRU', () => {
     it('evicts oldest entry when cache exceeds max', async () => {
         db = Database.connect('sqlite', { stmtCacheSize: 3 });
         const adapter = db.adapter;
@@ -92,7 +92,7 @@ describe('SQLite adapter — stmt cache LRU', () => {
 });
 
 // --- explain with all optional clauses ------------------------------------
-describe('SQLite adapter — explain()', () => {
+describe('SQLite adapter - explain()', () => {
     beforeEach(async () => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, category TEXT, value INTEGER)');
@@ -137,7 +137,7 @@ describe('SQLite adapter — explain()', () => {
 });
 
 // --- createTable complex schema -------------------------------------------
-describe('SQLite adapter — createTable branches', () => {
+describe('SQLite adapter - createTable branches', () => {
     beforeEach(() => { db = Database.connect('sqlite'); });
 
     it('creates table with composite primary key', async () => {
@@ -264,7 +264,7 @@ describe('SQLite adapter — createTable branches', () => {
 });
 
 // --- execute with all clauses ---------------------------------------------
-describe('SQLite adapter — execute() branches', () => {
+describe('SQLite adapter - execute() branches', () => {
     beforeEach(async () => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, cat TEXT, val INTEGER)');
@@ -311,7 +311,7 @@ describe('SQLite adapter — execute() branches', () => {
 });
 
 // --- aggregate with where/groupBy/having ----------------------------------
-describe('SQLite adapter — aggregate() branches', () => {
+describe('SQLite adapter - aggregate() branches', () => {
     beforeEach(() => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE items (id INTEGER PRIMARY KEY, cat TEXT, val INTEGER)');
@@ -349,7 +349,7 @@ describe('SQLite adapter — aggregate() branches', () => {
 });
 
 // --- addColumn with various options ---------------------------------------
-describe('SQLite adapter — addColumn() branches', () => {
+describe('SQLite adapter - addColumn() branches', () => {
     beforeEach(async () => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY)');
@@ -383,7 +383,7 @@ describe('SQLite adapter — addColumn() branches', () => {
 });
 
 // --- createIndex with unique ----------------------------------------------
-describe('SQLite adapter — createIndex()', () => {
+describe('SQLite adapter - createIndex()', () => {
     beforeEach(() => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, email TEXT, name TEXT)');
@@ -405,7 +405,7 @@ describe('SQLite adapter — createIndex()', () => {
 });
 
 // --- Schema migration methods ---------------------------------------------
-describe('SQLite adapter — schema migration methods', () => {
+describe('SQLite adapter - schema migration methods', () => {
     beforeEach(() => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, old_name TEXT)');
@@ -453,7 +453,7 @@ describe('SQLite adapter — schema migration methods', () => {
 });
 
 // --- ping false path -----------------------------------------------------
-describe('SQLite adapter — ping', () => {
+describe('SQLite adapter - ping', () => {
     it('ping returns false after close', () => {
         db = Database.connect('sqlite');
         const adapter = db.adapter;
@@ -464,7 +464,7 @@ describe('SQLite adapter — ping', () => {
 });
 
 // --- insertMany empty array ----------------------------------------------
-describe('SQLite adapter — insertMany', () => {
+describe('SQLite adapter - insertMany', () => {
     it('returns empty array for empty input', async () => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)');
@@ -474,7 +474,7 @@ describe('SQLite adapter — insertMany', () => {
 });
 
 // --- overview formatting branches -----------------------------------------
-describe('SQLite adapter — overview formatting', () => {
+describe('SQLite adapter - overview formatting', () => {
     it('formats size in GB', () => {
         db = Database.connect('sqlite');
         // Override fileSize to return large value
@@ -507,7 +507,7 @@ describe('SQLite adapter — overview formatting', () => {
 });
 
 // --- dropTable ------------------------------------------------------------
-describe('SQLite adapter — dropTable', () => {
+describe('SQLite adapter - dropTable', () => {
     it('drops an existing table', async () => {
         db = Database.connect('sqlite');
         db.adapter._db.exec('CREATE TABLE todrop (id INTEGER)');

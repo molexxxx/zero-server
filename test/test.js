@@ -659,11 +659,11 @@ async function run()
     // Test sendJSON
     ok(metaMsg && typeof metaMsg === 'object', 'WS sendJSON sends valid JSON')
 
-    // Test verifyClient — rejected (no token)
+    // Test verifyClient - rejected (no token)
     const wsReject = await wsRawConnect(wsPort, '/secure')
     ok(wsReject.includes('403'), 'WS verifyClient rejects unauthorized')
 
-    // Test verifyClient — accepted (correct token)
+    // Test verifyClient - accepted (correct token)
     const ws4 = await wsConnect(wsPort, '/secure', { 'X-Token': 'secret123' })
     await new Promise(r => setTimeout(r, 100))
     ok(ws4.messages.includes('authorized'), 'WS verifyClient accepts authorized')
@@ -734,7 +734,7 @@ async function run()
     {
         const secApp = createApp()
 
-        // Route that requires HTTPS (secure: true) — plain HTTP should 404
+        // Route that requires HTTPS (secure: true) - plain HTTP should 404
         secApp.get('/secure-only', { secure: true }, (req, res) => res.json({ msg: 'secret' }))
         // Route that requires HTTP only (secure: false)
         secApp.get('/http-only', { secure: false }, (req, res) => res.json({ msg: 'plain' }))

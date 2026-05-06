@@ -276,7 +276,7 @@ describe('WebSocket Integration', () => {
 
 
 // =========================================================================
-//  WebSocket handshake — coverage boost (from coverage/boost.test.js)
+//  WebSocket handshake - coverage boost (from coverage/boost.test.js)
 // =========================================================================
 
 {
@@ -456,7 +456,7 @@ describe('WebSocket Integration', () => {
 		// trigger it to cover the arrow function.
 		expect(socket._on_error).toBeDefined();
 		socket._on_error(new Error('ECONNRESET'));
-		// Should not throw — guard against crash
+		// Should not throw - guard against crash
 	});
 
 	it('URL without query string gives empty query object', () =>
@@ -471,10 +471,10 @@ describe('WebSocket Integration', () => {
 };
 
 // =========================================================================
-//  ws/handshake — function coverage (from coverage/deep.test.js)
+//  ws/handshake - function coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('ws/handshake — function coverage', () => {
+describe('ws/handshake - function coverage', () => {
 	const handleUpgrade = require('../../lib/ws/handshake');
 	const WS_MAGIC = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 

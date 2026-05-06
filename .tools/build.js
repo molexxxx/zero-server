@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * build.js — Unified documentation build pipeline.
+ * build.js - Unified documentation build pipeline.
  *
  * Generates ALL section JSON files from scratch by parsing JSDoc
  * comments & section headers in lib/ source files.
@@ -270,7 +270,7 @@ function jsdocToOptions(params)
 		.map(p => ({
 			option:  p.name.split('.').slice(1).join('.'),
 			type:    normalizeType(p.type),
-			default: p.default !== undefined ? String(p.default) : '—',
+			default: p.default !== undefined ? String(p.default) : '-',
 			notes:   p.description || '',
 		}));
 }
@@ -485,8 +485,8 @@ function buildMethodEntry(name, block)
 	}
 	else if (block.see)
 	{
-		// @see App#route — shortcut for GET requests.
-		const seeDesc = block.see.replace(/^[\w#.]+\s*—?\s*/, '').trim();
+		// @see App#route - shortcut for GET requests.
+		const seeDesc = block.see.replace(/^[\w#.]+\s*-?\s*/, '').trim();
 		if (seeDesc) entry.description = seeDesc.charAt(0).toUpperCase() + seeDesc.slice(1);
 	}
 
@@ -522,7 +522,7 @@ function buildFunctionItem(itemName, relPath)
 	// Find the module-level JSDoc (has @module tag)
 	const moduleBlock = blocks.find(b => b.module);
 
-	// Find the main function — prefer the exported function by name
+	// Find the main function - prefer the exported function by name
 	const exportName = findExportName(source);
 	const mainBlock = (exportName && blocks.find(b => b.name === exportName))
 	               || blocks.find(b => !b.module && !b.constructor && b.params.length > 0)
@@ -684,7 +684,7 @@ function buildClassItem(itemName, relPath)
 
 /**
  * Build a doc item for a CLI / terminal tool.
- * Shows only the module description and usage example — no methods or constructor params.
+ * Shows only the module description and usage example - no methods or constructor params.
  */
 function buildCliToolItem(itemName, relPath)
 {
@@ -694,13 +694,13 @@ function buildCliToolItem(itemName, relPath)
 	const item = { name: itemName };
 	item.description = (moduleBlock && moduleBlock.description) || '';
 
-	// Structured CLI commands for the frontend renderer — grouped by category
+	// Structured CLI commands for the frontend renderer - grouped by category
 	item.commandGroups = [
 		{
 			label: 'Scaffolding',
 			description: 'Generate starter files so you don\'t write boilerplate by hand. Every file is placed in the directory set by your config (or overridden with <code>--dir</code>).',
 			commands: [
-				{ cmd: 'npx zh make:migration <name>',  desc: 'Auto-generate a migration by comparing your current Model schemas against the last snapshot. The CLI writes the <code>up()</code> and <code>down()</code> code for you — no manual SQL. Pass <code>--empty</code> to get a blank template instead.', args: '--dir=<path> --models=<path> --empty' },
+				{ cmd: 'npx zh make:migration <name>',  desc: 'Auto-generate a migration by comparing your current Model schemas against the last snapshot. The CLI writes the <code>up()</code> and <code>down()</code> code for you - no manual SQL. Pass <code>--empty</code> to get a blank template instead.', args: '--dir=<path> --models=<path> --empty' },
 				{ cmd: 'npx zh make:model <name>',     desc: 'Create a new Model class with a table name, primary key, and <code>timestamps</code> enabled.', args: '--dir=<path>' },
 				{ cmd: 'npx zh make:seeder <name>',     desc: 'Create a new Seeder class for inserting sample or default data.', args: '--dir=<path>' },
 			],
@@ -721,7 +721,7 @@ function buildCliToolItem(itemName, relPath)
 				{ cmd: 'npx zh migrate:status',    desc: 'Show which migrations have been applied and which are still pending.' },
 				{ cmd: 'npx zh migrate:reset',     desc: 'Rollback every migration, then re-run them all from the start.' },
 				{ cmd: 'npx zh migrate:fresh',     desc: 'Drop <strong>all</strong> tables and re-run every migration from scratch. Useful during early development.' },
-				{ cmd: 'npx zh migrate:remove',    desc: 'Delete the most recent migration file — but only if it hasn\'t been applied yet. Also reverts the schema snapshot.' },
+				{ cmd: 'npx zh migrate:remove',    desc: 'Delete the most recent migration file - but only if it hasn\'t been applied yet. Also reverts the schema snapshot.' },
 			],
 		},
 		{
@@ -759,12 +759,12 @@ function buildCliToolItem(itemName, relPath)
 				{ label: '3. Define your schemas', code: '// models/User.js\nclass User extends Model {\n    static table = \'users\';\n    static schema = {\n        id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\n        name:  { type: TYPES.STRING, required: true, maxLength: 100 },\n        email: { type: TYPES.STRING, required: true, unique: true },\n    };\n    static timestamps = true;\n}' },
 				{ label: '4. Auto-generate the migration', code: '$ npx zh make:migration initial_schema\n\n  Detected schema changes:\n    + Table users\n\n  Migration created: migrations/20260402120000_initial_schema.js' },
 				{ label: '5. Apply the migration', code: '$ npx zh migrate\n\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1).' },
-				{ label: '6. Later — add a column', code: '// Add to models/User.js schema:\n//   avatar: { type: TYPES.STRING, maxLength: 255 },\n\n$ npx zh make:migration add_avatar_to_users\n\n  Detected schema changes:\n    + users.avatar\n\n  Migration created: migrations/20260403090000_add_avatar_to_users.js\n\n$ npx zh migrate' },
+				{ label: '6. Later - add a column', code: '// Add to models/User.js schema:\n//   avatar: { type: TYPES.STRING, maxLength: 255 },\n\n$ npx zh make:migration add_avatar_to_users\n\n  Detected schema changes:\n    + users.avatar\n\n  Migration created: migrations/20260403090000_add_avatar_to_users.js\n\n$ npx zh migrate' },
 			],
 		},
 		{
 			tab: 'Seeding',
-			description: 'Populate your database with sample or default data. Seeders run alphabetically — use numeric prefixes to control the order.',
+			description: 'Populate your database with sample or default data. Seeders run alphabetically - use numeric prefixes to control the order.',
 			steps: [
 				{ label: '1. Scaffold a seeder', code: '$ npx zh make:seeder Users' },
 				{ label: '2. Write your seed data', code: '// seeders/UsersSeeder.js\nconst { Seeder, Factory, Fake } = require(\'@zero-server/sdk\');\nconst User = require(\'../models/User\');\n\nclass UsersSeeder extends Seeder\n{\n    async run(db) {\n        const factory = new Factory(User);\n        factory.define({\n            name:  () => Fake.fullName(),\n            email: () => Fake.email({ unique: true }),\n            role:  \'user\',\n        });\n\n        await factory.count(20).create();\n\n        // create a few admins\n        factory.state(\'admin\', { role: \'admin\' });\n        await factory.count(3).withState(\'admin\').create();\n    }\n}\n\nmodule.exports = UsersSeeder;' },
@@ -1015,8 +1015,8 @@ function buildErrorItem(itemName, relPath)
 		const paramDoc = ctorDoc || classDoc;
 
 		// Build entry
-		const status = cls.statusCode || '—';
-		const code = cls.errorCode || (cls.statusCode ? deriveCode(cls.statusCode) : '—');
+		const status = cls.statusCode || '-';
+		const code = cls.errorCode || (cls.statusCode ? deriveCode(cls.statusCode) : '-');
 
 		const entry = {
 			method: cls.name,
@@ -1042,7 +1042,7 @@ function buildErrorItem(itemName, relPath)
 		}
 		else
 		{
-			// No constructor JSDoc — show actual constructor params
+			// No constructor JSDoc - show actual constructor params
 			if (cls.extends === 'Error')
 				entry.methodParams = [
 					{ param: 'statusCode', type: 'number', required: 'Yes', notes: 'HTTP status code' },
@@ -1283,7 +1283,7 @@ function buildFromSource(itemConfig)
 		return { name: itemConfig.name, description: 'Source file not found.' };
 	}
 
-	// Special: TYPES symbol — extract constant properties as options
+	// Special: TYPES symbol - extract constant properties as options
 	if (itemConfig.symbol === 'TYPES')
 	{
 		return buildTypesItem(itemConfig.name, relPath);
@@ -1301,7 +1301,7 @@ function buildFromSource(itemConfig)
 		return buildMultiSourceItem(itemConfig);
 	}
 
-	// Special: CLI / terminal tool — show description + example only, no methods
+	// Special: CLI / terminal tool - show description + example only, no methods
 	if (itemConfig.cliTool)
 	{
 		return buildCliToolItem(itemConfig.name, relPath);
@@ -1342,7 +1342,7 @@ function buildFromSource(itemConfig)
 
 const config = require('./docs-config');
 
-console.log(`\n  zero-server docs build — v${version}\n`);
+console.log(`\n  zero-server docs build - v${version}\n`);
 
 /* -- 1. Generate section JSON files -------------------------------- */
 
@@ -1420,7 +1420,7 @@ function generatePatchNotes(currentVer, currentDir)
 	const prev = prevVersions.find(v => v.version !== currentVer);
 	if (!prev)
 	{
-		// First version — everything is "added"
+		// First version - everything is "added"
 		const notes = { version: currentVer, previousVersion: null, date: new Date().toISOString().split('T')[0], changes: [] };
 		const sections = loadSections(currentDir);
 		for (const section of sections)
@@ -1548,7 +1548,7 @@ function generatePatchNotes(currentVer, currentDir)
 	}
 
 	// Reconcile items that moved between sections (same name + description, different section).
-	// These should not appear as "removed + added" — reclassify as "moved".
+	// These should not appear as "removed + added" - reclassify as "moved".
 	const addedItems  = notes.changes.filter(c => c.type === 'added'  && c.kind === 'item');
 	const removedItems = notes.changes.filter(c => c.type === 'removed' && c.kind === 'item');
 	const movedNames = new Set();
@@ -1671,4 +1671,4 @@ console.log(`  ✓ Cache-bust (v=${stamp})`);
 
 /* -- Done ---------------------------------------------------------- */
 
-console.log(`\n  ✓ Build complete — v${version}\n`);
+console.log(`\n  ✓ Build complete - v${version}\n`);

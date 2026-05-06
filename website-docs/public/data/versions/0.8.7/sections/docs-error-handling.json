@@ -5,10 +5,10 @@
 		{
 			"name": "Error Classes",
 			"description": "HTTP error classes with status codes, error codes, and structured details. Every error extends HttpError which carries a statusCode, code, and optional details.",
-			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory - create by status code\r\n  throw createError(503, 'Try again later');",
 			"examples": [
 				{
-					"code": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+					"code": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory - create by status code\r\n  throw createError(503, 'Try again later');",
 					"lang": "javascript"
 				}
 			],
@@ -44,13 +44,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code (e.g. 'VALIDATION_FAILED')."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -82,13 +82,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -115,13 +115,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -148,13 +148,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -181,13 +181,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -214,13 +214,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -247,13 +247,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -280,13 +280,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -313,13 +313,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -346,13 +346,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -385,7 +385,7 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								}
 							]
@@ -412,13 +412,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -445,13 +445,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -478,13 +478,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -511,13 +511,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -544,13 +544,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							]
@@ -563,7 +563,7 @@
 						{
 							"method": "DatabaseError",
 							"signature": "new DatabaseError([message], [opts])",
-							"description": "Database / ORM error — wraps adapter-level failures.",
+							"description": "Database / ORM error - wraps adapter-level failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -582,13 +582,13 @@
 								{
 									"option": "query",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The query or operation that failed."
 								},
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name (sqlite, mysql, etc.)."
 								}
 							]
@@ -596,7 +596,7 @@
 						{
 							"method": "ConfigurationError",
 							"signature": "new ConfigurationError([message], [opts])",
-							"description": "Configuration error — thrown when app/adapter configuration is invalid.",
+							"description": "Configuration error - thrown when app/adapter configuration is invalid.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -615,7 +615,7 @@
 								{
 									"option": "setting",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The setting key that's invalid."
 								}
 							]
@@ -623,7 +623,7 @@
 						{
 							"method": "MiddlewareError",
 							"signature": "new MiddlewareError([message], [opts])",
-							"description": "Middleware error — a middleware function failed unexpectedly.",
+							"description": "Middleware error - a middleware function failed unexpectedly.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -642,7 +642,7 @@
 								{
 									"option": "middleware",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Middleware name."
 								}
 							]
@@ -650,7 +650,7 @@
 						{
 							"method": "RoutingError",
 							"signature": "new RoutingError([message], [opts])",
-							"description": "Routing error — thrown when route resolution fails.",
+							"description": "Routing error - thrown when route resolution fails.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -669,13 +669,13 @@
 								{
 									"option": "path",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The route path."
 								},
 								{
 									"option": "method",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The HTTP method."
 								}
 							]
@@ -683,7 +683,7 @@
 						{
 							"method": "TimeoutError",
 							"signature": "new TimeoutError([message], [opts])",
-							"description": "Timeout error — operation exceeded allowed time.",
+							"description": "Timeout error - operation exceeded allowed time.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -702,7 +702,7 @@
 								{
 									"option": "timeout",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "The timeout limit in ms."
 								}
 							]
@@ -715,7 +715,7 @@
 						{
 							"method": "ConnectionError",
 							"signature": "new ConnectionError([message], [opts])",
-							"description": "Connection error — database connection failures with retry context.",
+							"description": "Connection error - database connection failures with retry context.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -734,31 +734,31 @@
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name."
 								},
 								{
 									"option": "attempt",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Retry attempt number."
 								},
 								{
 									"option": "maxRetries",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum retries configured."
 								},
 								{
 									"option": "host",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Target host."
 								},
 								{
 									"option": "port",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Target port."
 								}
 							]
@@ -766,7 +766,7 @@
 						{
 							"method": "MigrationError",
 							"signature": "new MigrationError([message], [opts])",
-							"description": "Migration error — migration execution failures.",
+							"description": "Migration error - migration execution failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -785,19 +785,19 @@
 								{
 									"option": "migration",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Migration name that failed."
 								},
 								{
 									"option": "direction",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'up' or 'down'."
 								},
 								{
 									"option": "batch",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Batch number."
 								}
 							]
@@ -805,7 +805,7 @@
 						{
 							"method": "TransactionError",
 							"signature": "new TransactionError([message], [opts])",
-							"description": "Transaction error — transaction commit/rollback failures.",
+							"description": "Transaction error - transaction commit/rollback failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -824,7 +824,7 @@
 								{
 									"option": "phase",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'begin', 'commit', or 'rollback'."
 								}
 							]
@@ -832,7 +832,7 @@
 						{
 							"method": "QueryError",
 							"signature": "new QueryError([message], [opts])",
-							"description": "Query error — query execution failures with SQL context.",
+							"description": "Query error - query execution failures with SQL context.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -851,19 +851,19 @@
 								{
 									"option": "sql",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The SQL that failed (if applicable)."
 								},
 								{
 									"option": "params",
 									"type": "Array",
-									"default": "—",
+									"default": "-",
 									"notes": "Query parameters."
 								},
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Target table."
 								}
 							]
@@ -871,7 +871,7 @@
 						{
 							"method": "AdapterError",
 							"signature": "new AdapterError([message], [opts])",
-							"description": "Adapter error — adapter-level issues (driver not found, unsupported operation).",
+							"description": "Adapter error - adapter-level issues (driver not found, unsupported operation).",
 							"methodParams": [
 								{
 									"param": "message",
@@ -890,13 +890,13 @@
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name."
 								},
 								{
 									"option": "operation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The operation that failed."
 								}
 							]
@@ -904,7 +904,7 @@
 						{
 							"method": "CacheError",
 							"signature": "new CacheError([message], [opts])",
-							"description": "Cache error — caching layer failures.",
+							"description": "Cache error - caching layer failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -923,13 +923,13 @@
 								{
 									"option": "operation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cache operation that failed."
 								},
 								{
 									"option": "key",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cache key involved."
 								}
 							]
@@ -942,7 +942,7 @@
 						{
 							"method": "TenancyError",
 							"signature": "new TenancyError([message], [opts])",
-							"description": "Tenancy error — multi-tenancy operation failures.",
+							"description": "Tenancy error - multi-tenancy operation failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -961,13 +961,13 @@
 								{
 									"option": "tenant",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Tenant identifier."
 								},
 								{
 									"option": "strategy",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Tenancy strategy (row, schema)."
 								}
 							]
@@ -975,7 +975,7 @@
 						{
 							"method": "AuditError",
 							"signature": "new AuditError([message], [opts])",
-							"description": "Audit error — audit logging failures.",
+							"description": "Audit error - audit logging failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -994,13 +994,13 @@
 								{
 									"option": "action",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Audit action that failed."
 								},
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Target table."
 								}
 							]
@@ -1008,7 +1008,7 @@
 						{
 							"method": "PluginError",
 							"signature": "new PluginError([message], [opts])",
-							"description": "Plugin error — plugin registration or lifecycle failures.",
+							"description": "Plugin error - plugin registration or lifecycle failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1027,13 +1027,13 @@
 								{
 									"option": "plugin",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Plugin name."
 								},
 								{
 									"option": "phase",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Lifecycle phase (install, boot, uninstall)."
 								}
 							]
@@ -1041,7 +1041,7 @@
 						{
 							"method": "ProcedureError",
 							"signature": "new ProcedureError([message], [opts])",
-							"description": "Procedure error — stored procedure/function failures.",
+							"description": "Procedure error - stored procedure/function failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1060,13 +1060,13 @@
 								{
 									"option": "procedure",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Procedure or function name."
 								},
 								{
 									"option": "operation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Operation (create, drop, execute)."
 								}
 							]
@@ -1104,13 +1104,13 @@
 								{
 									"option": "code",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Machine-readable error code."
 								},
 								{
 									"option": "details",
 									"type": "*",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra data (field errors, debug info, etc.)."
 								}
 							],
@@ -1150,10 +1150,10 @@
 		{
 			"name": "Framework Errors",
 			"description": "Specialized error classes for framework internals, ORM operations, and infrastructure failures. All extend HttpError and carry structured context.",
-			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+			"example": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory - create by status code\r\n  throw createError(503, 'Try again later');",
 			"examples": [
 				{
-					"code": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory — create by status code\r\n  throw createError(503, 'Try again later');",
+					"code": "  const { NotFoundError, ValidationError, createError } = require('zero-http');\r\n\n  // Throw a named error class\r\n  throw new NotFoundError('User not found');\r\n\n  // Attach a machine-readable code + details\r\n  throw new NotFoundError('Invoice missing', {\r\n      code: 'INVOICE_NOT_FOUND',\r\n      details: { invoiceId: 'INV-42' },\r\n  });\r\n\n  // Field-level validation errors\r\n  throw new ValidationError('Invalid input', {\r\n      email: 'required',\r\n      age:   'must be >= 18',\r\n  });\r\n\n  // Factory - create by status code\r\n  throw createError(503, 'Try again later');",
 					"lang": "javascript"
 				}
 			],
@@ -1164,7 +1164,7 @@
 						{
 							"method": "DatabaseError",
 							"signature": "new DatabaseError([message], [opts])",
-							"description": "Database / ORM error — wraps adapter-level failures.",
+							"description": "Database / ORM error - wraps adapter-level failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1183,13 +1183,13 @@
 								{
 									"option": "query",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The query or operation that failed."
 								},
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name (sqlite, mysql, etc.)."
 								}
 							]
@@ -1197,7 +1197,7 @@
 						{
 							"method": "ConfigurationError",
 							"signature": "new ConfigurationError([message], [opts])",
-							"description": "Configuration error — thrown when app/adapter configuration is invalid.",
+							"description": "Configuration error - thrown when app/adapter configuration is invalid.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1216,7 +1216,7 @@
 								{
 									"option": "setting",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The setting key that's invalid."
 								}
 							]
@@ -1224,7 +1224,7 @@
 						{
 							"method": "MiddlewareError",
 							"signature": "new MiddlewareError([message], [opts])",
-							"description": "Middleware error — a middleware function failed unexpectedly.",
+							"description": "Middleware error - a middleware function failed unexpectedly.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1243,7 +1243,7 @@
 								{
 									"option": "middleware",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Middleware name."
 								}
 							]
@@ -1251,7 +1251,7 @@
 						{
 							"method": "RoutingError",
 							"signature": "new RoutingError([message], [opts])",
-							"description": "Routing error — thrown when route resolution fails.",
+							"description": "Routing error - thrown when route resolution fails.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1270,13 +1270,13 @@
 								{
 									"option": "path",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The route path."
 								},
 								{
 									"option": "method",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The HTTP method."
 								}
 							]
@@ -1284,7 +1284,7 @@
 						{
 							"method": "TimeoutError",
 							"signature": "new TimeoutError([message], [opts])",
-							"description": "Timeout error — operation exceeded allowed time.",
+							"description": "Timeout error - operation exceeded allowed time.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1303,7 +1303,7 @@
 								{
 									"option": "timeout",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "The timeout limit in ms."
 								}
 							]
@@ -1316,7 +1316,7 @@
 						{
 							"method": "ConnectionError",
 							"signature": "new ConnectionError([message], [opts])",
-							"description": "Connection error — database connection failures with retry context.",
+							"description": "Connection error - database connection failures with retry context.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1335,31 +1335,31 @@
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name."
 								},
 								{
 									"option": "attempt",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Retry attempt number."
 								},
 								{
 									"option": "maxRetries",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum retries configured."
 								},
 								{
 									"option": "host",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Target host."
 								},
 								{
 									"option": "port",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Target port."
 								}
 							]
@@ -1367,7 +1367,7 @@
 						{
 							"method": "MigrationError",
 							"signature": "new MigrationError([message], [opts])",
-							"description": "Migration error — migration execution failures.",
+							"description": "Migration error - migration execution failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1386,19 +1386,19 @@
 								{
 									"option": "migration",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Migration name that failed."
 								},
 								{
 									"option": "direction",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'up' or 'down'."
 								},
 								{
 									"option": "batch",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Batch number."
 								}
 							]
@@ -1406,7 +1406,7 @@
 						{
 							"method": "TransactionError",
 							"signature": "new TransactionError([message], [opts])",
-							"description": "Transaction error — transaction commit/rollback failures.",
+							"description": "Transaction error - transaction commit/rollback failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1425,7 +1425,7 @@
 								{
 									"option": "phase",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'begin', 'commit', or 'rollback'."
 								}
 							]
@@ -1433,7 +1433,7 @@
 						{
 							"method": "QueryError",
 							"signature": "new QueryError([message], [opts])",
-							"description": "Query error — query execution failures with SQL context.",
+							"description": "Query error - query execution failures with SQL context.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1452,19 +1452,19 @@
 								{
 									"option": "sql",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The SQL that failed (if applicable)."
 								},
 								{
 									"option": "params",
 									"type": "Array",
-									"default": "—",
+									"default": "-",
 									"notes": "Query parameters."
 								},
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Target table."
 								}
 							]
@@ -1472,7 +1472,7 @@
 						{
 							"method": "AdapterError",
 							"signature": "new AdapterError([message], [opts])",
-							"description": "Adapter error — adapter-level issues (driver not found, unsupported operation).",
+							"description": "Adapter error - adapter-level issues (driver not found, unsupported operation).",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1491,13 +1491,13 @@
 								{
 									"option": "adapter",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Adapter name."
 								},
 								{
 									"option": "operation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "The operation that failed."
 								}
 							]
@@ -1505,7 +1505,7 @@
 						{
 							"method": "CacheError",
 							"signature": "new CacheError([message], [opts])",
-							"description": "Cache error — caching layer failures.",
+							"description": "Cache error - caching layer failures.",
 							"methodParams": [
 								{
 									"param": "message",
@@ -1524,13 +1524,13 @@
 								{
 									"option": "operation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cache operation that failed."
 								},
 								{
 									"option": "key",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cache key involved."
 								}
 							]
@@ -1546,31 +1546,31 @@
 				{
 					"option": "stack",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Include stack traces in responses (default: true when NODE_ENV !== 'production')."
 				},
 				{
 					"option": "log",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Log errors to console (default: true)."
 				},
 				{
 					"option": "logger",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom log function (default: console.error)."
 				},
 				{
 					"option": "formatter",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom response formatter: (err, req, isDev) => object."
 				},
 				{
 					"option": "onError",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Callback on every error: (err, req, res) => void."
 				}
 			],
@@ -1601,10 +1601,10 @@
 				"type": "Function & { trace, debug, info, warn, error, fatal, enabled }",
 				"description": "Logger function."
 			},
-			"example": "  const debug = require('zero-http').debug;\r\n  const log = debug('app:routes');\r\n\n  log.info('server started on port %d', 3000);\r\n  log.warn('deprecation notice');\r\n  log.error('failed to connect', err);\r\n  log('shorthand for debug level');\r\n\n  // Set minimum level — anything below is silenced\r\n  debug.level('warn');   // only warn, error, fatal\r\n  debug.level('silent'); // suppress all output\r\n  debug.level('trace');  // show everything\r\n  debug.level(0);        // same as 'trace'",
+			"example": "  const debug = require('zero-http').debug;\r\n  const log = debug('app:routes');\r\n\n  log.info('server started on port %d', 3000);\r\n  log.warn('deprecation notice');\r\n  log.error('failed to connect', err);\r\n  log('shorthand for debug level');\r\n\n  // Set minimum level - anything below is silenced\r\n  debug.level('warn');   // only warn, error, fatal\r\n  debug.level('silent'); // suppress all output\r\n  debug.level('trace');  // show everything\r\n  debug.level(0);        // same as 'trace'",
 			"examples": [
 				{
-					"code": "  const debug = require('zero-http').debug;\r\n  const log = debug('app:routes');\r\n\n  log.info('server started on port %d', 3000);\r\n  log.warn('deprecation notice');\r\n  log.error('failed to connect', err);\r\n  log('shorthand for debug level');\r\n\n  // Set minimum level — anything below is silenced\r\n  debug.level('warn');   // only warn, error, fatal\r\n  debug.level('silent'); // suppress all output\r\n  debug.level('trace');  // show everything\r\n  debug.level(0);        // same as 'trace'",
+					"code": "  const debug = require('zero-http').debug;\r\n  const log = debug('app:routes');\r\n\n  log.info('server started on port %d', 3000);\r\n  log.warn('deprecation notice');\r\n  log.error('failed to connect', err);\r\n  log('shorthand for debug level');\r\n\n  // Set minimum level - anything below is silenced\r\n  debug.level('warn');   // only warn, error, fatal\r\n  debug.level('silent'); // suppress all output\r\n  debug.level('trace');  // show everything\r\n  debug.level(0);        // same as 'trace'",
 					"lang": "javascript"
 				}
 			],
@@ -1621,7 +1621,7 @@
 									"param": "level",
 									"type": "string | number",
 									"required": "Yes",
-									"notes": "Level name or number.\n`'trace'` (0) — all output\n`'debug'` (1) — debug and above\n`'info'` (2) — info and above\n`'warn'` (3) — warn and above\n`'error'` (4) — error and fatal only\n`'fatal'` (5) — fatal only\n`'silent'` (6) — nothing"
+									"notes": "Level name or number.\n`'trace'` (0) - all output\n`'debug'` (1) - debug and above\n`'info'` (2) - info and above\n`'warn'` (3) - warn and above\n`'error'` (4) - error and fatal only\n`'fatal'` (5) - fatal only\n`'silent'` (6) - nothing"
 								}
 							]
 						},

@@ -1,5 +1,5 @@
 /**
- * Phase 4 — PluginManager tests
+ * Phase 4 - PluginManager tests
  */
 const { PluginManager } = require('../../lib/orm/plugin');
 
@@ -22,7 +22,7 @@ function makePlugin(overrides = {})
 // ===================================================================
 // Constructor
 // ===================================================================
-describe('PluginManager — constructor', () =>
+describe('PluginManager - constructor', () =>
 {
     it('creates with no args', () =>
     {
@@ -43,7 +43,7 @@ describe('PluginManager — constructor', () =>
 // ===================================================================
 // Registration
 // ===================================================================
-describe('PluginManager — register', () =>
+describe('PluginManager - register', () =>
 {
     it('registers a valid plugin', () =>
     {
@@ -119,7 +119,7 @@ describe('PluginManager — register', () =>
 // ===================================================================
 // registerAll
 // ===================================================================
-describe('PluginManager — registerAll', () =>
+describe('PluginManager - registerAll', () =>
 {
     it('registers multiple plugins', () =>
     {
@@ -150,7 +150,7 @@ describe('PluginManager — registerAll', () =>
 // ===================================================================
 // Unregister
 // ===================================================================
-describe('PluginManager — unregister', () =>
+describe('PluginManager - unregister', () =>
 {
     it('removes a plugin', () =>
     {
@@ -187,7 +187,7 @@ describe('PluginManager — unregister', () =>
 // ===================================================================
 // Boot
 // ===================================================================
-describe('PluginManager — boot', () =>
+describe('PluginManager - boot', () =>
 {
     it('calls boot on plugins', async () =>
     {
@@ -230,7 +230,7 @@ describe('PluginManager — boot', () =>
 // ===================================================================
 // Hook system
 // ===================================================================
-describe('PluginManager — hooks', () =>
+describe('PluginManager - hooks', () =>
 {
     it('registers and runs a hook', async () =>
     {
@@ -308,7 +308,7 @@ describe('PluginManager — hooks', () =>
 // ===================================================================
 // Query methods
 // ===================================================================
-describe('PluginManager — query', () =>
+describe('PluginManager - query', () =>
 {
     let pm;
 
@@ -365,7 +365,7 @@ describe('PluginManager — query', () =>
 // ===================================================================
 // Plugin name validation (security)
 // ===================================================================
-describe('PluginManager — name validation (security)', () =>
+describe('PluginManager - name validation (security)', () =>
 {
     let pm;
 

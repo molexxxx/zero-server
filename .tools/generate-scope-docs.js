@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * generate-scope-docs.js — Per-scope documentation.
+ * generate-scope-docs.js - Per-scope documentation.
  *
  * For each scope in .tools/scope-manifest.js this writes:
  *
@@ -135,7 +135,7 @@ for (const scope of scopes) {
 const indexBody = [
     '# Scoped packages',
     '',
-    '> The full SDK lives at [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk) — install that and you have everything. Every scope below is also published as its own standalone package for projects that only need a slice of the surface, and they all release at the same version.',
+    '> The full SDK lives at [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk) - install that and you have everything. Every scope below is also published as its own standalone package for projects that only need a slice of the surface, and they all release at the same version.',
     '',
     ...indexRows,
     '',

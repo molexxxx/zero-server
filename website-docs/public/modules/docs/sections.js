@@ -411,7 +411,7 @@ function renderDocItem(item, section)
             intro.className = 'cli-cfg-intro';
             intro.innerHTML =
                 'The CLI reads a <code>zero.config.js</code> file from your project root to know which database to connect to and where your project files live. ' +
-                'Create this file once and every <code>zh</code> command will use it automatically — no flags needed.';
+                'Create this file once and every <code>zh</code> command will use it automatically - no flags needed.';
             body.appendChild(intro);
 
             const dirExplain = document.createElement('div');
@@ -425,7 +425,7 @@ function renderDocItem(item, section)
                 '</div>' +
                 '<div class="cli-cfg-dir-item">' +
                     '<code>seedersDir</code>' +
-                    '<p>The folder where your seeder files live. Seeders insert sample or default data into your tables — ' +
+                    '<p>The folder where your seeder files live. Seeders insert sample or default data into your tables - ' +
                     'useful for populating a fresh database during development or setting up initial records in production.  ' +
                     'Run <code>npx zh make:seeder &lt;name&gt;</code> to generate one, then <code>npx zh seed</code> to run them all.</p>' +
                 '</div>' +
@@ -969,7 +969,7 @@ function populateToc(sections)
                 a.appendChild(iconWrap);
             }
 
-            /* Section name — ellipsis via CSS */
+            /* Section name - ellipsis via CSS */
             const nameSpan = document.createElement('span');
             nameSpan.className = 'toc-link-text';
             nameSpan.textContent = section.section;
@@ -1045,7 +1045,7 @@ export async function loadDocs(version)
     {
         const _v = window.__v ? `?v=${window.__v}` : '';
 
-        /* Resolve paths — always use /data/versions/{ver}/sections/ */
+        /* Resolve paths - always use /data/versions/{ver}/sections/ */
         const ver = version || window._docsVersion;
         if (!ver) return;
         const basePath = `/data/versions/${encodeURIComponent(ver)}`;
@@ -1104,7 +1104,7 @@ export async function loadDocs(version)
         {
             if (deferIdx >= sections.length)
             {
-                /* All done — finalize */
+                /* All done - finalize */
                 finalize();
                 return;
             }

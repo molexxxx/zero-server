@@ -256,7 +256,7 @@ describe('Double Send Protection', () => {
 // ===========================================================
 //  type() shorthands
 // ===========================================================
-describe('Response — type() shorthands', () => {
+describe('Response - type() shorthands', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -314,7 +314,7 @@ describe('Response — type() shorthands', () => {
 // ===========================================================
 //  send() auto-detection
 // ===========================================================
-describe('Response — send() auto-detection', () => {
+describe('Response - send() auto-detection', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -368,7 +368,7 @@ describe('Response — send() auto-detection', () => {
 // ===========================================================
 //  vary('*') behavior
 // ===========================================================
-describe('Response — vary() edge cases', () => {
+describe('Response - vary() edge cases', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -402,9 +402,9 @@ describe('Response — vary() edge cases', () => {
 });
 
 // ===========================================================
-//  Cookie — all option combinations
+//  Cookie - all option combinations
 // ===========================================================
-describe('Response — cookie option combinations', () => {
+describe('Response - cookie option combinations', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -473,9 +473,9 @@ describe('Response — cookie option combinations', () => {
 });
 
 // ===========================================================
-//  res.get() — response header retrieval
+//  res.get() - response header retrieval
 // ===========================================================
-describe('Response — get() header retrieval', () => {
+describe('Response - get() header retrieval', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -512,9 +512,9 @@ describe('Response — get() header retrieval', () => {
 });
 
 // ===========================================================
-//  sendFile — callback usage
+//  sendFile - callback usage
 // ===========================================================
-describe('Response — sendFile callback', () => {
+describe('Response - sendFile callback', () => {
     let server, base;
     const dir = path.join(__dirname, 'res-sendfile-cb');
 
@@ -557,9 +557,9 @@ describe('Response — sendFile callback', () => {
 });
 
 // ===========================================================
-//  Response — text() and html() helpers
+//  Response - text() and html() helpers
 // ===========================================================
-describe('Response — text() and html()', () => {
+describe('Response - text() and html()', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -589,7 +589,7 @@ describe('Response — text() and html()', () => {
 // ===========================================================
 //  status() chainability
 // ===========================================================
-describe('Response — status() chain', () => {
+describe('Response - status() chain', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -689,13 +689,13 @@ describe('Response send optimizations', () =>
 
 
 // =========================================================================
-//  response — coverage gaps (from coverage/gaps.test.js)
+//  response - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  14. RESPONSE — SET OBJECT, FORMAT WILDCARD
+//  14. RESPONSE - SET OBJECT, FORMAT WILDCARD
 // ============================================================
-describe('response — res.set with chaining', () => {
+describe('response - res.set with chaining', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -720,7 +720,7 @@ describe('response — res.set with chaining', () => {
 	});
 });
 
-describe('response — res.format with wildcard Accept', () => {
+describe('response - res.format with wildcard Accept', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -746,4 +746,4 @@ describe('response — res.format with wildcard Accept', () => {
 		});
 		expect(r.status).toBe(200);
 	});
-});
+});

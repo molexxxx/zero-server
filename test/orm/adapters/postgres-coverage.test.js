@@ -638,7 +638,7 @@ describe('PostgresAdapter stmtCacheStats', () =>
 });
 
 // ============================================================
-//  tableSizeFormatted — formatter branches
+//  tableSizeFormatted - formatter branches
 // ============================================================
 describe('PostgresAdapter tableSizeFormatted formatter', () =>
 {
@@ -684,7 +684,7 @@ describe('PostgresAdapter tableSizeFormatted formatter', () =>
 });
 
 // ============================================================
-//  overview — formatter branches
+//  overview - formatter branches
 // ============================================================
 describe('PostgresAdapter overview formatter', () =>
 {

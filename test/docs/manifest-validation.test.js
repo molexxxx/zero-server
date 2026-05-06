@@ -153,7 +153,7 @@ describe('Documentation Examples', () => {
         for (const ex of examples) {
             if (ex.lang !== 'javascript') continue;
 
-            it(`[${ex.section}] ${ex.name} — parses as valid JS`, () => {
+            it(`[${ex.section}] ${ex.name} - parses as valid JS`, () => {
                 const err = checkSyntax(ex.example);
                 if (err) {
                     // Include a snippet around the error to help debugging
@@ -178,7 +178,7 @@ describe('Documentation Examples', () => {
             const imports = extractImports(ex.example);
             if (imports.length === 0) continue;
 
-            it(`[${ex.section}] ${ex.name} — all imports exist`, () => {
+            it(`[${ex.section}] ${ex.name} - all imports exist`, () => {
                 const missing = imports.filter(name => !moduleExports.includes(name));
                 if (missing.length > 0) {
                     throw new Error(
@@ -210,7 +210,7 @@ describe('Documentation Examples', () => {
                 const getInstance = mapping[item.name];
                 if (!getInstance) continue;
 
-                it(`[${section.section}] ${item.name} — documented methods exist`, () => {
+                it(`[${section.section}] ${item.name} - documented methods exist`, () => {
                     const instance = getInstance();
                     const missingMethods = [];
 
@@ -277,7 +277,7 @@ describe('Documentation Examples', () => {
             const calls = extractMethodCalls(ex.example, 'app');
             if (calls.length === 0) continue;
 
-            it(`[${ex.section}] ${ex.name} — app methods exist`, () => {
+            it(`[${ex.section}] ${ex.name} - app methods exist`, () => {
                 const missing = calls.filter(m => !appMethods.has(m));
                 if (missing.length > 0) {
                     throw new Error(

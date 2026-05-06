@@ -1,5 +1,5 @@
 /**
- * Phase 3 — Computed & Virtual Columns, Attribute Casting, Accessors/Mutators
+ * Phase 3 - Computed & Virtual Columns, Attribute Casting, Accessors/Mutators
  */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
@@ -173,7 +173,7 @@ describe('Attribute Casting', () =>
         await db.sync();
 
         const inst1 = await M.create({ active: 'true' });
-        // Via toJSON / getAttribute — casts apply on read
+        // Via toJSON / getAttribute - casts apply on read
         expect(inst1.toJSON().active).toBe(true);
         expect(inst1.getAttribute('active')).toBe(true);
 

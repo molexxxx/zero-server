@@ -9,13 +9,13 @@
 				{
 					"option": "limit",
 					"type": "string | number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max body size (e.g. `'10kb'`). Default `'1mb'`."
 				},
 				{
 					"option": "reviver",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`JSON.parse` reviver function."
 				},
 				{
@@ -39,8 +39,8 @@
 				{
 					"option": "verify",
 					"type": "Function",
-					"default": "—",
-					"notes": "`verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403."
+					"default": "-",
+					"notes": "`verify(req, res, buf, encoding)` - called before parsing. Throw to reject with 403."
 				},
 				{
 					"option": "inflate",
@@ -62,7 +62,7 @@
 				{
 					"option": "limit",
 					"type": "string | number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max body size (e.g. `'10kb'`). Default `'1mb'`."
 				},
 				{
@@ -98,8 +98,8 @@
 				{
 					"option": "verify",
 					"type": "Function",
-					"default": "—",
-					"notes": "`verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403."
+					"default": "-",
+					"notes": "`verify(req, res, buf, encoding)` - called before parsing. Throw to reject with 403."
 				},
 				{
 					"option": "inflate",
@@ -121,7 +121,7 @@
 				{
 					"option": "limit",
 					"type": "string | number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max body size. Default `'1mb'`."
 				},
 				{
@@ -145,8 +145,8 @@
 				{
 					"option": "verify",
 					"type": "Function",
-					"default": "—",
-					"notes": "`verify(req, res, buf, encoding)` — called before decoding. Throw to reject with 403."
+					"default": "-",
+					"notes": "`verify(req, res, buf, encoding)` - called before decoding. Throw to reject with 403."
 				},
 				{
 					"option": "inflate",
@@ -168,7 +168,7 @@
 				{
 					"option": "limit",
 					"type": "string | number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max body size. Default `'1mb'`."
 				},
 				{
@@ -186,8 +186,8 @@
 				{
 					"option": "verify",
 					"type": "Function",
-					"default": "—",
-					"notes": "`verify(req, res, buf)` — called before setting body. Throw to reject with 403."
+					"default": "-",
+					"notes": "`verify(req, res, buf)` - called before setting body. Throw to reject with 403."
 				},
 				{
 					"option": "inflate",
@@ -209,13 +209,13 @@
 				{
 					"option": "dir",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Upload directory (default: OS temp dir)."
 				},
 				{
 					"option": "maxFileSize",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Maximum size per file in bytes."
 				},
 				{
@@ -239,19 +239,19 @@
 				{
 					"option": "maxFieldSize",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Maximum size of a single field value in bytes. Default 1 MB."
 				},
 				{
 					"option": "allowedMimeTypes",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Whitelist of MIME types for uploaded files (e.g. `['image/png', 'image/jpeg']`)."
 				},
 				{
 					"option": "maxTotalSize",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Maximum combined size of all uploaded files in bytes."
 				}
 			],

@@ -1,4 +1,4 @@
-/** initialization.test.js — adapter driver initialization tests */
+/** initialization.test.js - adapter driver initialization tests */
 const { Database, Model, TYPES } = require('../../../lib/orm');
 
 // -- Driver Availability ---------------------------------
@@ -137,7 +137,7 @@ describe('MySQL adapter (verbose driver tests)', () =>
         // Should not throw
     });
 
-    it('type handling — CRUD methods exist', () =>
+    it('type handling - CRUD methods exist', () =>
     {
         const db = Database.connect('mysql', {
             host: 'localhost', user: 'root', password: '', database: 'test',
@@ -461,7 +461,7 @@ describe('SQLite adapter (verbose driver tests)', () =>
     it('respects readonly option', () =>
     {
         const db = Database.connect('sqlite', { filename: ':memory:', readonly: false });
-        // Should be writable — use createTable which calls exec internally
+        // Should be writable - use createTable which calls exec internally
         db.adapter._db.exec('CREATE TABLE test_rw (id INTEGER PRIMARY KEY)');
         const tables = db.adapter.tables();
         expect(tables).toContain('test_rw');
@@ -562,7 +562,7 @@ describe('Cross-driver feature matrix', () =>
 });
 
 // ===========================================================
-//  MySQL Adapter — _typeMap & Debug Methods (Phase 10)
+//  MySQL Adapter - _typeMap & Debug Methods (Phase 10)
 // ===========================================================
 
 describe('MySQL adapter _typeMap', () =>
@@ -680,7 +680,7 @@ describe('MySQL adapter debug methods exist', () =>
 });
 
 // ===========================================================
-//  PostgreSQL Adapter — _typeMap & Debug Methods (Phase 10)
+//  PostgreSQL Adapter - _typeMap & Debug Methods (Phase 10)
 // ===========================================================
 
 describe('PostgreSQL adapter _typeMap', () =>

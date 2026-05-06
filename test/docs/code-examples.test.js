@@ -1,4 +1,4 @@
-/** code-examples.test.js — documentation code example tests */
+/** code-examples.test.js - documentation code example tests */
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
@@ -42,7 +42,7 @@ const {
 } = require('../../lib/errors');
 
 // ===========================================================
-//  § PostgreSQL Adapter — Doc Examples (db & db2, $1/$2)
+//  § PostgreSQL Adapter - Doc Examples (db & db2, $1/$2)
 // ===========================================================
 
 describe('PostgreSQL Adapter (doc examples)', () =>
@@ -54,7 +54,7 @@ describe('PostgreSQL Adapter (doc examples)', () =>
     {
         if (pgAvailable)
         {
-            // pg is installed — constructor succeeds, returns Database
+            // pg is installed - constructor succeeds, returns Database
             const db = Database.connect('postgres', {
                 connectionString: 'postgresql://user:pass@localhost/mydb',
                 ssl: { rejectUnauthorized: false },
@@ -73,7 +73,7 @@ describe('PostgreSQL Adapter (doc examples)', () =>
         }
     });
 
-    it('db & db2 — connection string style vs individual options both work', () =>
+    it('db & db2 - connection string style vs individual options both work', () =>
     {
         if (!pgAvailable) return; // skip if driver not installed
 
@@ -140,7 +140,7 @@ describe('PostgreSQL Adapter (doc examples)', () =>
 });
 
 // ===========================================================
-//  § MySQL Adapter — Doc Examples
+//  § MySQL Adapter - Doc Examples
 // ===========================================================
 
 describe('MySQL Adapter (doc examples)', () =>
@@ -182,7 +182,7 @@ describe('MySQL Adapter (doc examples)', () =>
 });
 
 // ===========================================================
-//  § MongoDB Adapter — Doc Examples
+//  § MongoDB Adapter - Doc Examples
 // ===========================================================
 
 describe('MongoDB Adapter (doc examples)', () =>
@@ -235,7 +235,7 @@ describe('Database.connect validation', () =>
 });
 
 // ===========================================================
-//  § JSON Adapter — Doc Examples
+//  § JSON Adapter - Doc Examples
 // ===========================================================
 
 describe('JSON Adapter (doc examples)', () =>
@@ -400,7 +400,7 @@ describe('JSON Adapter (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Memory Adapter — Doc Examples (clone, stats)
+//  § Memory Adapter - Doc Examples (clone, stats)
 // ===========================================================
 
 describe('Memory Adapter (doc examples)', () =>
@@ -423,7 +423,7 @@ describe('Memory Adapter (doc examples)', () =>
         await db.sync();
     });
 
-    it('clone() creates deep-copy — mutations are isolated', async () =>
+    it('clone() creates deep-copy - mutations are isolated', async () =>
     {
         await Item.create({ name: 'Original' });
         const fork = db.adapter.clone();
@@ -466,7 +466,7 @@ describe('Memory Adapter (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model Hooks — Doc Examples
+//  § Model Hooks - Doc Examples
 // ===========================================================
 
 describe('Model Hooks (doc examples)', () =>
@@ -547,7 +547,7 @@ describe('Model Hooks (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model Relationships — Doc Examples
+//  § Model Relationships - Doc Examples
 // ===========================================================
 
 describe('Model Relationships (doc examples)', () =>
@@ -597,7 +597,7 @@ describe('Model Relationships (doc examples)', () =>
         Book.belongsTo(Author, 'authorId');
     });
 
-    it('hasMany — load() returns related records', async () =>
+    it('hasMany - load() returns related records', async () =>
     {
         const author = await Author.create({ name: 'Tolkien' });
         await Book.create({ title: 'The Hobbit', authorId: author.id });
@@ -608,7 +608,7 @@ describe('Model Relationships (doc examples)', () =>
         expect(books.map(b => b.title).sort()).toEqual(['LOTR', 'The Hobbit']);
     });
 
-    it('hasOne — load() returns single related record', async () =>
+    it('hasOne - load() returns single related record', async () =>
     {
         const author = await Author.create({ name: 'Rowling' });
         await Profile.create({ bio: 'British novelist', authorId: author.id });
@@ -618,7 +618,7 @@ describe('Model Relationships (doc examples)', () =>
         expect(profile.bio).toBe('British novelist');
     });
 
-    it('belongsTo — load() from child returns parent', async () =>
+    it('belongsTo - load() from child returns parent', async () =>
     {
         const author = await Author.create({ name: 'Asimov' });
         const book = await Book.create({ title: 'Foundation', authorId: author.id });
@@ -643,7 +643,7 @@ describe('Model Relationships (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model belongsToMany — Doc Examples
+//  § Model belongsToMany - Doc Examples
 // ===========================================================
 
 describe('Model belongsToMany (doc examples)', () =>
@@ -713,7 +713,7 @@ describe('Model belongsToMany (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model Instance Methods — Doc Examples
+//  § Model Instance Methods - Doc Examples
 // ===========================================================
 
 describe('Model instance methods (doc examples)', () =>
@@ -843,7 +843,7 @@ describe('Model instance methods (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Query Builder — Additional Doc Examples
+//  § Query Builder - Additional Doc Examples
 // ===========================================================
 
 describe('Query: additional doc examples', () =>
@@ -988,7 +988,7 @@ describe('Query: additional doc examples', () =>
         expect(max).toBe(95);
     });
 
-    it('query is thenable — await directly without exec()', async () =>
+    it('query is thenable - await directly without exec()', async () =>
     {
         const results = await Person.query().where('role', 'admin');
         expect(results).toHaveLength(2);
@@ -996,7 +996,7 @@ describe('Query: additional doc examples', () =>
 });
 
 // ===========================================================
-//  § Debug Logger — Doc Examples
+//  § Debug Logger - Doc Examples
 // ===========================================================
 
 describe('Debug Logger (doc examples)', () =>
@@ -1202,7 +1202,7 @@ describe('Debug Logger (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Env Type Coercion — Doc Examples
+//  § Env Type Coercion - Doc Examples
 // ===========================================================
 
 describe('Env type coercion (doc examples)', () =>
@@ -1425,10 +1425,10 @@ describe('Env type coercion (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Error Classes — ALL Doc Examples
+//  § Error Classes - ALL Doc Examples
 // ===========================================================
 
-describe('Error Classes — complete doc coverage', () =>
+describe('Error Classes - complete doc coverage', () =>
 {
     // Each error class from the docs
     const errorTests = [
@@ -1553,7 +1553,7 @@ describe('Error Classes — complete doc coverage', () =>
 });
 
 // ===========================================================
-//  § Framework Errors — Doc Examples
+//  § Framework Errors - Doc Examples
 // ===========================================================
 
 describe('Framework Errors (doc examples)', () =>
@@ -1656,7 +1656,7 @@ describe('Framework Errors (doc examples)', () =>
 });
 
 // ===========================================================
-//  § TYPES Constants — Doc Examples
+//  § TYPES Constants - Doc Examples
 // ===========================================================
 
 describe('TYPES constants (doc examples)', () =>
@@ -1689,7 +1689,7 @@ describe('TYPES constants (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model static shortcuts — from doc examples
+//  § Model static shortcuts - from doc examples
 // ===========================================================
 
 describe('Model static shortcuts (doc examples)', () =>
@@ -1811,7 +1811,7 @@ describe('Model static shortcuts (doc examples)', () =>
         expect(user.logins).toBe(3);
     });
 
-    it('upsert — updates existing, creates new', async () =>
+    it('upsert - updates existing, creates new', async () =>
     {
         // Update existing
         const { instance: updated, created: c1 } = await User.upsert(
@@ -1848,7 +1848,7 @@ describe('Model static shortcuts (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Model guarded fields — Doc Example
+//  § Model guarded fields - Doc Example
 // ===========================================================
 
 describe('Model guarded fields (doc example)', () =>
@@ -1881,7 +1881,7 @@ describe('Model guarded fields (doc example)', () =>
 });
 
 // ===========================================================
-//  § Model timestamps — Doc Example
+//  § Model timestamps - Doc Example
 // ===========================================================
 
 describe('Model timestamps (doc example)', () =>
@@ -1924,7 +1924,7 @@ describe('Model timestamps (doc example)', () =>
 });
 
 // ===========================================================
-//  § Model schema validation — Doc Example
+//  § Model schema validation - Doc Example
 // ===========================================================
 
 describe('Model schema validation (doc example)', () =>
@@ -1976,7 +1976,7 @@ describe('Model schema validation (doc example)', () =>
 });
 
 // ===========================================================
-//  § createMany — Doc Example
+//  § createMany - Doc Example
 // ===========================================================
 
 describe('Model.createMany (doc example)', () =>
@@ -2019,7 +2019,7 @@ describe('Model.createMany (doc example)', () =>
 });
 
 // ===========================================================
-//  § Database.registerAll — Doc Example
+//  § Database.registerAll - Doc Example
 // ===========================================================
 
 describe('Database.registerAll (doc example)', () =>
@@ -2046,7 +2046,7 @@ describe('Database.registerAll (doc example)', () =>
 });
 
 // ============================================================
-//  § Schema DDL — references, check, index, composites (SQLite)
+//  § Schema DDL - references, check, index, composites (SQLite)
 // ============================================================
 
 describe('Schema DDL coverage (SQLite)', () =>
@@ -2247,7 +2247,7 @@ describe('Migration methods coverage (memory adapter)', () =>
 });
 
 // ===========================================================
-//  § Migrator — Doc Examples
+//  § Migrator - Doc Examples
 // ===========================================================
 
 describe('Migrator (doc examples)', () =>
@@ -2410,7 +2410,7 @@ describe('Migrator (doc examples)', () =>
 });
 
 // ===========================================================
-//  § QueryCache — Doc Examples
+//  § QueryCache - Doc Examples
 // ===========================================================
 
 describe('QueryCache (doc examples)', () =>
@@ -2543,7 +2543,7 @@ describe('QueryCache (doc examples)', () =>
 });
 
 // ===========================================================
-//  § Seeder, Factory & Fake — Doc Examples
+//  § Seeder, Factory & Fake - Doc Examples
 // ===========================================================
 
 describe('Seeder, Factory & Fake (doc examples)', () =>
@@ -2832,7 +2832,7 @@ describe('Seeder, Factory & Fake (doc examples)', () =>
 });
 
 // ===========================================================
-//  § ORM Error Classes — Doc Examples
+//  § ORM Error Classes - Doc Examples
 // ===========================================================
 
 describe('ORM Error Classes (doc examples)', () =>
@@ -2938,7 +2938,7 @@ describe('ORM Error Classes (doc examples)', () =>
 });
 
 // ===========================================================
-//  § QueryProfiler — Doc Examples
+//  § QueryProfiler - Doc Examples
 // ===========================================================
 
 describe('QueryProfiler (doc examples)', () =>
@@ -3098,7 +3098,7 @@ describe('QueryProfiler (doc examples)', () =>
             profiler.record({ table: 'users', action: 'select', duration: i });
         }
         expect(profiler.getQueries().length).toBe(3);
-        // Oldest (0, 1) evicted — remaining are 2, 3, 4
+        // Oldest (0, 1) evicted - remaining are 2, 3, 4
         expect(profiler.getQueries()[0].duration).toBe(2);
     });
 
@@ -3114,7 +3114,7 @@ describe('QueryProfiler (doc examples)', () =>
 });
 
 // ===========================================================
-//  § ReplicaManager — Doc Examples
+//  § ReplicaManager - Doc Examples
 // ===========================================================
 
 describe('ReplicaManager (doc examples)', () =>

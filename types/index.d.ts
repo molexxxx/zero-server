@@ -294,10 +294,10 @@ declare const zeroServer: {
     LIFECYCLE_STATE: typeof LIFECYCLE_STATE;
     ClusterManager: typeof ClusterManager;
     cluster: typeof clusterize;
-    // Observability — Structured Logging
+    // Observability - Structured Logging
     Logger: typeof Logger;
     structuredLogger: typeof structuredLogger;
-    // Observability — Metrics
+    // Observability - Metrics
     Counter: typeof Counter;
     Gauge: typeof Gauge;
     Histogram: typeof Histogram;
@@ -306,14 +306,14 @@ declare const zeroServer: {
     createDefaultMetrics: typeof createDefaultMetrics;
     metricsMiddleware: typeof metricsMiddleware;
     metricsEndpoint: typeof metricsEndpointHandler;
-    // Observability — Tracing
+    // Observability - Tracing
     Span: typeof Span;
     Tracer: typeof Tracer;
     parseTraceparent: typeof parseTraceparent;
     formatTraceparent: typeof formatTraceparent;
     tracingMiddleware: typeof tracingMiddleware;
     instrumentFetch: typeof instrumentFetch;
-    // Observability — Health Checks
+    // Observability - Health Checks
     healthCheck: typeof healthCheck;
     createHealthHandlers: typeof createHealthHandlers;
     memoryCheck: typeof memoryCheck;

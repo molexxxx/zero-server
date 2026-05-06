@@ -130,7 +130,7 @@ export async function initVersionSelector()
 		const item = e.target.closest('.version-menu-item');
 		if (!item) return;
 
-		/* "What's New" — handled by patch-notes module via data-patch-notes */
+		/* "What's New" - handled by patch-notes module via data-patch-notes */
 		if (item.hasAttribute('data-patch-notes'))
 		{
 			wrapper.classList.remove('open');

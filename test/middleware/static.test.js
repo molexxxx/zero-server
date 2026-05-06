@@ -59,7 +59,7 @@ describe('Static File Security', () => {
 // ===========================================================
 //  Directory index.html
 // ===========================================================
-describe('Static — directory index', () => {
+describe('Static - directory index', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-index');
 
@@ -94,7 +94,7 @@ describe('Static — directory index', () => {
 // ===========================================================
 //  index: false disables directory index
 // ===========================================================
-describe('Static — index: false', () => {
+describe('Static - index: false', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-noindex');
 
@@ -125,7 +125,7 @@ describe('Static — index: false', () => {
 // ===========================================================
 //  Extension fallbacks
 // ===========================================================
-describe('Static — extension fallbacks', () => {
+describe('Static - extension fallbacks', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-ext');
 
@@ -165,7 +165,7 @@ describe('Static — extension fallbacks', () => {
 // ===========================================================
 //  maxAge Cache-Control header
 // ===========================================================
-describe('Static — maxAge', () => {
+describe('Static - maxAge', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-cache');
 
@@ -194,7 +194,7 @@ describe('Static — maxAge', () => {
 // ===========================================================
 //  setHeaders hook
 // ===========================================================
-describe('Static — setHeaders hook', () => {
+describe('Static - setHeaders hook', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-headers');
 
@@ -229,7 +229,7 @@ describe('Static — setHeaders hook', () => {
 // ===========================================================
 //  Dotfiles: deny returns 403
 // ===========================================================
-describe('Static — dotfiles: deny', () => {
+describe('Static - dotfiles: deny', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-dotdeny');
 
@@ -264,7 +264,7 @@ describe('Static — dotfiles: deny', () => {
 // ===========================================================
 //  Dotfiles: allow serves dotfiles
 // ===========================================================
-describe('Static — dotfiles: allow', () => {
+describe('Static - dotfiles: allow', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-dotallow');
 
@@ -293,7 +293,7 @@ describe('Static — dotfiles: allow', () => {
 // ===========================================================
 //  MIME type detection
 // ===========================================================
-describe('Static — MIME types', () => {
+describe('Static - MIME types', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-mime');
 
@@ -338,9 +338,9 @@ describe('Static — MIME types', () => {
 });
 
 // ===========================================================
-//  HEAD requests — static files
+//  HEAD requests - static files
 // ===========================================================
-describe('Static — HEAD requests', () => {
+describe('Static - HEAD requests', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-head');
 
@@ -371,7 +371,7 @@ describe('Static — HEAD requests', () => {
 // ===========================================================
 //  POST/PUT passthrough (non-GET/HEAD)
 // ===========================================================
-describe('Static — non-GET/HEAD passthrough', () => {
+describe('Static - non-GET/HEAD passthrough', () => {
     let server, base;
     const dir = path.join(__dirname, 'static-methods');
 
@@ -399,10 +399,10 @@ describe('Static — non-GET/HEAD passthrough', () => {
 });
 
 // =========================================================================
-//  Static — ETag, Last-Modified, 304, Range (from audit)
+//  Static - ETag, Last-Modified, 304, Range (from audit)
 // =========================================================================
 
-describe('Static file serving — ETag, Last-Modified, Range', () =>
+describe('Static file serving - ETag, Last-Modified, Range', () =>
 {
     let server, base;
     const testDir = path.join(__dirname, '_static_test');

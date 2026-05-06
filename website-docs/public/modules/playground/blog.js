@@ -69,7 +69,7 @@ export function initBlog()
 
             if (!data.authors || !data.authors.length)
             {
-                authorList.innerHTML = '<div style="padding:12px;color:#98a0aa">No authors yet — add one or click "Seed Demo Data".</div>';
+                authorList.innerHTML = '<div style="padding:12px;color:#98a0aa">No authors yet - add one or click "Seed Demo Data".</div>';
                 populateAuthorDropdown([]);
                 return;
             }
@@ -95,7 +95,7 @@ export function initBlog()
     function populateAuthorDropdown(authors)
     {
         const current = postAuthor.value;
-        postAuthor.innerHTML = '<option value="">— select —</option>' +
+        postAuthor.innerHTML = '<option value="">- select -</option>' +
             authors.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
         if (current && authors.some(a => String(a.id) === current)) postAuthor.value = current;
     }

@@ -1,5 +1,5 @@
 /**
- * Phase 4 — AuditLog tests
+ * Phase 4 - AuditLog tests
  */
 const { Database, Model, AuditLog } = require('../../lib/orm');
 
@@ -28,7 +28,7 @@ function makeModel(db, table, schema, opts = {})
 // ===================================================================
 // Constructor
 // ===================================================================
-describe('AuditLog — constructor', () =>
+describe('AuditLog - constructor', () =>
 {
     it('throws without db', () =>
     {
@@ -94,7 +94,7 @@ describe('AuditLog — constructor', () =>
 // ===================================================================
 // Actor management
 // ===================================================================
-describe('AuditLog — actor management', () =>
+describe('AuditLog - actor management', () =>
 {
     let audit;
 
@@ -160,7 +160,7 @@ describe('AuditLog — actor management', () =>
 // ===================================================================
 // Diff computation
 // ===================================================================
-describe('AuditLog — diff', () =>
+describe('AuditLog - diff', () =>
 {
     let audit;
 
@@ -204,7 +204,7 @@ describe('AuditLog — diff', () =>
 // ===================================================================
 // Field filtering
 // ===================================================================
-describe('AuditLog — field filtering', () =>
+describe('AuditLog - field filtering', () =>
 {
     it('excludes underscore-prefixed fields', () =>
     {
@@ -234,7 +234,7 @@ describe('AuditLog — field filtering', () =>
 // ===================================================================
 // PK extraction
 // ===================================================================
-describe('AuditLog — PK extraction', () =>
+describe('AuditLog - PK extraction', () =>
 {
     let audit;
 
@@ -267,7 +267,7 @@ describe('AuditLog — PK extraction', () =>
 // ===================================================================
 // Install
 // ===================================================================
-describe('AuditLog — install', () =>
+describe('AuditLog - install', () =>
 {
     it('creates audit table on memory adapter', async () =>
     {
@@ -327,7 +327,7 @@ describe('AuditLog — install', () =>
 // ===================================================================
 // Middleware
 // ===================================================================
-describe('AuditLog — middleware', () =>
+describe('AuditLog - middleware', () =>
 {
     let audit;
 
@@ -369,7 +369,7 @@ describe('AuditLog — middleware', () =>
 // ===================================================================
 // Table name validation (security)
 // ===================================================================
-describe('AuditLog — table name validation', () =>
+describe('AuditLog - table name validation', () =>
 {
     it('rejects SQL injection in table name', () =>
     {
@@ -398,7 +398,7 @@ describe('AuditLog — table name validation', () =>
 // ===================================================================
 // Trail / History / byActor / count
 // ===================================================================
-describe('AuditLog — trail querying', () =>
+describe('AuditLog - trail querying', () =>
 {
     let db, audit, User;
 
@@ -461,7 +461,7 @@ describe('AuditLog — trail querying', () =>
 // ===================================================================
 // Purge
 // ===================================================================
-describe('AuditLog — purge', () =>
+describe('AuditLog - purge', () =>
 {
     it('throws without filters', async () =>
     {
@@ -483,7 +483,7 @@ describe('AuditLog — purge', () =>
         await User.create({ name: 'Test' });
         await new Promise(r => setTimeout(r, 50));
 
-        // Purge by table — should not throw
+        // Purge by table - should not throw
         const count = await audit.purge({ table: 'users' });
         expect(typeof count).toBe('number');
     });
@@ -502,7 +502,7 @@ describe('AuditLog — purge', () =>
 // ===================================================================
 // _logEntry branches
 // ===================================================================
-describe('AuditLog — _logEntry', () =>
+describe('AuditLog - _logEntry', () =>
 {
     it('logs create action without throwing', async () =>
     {
@@ -547,7 +547,7 @@ describe('AuditLog — _logEntry', () =>
     {
         const db = memDb();
         const audit = new AuditLog(db);
-        // Don't install — writing will fail but shouldn't throw
+        // Don't install - writing will fail but shouldn't throw
         await expect(audit._logEntry('create', 'users', { id: 1 })).resolves.not.toThrow();
     });
 
@@ -564,7 +564,7 @@ describe('AuditLog — _logEntry', () =>
 // ===================================================================
 // _attachHooks fallback (patching static create)
 // ===================================================================
-describe('AuditLog — _attachHooks fallback', () =>
+describe('AuditLog - _attachHooks fallback', () =>
 {
     it('patches static create when model has no .on()', async () =>
     {
@@ -591,7 +591,7 @@ describe('AuditLog — _attachHooks fallback', () =>
 // ===================================================================
 // _extractPK with toJSON
 // ===================================================================
-describe('AuditLog — _extractPK with toJSON', () =>
+describe('AuditLog - _extractPK with toJSON', () =>
 {
     it('uses toJSON() if available', () =>
     {
@@ -610,7 +610,7 @@ describe('AuditLog — _extractPK with toJSON', () =>
 // ===================================================================
 // Trail adapter fallback branches
 // ===================================================================
-describe('AuditLog — trail adapter branches', () =>
+describe('AuditLog - trail adapter branches', () =>
 {
     it('trail returns [] when adapter has no execute or find', async () =>
     {
@@ -668,7 +668,7 @@ describe('AuditLog — trail adapter branches', () =>
 // ===================================================================
 // Count adapter branches
 // ===================================================================
-describe('AuditLog — count branches', () =>
+describe('AuditLog - count branches', () =>
 {
     it('count handles numeric result from execute', async () =>
     {
@@ -724,7 +724,7 @@ describe('AuditLog — count branches', () =>
 // ===================================================================
 // _writeEntry branches
 // ===================================================================
-describe('AuditLog — _writeEntry branches', () =>
+describe('AuditLog - _writeEntry branches', () =>
 {
     it('uses adapter.insert when execute is absent', async () =>
     {
@@ -745,7 +745,7 @@ describe('AuditLog — _writeEntry branches', () =>
 // ===================================================================
 // _filterFields with toJSON
 // ===================================================================
-describe('AuditLog — _filterFields with toJSON', () =>
+describe('AuditLog - _filterFields with toJSON', () =>
 {
     it('uses toJSON when available', () =>
     {
@@ -759,7 +759,7 @@ describe('AuditLog — _filterFields with toJSON', () =>
 // ===================================================================
 // byActor with unknown actors
 // ===================================================================
-describe('AuditLog — byActor grouping', () =>
+describe('AuditLog - byActor grouping', () =>
 {
     it('groups entries with null actor under __unknown__', async () =>
     {
@@ -781,9 +781,9 @@ describe('AuditLog — byActor grouping', () =>
 });
 
 // ===================================================================
-// _attachHooks — updated/deleted event handlers
+// _attachHooks - updated/deleted event handlers
 // ===================================================================
-describe('AuditLog — _attachHooks event handlers', () =>
+describe('AuditLog - _attachHooks event handlers', () =>
 {
     it('fires updated event handler', async () =>
     {
@@ -840,10 +840,10 @@ describe('AuditLog — _attachHooks event handlers', () =>
 
         audit._attachHooks(FakeModel);
 
-        // Make _logEntry reject — the .catch(() => {}) in each handler should swallow
+        // Make _logEntry reject - the .catch(() => {}) in each handler should swallow
         vi.spyOn(audit, '_logEntry').mockRejectedValue(new Error('fail'));
 
-        // Call all three handlers — none should throw
+        // Call all three handlers - none should throw
         await handlers.created({ id: 1 });
         await handlers.updated({ id: 2 });
         await handlers.deleted({ id: 3 });
@@ -872,9 +872,9 @@ describe('AuditLog — _attachHooks event handlers', () =>
 });
 
 // ===================================================================
-// _computeDiff — null oldValues / newValues branches
+// _computeDiff - null oldValues / newValues branches
 // ===================================================================
-describe('AuditLog — _computeDiff null branches', () =>
+describe('AuditLog - _computeDiff null branches', () =>
 {
     it('handles null oldValues', () =>
     {
@@ -892,11 +892,11 @@ describe('AuditLog — _computeDiff null branches', () =>
 });
 
 // ===================================================================
-// install() — non-SQL adapter branches
+// install() - non-SQL adapter branches
 // ===================================================================
-describe('AuditLog — install non-SQL branches', () =>
+describe('AuditLog - install non-SQL branches', () =>
 {
-    it('install() else branch — adapter without execute but with createTable', async () =>
+    it('install() else branch - adapter without execute but with createTable', async () =>
     {
         const db = memDb();
         const audit = new AuditLog(db);
@@ -915,7 +915,7 @@ describe('AuditLog — install non-SQL branches', () =>
         delete audit._storage.adapter.createTable;
     });
 
-    it('install() else branch — adapter without execute or createTable', async () =>
+    it('install() else branch - adapter without execute or createTable', async () =>
     {
         const db = memDb();
         const audit = new AuditLog(db);
@@ -939,9 +939,9 @@ describe('AuditLog — install non-SQL branches', () =>
 });
 
 // ===================================================================
-// count() — fallback without execute
+// count() - fallback without execute
 // ===================================================================
-describe('AuditLog — count fallback', () =>
+describe('AuditLog - count fallback', () =>
 {
     it('count falls back to trail().length when no execute', async () =>
     {
@@ -951,7 +951,7 @@ describe('AuditLog — count fallback', () =>
         const origExec = audit._storage.adapter.execute.bind(audit._storage.adapter);
         Object.defineProperty(audit._storage.adapter, 'execute', { value: undefined, configurable: true, writable: true });
 
-        // trail() will also have no execute — stub it to return items
+        // trail() will also have no execute - stub it to return items
         vi.spyOn(audit, 'trail').mockResolvedValue([{ action: 'create' }, { action: 'update' }]);
 
         const count = await audit.count();
@@ -963,9 +963,9 @@ describe('AuditLog — count fallback', () =>
 });
 
 // ===================================================================
-// purge() — non-SQL adapter fallback
+// purge() - non-SQL adapter fallback
 // ===================================================================
-describe('AuditLog — purge non-SQL fallback', () =>
+describe('AuditLog - purge non-SQL fallback', () =>
 {
     it('returns 0 when adapter has no execute', async () =>
     {
@@ -994,9 +994,9 @@ describe('AuditLog — purge non-SQL fallback', () =>
 });
 
 // ===================================================================
-// trail() — null rows and JSON field branches
+// trail() - null rows and JSON field branches
 // ===================================================================
-describe('AuditLog — trail edge cases', () =>
+describe('AuditLog - trail edge cases', () =>
 {
     it('trail handles null rows from execute', async () =>
     {
@@ -1035,7 +1035,7 @@ describe('AuditLog — trail edge cases', () =>
         // Make _writeEntry throw
         vi.spyOn(audit, '_writeEntry').mockRejectedValue(new Error('write fail'));
 
-        // Should not throw — caught internally
+        // Should not throw - caught internally
         await audit._logEntry('create', 'users', { id: 1, name: 'Test' });
 
         audit._writeEntry.mockRestore();
@@ -1047,7 +1047,7 @@ describe('AuditLog — trail edge cases', () =>
         const audit = new AuditLog(db);
 
         const writeSpy = vi.spyOn(audit, '_writeEntry').mockResolvedValue();
-        // Pass instance without id, _id — pk will be null
+        // Pass instance without id, _id - pk will be null
         await audit._logEntry('create', 'users', { name: 'NoPK' });
 
         expect(writeSpy).toHaveBeenCalledWith(expect.objectContaining({ record_id: null }));

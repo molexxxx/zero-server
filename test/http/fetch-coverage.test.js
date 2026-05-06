@@ -36,7 +36,7 @@ function createEchoServer() {
 }
 
 // --- body normalisation ------------------------------------------------------
-describe('fetch — body normalisation', () => {
+describe('fetch - body normalisation', () => {
     let server, base;
     beforeAll(async () => { server = await createEchoServer(); base = `http://localhost:${server.address().port}`; });
     afterAll(() => server?.close());
@@ -104,7 +104,7 @@ describe('fetch — body normalisation', () => {
 });
 
 // --- stream body -------------------------------------------------------------
-describe('fetch — stream body', () => {
+describe('fetch - stream body', () => {
     let server, base;
     beforeAll(async () => { server = await createEchoServer(); base = `http://localhost:${server.address().port}`; });
     afterAll(() => server?.close());
@@ -146,7 +146,7 @@ describe('fetch — stream body', () => {
 });
 
 // --- upload progress with buffer body ----------------------------------------
-describe('fetch — upload progress (buffer)', () => {
+describe('fetch - upload progress (buffer)', () => {
     let server, base;
     beforeAll(async () => { server = await createEchoServer(); base = `http://localhost:${server.address().port}`; });
     afterAll(() => server?.close());
@@ -168,7 +168,7 @@ describe('fetch — upload progress (buffer)', () => {
 });
 
 // --- agent option ------------------------------------------------------------
-describe('fetch — agent option', () => {
+describe('fetch - agent option', () => {
     let server, base;
     beforeAll(async () => { server = await createEchoServer(); base = `http://localhost:${server.address().port}`; });
     afterAll(() => server?.close());
@@ -182,7 +182,7 @@ describe('fetch — agent option', () => {
 });
 
 // --- response headers edge cases ---------------------------------------------
-describe('fetch — response headers', () => {
+describe('fetch - response headers', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -218,7 +218,7 @@ describe('fetch — response headers', () => {
 });
 
 // --- json() error path ------------------------------------------------------
-describe('fetch — json() parse failure', () => {
+describe('fetch - json() parse failure', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -238,14 +238,14 @@ describe('fetch — json() parse failure', () => {
 });
 
 // --- invalid URL -------------------------------------------------------------
-describe('fetch — invalid URL', () => {
+describe('fetch - invalid URL', () => {
     it('rejects with error for malformed URL', async () => {
         await expect(fetch('not-a-valid-url')).rejects.toThrow();
     });
 });
 
 // --- EventEmitter-style AbortSignal ------------------------------------------
-describe('fetch — EventEmitter signal', () => {
+describe('fetch - EventEmitter signal', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -276,7 +276,7 @@ describe('fetch — EventEmitter signal', () => {
 });
 
 // --- HTTPS / TLS pass-through ------------------------------------------------
-describe('fetch — HTTPS with TLS options', () => {
+describe('fetch - HTTPS with TLS options', () => {
     let server, base, key, cert;
 
     beforeAll(async () => {
@@ -308,7 +308,7 @@ describe('fetch — HTTPS with TLS options', () => {
             fs.unlinkSync(keyPath);
             fs.unlinkSync(certPath);
         } catch (e) {
-            // openssl not available — skip HTTPS tests
+            // openssl not available - skip HTTPS tests
             return;
         }
 
@@ -343,7 +343,7 @@ describe('fetch — HTTPS with TLS options', () => {
 });
 
 // --- download progress with no content-length --------------------------------
-describe('fetch — download progress without content-length', () => {
+describe('fetch - download progress without content-length', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -366,7 +366,7 @@ describe('fetch — download progress without content-length', () => {
 });
 
 // --- onDownloadProgress / onUploadProgress error swallowing ------------------
-describe('fetch — progress callback errors are swallowed', () => {
+describe('fetch - progress callback errors are swallowed', () => {
     let server, base;
     beforeAll(async () => { server = await createEchoServer(); base = `http://localhost:${server.address().port}`; });
     afterAll(() => server?.close());

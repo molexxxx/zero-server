@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * build-api-md.js — Generate API.md from split section files
+ * build-api-md.js - Generate API.md from split section files
  *
  * Reads website-docs/public/data/docs-manifest.json and the corresponding
  * per-section files in website-docs/public/data/sections/ to produce a
  * comprehensive Markdown API reference.
  *
- * READ-ONLY — never modifies docs.json or any section file.
+ * READ-ONLY - never modifies docs.json or any section file.
  *
  * Usage:  node scripts/build-api-md.js
  * npm:    npm run build:api
@@ -30,7 +30,7 @@ const HEADER = `<p align="center">
   </a>
 </p>
 
-<h1 align="center">zero-server — API Reference</h1>
+<h1 align="center">zero-server - API Reference</h1>
 
 <p align="center">
   <strong>
@@ -302,7 +302,7 @@ function renderParams(params)
     {
         const param = (p.param || '').replace(/\|/g, '\\|');
         const type = (p.type || '').replace(/\|/g, '\\|');
-        const required = (p.required || '—').replace(/\|/g, '\\|');
+        const required = (p.required || '-').replace(/\|/g, '\\|');
         const notes = (p.notes || '').replace(/\|/g, '\\|');
         lines.push(`| \`${param}\` | ${type} | ${required} | ${notes} |`);
     }
@@ -322,7 +322,7 @@ function renderOptions(options)
     {
         const opt = (o.option || '').replace(/\|/g, '\\|');
         const type = (o.type || '').replace(/\|/g, '\\|');
-        const def = (o.default || '—').replace(/\|/g, '\\|');
+        const def = (o.default || '-').replace(/\|/g, '\\|');
         const notes = (o.notes || '').replace(/\|/g, '\\|');
         lines.push(`| \`${opt}\` | ${type} | \`${def}\` | ${notes} |`);
     }
@@ -343,7 +343,7 @@ function renderOptionGroups(groups)
         {
             const opt = (o.option || '').replace(/\|/g, '\\|');
             const type = (o.type || '').replace(/\|/g, '\\|');
-            const def = (o.default || '—').replace(/\|/g, '\\|');
+            const def = (o.default || '-').replace(/\|/g, '\\|');
             const notes = (o.notes || '').replace(/\|/g, '\\|');
             parts.push(`| \`${opt}\` | ${type} | \`${def}\` | ${notes} |`);
         }
@@ -503,7 +503,7 @@ function renderSection(section)
 
 function build()
 {
-    /* Load sections in manifest order — read-only, no writes to JSON */
+    /* Load sections in manifest order - read-only, no writes to JSON */
     const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
     const data = manifest.map(filename =>
         JSON.parse(fs.readFileSync(path.join(SECTIONS_DIR, filename), 'utf8'))

@@ -31,7 +31,7 @@ export interface Request {
     readonly ips: string[];
     /** `true` when the connection is over TLS (trust-proxy-aware). */
     readonly secure: boolean;
-    /** Protocol string — `'https'` or `'http'` (trust-proxy-aware). */
+    /** Protocol string - `'https'` or `'http'` (trust-proxy-aware). */
     readonly protocol: 'http' | 'https';
     /** HTTP version string (e.g. '1.1', '2.0'). */
     httpVersion: string;
@@ -49,7 +49,7 @@ export interface Request {
     id?: string;
     /** Whether the request timed out (populated by timeout middleware). */
     timedOut?: boolean;
-    /** The original URL as received — never rewritten by middleware. */
+    /** The original URL as received - never rewritten by middleware. */
     originalUrl: string;
     /** The URL path on which the current router was mounted. */
     baseUrl: string;
@@ -83,7 +83,7 @@ export interface Request {
     subdomains(offset?: number): string[];
 
     /**
-     * Content negotiation — check which types the client accepts.
+     * Content negotiation - check which types the client accepts.
      */
     accepts(...types: string[]): string | false;
 

@@ -1,4 +1,4 @@
-/** constructors.test.js — adapter constructor and utility tests */
+/** constructors.test.js - adapter constructor and utility tests */
 const os   = require('os');
 const fs   = require('fs');
 const path = require('path');
@@ -131,7 +131,7 @@ describe('Memory adapter utilities', () =>
         const copy = db.adapter.clone();
         expect(copy.totalRows()).toBe(1);
 
-        // Modify original — clone should be unaffected
+        // Modify original - clone should be unaffected
         await Widget.create({ name: 'second' });
         expect(db.adapter.totalRows()).toBe(2);
         expect(copy.totalRows()).toBe(1);
@@ -319,7 +319,7 @@ describe('JSON adapter utilities', () =>
 });
 
 // ===========================================================
-//  MySQL Adapter — Structural Tests
+//  MySQL Adapter - Structural Tests
 // ===========================================================
 
 describe('MySQL adapter structure', () =>
@@ -381,7 +381,7 @@ describe('MySQL adapter structure', () =>
 });
 
 // ===========================================================
-//  PostgreSQL Adapter — Structural Tests
+//  PostgreSQL Adapter - Structural Tests
 // ===========================================================
 
 describe('PostgreSQL adapter structure', () =>
@@ -420,7 +420,7 @@ describe('PostgreSQL adapter structure', () =>
 
     it('credential validation allows valid options through', () =>
     {
-        // pg can be constructed without connecting — pool is lazy
+        // pg can be constructed without connecting - pool is lazy
         try
         {
             const db = Database.connect('postgres', {
@@ -442,7 +442,7 @@ describe('PostgreSQL adapter structure', () =>
 });
 
 // ===========================================================
-//  MongoDB Adapter — Structural Tests
+//  MongoDB Adapter - Structural Tests
 // ===========================================================
 
 describe('MongoDB adapter structure', () =>
@@ -652,10 +652,10 @@ describe('Cross-adapter credential validation', () =>
 
 
 // =========================================================================
-//  json adapter — function coverage (from coverage/deep.test.js)
+//  json adapter - function coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('json adapter — function coverage', () => {
+describe('json adapter - function coverage', () => {
 	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-adapter-' + Date.now());
 	let db;
 
@@ -761,7 +761,7 @@ describe('json adapter — function coverage', () => {
 	});
 
 	it('constructor loads existing JSON files', () => {
-		// Create a new adapter pointing to same dir — should load existing data
+		// Create a new adapter pointing to same dir - should load existing data
 		const JsonAdapter = require('../../../lib/orm/adapters/json');
 		const adapter2 = new JsonAdapter({ dir: jsonDir });
 		expect(adapter2._tables.size).toBeGreaterThan(0);
@@ -818,10 +818,10 @@ describe('json adapter — function coverage', () => {
 });
 
 // =========================================================================
-//  json adapter — _saveTable EPERM/EACCES retry branch
+//  json adapter - _saveTable EPERM/EACCES retry branch
 // =========================================================================
 
-describe('json adapter — _saveTable atomic write retry', () => {
+describe('json adapter - _saveTable atomic write retry', () => {
 	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-eperm-' + Date.now());
 	let adapter;
 
@@ -903,10 +903,10 @@ describe('json adapter — _saveTable atomic write retry', () => {
 });
 
 // =========================================================================
-//  json adapter — _scheduleSave with autoFlush=false
+//  json adapter - _scheduleSave with autoFlush=false
 // =========================================================================
 
-describe('json adapter — autoFlush=false', () => {
+describe('json adapter - autoFlush=false', () => {
 	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-noauto-' + Date.now());
 	let adapter;
 
@@ -940,10 +940,10 @@ describe('json adapter — autoFlush=false', () => {
 });
 
 // =========================================================================
-//  json adapter — remove method
+//  json adapter - remove method
 // =========================================================================
 
-describe('json adapter — remove', () => {
+describe('json adapter - remove', () => {
 	const jsonDir = path.join(os.tmpdir(), 'zero-test-json-remove-' + Date.now());
 	let db;
 

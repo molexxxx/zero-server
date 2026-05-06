@@ -1,5 +1,5 @@
 /**
- * Tests for urlencoded body parser — extended (nested bracket) mode.
+ * Tests for urlencoded body parser - extended (nested bracket) mode.
  * Covers array push, numeric indices, nested objects, prototype pollution guard,
  * flat mode, and edge cases.
  */
@@ -213,7 +213,7 @@ describe('urlencoded parser', () =>
 
 
 // =========================================================================
-//  urlencoded parser — HTTP integration tests (parameter limit, depth limit, verify callback)
+//  urlencoded parser - HTTP integration tests (parameter limit, depth limit, verify callback)
 // =========================================================================
 
 {

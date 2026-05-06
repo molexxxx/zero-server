@@ -1,4 +1,4 @@
-/** subsystem-errors.test.js — cross-subsystem error handling tests */
+/** subsystem-errors.test.js - cross-subsystem error handling tests */
 const http = require('http');
 const { doFetch } = require('../_helpers');
 const { createApp, Router } = require('../../');
@@ -428,7 +428,7 @@ describe('Timeout Middleware', () =>
 
         app.get('/slow', (req, res) =>
         {
-            // Never responds — timeout should fire
+            // Never responds - timeout should fire
             setTimeout(() => {
                 if (!req.timedOut) res.json({ ok: true });
             }, 300);
@@ -730,7 +730,7 @@ describe('HttpError Integration with Router', () =>
 
 
 // =========================================================================
-//  errorHandler — coverage gaps (from coverage/gaps.test.js)
+//  errorHandler - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
@@ -801,7 +801,7 @@ describe('errorHandler middleware', () => {
 	});
 });
 
-describe('errorHandler — production mode (no stack)', () => {
+describe('errorHandler - production mode (no stack)', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -826,7 +826,7 @@ describe('errorHandler — production mode (no stack)', () => {
 	});
 });
 
-describe('errorHandler — custom formatter', () => {
+describe('errorHandler - custom formatter', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -858,7 +858,7 @@ describe('errorHandler — custom formatter', () => {
 	});
 });
 
-describe('errorHandler — onError callback', () => {
+describe('errorHandler - onError callback', () => {
 	let server, base, onErrorCalls;
 
 	beforeAll(async () => {
@@ -888,7 +888,7 @@ describe('errorHandler — onError callback', () => {
 	});
 });
 
-describe('errorHandler — invalid status code normalization', () => {
+describe('errorHandler - invalid status code normalization', () => {
 	let server, base;
 
 	beforeAll(async () => {

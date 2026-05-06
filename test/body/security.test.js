@@ -1,4 +1,4 @@
-/** security.test.js — body parser security tests */
+/** security.test.js - body parser security tests */
 'use strict';
 
 const http = require('http');
@@ -65,7 +65,7 @@ function runMw(mw, req, res) {
 // sendError
 // -----------------------------------------------------------------------------
 
-describe('sendError — direct unit tests', () => {
+describe('sendError - direct unit tests', () => {
     const sendError = require('../../lib/body/sendError');
 
     it('writes status + JSON error body', () => {
@@ -103,7 +103,7 @@ describe('sendError — direct unit tests', () => {
 // typeMatch
 // -----------------------------------------------------------------------------
 
-describe('typeMatch — comprehensive branch coverage', () => {
+describe('typeMatch - comprehensive branch coverage', () => {
     const isTypeMatch = require('../../lib/body/typeMatch');
 
     // no typeOpt → always matches
@@ -167,10 +167,10 @@ describe('typeMatch — comprehensive branch coverage', () => {
 });
 
 // -----------------------------------------------------------------------------
-// rawBuffer — parseLimit + charsetFromContentType + streaming
+// rawBuffer - parseLimit + charsetFromContentType + streaming
 // -----------------------------------------------------------------------------
 
-describe('rawBuffer — parseLimit edge cases', () => {
+describe('rawBuffer - parseLimit edge cases', () => {
     const rawBuffer = require('../../lib/body/rawBuffer');
 
     it('no limit option → reads entire stream', async () => {
@@ -227,7 +227,7 @@ describe('rawBuffer — parseLimit edge cases', () => {
     });
 });
 
-describe('charsetFromContentType — full coverage', () => {
+describe('charsetFromContentType - full coverage', () => {
     const { charsetFromContentType } = require('../../lib/body/rawBuffer');
 
     it('utf-8 → utf8', () => expect(charsetFromContentType('text/plain; charset=utf-8')).toBe('utf8'));
@@ -247,10 +247,10 @@ describe('charsetFromContentType — full coverage', () => {
 });
 
 // -----------------------------------------------------------------------------
-// json parser — branch coverage
+// json parser - branch coverage
 // -----------------------------------------------------------------------------
 
-describe('json parser — requireSecure', () => {
+describe('json parser - requireSecure', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('rejects non-HTTPS when requireSecure=true', async () => {
@@ -274,7 +274,7 @@ describe('json parser — requireSecure', () => {
     });
 });
 
-describe('json parser — empty body', () => {
+describe('json parser - empty body', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('empty body string → req.body = null and calls next', async () => {
@@ -288,7 +288,7 @@ describe('json parser — empty body', () => {
     });
 });
 
-describe('json parser — content-type mismatch calls next', () => {
+describe('json parser - content-type mismatch calls next', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('skips when content-type does not match', async () => {
@@ -311,7 +311,7 @@ describe('json parser — content-type mismatch calls next', () => {
     });
 });
 
-describe('json parser — inflate:false rejects compressed body (415)', () => {
+describe('json parser - inflate:false rejects compressed body (415)', () => {
     let server, base;
     beforeAll(async () => {
         const app = createApp();
@@ -333,7 +333,7 @@ describe('json parser — inflate:false rejects compressed body (415)', () => {
     });
 });
 
-describe('json parser — generic error in catch → next() still called', () => {
+describe('json parser - generic error in catch → next() still called', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('unrecognised error sets req.body=null and calls next', async () => {
@@ -351,7 +351,7 @@ describe('json parser — generic error in catch → next() still called', () =>
     });
 });
 
-describe('json parser — verify error without message uses default', () => {
+describe('json parser - verify error without message uses default', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('verify error with no message → "verification failed"', async () => {
@@ -364,7 +364,7 @@ describe('json parser — verify error without message uses default', () => {
     });
 });
 
-describe('json parser — _sanitize prototype pollution guard', () => {
+describe('json parser - _sanitize prototype pollution guard', () => {
     const jsonMw = require('../../lib/body/json');
 
     it('strips __proto__ key inside nested object', async () => {
@@ -407,10 +407,10 @@ describe('json parser — _sanitize prototype pollution guard', () => {
     });
 });
 
-describe('json parser — strict=false (default true)', () => {
+describe('json parser - strict=false (default true)', () => {
     const jsonMw = require('../../lib/body/json');
 
-    it('strict defaults to true — rejects primitive root', async () => {
+    it('strict defaults to true - rejects primitive root', async () => {
         // opts without "strict" key → hasOwnProperty returns false → default true
         const mw = jsonMw({});
         const req = mockReq('"just a string"', { 'content-type': 'application/json' });
@@ -438,10 +438,10 @@ describe('json parser — strict=false (default true)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// text parser — branch coverage
+// text parser - branch coverage
 // -----------------------------------------------------------------------------
 
-describe('text parser — requireSecure', () => {
+describe('text parser - requireSecure', () => {
     const textMw = require('../../lib/body/text');
 
     it('rejects non-HTTPS when requireSecure=true', async () => {
@@ -454,7 +454,7 @@ describe('text parser — requireSecure', () => {
     });
 });
 
-describe('text parser — content-type mismatch', () => {
+describe('text parser - content-type mismatch', () => {
     const textMw = require('../../lib/body/text');
 
     it('calls next without setting body when CT does not match', async () => {
@@ -468,7 +468,7 @@ describe('text parser — content-type mismatch', () => {
     });
 });
 
-describe('text parser — inflate:false returns 415', () => {
+describe('text parser - inflate:false returns 415', () => {
     const textMw = require('../../lib/body/text');
 
     it('rejects gzip body when inflate=false', async () => {
@@ -485,7 +485,7 @@ describe('text parser — inflate:false returns 415', () => {
     });
 });
 
-describe('text parser — generic error → req.body = empty string', () => {
+describe('text parser - generic error → req.body = empty string', () => {
     const textMw = require('../../lib/body/text');
 
     it('unrecognised stream error → req.body="" and next called', async () => {
@@ -502,7 +502,7 @@ describe('text parser — generic error → req.body = empty string', () => {
     });
 });
 
-describe('text parser — verify error without message', () => {
+describe('text parser - verify error without message', () => {
     const textMw = require('../../lib/body/text');
 
     it('uses default message "verification failed" when error has no message', async () => {
@@ -515,7 +515,7 @@ describe('text parser — verify error without message', () => {
     });
 });
 
-describe('text parser — custom encoding fallback', () => {
+describe('text parser - custom encoding fallback', () => {
     const textMw = require('../../lib/body/text');
 
     it('uses defaultEncoding option when CT has no charset', async () => {
@@ -537,7 +537,7 @@ describe('text parser — custom encoding fallback', () => {
     });
 });
 
-describe('text parser — inflate 413 catch path', () => {
+describe('text parser - inflate 413 catch path', () => {
     let server, base;
     beforeAll(async () => {
         const app = createApp();
@@ -558,7 +558,7 @@ describe('text parser — inflate 413 catch path', () => {
     });
 });
 
-describe('text parser — inflate 415 catch path via unsupported encoding', () => {
+describe('text parser - inflate 415 catch path via unsupported encoding', () => {
     let server, base;
     beforeAll(async () => {
         const app = createApp();
@@ -580,10 +580,10 @@ describe('text parser — inflate 415 catch path via unsupported encoding', () =
 });
 
 // -----------------------------------------------------------------------------
-// raw parser — branch coverage
+// raw parser - branch coverage
 // -----------------------------------------------------------------------------
 
-describe('raw parser — requireSecure', () => {
+describe('raw parser - requireSecure', () => {
     const rawMw = require('../../lib/body/raw');
 
     it('rejects non-HTTPS when requireSecure=true', async () => {
@@ -596,7 +596,7 @@ describe('raw parser — requireSecure', () => {
     });
 });
 
-describe('raw parser — content-type mismatch', () => {
+describe('raw parser - content-type mismatch', () => {
     const rawMw = require('../../lib/body/raw');
 
     it('calls next without body when CT does not match', async () => {
@@ -610,7 +610,7 @@ describe('raw parser — content-type mismatch', () => {
     });
 });
 
-describe('raw parser — inflate:false returns 415', () => {
+describe('raw parser - inflate:false returns 415', () => {
     const rawMw = require('../../lib/body/raw');
 
     it('rejects compressed body when inflate=false', async () => {
@@ -627,7 +627,7 @@ describe('raw parser — inflate:false returns 415', () => {
     });
 });
 
-describe('raw parser — generic error → req.body = empty Buffer', () => {
+describe('raw parser - generic error → req.body = empty Buffer', () => {
     const rawMw = require('../../lib/body/raw');
 
     it('unrecognised stream error → req.body=Buffer.alloc(0) and next called', async () => {
@@ -645,7 +645,7 @@ describe('raw parser — generic error → req.body = empty Buffer', () => {
     });
 });
 
-describe('raw parser — verify error without message', () => {
+describe('raw parser - verify error without message', () => {
     const rawMw = require('../../lib/body/raw');
 
     it('default "verification failed" when error has no message', async () => {
@@ -658,7 +658,7 @@ describe('raw parser — verify error without message', () => {
     });
 });
 
-describe('raw parser — 415 catch path', () => {
+describe('raw parser - 415 catch path', () => {
     let server, base;
     beforeAll(async () => {
         const app = createApp();
@@ -680,10 +680,10 @@ describe('raw parser — 415 catch path', () => {
 });
 
 // -----------------------------------------------------------------------------
-// urlencoded parser — deep branch coverage (extended mode paths)
+// urlencoded parser - deep branch coverage (extended mode paths)
 // -----------------------------------------------------------------------------
 
-describe('urlencoded parser — appendValue all branches', () => {
+describe('urlencoded parser - appendValue all branches', () => {
     // appendValue is private but exercised through extended mode
     const factory = require('../../lib/body/urlencoded');
 
@@ -713,7 +713,7 @@ describe('urlencoded parser — appendValue all branches', () => {
     });
 });
 
-describe('urlencoded parser — array push [] notation (fixed bug)', () => {
+describe('urlencoded parser - array push [] notation (fixed bug)', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('a[]=1 creates array with one element', async () => {
@@ -742,7 +742,7 @@ describe('urlencoded parser — array push [] notation (fixed bug)', () => {
     });
 });
 
-describe('urlencoded parser — intermediate [] bracket navigation', () => {
+describe('urlencoded parser - intermediate [] bracket navigation', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('a[][name]=foo creates array of objects', async () => {
@@ -764,7 +764,7 @@ describe('urlencoded parser — intermediate [] bracket navigation', () => {
     });
 });
 
-describe('urlencoded parser — array cur with numeric key at END (isLast + array)', () => {
+describe('urlencoded parser - array cur with numeric key at END (isLast + array)', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('numeric index at last position is set on array directly', async () => {
@@ -788,7 +788,7 @@ describe('urlencoded parser — array cur with numeric key at END (isLast + arra
     });
 });
 
-describe('urlencoded parser — non-numeric key on array cur (not-last)', () => {
+describe('urlencoded parser - non-numeric key on array cur (not-last)', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('non-numeric key mid-path on array navigates into last pushed object', async () => {
@@ -802,7 +802,7 @@ describe('urlencoded parser — non-numeric key on array cur (not-last)', () => 
     });
 });
 
-describe('urlencoded parser — inflate:false error path', () => {
+describe('urlencoded parser - inflate:false error path', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('415 when inflate=false and body is compressed', async () => {
@@ -819,7 +819,7 @@ describe('urlencoded parser — inflate:false error path', () => {
     });
 });
 
-describe('urlencoded parser — generic error → req.body = {}', () => {
+describe('urlencoded parser - generic error → req.body = {}', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('unrecognised stream error → req.body={} and next called', async () => {
@@ -836,7 +836,7 @@ describe('urlencoded parser — generic error → req.body = {}', () => {
     });
 });
 
-describe('urlencoded parser — requireSecure', () => {
+describe('urlencoded parser - requireSecure', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('rejects non-HTTPS when requireSecure=true', async () => {
@@ -849,7 +849,7 @@ describe('urlencoded parser — requireSecure', () => {
     });
 });
 
-describe('urlencoded parser — existing array slot navigated by numeric index', () => {
+describe('urlencoded parser - existing array slot navigated by numeric index', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('existing value at numeric index is updated via appendValue', async () => {
@@ -864,7 +864,7 @@ describe('urlencoded parser — existing array slot navigated by numeric index',
     });
 });
 
-describe('urlencoded parser — 415 from unsupported encoding', () => {
+describe('urlencoded parser - 415 from unsupported encoding', () => {
     let server, base;
     beforeAll(async () => {
         const app = createApp();
@@ -886,10 +886,10 @@ describe('urlencoded parser — 415 from unsupported encoding', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — helper function unit tests (accessed via internal module)
+// multipart - helper function unit tests (accessed via internal module)
 // -----------------------------------------------------------------------------
 
-describe('multipart internal helpers — sanitizeFilename security', () => {
+describe('multipart internal helpers - sanitizeFilename security', () => {
     // Exercise sanitizeFilename indirectly via the full middleware
     // Any filename that comes out stored in files[n].originalFilename has been sanitized
 
@@ -989,10 +989,10 @@ describe('multipart internal helpers — sanitizeFilename security', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — no boundary → next() immediately
+// multipart - no boundary → next() immediately
 // -----------------------------------------------------------------------------
 
-describe('multipart — missing boundary in content-type', () => {
+describe('multipart - missing boundary in content-type', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('calls next() without setting req.body when boundary absent', async () => {
@@ -1022,10 +1022,10 @@ describe('multipart — missing boundary in content-type', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — requireSecure
+// multipart - requireSecure
 // -----------------------------------------------------------------------------
 
-describe('multipart — requireSecure rejects HTTP', () => {
+describe('multipart - requireSecure rejects HTTP', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('returns 403 when requireSecure=true on non-secure request', async () => {
@@ -1044,10 +1044,10 @@ describe('multipart — requireSecure rejects HTTP', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — req.raw 'error' event handler
+// multipart - req.raw 'error' event handler
 // -----------------------------------------------------------------------------
 
-describe('multipart — stream error event calls next', () => {
+describe('multipart - stream error event calls next', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('calls next() when req.raw emits an error', async () => {
@@ -1071,10 +1071,10 @@ describe('multipart — stream error event calls next', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — quoted boundary in content-type
+// multipart - quoted boundary in content-type
 // -----------------------------------------------------------------------------
 
-describe('multipart — quoted boundary parsing', () => {
+describe('multipart - quoted boundary parsing', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1104,10 +1104,10 @@ describe('multipart — quoted boundary parsing', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — absolute vs relative dir option
+// multipart - absolute vs relative dir option
 // -----------------------------------------------------------------------------
 
-describe('multipart — dir option handling', () => {
+describe('multipart - dir option handling', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1162,10 +1162,10 @@ describe('multipart — dir option handling', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — streaming chunked data (boundary split across chunks)
+// multipart - streaming chunked data (boundary split across chunks)
 // -----------------------------------------------------------------------------
 
-describe('multipart — boundary detection across multiple data chunks', () => {
+describe('multipart - boundary detection across multiple data chunks', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('correctly assembles body from multiple small chunks', async () => {
@@ -1204,10 +1204,10 @@ describe('multipart — boundary detection across multiple data chunks', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — 'end' event with no current part (no stream interruptions)
+// multipart - 'end' event with no current part (no stream interruptions)
 // -----------------------------------------------------------------------------
 
-describe('multipart — end event with no active current part', () => {
+describe('multipart - end event with no active current part', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('end fires without active part → body set to {fields, files}, next called', async () => {
@@ -1235,10 +1235,10 @@ describe('multipart — end event with no active current part', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — abortFileTooLarge guard (_multipartErrorHandled)
+// multipart - abortFileTooLarge guard (_multipartErrorHandled)
 // -----------------------------------------------------------------------------
 
-describe('multipart — double-error guard prevents duplicate 413 responses', () => {
+describe('multipart - double-error guard prevents duplicate 413 responses', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1270,10 +1270,10 @@ describe('multipart — double-error guard prevents duplicate 413 responses', ()
 });
 
 // -----------------------------------------------------------------------------
-// multipart — maxFileSize exceeded during incremental streaming (writeLen > 0 path)
+// multipart - maxFileSize exceeded during incremental streaming (writeLen > 0 path)
 // -----------------------------------------------------------------------------
 
-describe('multipart — maxFileSize exceeded mid-stream (before final boundary)', () => {
+describe('multipart - maxFileSize exceeded mid-stream (before final boundary)', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('aborts and sends 413 when file size limit hit during chunked write', async () => {
@@ -1294,7 +1294,7 @@ describe('multipart — maxFileSize exceeded mid-stream (before final boundary)'
 
         // Send headers part
         emitter.emit('data', Buffer.from('--BND\r\nContent-Disposition: form-data; name="f"; filename="x.bin"\r\nContent-Type: application/octet-stream\r\n\r\n'));
-        // Send data exceeding maxFileSize — must be >1024 bytes so writeLen>0 triggers the size check
+        // Send data exceeding maxFileSize - must be >1024 bytes so writeLen>0 triggers the size check
         emitter.emit('data', Buffer.from('x'.repeat(2000)));
 
         await new Promise(r => setTimeout(r, 50));
@@ -1307,10 +1307,10 @@ describe('multipart — maxFileSize exceeded mid-stream (before final boundary)'
 });
 
 // -----------------------------------------------------------------------------
-// multipart — maxTotalSize exceeded during incremental streaming
+// multipart - maxTotalSize exceeded during incremental streaming
 // -----------------------------------------------------------------------------
 
-describe('multipart — maxTotalSize exceeded mid-stream', () => {
+describe('multipart - maxTotalSize exceeded mid-stream', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('aborts and sends 413 when total size limit hit during chunked write', async () => {
@@ -1343,10 +1343,10 @@ describe('multipart — maxTotalSize exceeded mid-stream', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — maxFieldSize exceeded during incremental streaming
+// multipart - maxFieldSize exceeded during incremental streaming
 // -----------------------------------------------------------------------------
 
-describe('multipart — maxFieldSize exceeded mid-stream', () => {
+describe('multipart - maxFieldSize exceeded mid-stream', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('sends 413 when field value grows beyond maxFieldSize in incremental write', async () => {
@@ -1377,10 +1377,10 @@ describe('multipart — maxFieldSize exceeded mid-stream', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — closeCurrent writeStream 'error' event
+// multipart - closeCurrent writeStream 'error' event
 // -----------------------------------------------------------------------------
 
-describe('multipart — writeStream error in closeCurrent (resolve without storing file)', () => {
+describe('multipart - writeStream error in closeCurrent (resolve without storing file)', () => {
     it('file with writeStream error still resolves (no crash)', async () => {
         const mpFactory = require('../../lib/body/multipart');
         const fsMock = require('fs');
@@ -1427,16 +1427,16 @@ describe('multipart — writeStream error in closeCurrent (resolve without stori
         spy.mockRestore();
         try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
 
-        // Should not have thrown — nextCalled may or may not be true depending on which path fires
+        // Should not have thrown - nextCalled may or may not be true depending on which path fires
         expect(typeof nextCalled).toBe('boolean');
     });
 });
 
 // -----------------------------------------------------------------------------
-// multipart — parseHeaders edge cases
+// multipart - parseHeaders edge cases
 // -----------------------------------------------------------------------------
 
-describe('multipart — parseHeaders robustness (via field parsing)', () => {
+describe('multipart - parseHeaders robustness (via field parsing)', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1465,7 +1465,7 @@ describe('multipart — parseHeaders robustness (via field parsing)', () => {
             method: 'POST', body,
             headers: { 'content-type': `multipart/form-data; boundary=${bnd}` },
         });
-        // Either parsed correctly or just set to empty string — should not throw
+        // Either parsed correctly or just set to empty string - should not throw
         expect(r.status).toBe(200);
     });
 
@@ -1487,10 +1487,10 @@ describe('multipart — parseHeaders robustness (via field parsing)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — file with no content-type (contentType is null)
+// multipart - file with no content-type (contentType is null)
 // -----------------------------------------------------------------------------
 
-describe('multipart — file without Content-Type header', () => {
+describe('multipart - file without Content-Type header', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1523,10 +1523,10 @@ describe('multipart — file without Content-Type header', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — allowedMimeTypes with null contentType (no Content-Type on file)
+// multipart - allowedMimeTypes with null contentType (no Content-Type on file)
 // -----------------------------------------------------------------------------
 
-describe('multipart — allowedMimeTypes does not block null contentType', () => {
+describe('multipart - allowedMimeTypes does not block null contentType', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1540,7 +1540,7 @@ describe('multipart — allowedMimeTypes does not block null contentType', () =>
     });
     afterAll(() => { server?.close(); try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {} });
 
-    it('file without Content-Type bypasses MIME check (contentType is null — condition short-circuits)', async () => {
+    it('file without Content-Type bypasses MIME check (contentType is null - condition short-circuits)', async () => {
         const bnd = 'bnd-nullmime-' + Date.now();
         // No Content-Type header → contentType = null → allowedMimeTypes check skipped
         const body = Buffer.concat([
@@ -1559,10 +1559,10 @@ describe('multipart — allowedMimeTypes does not block null contentType', () =>
 });
 
 // -----------------------------------------------------------------------------
-// multipart — file extension preservation
+// multipart - file extension preservation
 // -----------------------------------------------------------------------------
 
-describe('multipart — stored filename extension handling', () => {
+describe('multipart - stored filename extension handling', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1616,10 +1616,10 @@ describe('multipart — stored filename extension handling', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — large header buffer overflow protection path
+// multipart - large header buffer overflow protection path
 // -----------------------------------------------------------------------------
 
-describe('multipart — headers buffer overflow protection (large header without CRLF CRLF)', () => {
+describe('multipart - headers buffer overflow protection (large header without CRLF CRLF)', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('trims buffer when headers block exceeds 1MB without CRLF CRLF terminator', async () => {
@@ -1653,10 +1653,10 @@ describe('multipart — headers buffer overflow protection (large header without
 });
 
 // -----------------------------------------------------------------------------
-// multipart — body chunk with CRLF prefix stripping (both code paths)
+// multipart - body chunk with CRLF prefix stripping (both code paths)
 // -----------------------------------------------------------------------------
 
-describe('multipart — CRLF prefix stripping at boundary', () => {
+describe('multipart - CRLF prefix stripping at boundary', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1672,7 +1672,7 @@ describe('multipart — CRLF prefix stripping at boundary', () => {
 
     it('multi-field body: CRLF divider between parts is stripped correctly', async () => {
         const bnd = 'bnd-crlf-' + Date.now();
-        // Two fields — CRLF before each boundary is standard
+        // Two fields - CRLF before each boundary is standard
         const body = [
             `--${bnd}\r\n`,
             `Content-Disposition: form-data; name="a"\r\n\r\n`,
@@ -1693,10 +1693,10 @@ describe('multipart — CRLF prefix stripping at boundary', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — closeCurrent without writeStream (field path)
+// multipart - closeCurrent without writeStream (field path)
 // -----------------------------------------------------------------------------
 
-describe('multipart — closeCurrent field path stores value with default empty string', () => {
+describe('multipart - closeCurrent field path stores value with default empty string', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1728,10 +1728,10 @@ describe('multipart — closeCurrent field path stores value with default empty 
 });
 
 // -----------------------------------------------------------------------------
-// multipart — req.raw.pause is absent (defensive branch)
+// multipart - req.raw.pause is absent (defensive branch)
 // -----------------------------------------------------------------------------
 
-describe('multipart — req.raw without pause method (defensive guard)', () => {
+describe('multipart - req.raw without pause method (defensive guard)', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('does not crash when req.raw.pause is undefined', async () => {
@@ -1762,10 +1762,10 @@ describe('multipart — req.raw without pause method (defensive guard)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — res.headersSent guard in sendError (called from multipart context)
+// multipart - res.headersSent guard in sendError (called from multipart context)
 // -----------------------------------------------------------------------------
 
-describe('multipart — sendError skipped when headers already sent', () => {
+describe('multipart - sendError skipped when headers already sent', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('sends only one error response even when multiple limits fire', async () => {
@@ -1796,10 +1796,10 @@ describe('multipart — sendError skipped when headers already sent', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart — ensureDir (existing directory should not throw)
+// multipart - ensureDir (existing directory should not throw)
 // -----------------------------------------------------------------------------
 
-describe('multipart — ensureDir idempotent (no throw on existing dir)', () => {
+describe('multipart - ensureDir idempotent (no throw on existing dir)', () => {
     let server, base, tmpDir;
 
     beforeAll(async () => {
@@ -1827,10 +1827,10 @@ describe('multipart — ensureDir idempotent (no throw on existing dir)', () => 
 });
 
 // -----------------------------------------------------------------------------
-// multipart — start state boundary search when buffer is large but no boundary
+// multipart - start state boundary search when buffer is large but no boundary
 // -----------------------------------------------------------------------------
 
-describe('multipart — start state: no boundary found in large initial buffer', () => {
+describe('multipart - start state: no boundary found in large initial buffer', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('trims oversized pre-boundary buffer and waits for more data', async () => {
@@ -1880,7 +1880,7 @@ describe('lib/body barrel export', () => {
 // Security invariant summary tests (regression guards)
 // -----------------------------------------------------------------------------
 
-describe('Security invariants — prototype pollution can never succeed', () => {
+describe('Security invariants - prototype pollution can never succeed', () => {
     const jsonMw = require('../../lib/body/json');
     const factory = require('../../lib/body/urlencoded');
 
@@ -1917,7 +1917,7 @@ describe('Security invariants — prototype pollution can never succeed', () => 
     });
 });
 
-describe('Security invariants — size limits are always enforced', () => {
+describe('Security invariants - size limits are always enforced', () => {
     const jsonMw = require('../../lib/body/json');
     const textMw = require('../../lib/body/text');
     const rawMw = require('../../lib/body/raw');
@@ -1951,7 +1951,7 @@ describe('Security invariants — size limits are always enforced', () => {
     });
 });
 
-describe('Security invariants — HTTPS-only enforcement', () => {
+describe('Security invariants - HTTPS-only enforcement', () => {
     const jsonMw = require('../../lib/body/json');
     const textMw = require('../../lib/body/text');
     const rawMw = require('../../lib/body/raw');
@@ -1993,10 +1993,10 @@ describe('Security invariants — HTTPS-only enforcement', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Branch coverage — options || {} fallback (when factory called with null)
+// Branch coverage - options || {} fallback (when factory called with null)
 // Covers: json.js line 46, text.js line 26, raw.js line 24, urlencoded.js opts
 // -----------------------------------------------------------------------------
-describe('parsers — null options uses defaults (options || {} fallback branch)', () => {
+describe('parsers - null options uses defaults (options || {} fallback branch)', () => {
     it('json(null) parses body with default options', async () => {
         const mw = require('../../lib/body/json')(null);
         const req = mockReq('{"x":1}', { 'content-type': 'application/json' });
@@ -2031,10 +2031,10 @@ describe('parsers — null options uses defaults (options || {} fallback branch)
 });
 
 // -----------------------------------------------------------------------------
-// Branch coverage — content-type header absent (ct = header || '' right branch)
+// Branch coverage - content-type header absent (ct = header || '' right branch)
 // Covers: text.js line 37, raw.js line 34, json.js ct line
 // -----------------------------------------------------------------------------
-describe('parsers — missing content-type header (|| "" fallback branch)', () => {
+describe('parsers - missing content-type header (|| "" fallback branch)', () => {
     it('json: no content-type → isTypeMatch false → next() called, body unset', async () => {
         const mw = require('../../lib/body/json')();
         const req = mockReq('{"x":1}', {}); // empty headers, no content-type
@@ -2069,9 +2069,9 @@ describe('parsers — missing content-type header (|| "" fallback branch)', () =
 });
 
 // -----------------------------------------------------------------------------
-// rawBuffer.js line 29 — parseLimit returns null for exotic (non-string/number) types
+// rawBuffer.js line 29 - parseLimit returns null for exotic (non-string/number) types
 // -----------------------------------------------------------------------------
-describe('rawBuffer — parseLimit returns null for exotic limit type', () => {
+describe('rawBuffer - parseLimit returns null for exotic limit type', () => {
     it('limit=true is treated as unlimited (falls through to return null)', async () => {
         const rawBuffer = require('../../lib/body/rawBuffer');
         // parseLimit(true): truthy, not 0, not number, not string → return null (unlimited)
@@ -2089,10 +2089,10 @@ describe('rawBuffer — parseLimit returns null for exotic limit type', () => {
 });
 
 // -----------------------------------------------------------------------------
-// urlencoded.js — isLast + Array.isArray(cur) paths (lines 163–168)
+// urlencoded.js - isLast + Array.isArray(cur) paths (lines 163–168)
 // Created by: first using [] push to make an array, then accessing it by key
 // -----------------------------------------------------------------------------
-describe('urlencoded parser — isLast + Array.isArray(cur) branch', () => {
+describe('urlencoded parser - isLast + Array.isArray(cur) branch', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('numeric key at last position on array container (a[]=init → a[0]=upd)', async () => {
@@ -2121,14 +2121,14 @@ describe('urlencoded parser — isLast + Array.isArray(cur) branch', () => {
 });
 
 // -----------------------------------------------------------------------------
-// urlencoded.js — !isLast + Array.isArray(cur) paths (lines 179–195)
+// urlencoded.js - !isLast + Array.isArray(cur) paths (lines 179–195)
 // Triggered when a previous [] push made a value an array, then further
 // navigation uses a normal (non-empty) key through that array position.
 // -----------------------------------------------------------------------------
-describe('urlencoded parser — !isLast + Array.isArray(cur) branch', () => {
+describe('urlencoded parser - !isLast + Array.isArray(cur) branch', () => {
     const factory = require('../../lib/body/urlencoded');
 
-    it('numeric key at !isLast on array container — cur[idx] exists (lines 179–185)', async () => {
+    it('numeric key at !isLast on array container - cur[idx] exists (lines 179–185)', async () => {
         // a[0][]=init makes out.a['0']=['init']
         // a[0][0][k]=v: part='0' (notLast), cur=['init'] is array, idx=0 (numeric, cur[0] truthy)
         // Covers lines 179–185: !isLast + Array.isArray + numeric idx + cur[idx] truthy
@@ -2139,7 +2139,7 @@ describe('urlencoded parser — !isLast + Array.isArray(cur) branch', () => {
         expect(req.body.a).toBeDefined();
     });
 
-    it('numeric key at !isLast on array container — cur[idx] is falsy (line 182: creates {})', async () => {
+    it('numeric key at !isLast on array container - cur[idx] is falsy (line 182: creates {})', async () => {
         // a[0][]=&a[0][0][k]=v: empty value '' is falsy → !cur[idx]=true → creates {} at that slot
         // Covers the !cur[idx] branch on line 182
         const mw = factory({ extended: true });
@@ -2162,7 +2162,7 @@ describe('urlencoded parser — !isLast + Array.isArray(cur) branch', () => {
         expect(Array.isArray(req.body.a['0'])).toBe(true);
     });
 
-    it('non-numeric key at !isLast — cur is empty array → pushes first object (line 189)', async () => {
+    it('non-numeric key at !isLast - cur is empty array → pushes first object (line 189)', async () => {
         // a[0][sub]=v: out.a['0']=['init'] then navigate to it as array with no length 0 case
         // Alternative: force a fresh [] that is empty when we arrive at the non-numeric step
         // Use a[][sub]=v where we get empty array at intermediate step but populated by [] handler
@@ -2178,12 +2178,12 @@ describe('urlencoded parser — !isLast + Array.isArray(cur) branch', () => {
 });
 
 // -----------------------------------------------------------------------------
-// multipart.js — large field value incremental accumulation (lines 331–333)
+// multipart.js - large field value incremental accumulation (lines 331–333)
 // The internal write loop keeps 1 KB of buffer for boundary matching.
 // writeLen = buffer.length - 1024 > 0 only when buf > 1024 bytes.
 // For fields (no writeStream), this writes to current.value incrementally.
 // -----------------------------------------------------------------------------
-describe('multipart — large field value incremental accumulation', () => {
+describe('multipart - large field value incremental accumulation', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('field >1KB is accumulated incrementally (writeLen > 0 path for fields)', async () => {
@@ -2221,10 +2221,10 @@ describe('multipart — large field value incremental accumulation', () => {
 });
 
 // -----------------------------------------------------------------------------
-// json.js / text.js / raw.js — 415 catch path with no message
+// json.js / text.js / raw.js - 415 catch path with no message
 // Covers the `err.message || 'unsupported encoding'` right-hand branch
 // -----------------------------------------------------------------------------
-describe('parsers — 415 error without message uses "unsupported encoding" fallback', () => {
+describe('parsers - 415 error without message uses "unsupported encoding" fallback', () => {
     it('json: 415 error with empty message uses fallback string', async () => {
         const jsonMw = require('../../lib/body/json');
         // Inject a 415-status error with no message via a stream that rejects immediately
@@ -2233,7 +2233,7 @@ describe('parsers — 415 error without message uses "unsupported encoding" fall
         const res = mockRes();
         const mw = jsonMw();
         const p = callMw(mw, req, res);
-        // Emit a 415 error with empty message — hits `err.message || 'unsupported encoding'`
+        // Emit a 415 error with empty message - hits `err.message || 'unsupported encoding'`
         const err415 = Object.assign(new Error(''), { status: 415 });
         emitter.emit('error', err415);
         await p;
@@ -2270,7 +2270,7 @@ describe('parsers — 415 error without message uses "unsupported encoding" fall
     });
 });
 
-describe('urlencoded parser — explicit 413/415 catch branches', () => {
+describe('urlencoded parser - explicit 413/415 catch branches', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('maps err.status=413 to payload too large', async () => {
@@ -2306,7 +2306,7 @@ describe('urlencoded parser — explicit 413/415 catch branches', () => {
     });
 });
 
-describe('urlencoded parser — array traversal not-last branches', () => {
+describe('urlencoded parser - array traversal not-last branches', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('array + numeric key at not-last creates missing slot object', async () => {
@@ -2328,7 +2328,7 @@ describe('urlencoded parser — array traversal not-last branches', () => {
     });
 });
 
-describe('multipart — incremental file write branch and Promise.catch continuation', () => {
+describe('multipart - incremental file write branch and Promise.catch continuation', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('writes incremental file chunk when boundary is not yet present (writeLen path)', async () => {
@@ -2397,7 +2397,7 @@ describe('multipart — incremental file write branch and Promise.catch continua
     });
 });
 
-describe('urlencoded parser — parent conversion for nested [] syntax', () => {
+describe('urlencoded parser - parent conversion for nested [] syntax', () => {
     const factory = require('../../lib/body/urlencoded');
 
     it('converts nested object slot to array for isLast empty bracket (a[b][]=1)', async () => {
@@ -2421,7 +2421,7 @@ describe('urlencoded parser — parent conversion for nested [] syntax', () => {
     });
 });
 
-describe('multipart — malformed part separators still follow non-final boundary path', () => {
+describe('multipart - malformed part separators still follow non-final boundary path', () => {
     const mpFactory = require('../../lib/body/multipart');
 
     it('takes the non-CRLF branch after boundary when payload is malformed', async () => {

@@ -166,25 +166,25 @@
 				{
 					"option": "secret",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "HMAC secret. Auto-generated per process if omitted."
 				},
 				{
 					"option": "ignoreMethods",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "HTTP methods to skip. Default: GET, HEAD, OPTIONS."
 				},
 				{
 					"option": "ignorePaths",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Path prefixes to skip (e.g. ['/api/webhooks'])."
 				},
 				{
 					"option": "onError",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom error handler `(req, res) => {}`."
 				}
 			],
@@ -207,19 +207,19 @@
 				{
 					"option": "body",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Rules for req.body fields."
 				},
 				{
 					"option": "query",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Rules for req.query fields."
 				},
 				{
 					"option": "params",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Rules for req.params fields."
 				},
 				{
@@ -231,7 +231,7 @@
 				{
 					"option": "onError",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom error handler `(errors, req, res) => {}`."
 				}
 			],

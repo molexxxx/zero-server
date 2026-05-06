@@ -68,18 +68,18 @@ describe('Fetch Replacement', () => {
 
 
 // =========================================================================
-//  fetch — coverage gaps (from coverage/gaps.test.js)
+//  fetch - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  4. FETCH — TIMEOUT, ABORT, PROGRESS, STATUS
+//  4. FETCH - TIMEOUT, ABORT, PROGRESS, STATUS
 // ============================================================
-describe('fetch — timeout', () => {
+describe('fetch - timeout', () => {
 	let server, base;
 
 	beforeAll(async () => {
 		server = http.createServer((req, res) => {
-			// Intentionally slow — never responds within timeout
+			// Intentionally slow - never responds within timeout
 			setTimeout(() => {
 				res.writeHead(200);
 				res.end('ok');
@@ -98,7 +98,7 @@ describe('fetch — timeout', () => {
 	});
 });
 
-describe('fetch — AbortSignal', () => {
+describe('fetch - AbortSignal', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -131,7 +131,7 @@ describe('fetch — AbortSignal', () => {
 	});
 });
 
-describe('fetch — ok, statusText, error responses', () => {
+describe('fetch - ok, statusText, error responses', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -178,7 +178,7 @@ describe('fetch — ok, statusText, error responses', () => {
 	});
 });
 
-describe('fetch — URLSearchParams body', () => {
+describe('fetch - URLSearchParams body', () => {
 	let server, base, received;
 
 	beforeAll(async () => {
@@ -207,7 +207,7 @@ describe('fetch — URLSearchParams body', () => {
 	});
 });
 
-describe('fetch — download progress', () => {
+describe('fetch - download progress', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -233,4 +233,4 @@ describe('fetch — download progress', () => {
 		expect(last.loaded).toBe(1024);
 		expect(last.total).toBe(1024);
 	});
-});
+});

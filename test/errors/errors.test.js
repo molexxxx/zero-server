@@ -598,7 +598,7 @@ describe('Debug Logger', () =>
         expect(output[0]).toContain('TRACE');
     });
 
-    it('respects minimum level — filters lower levels', () =>
+    it('respects minimum level - filters lower levels', () =>
     {
         debug.level('warn');
         const log = debug('app');

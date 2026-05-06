@@ -1,4 +1,4 @@
-/** schema.test.js — ORM DDL, migration, and schema constraint tests */
+/** schema.test.js - ORM DDL, migration, and schema constraint tests */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
 // --- Helpers ------------------------------------------------------------
@@ -15,7 +15,7 @@ function memoryDb()
 
 // --- SQLite DDL Tests ---------------------------------------------------
 
-describe('SQLite DDL — Foreign Keys', () =>
+describe('SQLite DDL - Foreign Keys', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); db.adapter._db.exec('PRAGMA foreign_keys = ON'); });
@@ -102,7 +102,7 @@ describe('SQLite DDL — Foreign Keys', () =>
     });
 });
 
-describe('SQLite DDL — CHECK Constraints', () =>
+describe('SQLite DDL - CHECK Constraints', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); });
@@ -150,7 +150,7 @@ describe('SQLite DDL — CHECK Constraints', () =>
     });
 });
 
-describe('SQLite DDL — Indexes', () =>
+describe('SQLite DDL - Indexes', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); });
@@ -210,7 +210,7 @@ describe('SQLite DDL — Indexes', () =>
     });
 });
 
-describe('SQLite DDL — Composite Primary Keys', () =>
+describe('SQLite DDL - Composite Primary Keys', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); });
@@ -277,7 +277,7 @@ describe('SQLite DDL — Composite Primary Keys', () =>
     });
 });
 
-describe('SQLite DDL — Composite Unique Constraints', () =>
+describe('SQLite DDL - Composite Unique Constraints', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); });
@@ -405,7 +405,7 @@ describe('SQLite Migrations', () =>
 
 // --- Memory Adapter Tests -----------------------------------------------
 
-describe('Memory Adapter — Schema Tracking', () =>
+describe('Memory Adapter - Schema Tracking', () =>
 {
     let db;
     beforeEach(() => { db = memoryDb(); });
@@ -435,7 +435,7 @@ describe('Memory Adapter — Schema Tracking', () =>
     });
 });
 
-describe('Memory Adapter — Unique Constraint Enforcement', () =>
+describe('Memory Adapter - Unique Constraint Enforcement', () =>
 {
     let db;
     beforeEach(async () =>
@@ -473,7 +473,7 @@ describe('Memory Adapter — Unique Constraint Enforcement', () =>
     });
 });
 
-describe('Memory Adapter — Composite Unique', () =>
+describe('Memory Adapter - Composite Unique', () =>
 {
     let db;
     beforeEach(async () =>
@@ -504,7 +504,7 @@ describe('Memory Adapter — Composite Unique', () =>
     });
 });
 
-describe('Memory Adapter — Migration Methods', () =>
+describe('Memory Adapter - Migration Methods', () =>
 {
     let db;
     beforeEach(async () =>
@@ -581,7 +581,7 @@ describe('Memory Adapter — Migration Methods', () =>
 
 // --- Database Class Migration Proxies -----------------------------------
 
-describe('Database — Migration API', () =>
+describe('Database - Migration API', () =>
 {
     let db;
     beforeEach(async () =>
@@ -644,7 +644,7 @@ describe('Database — Migration API', () =>
 
 // --- Topological Sync Ordering ------------------------------------------
 
-describe('Database — Topological Sync Ordering', () =>
+describe('Database - Topological Sync Ordering', () =>
 {
     let db;
     afterEach(() => db.close());
@@ -729,7 +729,7 @@ describe('Database — Topological Sync Ordering', () =>
 
 // --- Full Integration: Schema with ALL features -------------------------
 
-describe('SQLite — Full-Feature Schema Integration', () =>
+describe('SQLite - Full-Feature Schema Integration', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); db.adapter._db.exec('PRAGMA foreign_keys = ON'); });
@@ -793,7 +793,7 @@ describe('SQLite — Full-Feature Schema Integration', () =>
 
 // --- SQLite Migration Full Workflow -------------------------------------
 
-describe('SQLite — Migration Workflow', () =>
+describe('SQLite - Migration Workflow', () =>
 {
     let db;
     beforeEach(() => { db = sqliteDb(); });
@@ -835,7 +835,7 @@ describe('SQLite — Migration Workflow', () =>
 
 // --- Composite Index in SQLite ------------------------------------------
 
-describe('SQLite — Composite Index via createIndex', () =>
+describe('SQLite - Composite Index via createIndex', () =>
 {
     let db;
     beforeEach(() =>
@@ -865,7 +865,7 @@ describe('SQLite — Composite Index via createIndex', () =>
 
 // --- JSON Adapter inherits from Memory ----------------------------------
 
-describe('JSON Adapter — inherits migration methods from Memory', () =>
+describe('JSON Adapter - inherits migration methods from Memory', () =>
 {
     it('has migration methods via inheritance', () =>
     {
@@ -896,7 +896,7 @@ describe('JSON Adapter — inherits migration methods from Memory', () =>
 
 // --- MySQL Adapter DDL (quick constructor check, no live connection) ----
 
-describe('MySQL Adapter — DDL method signatures', () =>
+describe('MySQL Adapter - DDL method signatures', () =>
 {
     it('has all migration methods', () =>
     {
@@ -919,7 +919,7 @@ describe('MySQL Adapter — DDL method signatures', () =>
 
 // --- PostgreSQL Adapter DDL (method signatures) -------------------------
 
-describe('PostgreSQL Adapter — DDL method signatures', () =>
+describe('PostgreSQL Adapter - DDL method signatures', () =>
 {
     it('has all migration methods', () =>
     {
@@ -941,7 +941,7 @@ describe('PostgreSQL Adapter — DDL method signatures', () =>
 
 // --- MongoDB Adapter DDL (method signatures) ----------------------------
 
-describe('MongoDB Adapter — DDL method signatures', () =>
+describe('MongoDB Adapter - DDL method signatures', () =>
 {
     it('has all migration methods', () =>
     {

@@ -1,5 +1,5 @@
 /**
- * Tests for WebSocketConnection — frame building, event emitter, send/close/terminate,
+ * Tests for WebSocketConnection - frame building, event emitter, send/close/terminate,
  * and incoming data parsing (text, binary, ping/pong, close frames).
  */
 const WebSocketConnection = require('../../lib/ws/connection');
@@ -412,7 +412,7 @@ describe('computed properties', () =>
 });
 
 // ===========================================================
-//  _onData — parsing incoming WebSocket frames
+//  _onData - parsing incoming WebSocket frames
 // ===========================================================
 describe('_onData - frame parsing', () =>
 {

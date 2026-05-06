@@ -1,5 +1,5 @@
 /**
- * kingbobbyb.js — A hidden tribute to John Hart (kingbobbyb).
+ * kingbobbyb.js - A hidden tribute to John Hart (kingbobbyb).
  *
  * Konami code: ↑ ↑ ↓ ↓ ← → ← → B A
  * "The king is gone but not forgotten."

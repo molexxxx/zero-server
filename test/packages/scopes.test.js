@@ -6,7 +6,7 @@
  *     by hand instead of re-running `npm run packages:generate`).
  *   - package.json metadata regressions (wrong name, missing dep, etc.).
  *
- * Each scoped package is now a TRUE STANDALONE bundle — it ships its own copy
+ * Each scoped package is now a TRUE STANDALONE bundle - it ships its own copy
  * of the lib/ source and has NO runtime dep on @zero-server/sdk.  Cross-scope
  * deps (e.g. @zero-server/auth → @zero-server/fetch) are redirected to local
  * packages/ so the test works without a real npm install.
@@ -55,7 +55,7 @@ beforeAll(() => {
     }
 });
 
-describe('scoped packages — manifest', () => {
+describe('scoped packages - manifest', () => {
     it('manifest defines at least one scope', () => {
         expect(Array.isArray(scopes)).toBe(true);
         expect(scopes.length).toBeGreaterThan(0);
@@ -85,7 +85,7 @@ describe('scoped packages — manifest', () => {
     });
 });
 
-describe('scoped packages — generated stubs', () => {
+describe('scoped packages - generated stubs', () => {
     it('packages/ directory exists', () => {
         expect(fs.existsSync(PACKAGES_DIR)).toBe(true);
     });
@@ -108,7 +108,7 @@ describe('scoped packages — generated stubs', () => {
                 expect(pkg.main).toBe('./index.js');
                 expect(pkg.types).toBe('./index.d.ts');
                 expect(pkg.engines && pkg.engines.node).toBe('>=18.0.0');
-                // SDK must NOT be a hard runtime dependency anymore — it is an
+                // SDK must NOT be a hard runtime dependency anymore - it is an
                 // optional peerDependency used only for TypeScript types.
                 expect(pkg.dependencies && pkg.dependencies['@zero-server/sdk']).toBeUndefined();
                 expect(pkg.peerDependencies && pkg.peerDependencies['@zero-server/sdk']).toBeDefined();
@@ -165,7 +165,7 @@ describe('scoped packages — generated stubs', () => {
     }
 });
 
-describe('scoped packages — coverage of SDK surface', () => {
+describe('scoped packages - coverage of SDK surface', () => {
     it('every SDK value export belongs to at least one scope', () => {
         const covered = new Set();
         for (const scope of scopes) {

@@ -85,7 +85,7 @@ describe('Database', () =>
     it('sync() creates tables for all models', async () =>
     {
         await db.sync();
-        // Tables should exist — inserting should work
+        // Tables should exist - inserting should work
         const user = await User.create({ name: 'Alice', email: 'a@b.com' });
         expect(user.id).toBeDefined();
     });
@@ -95,14 +95,14 @@ describe('Database', () =>
         await db.sync();
         await User.create({ name: 'Alice', email: 'a@b.com' });
         await db.drop();
-        // After drop, table is gone — sync and insert again
+        // After drop, table is gone - sync and insert again
         await db.sync();
         const users = await User.find();
         expect(users).toHaveLength(0);
     });
 });
 
-describe('Model — CRUD', () =>
+describe('Model - CRUD', () =>
 {
     beforeEach(async () => { await db.sync(); });
 
@@ -265,7 +265,7 @@ describe('Model — CRUD', () =>
     });
 });
 
-describe('Model — Soft Deletes', () =>
+describe('Model - Soft Deletes', () =>
 {
     beforeEach(async () => { await db.sync(); });
 
@@ -297,7 +297,7 @@ describe('Model — Soft Deletes', () =>
     });
 });
 
-describe('Model — Relationships', () =>
+describe('Model - Relationships', () =>
 {
     beforeEach(async () =>
     {
@@ -436,7 +436,7 @@ describe('Query Builder', () =>
     });
 });
 
-describe('Schema — TYPES', () =>
+describe('Schema - TYPES', () =>
 {
     it('TYPES contains all expected types', () =>
     {
@@ -453,7 +453,7 @@ describe('Schema — TYPES', () =>
     });
 });
 
-describe('Model — Hooks', () =>
+describe('Model - Hooks', () =>
 {
     let hookLog;
 
@@ -509,7 +509,7 @@ describe('Model — Hooks', () =>
     });
 });
 
-describe('Memory Adapter — edge cases', () =>
+describe('Memory Adapter - edge cases', () =>
 {
     beforeEach(async () => { await db.sync(); });
 
@@ -653,7 +653,7 @@ describe('ORM Pagination', () =>
 });
 // --- Aggregate Functions (Native) ----------------------------
 
-describe('ORM Aggregate — native adapter', () =>
+describe('ORM Aggregate - native adapter', () =>
 {
     beforeEach(async () =>
     {

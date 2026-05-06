@@ -156,7 +156,7 @@ describe('enrollment.verify()', () =>
         req.session.set('_2faEnrollment', {
             secret: 'JBSWY3DPEHPK3PXP',
             backupHashes: [],
-            createdAt: Date.now() - 20 * 60 * 1000, // 20 minutes ago — expired
+            createdAt: Date.now() - 20 * 60 * 1000, // 20 minutes ago - expired
         });
         const res = mockRes();
         await mw(req, res);

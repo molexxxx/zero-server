@@ -31,7 +31,7 @@ export function initCookies()
 
             if (!all.length && !signed.length)
             {
-                jarEl.innerHTML = '<div style="padding:12px;color:#98a0aa">No cookies set — use the form above to create one.</div>';
+                jarEl.innerHTML = '<div style="padding:12px;color:#98a0aa">No cookies set - use the form above to create one.</div>';
                 return;
             }
 

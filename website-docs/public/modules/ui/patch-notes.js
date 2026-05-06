@@ -1,6 +1,6 @@
 /**
  * ui/patch-notes.js
- * Patch notes modal — shows what changed between documentation versions.
+ * Patch notes modal - shows what changed between documentation versions.
  */
 
 import { escapeHtml } from '../core/helpers.js';

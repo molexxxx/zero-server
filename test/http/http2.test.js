@@ -1,6 +1,6 @@
 'use strict';
 /**
- * http2.test.js — HTTP/2 features: server creation, push, SSE compat, drain compat
+ * http2.test.js - HTTP/2 features: server creation, push, SSE compat, drain compat
  * @vitest-environment node
  */
 
@@ -16,7 +16,7 @@ const Request  = require('../../lib/http/request');
 const Response = require('../../lib/http/response');
 
 // HTTP/2 sessions emit errors during test teardown (GOAWAY, ECONNREFUSED,
-// ERR_HTTP2_STREAM_CANCEL) — these are benign cleanup artefacts.
+// ERR_HTTP2_STREAM_CANCEL) - these are benign cleanup artefacts.
 // Suppress them so vitest doesn't fail the run.
 const _h2ErrorCodes = new Set(['ERR_HTTP2_STREAM_CANCEL', 'ECONNREFUSED', 'ERR_HTTP2_GOAWAY_SESSION', 'ERR_HTTP2_ERROR']);
 let _origUE, _origUR;
@@ -88,7 +88,7 @@ function buildSelfSignedCert(privateKey, publicKey)
     }
     catch (e)
     {
-        // openssl not available — return null, tests will be skipped
+        // openssl not available - return null, tests will be skipped
         return null;
     }
     finally
@@ -147,9 +147,9 @@ function mockRawRes(overrides = {})
 }
 
 // ===========================================================================
-// app.listen() — server creation modes
+// app.listen() - server creation modes
 // ===========================================================================
-describe('app.listen() — server creation modes', () =>
+describe('app.listen() - server creation modes', () =>
 {
     it('creates HTTP server by default', async () =>
     {
@@ -186,9 +186,9 @@ describe('app.listen() — server creation modes', () =>
 });
 
 // ===========================================================================
-// h2c — HTTP/2 cleartext server integration
+// h2c - HTTP/2 cleartext server integration
 // ===========================================================================
-describe('HTTP/2 cleartext (h2c) — integration', () =>
+describe('HTTP/2 cleartext (h2c) - integration', () =>
 {
     let server, url;
 
@@ -290,7 +290,7 @@ describe('HTTP/2 cleartext (h2c) — integration', () =>
 // ===========================================================================
 // HTTP/2 with TLS (if openssl available)
 // ===========================================================================
-describe('HTTP/2 TLS — integration', () =>
+describe('HTTP/2 TLS - integration', () =>
 {
     let certs;
     let server, url;
@@ -371,9 +371,9 @@ describe('HTTP/2 TLS — integration', () =>
 });
 
 // ===========================================================================
-// res.push() — unit-level mocking
+// res.push() - unit-level mocking
 // ===========================================================================
-describe('res.push() — unit level', () =>
+describe('res.push() - unit level', () =>
 {
     it('returns null when not on HTTP/2 (no stream.pushStream)', () =>
     {
@@ -580,7 +580,7 @@ describe('res.push() — unit level', () =>
 });
 
 // ===========================================================================
-// res.supportsPush — getter
+// res.supportsPush - getter
 // ===========================================================================
 describe('res.supportsPush', () =>
 {
@@ -609,9 +609,9 @@ describe('res.supportsPush', () =>
 });
 
 // ===========================================================================
-// SSE — HTTP/2 compatibility (no Connection header)
+// SSE - HTTP/2 compatibility (no Connection header)
 // ===========================================================================
-describe('SSE — HTTP/2 compatibility', () =>
+describe('SSE - HTTP/2 compatibility', () =>
 {
     it('omits Connection header on HTTP/2 response', () =>
     {
@@ -654,9 +654,9 @@ describe('SSE — HTTP/2 compatibility', () =>
 });
 
 // ===========================================================================
-// Drain response — HTTP/2 compatibility
+// Drain response - HTTP/2 compatibility
 // ===========================================================================
-describe('app.handle() — drain response HTTP/2 compat', () =>
+describe('app.handle() - drain response HTTP/2 compat', () =>
 {
     it('omits Connection header in 503 for HTTP/2 requests', () =>
     {
@@ -717,9 +717,9 @@ describe('app.handle() — drain response HTTP/2 compat', () =>
 });
 
 // ===========================================================================
-// HTTP/2 server push — h2c integration
+// HTTP/2 server push - h2c integration
 // ===========================================================================
-describe('HTTP/2 server push — h2c integration', () =>
+describe('HTTP/2 server push - h2c integration', () =>
 {
     let server, url;
 
@@ -814,9 +814,9 @@ describe('HTTP/2 server push — h2c integration', () =>
 });
 
 // ===========================================================================
-// HTTP/2 middleware stack — routing, body, etc.
+// HTTP/2 middleware stack - routing, body, etc.
 // ===========================================================================
-describe('HTTP/2 — middleware stack integration', () =>
+describe('HTTP/2 - middleware stack integration', () =>
 {
     let server, url;
 
@@ -946,9 +946,9 @@ describe('app.close()', () =>
 });
 
 // ===========================================================================
-// Static middleware — pushAssets (unit level)
+// Static middleware - pushAssets (unit level)
 // ===========================================================================
-describe('serveStatic — pushAssets (unit level)', () =>
+describe('serveStatic - pushAssets (unit level)', () =>
 {
     let tmpDir, tmpRoot;
 
@@ -1086,7 +1086,7 @@ describe('serveStatic — pushAssets (unit level)', () =>
 
         const r = await doFetch(`${base}/index.html`);
         expect(r.data).toContain('<html>');
-        // No push possible on HTTP/1.1 — just verify it didn't crash
+        // No push possible on HTTP/1.1 - just verify it didn't crash
         expect(r.status).toBe(200);
         server.close();
     });

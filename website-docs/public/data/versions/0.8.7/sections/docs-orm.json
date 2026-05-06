@@ -4,7 +4,7 @@
 	"items": [
 		{
 			"name": "Database",
-			"description": "ORM entry point.  Provides the `Database` factory that creates a connection to a backing store, the base `Model` class, the `TYPES` enum, and schema helpers. Supported adapters (all optional \"bring your own driver\"): - `memory`  — in-process (no driver needed) - `json`    — JSON file persistence (no driver needed) - `sqlite`  — requires `better-sqlite3` - `mysql`   — requires `mysql2` - `postgres` — requires `pg` - `mongo`   — requires `mongodb`",
+			"description": "ORM entry point.  Provides the `Database` factory that creates a connection to a backing store, the base `Model` class, the `TYPES` enum, and schema helpers. Supported adapters (all optional \"bring your own driver\"): - `memory`  - in-process (no driver needed) - `json`    - JSON file persistence (no driver needed) - `sqlite`  - requires `better-sqlite3` - `mysql`   - requires `mysql2` - `postgres` - requires `pg` - `mongo`   - requires `mongodb`",
 			"example": "  const { Database, Model, TYPES } = require('zero-http');\r\n\n  const db = Database.connect('memory');\r\n\n  class User extends Model {\r\n      static table = 'users';\r\n      static schema = {\r\n          id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\r\n          name:  { type: TYPES.STRING, required: true },\r\n          email: { type: TYPES.STRING, required: true, unique: true },\r\n      };\r\n      static timestamps = true;\r\n  }\r\n\n  db.register(User);\r\n  await db.sync();\r\n\n  const user = await User.create({ name: 'Alice', email: 'a@b.com' });",
 			"examples": [
 				{
@@ -46,49 +46,49 @@
 								{
 									"option": "host",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Database host (mysql, postgres)."
 								},
 								{
 									"option": "port",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Database port (mysql, postgres)."
 								},
 								{
 									"option": "user",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Database user (mysql, postgres)."
 								},
 								{
 									"option": "password",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Database password (mysql, postgres)."
 								},
 								{
 									"option": "database",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Database name (mysql, postgres, mongo)."
 								},
 								{
 									"option": "url",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Connection URL (mongo, redis)."
 								},
 								{
 									"option": "filename",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Database file path (sqlite)."
 								},
 								{
 									"option": "directory",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Storage directory (json)."
 								}
 							],
@@ -141,7 +141,7 @@
 						{
 							"method": "sync",
 							"signature": "sync()",
-							"description": "Synchronise all registered models — create tables if they don't exist. Tables are ordered so referenced tables are created first (topological sort).",
+							"description": "Synchronise all registered models - create tables if they don't exist. Tables are ordered so referenced tables are created first (topological sort).",
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": ""
@@ -343,13 +343,13 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom index name."
 								},
 								{
 									"option": "unique",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Create a unique index."
 								}
 							],
@@ -478,19 +478,19 @@
 								{
 									"option": "onDelete",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Referential action on delete (CASCADE, SET NULL, RESTRICT, etc.)."
 								},
 								{
 									"option": "onUpdate",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Referential action on update (CASCADE, SET NULL, RESTRICT, etc.)."
 								},
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom constraint name."
 								}
 							],
@@ -589,7 +589,7 @@
 								{
 									"option": "onRetry",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Callback on each retry: (err, attempt) => {}."
 								}
 							],
@@ -638,7 +638,7 @@
 								{
 									"option": "onSlow",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Callback on slow query: (entry) => {}."
 								},
 								{
@@ -656,7 +656,7 @@
 								{
 									"option": "onN1",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Callback on N+1 detection."
 								}
 							],
@@ -1295,7 +1295,7 @@
 						{
 							"method": "all",
 							"signature": "all([conditions])",
-							"description": "Get all records, optionally filtered. Alias for find() — for LINQ-familiarity.",
+							"description": "Get all records, optionally filtered. Alias for find() - for LINQ-familiarity.",
 							"methodParams": [
 								{
 									"param": "conditions",
@@ -1465,31 +1465,31 @@
 								{
 									"option": "through",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Junction table name (e.g. 'user_roles')."
 								},
 								{
 									"option": "foreignKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Column on the junction table referencing THIS model."
 								},
 								{
 									"option": "otherKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Column on the junction table referencing the related model."
 								},
 								{
 									"option": "localKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Local key (default: primary key)."
 								},
 								{
 									"option": "relatedKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Related model key (default: its primary key)."
 								}
 							],
@@ -1856,13 +1856,13 @@
 								{
 									"option": "foreignKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "FK column referencing self (e.g. 'parentId')."
 								},
 								{
 									"option": "localKey",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Local key (default: primary key)."
 								},
 								{
@@ -2973,7 +2973,7 @@
 						{
 							"method": "include",
 							"signature": "include(...relations)",
-							"description": "Alias for with() — mirrors Entity Framework include syntax.",
+							"description": "Alias for with() - mirrors Entity Framework include syntax.",
 							"methodParams": [
 								{
 									"param": "relations",
@@ -3036,7 +3036,7 @@
 								{
 									"option": "analyze",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Include ANALYZE (PostgreSQL)."
 								}
 							],
@@ -3220,7 +3220,7 @@
 						{
 							"method": "then",
 							"signature": "then(resolve, reject)",
-							"description": "Make Query thenable — allows `await query`.",
+							"description": "Make Query thenable - allows `await query`.",
 							"methodParams": [
 								{
 									"param": "resolve",
@@ -3282,7 +3282,7 @@
 						{
 							"method": "toArray",
 							"signature": "toArray()",
-							"description": "Alias for exec — explicitly convert to array.",
+							"description": "Alias for exec - explicitly convert to array.",
 							"methodReturns": {
 								"type": "Promise<Array>",
 								"description": "Matching rows as an array."
@@ -3325,7 +3325,7 @@
 						{
 							"method": "firstOrDefault",
 							"signature": "firstOrDefault()",
-							"description": "Alias for first() — C# FirstOrDefault returns null on empty.",
+							"description": "Alias for first() - C# FirstOrDefault returns null on empty.",
 							"methodReturns": {
 								"type": "Promise<object | null>",
 								"description": "Matching row or null."
@@ -3334,7 +3334,7 @@
 						{
 							"method": "average",
 							"signature": "average(field)",
-							"description": "Alias for avg() — C# naming.",
+							"description": "Alias for avg() - C# naming.",
 							"methodParams": [
 								{
 									"param": "field",
@@ -3351,7 +3351,7 @@
 						{
 							"method": "aggregate",
 							"signature": "aggregate(fn, seed)",
-							"description": "Alias for reduce() — C# Aggregate naming.",
+							"description": "Alias for reduce() - C# Aggregate naming.",
 							"methodParams": [
 								{
 									"param": "fn",
@@ -3388,7 +3388,7 @@
 						{
 							"method": "lastOrDefault",
 							"signature": "lastOrDefault()",
-							"description": "Alias for last() — C# naming.",
+							"description": "Alias for last() - C# naming.",
 							"methodReturns": {
 								"type": "Promise<object | null>",
 								"description": "Matching row or null."
@@ -3647,7 +3647,7 @@
 						{
 							"method": "selectMany",
 							"signature": "selectMany(fn)",
-							"description": "FlatMap — project each element to an array and flatten.",
+							"description": "FlatMap - project each element to an array and flatten.",
 							"methodParams": [
 								{
 									"param": "fn",
@@ -3956,7 +3956,7 @@
 						{
 							"method": "unless",
 							"signature": "unless(condition, fn)",
-							"description": "Inverse of when — apply query logic when condition is falsy.",
+							"description": "Inverse of when - apply query logic when condition is falsy.",
 							"methodParams": [
 								{
 									"param": "condition",
@@ -4207,7 +4207,7 @@
 				{
 					"option": "verbose",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Log every SQL statement (debug)."
 				},
 				{
@@ -4219,7 +4219,7 @@
 				{
 					"option": "pragmas",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "PRAGMA settings to apply on open."
 				},
 				{
@@ -4267,31 +4267,31 @@
 				{
 					"option": "pragmas.page_size",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Page size in bytes (must be set before WAL)."
 				},
 				{
 					"option": "pragmas.auto_vacuum",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Auto-vacuum mode (NONE, FULL, INCREMENTAL)."
 				},
 				{
 					"option": "pragmas.secure_delete",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Overwrite deleted content with zeros."
 				},
 				{
 					"option": "pragmas.wal_autocheckpoint",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Pages before auto-checkpoint (default 1000)."
 				},
 				{
 					"option": "pragmas.locking_mode",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "NORMAL or EXCLUSIVE."
 				}
 			],
@@ -4762,7 +4762,7 @@
 						{
 							"method": "overview",
 							"signature": "overview()",
-							"description": "Get counts for all tables — structured database overview.",
+							"description": "Get counts for all tables - structured database overview.",
 							"methodReturns": {
 								"type": "{ tables: Array<{ name: string, rows: number }>, totalRows: number, fileSize: string }",
 								"description": ""
@@ -4916,13 +4916,13 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Index name (auto-generated if omitted)."
 								},
 								{
 									"option": "unique",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Create a UNIQUE index."
 								}
 							]
@@ -4936,7 +4936,7 @@
 									"param": "_table",
 									"type": "string",
 									"required": "Yes",
-									"notes": "Table name (unused — SQLite indexes are schema-scoped)."
+									"notes": "Table name (unused - SQLite indexes are schema-scoped)."
 								},
 								{
 									"param": "name",
@@ -5045,7 +5045,7 @@
 				{
 					"option": "database",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Database name."
 				},
 				{
@@ -5099,7 +5099,7 @@
 				{
 					"option": "ssl",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "SSL profile or options object."
 				}
 			],
@@ -5285,7 +5285,7 @@
 						{
 							"method": "overview",
 							"signature": "overview()",
-							"description": "Get full database overview — all tables with size and row counts. Returns a structured database summary.",
+							"description": "Get full database overview - all tables with size and row counts. Returns a structured database summary.",
 							"methodReturns": {
 								"type": "Promise<{ tables: Array, totalSize: string, totalRows: number }>",
 								"description": ""
@@ -5311,7 +5311,7 @@
 						{
 							"method": "processlist",
 							"signature": "processlist()",
-							"description": "Get processlist — active connections/queries.",
+							"description": "Get processlist - active connections/queries.",
 							"methodReturns": {
 								"type": "Promise<Array<{ id: number, user: string, host: string, db: string, command: string, time: number, state: string, info: string }>>",
 								"description": ""
@@ -5339,19 +5339,19 @@
 								{
 									"option": "engine",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "e.g. 'InnoDB', 'MyISAM'"
 								},
 								{
 									"option": "charset",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "e.g. 'utf8mb4', 'latin1'"
 								},
 								{
 									"option": "collation",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "e.g. 'utf8mb4_unicode_ci'"
 								}
 							]
@@ -5395,7 +5395,7 @@
 								{
 									"option": "after",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Place column after this column."
 								}
 							]
@@ -5491,13 +5491,13 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Index name."
 								},
 								{
 									"option": "unique",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Create a UNIQUE index."
 								}
 							]
@@ -5897,7 +5897,7 @@
 								{
 									"option": "analyze",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Use EXPLAIN ANALYZE (MySQL 8.0.18+)."
 								}
 							],
@@ -5967,19 +5967,19 @@
 				{
 					"option": "user",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Database user."
 				},
 				{
 					"option": "password",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Database password."
 				},
 				{
 					"option": "database",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Database name."
 				},
 				{
@@ -6003,25 +6003,25 @@
 				{
 					"option": "ssl",
 					"type": "boolean | object",
-					"default": "—",
+					"default": "-",
 					"notes": "SSL mode or TLS options."
 				},
 				{
 					"option": "connectionString",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Full connection URI (overrides individual settings)."
 				},
 				{
 					"option": "application_name",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Identify the app in pg_stat_activity."
 				},
 				{
 					"option": "statement_timeout",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Statement timeout in ms."
 				}
 			],
@@ -6221,7 +6221,7 @@
 						{
 							"method": "overview",
 							"signature": "overview()",
-							"description": "Get full database overview — all tables with size and row counts.",
+							"description": "Get full database overview - all tables with size and row counts.",
 							"methodReturns": {
 								"type": "Promise<{ tables: Array, totalSize: string, totalRows: number }>",
 								"description": ""
@@ -6849,19 +6849,19 @@
 								{
 									"option": "analyze",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Include ANALYZE."
 								},
 								{
 									"option": "buffers",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Include BUFFERS."
 								},
 								{
 									"option": "format",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Output format (TEXT, JSON, XML, YAML)."
 								}
 							],
@@ -6931,7 +6931,7 @@
 				{
 					"option": "database",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Database name."
 				},
 				{
@@ -6979,19 +6979,19 @@
 				{
 					"option": "authSource",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Auth database name."
 				},
 				{
 					"option": "replicaSet",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Replica set name."
 				},
 				{
 					"option": "clientOptions",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Extra MongoClient options (passed directly)."
 				}
 			],
@@ -7615,7 +7615,7 @@
 				{
 					"option": "url",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Redis connection URL."
 				},
 				{
@@ -7633,7 +7633,7 @@
 				{
 					"option": "password",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Redis password."
 				},
 				{
@@ -7663,13 +7663,13 @@
 				{
 					"option": "tls",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "TLS options for secure connections."
 				},
 				{
 					"option": "keyPrefix",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Alias for prefix (ioredis compat)."
 				},
 				{
@@ -9187,7 +9187,7 @@
 									"param": "_table",
 									"type": "string",
 									"required": "Yes",
-									"notes": "Table name (unused — searches all tables)."
+									"notes": "Table name (unused - searches all tables)."
 								},
 								{
 									"param": "name",
@@ -9532,7 +9532,7 @@
 		},
 		{
 			"name": "JSON Adapter",
-			"description": "JSON file-backed database adapter. Persists data to JSON files on disk — one file per table. Zero-dependency, suitable for prototyping, small apps, and embedded scenarios. Uses atomic writes for safety.",
+			"description": "JSON file-backed database adapter. Persists data to JSON files on disk - one file per table. Zero-dependency, suitable for prototyping, small apps, and embedded scenarios. Uses atomic writes for safety.",
 			"example": "  const { Database, Model, TYPES } = require('zero-http');\r\n\n  const db = Database.connect('json', { directory: './data' });\r\n\n  class Note extends Model {\r\n      static table  = 'notes';\r\n      static schema = {\r\n          id:    { type: TYPES.INTEGER, primaryKey: true, autoIncrement: true },\r\n          body:  { type: TYPES.TEXT, required: true },\r\n      };\r\n  }\r\n\n  db.register(Note);\r\n  await db.sync();\r\n\n  await Note.create({ body: 'Hello world' });\r\n  // Data persisted to ./data/notes.json",
 			"examples": [
 				{
@@ -9544,7 +9544,7 @@
 				{
 					"option": "dir",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Directory to store JSON files. Created if needed."
 				},
 				{
@@ -9887,19 +9887,19 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Unique migration name (e.g., '001_create_users')."
 								},
 								{
 									"option": "up",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Forward migration: `async (db) => {}`."
 								},
 								{
 									"option": "down",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Reverse migration: `async (db) => {}`."
 								}
 							],
@@ -9978,7 +9978,7 @@
 						{
 							"method": "fresh",
 							"signature": "fresh()",
-							"description": "Fresh start: drop ALL tables (not just migrated ones) then re-migrate. ⚠️  DESTRUCTIVE — use with caution.",
+							"description": "Fresh start: drop ALL tables (not just migrated ones) then re-migrate. ⚠️  DESTRUCTIVE - use with caution.",
 							"methodReturns": {
 								"type": "Promise<{ migrated: string[], batch: number }>",
 								"description": ""
@@ -10090,7 +10090,7 @@
 				{
 					"option": "redis",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Redis adapter instance for distributed caching."
 				}
 			],
@@ -10633,13 +10633,13 @@
 								{
 									"option": "key",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Namespace key (defaults to function name)."
 								},
 								{
 									"option": "maxAttempts",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Retry limit (default 1000)."
 								}
 							],
@@ -10706,7 +10706,7 @@
 								{
 									"option": "sex",
 									"type": "'male' | 'female'",
-									"default": "—",
+									"default": "-",
 									"notes": "Constrain to a sex."
 								},
 								{
@@ -10774,7 +10774,7 @@
 								{
 									"option": "sex",
 									"type": "'male' | 'female'",
-									"default": "—",
+									"default": "-",
 									"notes": "Biological sex (male/female)."
 								},
 								{
@@ -10805,7 +10805,7 @@
 								{
 									"option": "sex",
 									"type": "'male' | 'female'",
-									"default": "—",
+									"default": "-",
 									"notes": "Biological sex (male/female)."
 								},
 								{
@@ -10835,13 +10835,13 @@
 								{
 									"option": "firstName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override the first name."
 								},
 								{
 									"option": "lastName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override the last name."
 								},
 								{
@@ -10872,7 +10872,7 @@
 								{
 									"option": "sex",
 									"type": "'male' | 'female' | 'neutral'",
-									"default": "—",
+									"default": "-",
 									"notes": "Biological sex (male/female)."
 								}
 							],
@@ -10912,7 +10912,7 @@
 								{
 									"option": "countryCode",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "ISO 3166-1 alpha-2 (e.g. 'US', 'DE').\nDefaults to a random country."
 								},
 								{
@@ -10970,19 +10970,19 @@
 								{
 									"option": "firstName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override the local-part first name."
 								},
 								{
 									"option": "lastName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override the local-part last name."
 								},
 								{
 									"option": "provider",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Force a provider domain."
 								},
 								{
@@ -11037,13 +11037,13 @@
 								{
 									"option": "firstName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override first name component."
 								},
 								{
 									"option": "lastName",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override last name component."
 								},
 								{
@@ -11625,7 +11625,7 @@
 								{
 									"option": "country",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by ISO 3166-1 alpha-2 country code."
 								}
 							],
@@ -12002,7 +12002,7 @@
 								{
 									"option": "tld",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Force a specific TLD."
 								}
 							],
@@ -12148,7 +12148,7 @@
 								{
 									"option": "methods",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Restrict to specific methods."
 								}
 							],
@@ -12169,7 +12169,7 @@
 						{
 							"method": "password",
 							"signature": "password([options])",
-							"description": "Random password-like string. NOT suitable for real passwords — uses a PRNG seeded from Math.random, not a CSPRNG.",
+							"description": "Random password-like string. NOT suitable for real passwords - uses a PRNG seeded from Math.random, not a CSPRNG.",
 							"methodParams": [
 								{
 									"param": "options",
@@ -12409,7 +12409,7 @@
 				{
 					"option": "onSlow",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Callback on slow query: (entry) => {}."
 				},
 				{
@@ -12427,7 +12427,7 @@
 				{
 					"option": "onN1",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Callback on N+1 detection: (info) => {}."
 				}
 			],
@@ -12451,19 +12451,19 @@
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Table name."
 								},
 								{
 									"option": "action",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Query action (select, insert, update, delete, count)."
 								},
 								{
 									"option": "duration",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Execution time in milliseconds."
 								}
 							]
@@ -12507,19 +12507,19 @@
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by table name."
 								},
 								{
 									"option": "action",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by action type."
 								},
 								{
 									"option": "minDuration",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Minimum duration filter."
 								}
 							],
@@ -12717,25 +12717,25 @@
 				{
 					"option": "query",
 					"type": "Query",
-					"default": "—",
+					"default": "-",
 					"notes": "Query builder instance defining the view's SELECT."
 				},
 				{
 					"option": "sql",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Raw SQL for the view definition (SQL adapters only)."
 				},
 				{
 					"option": "model",
 					"type": "typeof Model",
-					"default": "—",
+					"default": "-",
 					"notes": "Model class the view is based on."
 				},
 				{
 					"option": "schema",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Column schema for the view (optional; inferred from model if omitted)."
 				},
 				{
@@ -12919,13 +12919,13 @@
 				{
 					"option": "fields",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Column names to include in the search index."
 				},
 				{
 					"option": "weights",
 					"type": "Object<string, string>",
-					"default": "—",
+					"default": "-",
 					"notes": "Weight map for fields (e.g. `{ title: 'A', body: 'B' }`)."
 				},
 				{
@@ -12937,7 +12937,7 @@
 				{
 					"option": "indexName",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom index name."
 				}
 			],
@@ -13022,25 +13022,25 @@
 								{
 									"option": "limit",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum number of results."
 								},
 								{
 									"option": "offset",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Offset for pagination."
 								},
 								{
 									"option": "where",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional WHERE conditions."
 								},
 								{
 									"option": "orderBy",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom order ('rank' for relevance, or a column name)."
 								}
 							],
@@ -13137,7 +13137,7 @@
 								{
 									"option": "field",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Specific field to suggest from."
 								}
 							],
@@ -13171,13 +13171,13 @@
 				{
 					"option": "latField",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Column name for latitude."
 				},
 				{
 					"option": "lngField",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Column name for longitude."
 				},
 				{
@@ -13227,31 +13227,31 @@
 								{
 									"option": "radius",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum distance (in configured unit)."
 								},
 								{
 									"option": "limit",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum number of results."
 								},
 								{
 									"option": "offset",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Skip N results."
 								},
 								{
 									"option": "where",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional WHERE conditions."
 								},
 								{
 									"option": "unit",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Override distance unit ('km' or 'mi')."
 								},
 								{
@@ -13295,37 +13295,37 @@
 								{
 									"option": "north",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Northern latitude boundary."
 								},
 								{
 									"option": "south",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Southern latitude boundary."
 								},
 								{
 									"option": "east",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Eastern longitude boundary."
 								},
 								{
 									"option": "west",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Western longitude boundary."
 								},
 								{
 									"option": "limit",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum results."
 								},
 								{
 									"option": "where",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional WHERE conditions."
 								}
 							],
@@ -13452,7 +13452,7 @@
 								{
 									"option": "properties",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Fields to include in GeoJSON properties."
 								}
 							],
@@ -13490,7 +13490,7 @@
 								{
 									"option": "properties",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Fields to include in each feature's properties."
 								}
 							],
@@ -13888,13 +13888,13 @@
 								{
 									"option": "queryParam",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Query parameter name (optional)."
 								},
 								{
 									"option": "extract",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom `(req) => tenantId` function."
 								},
 								{
@@ -14003,31 +14003,31 @@
 				{
 					"option": "include",
 					"type": "Array<typeof import('./model')>",
-					"default": "—",
+					"default": "-",
 					"notes": "Models to audit (all registered if omitted)."
 				},
 				{
 					"option": "exclude",
 					"type": "Array<typeof import('./model')>",
-					"default": "—",
+					"default": "-",
 					"notes": "Models to exclude from auditing."
 				},
 				{
 					"option": "excludeFields",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Fields to never log (e.g. passwords)."
 				},
 				{
 					"option": "actorField",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Context property for the actor identifier."
 				},
 				{
 					"option": "storage",
 					"type": "import('./index').Database",
-					"default": "—",
+					"default": "-",
 					"notes": "Separate database for audit storage."
 				},
 				{
@@ -14195,37 +14195,37 @@
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by table name."
 								},
 								{
 									"option": "action",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by action (create, update, delete)."
 								},
 								{
 									"option": "recordId",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by record ID."
 								},
 								{
 									"option": "actor",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Filter by actor."
 								},
 								{
 									"option": "since",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "ISO timestamp lower bound."
 								},
 								{
 									"option": "until",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "ISO timestamp upper bound."
 								},
 								{
@@ -14352,19 +14352,19 @@
 								{
 									"option": "before",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "ISO timestamp; delete entries older than this."
 								},
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Only purge entries for this table."
 								},
 								{
 									"option": "keepLast",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Keep at least this many entries per record."
 								}
 							],
@@ -14396,7 +14396,7 @@
 								{
 									"option": "extract",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom `(req) => actorId` function."
 								},
 								{
@@ -14466,37 +14466,37 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Unique plugin name."
 								},
 								{
 									"option": "version",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Plugin version string."
 								},
 								{
 									"option": "install",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Install function `(manager, options) => {}`."
 								},
 								{
 									"option": "boot",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Boot function called after all plugins are registered."
 								},
 								{
 									"option": "uninstall",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Cleanup function."
 								},
 								{
 									"option": "dependencies",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Required plugin names."
 								}
 							],
@@ -14789,7 +14789,7 @@
 				{
 					"option": "body",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Procedure body (SQL)."
 				},
 				{
@@ -14801,7 +14801,7 @@
 				{
 					"option": "options",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Adapter-specific options."
 				}
 			],
@@ -15060,25 +15060,25 @@
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Table the trigger is on."
 								},
 								{
 									"option": "timing",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'BEFORE' or 'AFTER'."
 								},
 								{
 									"option": "event",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "'INSERT', 'UPDATE', or 'DELETE'."
 								},
 								{
 									"option": "body",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Trigger body (SQL)."
 								},
 								{
@@ -15090,7 +15090,7 @@
 								{
 									"option": "when",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Optional WHEN condition."
 								}
 							],
@@ -15161,7 +15161,7 @@
 								{
 									"option": "table",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Table name (required for MySQL)."
 								},
 								{
@@ -15216,7 +15216,7 @@
 					"commands": [
 						{
 							"cmd": "npx zh make:migration <name>",
-							"desc": "Auto-generate a migration by comparing your current Model schemas against the last snapshot. The CLI writes the <code>up()</code> and <code>down()</code> code for you — no manual SQL. Pass <code>--empty</code> to get a blank template instead.",
+							"desc": "Auto-generate a migration by comparing your current Model schemas against the last snapshot. The CLI writes the <code>up()</code> and <code>down()</code> code for you - no manual SQL. Pass <code>--empty</code> to get a blank template instead.",
 							"args": "--dir=<path> --models=<path> --empty"
 						},
 						{
@@ -15267,7 +15267,7 @@
 						},
 						{
 							"cmd": "npx zh migrate:remove",
-							"desc": "Delete the most recent migration file — but only if it hasn't been applied yet. Also reverts the schema snapshot."
+							"desc": "Delete the most recent migration file - but only if it hasn't been applied yet. Also reverts the schema snapshot."
 						}
 					]
 				},
@@ -15343,14 +15343,14 @@
 							"code": "$ npx zh migrate\n\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1)."
 						},
 						{
-							"label": "6. Later — add a column",
+							"label": "6. Later - add a column",
 							"code": "// Add to models/User.js schema:\n//   avatar: { type: TYPES.STRING, maxLength: 255 },\n\n$ npx zh make:migration add_avatar_to_users\n\n  Detected schema changes:\n    + users.avatar\n\n  Migration created: migrations/20260403090000_add_avatar_to_users.js\n\n$ npx zh migrate"
 						}
 					]
 				},
 				{
 					"tab": "Seeding",
-					"description": "Populate your database with sample or default data. Seeders run alphabetically — use numeric prefixes to control the order.",
+					"description": "Populate your database with sample or default data. Seeders run alphabetically - use numeric prefixes to control the order.",
 					"steps": [
 						{
 							"label": "1. Scaffold a seeder",

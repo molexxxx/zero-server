@@ -1,15 +1,15 @@
 /* ================================================================
-   zh-highlight — custom syntax highlighting for zero-server docs
+   zh-highlight - custom syntax highlighting for zero-server docs
 
    Palette (6 hues + neutrals):
-     Red      #ff7b72  — keywords (bold, high-contrast)
-     Purple   #d2a8ff  — functions, decorators, regex
-     Blue     #a5d6ff  — strings, template literals
-     Cyan     #79c0ff  — numbers, values, attrs, entities
-     Teal     #56d4dd  — properties, self
-     Orange   #ffa657  — builtins, classes
-     Green    #7ee787  — HTML tag names (used ONLY here)
-     Grey     #546270 / #8b949e — comments, punctuation
+     Red      #ff7b72  - keywords (bold, high-contrast)
+     Purple   #d2a8ff  - functions, decorators, regex
+     Blue     #a5d6ff  - strings, template literals
+     Cyan     #79c0ff  - numbers, values, attrs, entities
+     Teal     #56d4dd  - properties, self
+     Orange   #ffa657  - builtins, classes
+     Green    #7ee787  - HTML tag names (used ONLY here)
+     Grey     #546270 / #8b949e - comments, punctuation
 
    Button colors (NOT used in syntax):
      Opts     #58a6ff (blue)
@@ -22,7 +22,7 @@
 /* Keywords: if, const, return, export, etc. */
 .zh-kw         { color: #ff7b72; font-weight: 700; }
 
-/* this / super — italic teal */
+/* this / super - italic teal */
 .zh-self       { color: #56d4dd; font-style: italic; }
 
 /* Strings */

@@ -1,5 +1,5 @@
 'use strict';
-/** seed-fake.test.js — seed/fake module unit tests */
+/** seed-fake.test.js - seed/fake module unit tests */
 
 const { Fake }                         = require('../../lib/orm/seed/fake');
 const { rand, seed: seedRng, getSeed } = require('../../lib/orm/seed/rng');
@@ -71,7 +71,7 @@ describe('rng module', () =>
 
     it('zero seed is handled (truthy via >>>0)', () =>
     {
-        // 0 >>> 0 === 0, falsy — seed() should detect value !== null/undefined path
+        // 0 >>> 0 === 0, falsy - seed() should detect value !== null/undefined path
         // and still create a 0-seeded RNG (mulberry32 handles 0)
         const s = seedRng(0);
         // seed path: typeof 0 === 'number', n = 0 >>> 0 = 0
@@ -100,7 +100,7 @@ describe('UniqueTracker', () =>
     it('retries until an unseen value is found', () =>
     {
         let n = 0;
-        // Returns 0,0,1,1,2,2 — so second call forces retry
+        // Returns 0,0,1,1,2,2 - so second call forces retry
         const gen = () => Math.floor(n++ / 2);
         const a = tracker.generate('k', gen);
         const b = tracker.generate('k', gen);
@@ -151,7 +151,7 @@ describe('UniqueTracker', () =>
 });
 
 // ============================================================
-//  Factory — extra branch coverage
+//  Factory - extra branch coverage
 // ============================================================
 describe('Factory extra branches', () =>
 {
@@ -192,7 +192,7 @@ describe('Factory extra branches', () =>
 });
 
 // ============================================================
-//  Fake — Seeding & Uniqueness
+//  Fake - Seeding & Uniqueness
 // ============================================================
 describe('Fake seeding & uniqueness', () =>
 {
@@ -288,7 +288,7 @@ describe('Fake seeding & uniqueness', () =>
 });
 
 // ============================================================
-//  Fake — Names
+//  Fake - Names
 // ============================================================
 describe('Fake names', () =>
 {
@@ -399,7 +399,7 @@ describe('Fake names', () =>
         expect(typeof Fake.namePrefix()).toBe('string');
     });
 
-    it('namePrefix() random — seed 0 yields female prefix (rand < 0.5)', () =>
+    it('namePrefix() random - seed 0 yields female prefix (rand < 0.5)', () =>
     {
         // seed 0: rand() ≈ 0.266 → 0.266 > 0.5 is false → 'female' branch (line 283)
         Fake.seed(0);
@@ -408,7 +408,7 @@ describe('Fake names', () =>
         expect(p.length).toBeGreaterThan(0);
     });
 
-    it('namePrefix() random — seed 1 yields male prefix (rand > 0.5)', () =>
+    it('namePrefix() random - seed 1 yields male prefix (rand > 0.5)', () =>
     {
         // seed 1: rand() ≈ 0.627 → 0.627 > 0.5 is true → 'male' branch (line 282)
         Fake.seed(1);
@@ -453,7 +453,7 @@ describe('Fake names', () =>
 });
 
 // ============================================================
-//  Fake — Phone
+//  Fake - Phone
 // ============================================================
 describe('Fake phone', () =>
 {
@@ -511,7 +511,7 @@ describe('Fake phone', () =>
 });
 
 // ============================================================
-//  Fake — Email
+//  Fake - Email
 // ============================================================
 describe('Fake email', () =>
 {
@@ -560,7 +560,7 @@ describe('Fake email', () =>
 });
 
 // ============================================================
-//  Fake — Username
+//  Fake - Username
 // ============================================================
 describe('Fake username', () =>
 {
@@ -628,7 +628,7 @@ describe('Fake username', () =>
 });
 
 // ============================================================
-//  Fake — Numbers
+//  Fake - Numbers
 // ============================================================
 describe('Fake numbers', () =>
 {
@@ -780,7 +780,7 @@ describe('Fake numbers', () =>
 });
 
 // ============================================================
-//  Fake — Dates
+//  Fake - Dates
 // ============================================================
 describe('Fake dates', () =>
 {
@@ -832,7 +832,7 @@ describe('Fake dates', () =>
 });
 
 // ============================================================
-//  Fake — Text
+//  Fake - Text
 // ============================================================
 describe('Fake text', () =>
 {
@@ -914,7 +914,7 @@ describe('Fake text', () =>
 });
 
 // ============================================================
-//  Fake — Person
+//  Fake - Person
 // ============================================================
 describe('Fake person', () =>
 {
@@ -979,7 +979,7 @@ describe('Fake person', () =>
 });
 
 // ============================================================
-//  Fake — Location
+//  Fake - Location
 // ============================================================
 describe('Fake location', () =>
 {
@@ -1162,7 +1162,7 @@ describe('Fake location', () =>
 });
 
 // ============================================================
-//  Fake — Commerce
+//  Fake - Commerce
 // ============================================================
 describe('Fake commerce', () =>
 {
@@ -1227,7 +1227,7 @@ describe('Fake commerce', () =>
 });
 
 // ============================================================
-//  Fake — Internet & Network
+//  Fake - Internet & Network
 // ============================================================
 describe('Fake internet & network', () =>
 {
@@ -1403,7 +1403,7 @@ describe('Fake internet & network', () =>
 });
 
 // ============================================================
-//  Fake — Colors
+//  Fake - Colors
 // ============================================================
 describe('Fake colors', () =>
 {
@@ -1440,7 +1440,7 @@ describe('Fake colors', () =>
 });
 
 // ============================================================
-//  Fake — Helpers
+//  Fake - Helpers
 // ============================================================
 describe('Fake helpers', () =>
 {
@@ -1501,7 +1501,7 @@ describe('Fake helpers', () =>
 });
 
 // ============================================================
-//  seeder.js — branch coverage
+//  seeder.js - branch coverage
 // ============================================================
 describe('seeder.js branches', () =>
 {
@@ -1524,7 +1524,7 @@ describe('seeder.js branches', () =>
         let ran = false;
         class SimpleSeeder extends Seeder { async run() { ran = true; } }
 
-        // Adapter with NO clear() method — should not throw
+        // Adapter with NO clear() method - should not throw
         const fakeDb = { adapter: {} };
         const runner = new SeederRunner(fakeDb);
         await expect(runner.fresh(SimpleSeeder)).resolves.toBeDefined();
@@ -1533,7 +1533,7 @@ describe('seeder.js branches', () =>
 });
 
 // ============================================================
-//  fake.js — _uuid fallback (Node < 19 path)
+//  fake.js - _uuid fallback (Node < 19 path)
 // ============================================================
 describe('fake.js _uuid fallback branch', () =>
 {

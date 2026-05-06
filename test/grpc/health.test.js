@@ -282,7 +282,7 @@ describe('HealthService', () =>
         health.setStatus('cached', ServingStatus.SERVING);
         // Force cache population
         health._getResponseBytes(ServingStatus.SERVING);
-        // Change status — cache should be invalidated (no error)
+        // Change status - cache should be invalidated (no error)
         health.setStatus('cached', ServingStatus.NOT_SERVING);
         expect(health.getStatus('cached')).toBe(ServingStatus.NOT_SERVING);
     });

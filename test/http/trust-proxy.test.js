@@ -1,5 +1,5 @@
 'use strict';
-/** trust-proxy.test.js — Trust Proxy system: branch, statement, function coverage */
+/** trust-proxy.test.js - Trust Proxy system: branch, statement, function coverage */
 
 const http = require('http');
 const { doFetch } = require('../_helpers');
@@ -31,7 +31,7 @@ function makeReq(overrides = {}, trustProxy = false)
 }
 
 // ===========================================================================
-// compileTrust() — all input types
+// compileTrust() - all input types
 // ===========================================================================
 describe('compileTrust()', () =>
 {
@@ -258,9 +258,9 @@ describe('compileTrust()', () =>
 });
 
 // ===========================================================================
-// req.ip — trust proxy resolution
+// req.ip - trust proxy resolution
 // ===========================================================================
-describe('req.ip — trust proxy', () =>
+describe('req.ip - trust proxy', () =>
 {
     it('returns socket IP when no app', () =>
     {
@@ -402,9 +402,9 @@ describe('req.ip — trust proxy', () =>
 });
 
 // ===========================================================================
-// req.ips — proxy chain
+// req.ips - proxy chain
 // ===========================================================================
-describe('req.ips — proxy chain', () =>
+describe('req.ips - proxy chain', () =>
 {
     it('returns empty array when no app', () =>
     {
@@ -443,9 +443,9 @@ describe('req.ips — proxy chain', () =>
 });
 
 // ===========================================================================
-// req.protocol — X-Forwarded-Proto
+// req.protocol - X-Forwarded-Proto
 // ===========================================================================
-describe('req.protocol — trust proxy', () =>
+describe('req.protocol - trust proxy', () =>
 {
     it('returns http for plain connection without trust proxy', () =>
     {
@@ -521,7 +521,7 @@ describe('req.protocol — trust proxy', () =>
 });
 
 // ===========================================================================
-// req.secure — derived from protocol
+// req.secure - derived from protocol
 // ===========================================================================
 describe('req.secure', () =>
 {
@@ -548,9 +548,9 @@ describe('req.secure', () =>
 });
 
 // ===========================================================================
-// req.hostname — trust proxy / X-Forwarded-Host
+// req.hostname - trust proxy / X-Forwarded-Host
 // ===========================================================================
-describe('req.hostname — trust proxy', () =>
+describe('req.hostname - trust proxy', () =>
 {
     it('returns Host header without trust proxy', () =>
     {
@@ -589,7 +589,7 @@ describe('req.hostname — trust proxy', () =>
     {
         const req = makeReq(
             { headers: { host: 'example.com', 'x-forwarded-host': 'evil.com' }, socket: { remoteAddress: '192.168.1.1' } },
-            true, // loopback only — 192.168 is not trusted
+            true, // loopback only - 192.168 is not trusted
         );
         expect(req.hostname).toBe('example.com');
     });
@@ -632,9 +632,9 @@ describe('req.hostname — trust proxy', () =>
 });
 
 // ===========================================================================
-// Integration — full-stack trust proxy via HTTP
+// Integration - full-stack trust proxy via HTTP
 // ===========================================================================
-describe('Trust Proxy — integration (HTTP server)', () =>
+describe('Trust Proxy - integration (HTTP server)', () =>
 {
     let server, base;
 
@@ -705,9 +705,9 @@ describe('Trust Proxy — integration (HTTP server)', () =>
 });
 
 // ===========================================================================
-// Integration — trust proxy disabled (security)
+// Integration - trust proxy disabled (security)
 // ===========================================================================
-describe('Trust Proxy — disabled (security)', () =>
+describe('Trust Proxy - disabled (security)', () =>
 {
     let server, base;
 
@@ -759,9 +759,9 @@ describe('Trust Proxy — disabled (security)', () =>
 });
 
 // ===========================================================================
-// Integration — hop-count mode
+// Integration - hop-count mode
 // ===========================================================================
-describe('Trust Proxy — hop-count mode', () =>
+describe('Trust Proxy - hop-count mode', () =>
 {
     let server, base;
 
@@ -793,9 +793,9 @@ describe('Trust Proxy — hop-count mode', () =>
 });
 
 // ===========================================================================
-// Integration — CIDR mode
+// Integration - CIDR mode
 // ===========================================================================
-describe('Trust Proxy — CIDR mode', () =>
+describe('Trust Proxy - CIDR mode', () =>
 {
     let server, base;
 
@@ -830,7 +830,7 @@ describe('Trust Proxy — CIDR mode', () =>
 // ===========================================================================
 // HTTP/2 pseudo-headers on Request
 // ===========================================================================
-describe('Request — HTTP/2 pseudo-headers', () =>
+describe('Request - HTTP/2 pseudo-headers', () =>
 {
     it('uses :method over req.method', () =>
     {
@@ -877,9 +877,9 @@ describe('Request — HTTP/2 pseudo-headers', () =>
 });
 
 // ===========================================================================
-// Edge cases — _getTrustFn caching
+// Edge cases - _getTrustFn caching
 // ===========================================================================
-describe('Trust Proxy — internal caching', () =>
+describe('Trust Proxy - internal caching', () =>
 {
     it('_getTrustFn returns same function on subsequent calls', () =>
     {

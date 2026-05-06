@@ -1,5 +1,5 @@
 /**
- * Tests for the SQLite adapter — pragmas, utility methods, credential
+ * Tests for the SQLite adapter - pragmas, utility methods, credential
  * validation, directory auto-creation, and full Model CRUD through SQLite.
  */
 const fs   = require('fs');

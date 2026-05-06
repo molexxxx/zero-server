@@ -1,4 +1,4 @@
-// Re-exports for @zero-server/body — body parser types
+// Re-exports for @zero-server/body - body parser types
 export {
     BodyParserOptions,
     JsonParserOptions,

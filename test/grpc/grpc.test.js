@@ -5401,7 +5401,7 @@ describe('gRPC schema version compatibility', () =>
         await new Promise(r => { server.close(r); setTimeout(r, 5000); });
     });
 
-    it('v1 client talks to v2 server — unknown fields are ignored', async () =>
+    it('v1 client talks to v2 server - unknown fields are ignored', async () =>
     {
         const clientSchema = parseProto(PROTO_V1);
         const client = new GrpcClient(`http://localhost:${port}`, clientSchema, 'Svc');
@@ -5413,7 +5413,7 @@ describe('gRPC schema version compatibility', () =>
         } finally { client.close(); }
     });
 
-    it('v2 client sends fields unknown to v1 — they are decoded', async () =>
+    it('v2 client sends fields unknown to v1 - they are decoded', async () =>
     {
         const clientSchema = parseProto(PROTO_V2);
         const client = new GrpcClient(`http://localhost:${port}`, clientSchema, 'Svc');

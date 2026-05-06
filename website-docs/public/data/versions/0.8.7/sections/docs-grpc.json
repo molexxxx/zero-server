@@ -60,13 +60,13 @@
 								{
 									"option": "interceptors",
 									"type": "Function[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Per-service interceptors."
 								},
 								{
 									"option": "maxMessageSize",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Max incoming message size in bytes."
 								},
 								{
@@ -130,7 +130,7 @@
 						{
 							"method": "drain",
 							"signature": "drain([timeout])",
-							"description": "Begin draining — reject new calls and wait for active calls to finish.",
+							"description": "Begin draining - reject new calls and wait for active calls to finish.",
 							"methodParams": [
 								{
 									"param": "timeout",
@@ -197,7 +197,7 @@
 						{
 							"method": "call",
 							"signature": "call(methodName, request, [opts])",
-							"description": "Make a unary gRPC call — send one message, receive one response.",
+							"description": "Make a unary gRPC call - send one message, receive one response.",
 							"methodParams": [
 								{
 									"param": "methodName",
@@ -222,13 +222,13 @@
 								{
 									"option": "metadata",
 									"type": "Metadata | object",
-									"default": "—",
+									"default": "-",
 									"notes": "Per-call metadata."
 								},
 								{
 									"option": "deadline",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Deadline in ms."
 								}
 							],
@@ -252,7 +252,7 @@
 						{
 							"method": "serverStream",
 							"signature": "serverStream(methodName, request, [opts])",
-							"description": "Make a server-streaming gRPC call — send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages.",
+							"description": "Make a server-streaming gRPC call - send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages.",
 							"methodParams": [
 								{
 									"param": "methodName",
@@ -277,13 +277,13 @@
 								{
 									"option": "metadata",
 									"type": "Metadata | object",
-									"default": "—",
+									"default": "-",
 									"notes": "Per-call metadata."
 								},
 								{
 									"option": "deadline",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Deadline in ms."
 								}
 							],
@@ -307,7 +307,7 @@
 						{
 							"method": "clientStream",
 							"signature": "clientStream(methodName, [opts])",
-							"description": "Make a client-streaming gRPC call — send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise.",
+							"description": "Make a client-streaming gRPC call - send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise.",
 							"methodParams": [
 								{
 									"param": "methodName",
@@ -326,13 +326,13 @@
 								{
 									"option": "metadata",
 									"type": "Metadata | object",
-									"default": "—",
+									"default": "-",
 									"notes": "Per-call metadata."
 								},
 								{
 									"option": "deadline",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Deadline in ms."
 								}
 							],
@@ -356,7 +356,7 @@
 						{
 							"method": "bidiStream",
 							"signature": "bidiStream(methodName, [opts])",
-							"description": "Make a bidirectional streaming gRPC call — send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable.",
+							"description": "Make a bidirectional streaming gRPC call - send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable.",
 							"methodParams": [
 								{
 									"param": "methodName",
@@ -375,13 +375,13 @@
 								{
 									"option": "metadata",
 									"type": "Metadata | object",
-									"default": "—",
+									"default": "-",
 									"notes": "Per-call metadata."
 								},
 								{
 									"option": "deadline",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Deadline in ms."
 								}
 							],
@@ -422,7 +422,7 @@
 		},
 		{
 			"name": "Call Objects",
-			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming",
+			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` - single request, single response - `ServerStreamCall` - single request, stream of responses - `ClientStreamCall` - stream of requests, single response - `BidiStreamCall` - bidirectional streaming",
 			"example": "  async function GetUser(call) {\r\n      const user = await db.findById(call.request.id);\r\n      return user; // auto-encoded and sent\r\n  }",
 			"examples": [
 				{
@@ -445,7 +445,7 @@
 				{
 					"option": "maxMessageSize",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max message size in bytes."
 				},
 				{
@@ -608,18 +608,18 @@
 		},
 		{
 			"name": "Proto3 Parser",
-			"description": "Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`",
+			"description": "Zero-dependency proto3 parser - reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`",
 			"options": [
 				{
 					"option": "filename",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "File name for error messages."
 				},
 				{
 					"option": "basePath",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Base directory for resolving imports."
 				},
 				{
@@ -641,10 +641,10 @@
 				"type": "ProtoSchema",
 				"description": "Parsed schema with messages, enums, and services."
 			},
-			"example": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  — { MessageName: { fields: [...] } }\r\n  // schema.enums     — { EnumName: { values: { ... } } }\r\n  // schema.services  — { ServiceName: { methods: { ... } } }",
+			"example": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  - { MessageName: { fields: [...] } }\r\n  // schema.enums     - { EnumName: { values: { ... } } }\r\n  // schema.services  - { ServiceName: { methods: { ... } } }",
 			"examples": [
 				{
-					"code": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  — { MessageName: { fields: [...] } }\r\n  // schema.enums     — { EnumName: { values: { ... } } }\r\n  // schema.services  — { ServiceName: { methods: { ... } } }",
+					"code": "  const { parseProto } = require('./proto');\r\n  const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));\r\n  // schema.messages  - { MessageName: { fields: [...] } }\r\n  // schema.enums     - { EnumName: { values: { ... } } }\r\n  // schema.services  - { ServiceName: { methods: { ... } } }",
 					"lang": "javascript"
 				}
 			],
@@ -1370,7 +1370,7 @@
 		},
 		{
 			"name": "Metadata",
-			"description": "gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.",
+			"description": "gRPC metadata container - typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.",
 			"example": "  const md = new Metadata();\r\n  md.set('x-request-id', '123');\r\n  md.add('x-tags', 'alpha');\r\n  md.add('x-tags', 'beta');\r\n  md.getAll('x-tags');  // ['alpha', 'beta']",
 			"examples": [
 				{
@@ -1857,7 +1857,7 @@
 						{
 							"method": "Check",
 							"signature": "Check(call)",
-							"description": "Handle a Check RPC — unary request for current health of a service.",
+							"description": "Handle a Check RPC - unary request for current health of a service.",
 							"methodParams": [
 								{
 									"param": "call",
@@ -1870,7 +1870,7 @@
 						{
 							"method": "Watch",
 							"signature": "Watch(call)",
-							"description": "Handle a Watch RPC — server-stream that pushes status changes. Sends the current status immediately, then pushes on every change.",
+							"description": "Handle a Watch RPC - server-stream that pushes status changes. Sends the current status immediately, then pushes on every change.",
 							"methodParams": [
 								{
 									"param": "call",
@@ -1883,7 +1883,7 @@
 						{
 							"method": "getSchema",
 							"signature": "getSchema()",
-							"description": "Get the schema object needed for server registration. Avoids requiring proto parsing — returns descriptors directly.",
+							"description": "Get the schema object needed for server registration. Avoids requiring proto parsing - returns descriptors directly.",
 							"methodReturns": {
 								"type": "object",
 								"description": "Schema compatible with GrpcServiceRegistry.addService"
@@ -2090,7 +2090,7 @@
 		},
 		{
 			"name": "Credentials",
-			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages.",
+			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` - no external packages.",
 			"example": "  const { ChannelCredentials, GrpcClient } = require('zero-http');\r\n  const creds = ChannelCredentials.createInsecure();\r\n  const client = new GrpcClient({ address: 'http://localhost:50051', credentials: creds }, schema, 'Greeter');",
 			"examples": [
 				{
@@ -2126,7 +2126,7 @@
 						{
 							"method": "createInsecure",
 							"signature": "createInsecure()",
-							"description": "Create insecure (plaintext) credentials. No TLS — suitable for development or service-mesh environments where transport security is handled by the infrastructure.",
+							"description": "Create insecure (plaintext) credentials. No TLS - suitable for development or service-mesh environments where transport security is handled by the infrastructure.",
 							"methodReturns": {
 								"type": "ChannelCredentials",
 								"description": ""
@@ -2334,19 +2334,19 @@
 								{
 									"option": "caPath",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Path to CA certificate file."
 								},
 								{
 									"option": "keyPath",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Path to client key file (for mTLS)."
 								},
 								{
 									"option": "certPath",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Path to client certificate file (for mTLS)."
 								},
 								{
@@ -2358,7 +2358,7 @@
 								{
 									"option": "sslOpts",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional SSL options."
 								}
 							],
@@ -2380,18 +2380,18 @@
 		},
 		{
 			"name": "Proto Watcher",
-			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`.",
+			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** - disabled by default when `NODE_ENV=production`.",
 			"options": [
 				{
 					"option": "interceptors",
 					"type": "Function[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Per-service interceptors."
 				},
 				{
 					"option": "maxMessageSize",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max incoming message size."
 				},
 				{
@@ -2415,13 +2415,13 @@
 				{
 					"option": "onReload",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(schema) => void` callback after reload."
 				},
 				{
 					"option": "onError",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(err) => void` callback on parse/reload error."
 				}
 			],

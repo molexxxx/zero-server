@@ -47,7 +47,7 @@
       <feGaussianBlur stdDeviation="6" result="glow"/>
       <feComposite in="SourceGraphic" in2="glow" operator="over"/>
     </filter>
-    <!-- Radial fade mask for orbital dots — fade before reaching ring -->
+    <!-- Radial fade mask for orbital dots - fade before reaching ring -->
     <mask id="orb-fade-mask">
       <radialGradient id="orb-fade-grad" cx="256" cy="256" r="145" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stop-color="white"/>
@@ -65,10 +65,10 @@
 
   <g clip-path="url(#viewbox-clip)">
 
-  <!-- Background glow — pulsing -->
+  <!-- Background glow - pulsing -->
   <circle cx="256" cy="256" r="200" fill="url(#abg-glow)"/>
 
-  <!-- Outer ring — subtle pulse -->
+  <!-- Outer ring - subtle pulse -->
   <circle cx="256" cy="256" r="195" fill="none"
           stroke="url(#alogo-grad)" stroke-width="24"
           stroke-linecap="round" opacity="0.15">
@@ -80,7 +80,7 @@
           stroke="url(#alogo-grad)" stroke-width="32"
           stroke-linecap="round" filter="url(#alogo-shadow)"/>
 
-  <!-- Occasional ring flash — smooth pulse every 6s -->
+  <!-- Occasional ring flash - smooth pulse every 6s -->
   <circle cx="256" cy="256" r="170" fill="none"
           stroke="url(#alogo-glow)" stroke-width="8"
           stroke-linecap="round" opacity="0" filter="url(#ring-flash-glow)">
@@ -93,7 +93,7 @@
         fill="none" stroke="url(#alogo-hi)" stroke-width="14"
         stroke-linecap="round" opacity="0.6"/>
 
-  <!-- Lightning bolt — shimmer gradient -->
+  <!-- Lightning bolt - shimmer gradient -->
   <g filter="url(#abolt-glow)">
     <!-- Bolt body -->
     <path d="
@@ -107,7 +107,7 @@
       Z
     " fill="url(#bolt-shimmer)"/>
 
-    <!-- Bolt inner highlight — subtle pulse -->
+    <!-- Bolt inner highlight - subtle pulse -->
     <path d="
       M 228 100
       L 202 238
@@ -122,7 +122,7 @@
     </path>
   </g>
 
-  <!-- Occasional bolt flash — brief brightness burst every 8s -->
+  <!-- Occasional bolt flash - brief brightness burst every 8s -->
   <g opacity="0">
     <path d="
       M 222 82
@@ -138,7 +138,7 @@
              keyTimes="0;0.55;0.58;0.6;0.63;0.68;0.7;1" begin="3s"/>
   </g>
 
-  <!-- Orbital dots — masked with radial fade so they vanish near the ring edge -->
+  <!-- Orbital dots - masked with radial fade so they vanish near the ring edge -->
   <g mask="url(#orb-fade-mask)">
     <!-- Dot 1: clockwise orbit r=125 -->
     <circle r="7" fill="#7b61ff" opacity="0">
@@ -171,7 +171,7 @@
     </circle>
   </g>
 
-  <!-- Particle trail — tiny dots that fade in/out, within bounds -->
+  <!-- Particle trail - tiny dots that fade in/out, within bounds -->
   <circle cx="160" cy="140" r="2" fill="#a78bfa">
     <animate attributeName="opacity" values="0;0.6;0" dur="3s" repeatCount="indefinite" begin="0s"/>
     <animate attributeName="r" values="1;3;1" dur="3s" repeatCount="indefinite" begin="0s"/>

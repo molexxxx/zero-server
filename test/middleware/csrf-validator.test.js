@@ -87,7 +87,7 @@ describe('CSRF Middleware', () =>
     });
 });
 
-describe('CSRF — ignorePaths', () =>
+describe('CSRF - ignorePaths', () =>
 {
     let server, base;
 
@@ -236,7 +236,7 @@ describe('Validator Middleware', () =>
     });
 });
 
-describe('Validator — standalone helpers', () =>
+describe('Validator - standalone helpers', () =>
 {
     it('validate.field() validates a single field', () =>
     {
@@ -309,13 +309,13 @@ describe('Validator — standalone helpers', () =>
 
 
 // =========================================================================
-//  csrf — coverage gaps (from coverage/gaps.test.js)
+//  csrf - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  7. CSRF — BODY/QUERY TOKEN, IGNOREMETHODS, ONERROR
+//  7. CSRF - BODY/QUERY TOKEN, IGNOREMETHODS, ONERROR
 // ============================================================
-describe('csrf — token from body._csrf', () => {
+describe('csrf - token from body._csrf', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -372,7 +372,7 @@ describe('csrf — token from body._csrf', () => {
 	});
 });
 
-describe('csrf — token from query._csrf', () => {
+describe('csrf - token from query._csrf', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -421,7 +421,7 @@ describe('csrf — token from query._csrf', () => {
 	});
 });
 
-describe('csrf — ignoreMethods', () => {
+describe('csrf - ignoreMethods', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -444,7 +444,7 @@ describe('csrf — ignoreMethods', () => {
 	});
 });
 
-describe('csrf — custom onError', () => {
+describe('csrf - custom onError', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -474,13 +474,13 @@ describe('csrf — custom onError', () => {
 });
 
 // =========================================================================
-//  validator — coverage gaps (from coverage/gaps.test.js)
+//  validator - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  9. VALIDATOR — PARAMS, DATE/FLOAT/JSON, ITEMS, STRIPUNKNOWN, ONERROR
+//  9. VALIDATOR - PARAMS, DATE/FLOAT/JSON, ITEMS, STRIPUNKNOWN, ONERROR
 // ============================================================
-describe('validator — params validation', () => {
+describe('validator - params validation', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -512,7 +512,7 @@ describe('validator — params validation', () => {
 	});
 });
 
-describe('validator — date type', () => {
+describe('validator - date type', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -554,7 +554,7 @@ describe('validator — date type', () => {
 	});
 });
 
-describe('validator — float type', () => {
+describe('validator - float type', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -584,7 +584,7 @@ describe('validator — float type', () => {
 	});
 });
 
-describe('validator — json type', () => {
+describe('validator - json type', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -614,7 +614,7 @@ describe('validator — json type', () => {
 	});
 });
 
-describe('validator — array minItems/maxItems', () => {
+describe('validator - array minItems/maxItems', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -663,7 +663,7 @@ describe('validator — array minItems/maxItems', () => {
 	});
 });
 
-describe('validator — stripUnknown via middleware', () => {
+describe('validator - stripUnknown via middleware', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -706,7 +706,7 @@ describe('validator — stripUnknown via middleware', () => {
 	});
 });
 
-describe('validator — custom onError', () => {
+describe('validator - custom onError', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -740,7 +740,7 @@ describe('validator — custom onError', () => {
 	});
 });
 
-describe('validator — custom validate function', () => {
+describe('validator - custom validate function', () => {
 	it('validate.field supports custom validator', () => {
 		const { validate } = require('../../');
 		const { value, error } = validate.field('abc', {
@@ -751,7 +751,7 @@ describe('validator — custom validate function', () => {
 	});
 });
 
-describe('validator — url type', () => {
+describe('validator - url type', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -788,7 +788,7 @@ describe('validator — url type', () => {
 	});
 });
 
-describe('validator — uuid type', () => {
+describe('validator - uuid type', () => {
 	it('validates UUID format', () => {
 		const { validate } = require('../../');
 		const good = validate.field('550e8400-e29b-41d4-a716-446655440000', { type: 'uuid' }, 'id');
@@ -796,4 +796,4 @@ describe('validator — uuid type', () => {
 		const bad = validate.field('not-a-uuid', { type: 'uuid' }, 'id');
 		expect(bad.error).toBeTruthy();
 	});
-});
+});

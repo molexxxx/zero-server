@@ -1,5 +1,5 @@
 /**
- * Authorization helpers — comprehensive tests.
+ * Authorization helpers - comprehensive tests.
  * Covers: authorize (RBAC), can/canAny (permissions), Policy class,
  * gate middleware, attachUserHelpers, edge cases and security.
  */
@@ -20,7 +20,7 @@ function createTestApp(authMiddleware, handler)
 }
 
 // =========================================================
-// authorize() — Role-Based Access Control
+// authorize() - Role-Based Access Control
 // =========================================================
 
 describe('Authorization: authorize()', () =>
@@ -110,7 +110,7 @@ describe('Authorization: authorize()', () =>
 });
 
 // =========================================================
-// can() — Permission-Based Access Control
+// can() - Permission-Based Access Control
 // =========================================================
 
 describe('Authorization: can()', () =>

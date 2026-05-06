@@ -23,7 +23,7 @@ function span(cls, text) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Language grammars  (order matters — first match wins)              */
+/*  Language grammars  (order matters - first match wins)              */
 /* ------------------------------------------------------------------ */
 
 const JS_RULES = [

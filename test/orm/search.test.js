@@ -1,5 +1,5 @@
 /**
- * Phase 3 — FullTextSearch tests
+ * Phase 3 - FullTextSearch tests
  */
 const { Database, Model, FullTextSearch } = require('../../lib/orm');
 
@@ -27,7 +27,7 @@ function makeModel(db, table, schema, opts = {})
 // ===================================================================
 // Constructor Validation
 // ===================================================================
-describe('FullTextSearch — constructor', () =>
+describe('FullTextSearch - constructor', () =>
 {
     it('throws without ModelClass', () =>
     {
@@ -74,7 +74,7 @@ describe('FullTextSearch — constructor', () =>
 // ===================================================================
 // createIndex / dropIndex
 // ===================================================================
-describe('FullTextSearch — createIndex & dropIndex', () =>
+describe('FullTextSearch - createIndex & dropIndex', () =>
 {
     let db, Article, fts;
 
@@ -125,7 +125,7 @@ describe('FullTextSearch — createIndex & dropIndex', () =>
 // ===================================================================
 // search (in-memory fallback)
 // ===================================================================
-describe('FullTextSearch — search', () =>
+describe('FullTextSearch - search', () =>
 {
     let db, Article, fts;
 
@@ -230,7 +230,7 @@ describe('FullTextSearch — search', () =>
 // ===================================================================
 // searchModels
 // ===================================================================
-describe('FullTextSearch — searchModels', () =>
+describe('FullTextSearch - searchModels', () =>
 {
     let db, Article, fts;
 
@@ -267,7 +267,7 @@ describe('FullTextSearch — searchModels', () =>
 // ===================================================================
 // count
 // ===================================================================
-describe('FullTextSearch — count', () =>
+describe('FullTextSearch - count', () =>
 {
     let db, Article, fts;
 
@@ -304,7 +304,7 @@ describe('FullTextSearch — count', () =>
 // ===================================================================
 // suggest
 // ===================================================================
-describe('FullTextSearch — suggest', () =>
+describe('FullTextSearch - suggest', () =>
 {
     let db, Article, fts;
 
@@ -374,7 +374,7 @@ describe('FullTextSearch — suggest', () =>
 // ===================================================================
 // _getWeight
 // ===================================================================
-describe('FullTextSearch — _getWeight', () =>
+describe('FullTextSearch - _getWeight', () =>
 {
     it('returns 1 for unweighted field', () =>
     {
@@ -434,7 +434,7 @@ describe('FullTextSearch — _getWeight', () =>
 // ===================================================================
 // _detectAdapterType
 // ===================================================================
-describe('FullTextSearch — _detectAdapterType', () =>
+describe('FullTextSearch - _detectAdapterType', () =>
 {
     it('returns memory when no adapter set', () =>
     {
@@ -459,7 +459,7 @@ describe('FullTextSearch — _detectAdapterType', () =>
 // ===================================================================
 // Weighted search ranking
 // ===================================================================
-describe('FullTextSearch — weighted search', () =>
+describe('FullTextSearch - weighted search', () =>
 {
     let db, Article, fts;
 
@@ -494,9 +494,9 @@ describe('FullTextSearch — weighted search', () =>
 });
 
 // ===================================================================
-// _memorySearch — empty tokens
+// _memorySearch - empty tokens
 // ===================================================================
-describe('FullTextSearch — _memorySearch edge cases', () =>
+describe('FullTextSearch - _memorySearch edge cases', () =>
 {
     let db, Article, fts;
 

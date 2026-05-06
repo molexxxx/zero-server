@@ -8,7 +8,7 @@
 			"kind": "item",
 			"section": "Multi-Factor Auth",
 			"name": "twoFactor",
-			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages."
+			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` - no external packages."
 		},
 		{
 			"type": "added",
@@ -22,14 +22,14 @@
 			"kind": "item",
 			"section": "Multi-Factor Auth",
 			"name": "trustedDevice",
-			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage."
+			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption - tokens are encrypted, not just signed, preventing information leakage."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "Multi-Factor Auth",
 			"name": "enrollment",
-			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account"
+			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` - Generate secret + backup codes, store in session 2. `verify()` - Confirm user can produce a valid TOTP code 3. `complete()` - Persist the verified secret to the database 4. `disable()` - Remove 2FA from the account"
 		},
 		{
 			"type": "added",
@@ -50,14 +50,14 @@
 			"kind": "item",
 			"section": "gRPC",
 			"name": "Call Objects",
-			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming"
+			"description": "gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` - single request, single response - `ServerStreamCall` - single request, stream of responses - `ClientStreamCall` - stream of requests, single response - `BidiStreamCall` - bidirectional streaming"
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "gRPC",
 			"name": "Proto3 Parser",
-			"description": "Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`"
+			"description": "Zero-dependency proto3 parser - reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = \"proto3\";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`"
 		},
 		{
 			"type": "added",
@@ -78,7 +78,7 @@
 			"kind": "item",
 			"section": "gRPC",
 			"name": "Metadata",
-			"description": "gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values."
+			"description": "gRPC metadata container - typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values."
 		},
 		{
 			"type": "added",
@@ -113,14 +113,14 @@
 			"kind": "item",
 			"section": "gRPC",
 			"name": "Credentials",
-			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages."
+			"description": "Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` - no external packages."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "gRPC",
 			"name": "Proto Watcher",
-			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`."
+			"description": "Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** - disabled by default when `NODE_ENV=production`."
 		},
 		{
 			"type": "added",
@@ -194,7 +194,7 @@
 			"section": "Authorization",
 			"name": "authorize",
 			"fromSection": "Authentication & Sessions",
-			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
+			"description": "Authorization helpers - role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
 		},
 		{
 			"type": "added",

@@ -1,5 +1,5 @@
 /**
- * Tests for QueryCache — in-memory LRU cache with TTL.
+ * Tests for QueryCache - in-memory LRU cache with TTL.
  * Tests get/set, TTL expiry, LRU eviction, prune, remember, wrap, stats,
  * invalidate, has, flush, and keyFromDescriptor.
  */
@@ -337,10 +337,10 @@ describe('keyFromDescriptor', () =>
 
 
 // =========================================================================
-//  cache — deep coverage (from coverage/deep.test.js)
+//  cache - deep coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('cache — deep coverage', () => {
+describe('cache - deep coverage', () => {
 	it('prune removes expired entries', async () => {
 		const { QueryCache } = require('../../');
 		const cache = new QueryCache({ defaultTTL: 0.01 }); // 10ms TTL
@@ -488,7 +488,7 @@ describe('cache — deep coverage', () => {
 // ===================================================================
 // Cache stampede prevention (_inflight dedup)
 // ===================================================================
-describe('QueryCache — remember() stampede prevention', () =>
+describe('QueryCache - remember() stampede prevention', () =>
 {
 	let cache;
 

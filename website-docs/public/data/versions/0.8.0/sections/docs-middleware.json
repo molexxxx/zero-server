@@ -27,7 +27,7 @@
 				{
 					"option": "exposedHeaders",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Headers the browser is allowed to read."
 				},
 				{
@@ -39,7 +39,7 @@
 				{
 					"option": "maxAge",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Preflight cache duration in seconds."
 				}
 			],
@@ -62,20 +62,20 @@
 				{
 					"option": "level",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Compression level (zlib.constants.Z_DEFAULT_COMPRESSION)."
 				},
 				{
 					"option": "encoding",
 					"type": "string | string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Force specific encoding(s). Default: auto-negotiate."
 				},
 				{
 					"option": "filter",
 					"type": "Function",
-					"default": "—",
-					"notes": "`(req, res) => boolean` — return false to skip compression."
+					"default": "-",
+					"notes": "`(req, res) => boolean` - return false to skip compression."
 				}
 			],
 			"returns": {
@@ -91,7 +91,7 @@
 				{
 					"option": "contentSecurityPolicy",
 					"type": "object | false",
-					"default": "—",
+					"default": "-",
 					"notes": "CSP directive object or `false` to disable."
 				},
 				{
@@ -210,13 +210,13 @@
 				{
 					"option": "extensions",
 					"type": "string[]",
-					"default": "—",
+					"default": "-",
 					"notes": "Array of fallback extensions (e.g. `['html', 'htm']`)."
 				},
 				{
 					"option": "setHeaders",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(res, filePath) => void` hook to set custom headers."
 				}
 			],
@@ -253,7 +253,7 @@
 				{
 					"option": "message",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom error message."
 				},
 				{
@@ -265,19 +265,19 @@
 				{
 					"option": "keyGenerator",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "(req) => string; custom key extraction (default: req.ip)."
 				},
 				{
 					"option": "skip",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "(req) => boolean; return true to skip rate limiting."
 				},
 				{
 					"option": "handler",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "(req, res) => void; custom handler for rate-limited requests."
 				}
 			],
@@ -331,7 +331,7 @@
 				{
 					"option": "generator",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom ID generator `() => string`."
 				},
 				{
@@ -354,19 +354,19 @@
 				{
 					"option": "logger",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom log function (default: console.log)."
 				},
 				{
 					"option": "colors",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Colorize output (default: true when TTY)."
 				},
 				{
 					"option": "format",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "'tiny' | 'short' | 'dev' (default: 'dev')."
 				}
 			],
@@ -383,31 +383,31 @@
 				{
 					"option": "stack",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Include stack traces in responses (default: true when NODE_ENV !== 'production')."
 				},
 				{
 					"option": "log",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Log errors to console (default: true)."
 				},
 				{
 					"option": "logger",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom log function (default: console.error)."
 				},
 				{
 					"option": "formatter",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom response formatter: (err, req, isDev) => object."
 				},
 				{
 					"option": "onError",
 					"type": "function",
-					"default": "—",
+					"default": "-",
 					"notes": "Callback on every error: (err, req, res) => void."
 				}
 			],

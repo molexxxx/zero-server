@@ -1,4 +1,4 @@
-/** redis.test.js — Redis adapter tests (memory mock) */
+/** redis.test.js - Redis adapter tests (memory mock) */
 const path = require('path');
 const { Database, Model, TYPES } = require('../../../lib/orm');
 
@@ -1095,10 +1095,10 @@ describe('Redis Adapter', () =>
 });
 
 // =========================================================================
-//  Redis adapter — coverage boost (from coverage/boost.test.js)
+//  Redis adapter - coverage boost (from coverage/boost.test.js)
 // =========================================================================
 
-describe('Redis adapter — coverage boost', () =>
+describe('Redis adapter - coverage boost', () =>
 {
 	let adapter;
 
@@ -1897,14 +1897,14 @@ describe('Redis adapter — coverage boost', () =>
 });
 
 // =========================================================================
-//  Redis adapter — constructor validation (from coverage/boost.test.js)
+//  Redis adapter - constructor validation (from coverage/boost.test.js)
 // =========================================================================
 
 // ===================================================================
-//  REDIS CONSTRUCTOR — validation branches (mocked ioredis)
+//  REDIS CONSTRUCTOR - validation branches (mocked ioredis)
 // ===================================================================
 
-describe('Redis adapter — constructor validation', () =>
+describe('Redis adapter - constructor validation', () =>
 {
 	// We need to inject a mock ioredis into require cache
 	const adapterPath = path.resolve(__dirname, '../../../lib/orm/adapters/redis.js');
@@ -2047,6 +2047,6 @@ describe('Redis adapter — constructor validation', () =>
 });
 
 // ===================================================================
-//  URLENCODED PARSER — branch coverage boost
+//  URLENCODED PARSER - branch coverage boost
 // ===================================================================
 

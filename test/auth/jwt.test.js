@@ -1,5 +1,5 @@
 /**
- * JWT middleware — comprehensive tests.
+ * JWT middleware - comprehensive tests.
  * Covers: sign/verify/decode, HMAC & RSA algorithms, claims validation,
  * middleware token extraction, JWKS, token pairs, and security edge cases.
  */
@@ -21,7 +21,7 @@ const { publicKey: RSA_PUBLIC, privateKey: RSA_PRIVATE } = crypto.generateKeyPai
 });
 
 // =========================================================
-// sign / verify / decode — Core Functions
+// sign / verify / decode - Core Functions
 // =========================================================
 
 describe('JWT Core: sign()', () =>
@@ -903,7 +903,7 @@ describe('JWT: jwks()', () =>
         await getKey({ kid: 'test-kid-1' });
         expect(fetchCount).toBe(1);
 
-        // Request unknown kid — triggers refresh
+        // Request unknown kid - triggers refresh
         const pem = await getKey({ kid: 'new-kid' });
         expect(fetchCount).toBe(2);
         expect(pem).toContain('-----BEGIN PUBLIC KEY-----');

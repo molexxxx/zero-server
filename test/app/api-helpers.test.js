@@ -7,7 +7,7 @@ const { createApp, Router, json } = require('../../');
 
 // -- App QoL ---------------------------------------------
 
-describe('App — set/get/enable/disable', () =>
+describe('App - set/get/enable/disable', () =>
 {
     it('set() and get() store and retrieve settings', () =>
     {
@@ -47,7 +47,7 @@ describe('App — set/get/enable/disable', () =>
     });
 });
 
-describe('App — route chaining', () =>
+describe('App - route chaining', () =>
 {
     let server, base;
 
@@ -74,7 +74,7 @@ describe('App — route chaining', () =>
     });
 });
 
-describe('App — group()', () =>
+describe('App - group()', () =>
 {
     let server, base;
 
@@ -107,7 +107,7 @@ describe('App — group()', () =>
     });
 });
 
-describe('App — param()', () =>
+describe('App - param()', () =>
 {
     let server, base;
 
@@ -142,7 +142,7 @@ describe('App — param()', () =>
 
 // -- Request QoL -----------------------------------------
 
-describe('Request — app, originalUrl', () =>
+describe('Request - app, originalUrl', () =>
 {
     let server, base;
 
@@ -179,7 +179,7 @@ describe('Request — app, originalUrl', () =>
 
 // -- Response QoL ----------------------------------------
 
-describe('Response — location()', () =>
+describe('Response - location()', () =>
 {
     let server, base;
 
@@ -205,7 +205,7 @@ describe('Response — location()', () =>
     });
 });
 
-describe('Response — links()', () =>
+describe('Response - links()', () =>
 {
     let server, base;
 
@@ -234,7 +234,7 @@ describe('Response — links()', () =>
     });
 });
 
-describe('Response — format()', () =>
+describe('Response - format()', () =>
 {
     let server, base;
 
@@ -287,7 +287,7 @@ describe('Response — format()', () =>
 
 // -- Router QoL ------------------------------------------
 
-describe('Router — baseUrl on sub-routers', () =>
+describe('Router - baseUrl on sub-routers', () =>
 {
     let server, base;
 
@@ -316,11 +316,11 @@ describe('Router — baseUrl on sub-routers', () =>
 
 
 // =========================================================================
-//  app chain/close — coverage gaps (from coverage/gaps.test.js)
+//  app chain/close - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  15. APP — CHAIN, CLOSE
+//  15. APP - CHAIN, CLOSE
 // ============================================================
 describe('app.chain() method', () => {
 	let server, base;
@@ -369,13 +369,13 @@ describe('app.close()', () => {
 });
 
 // =========================================================================
-//  debug — coverage gaps (from coverage/gaps.test.js)
+//  debug - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  17. DEBUG — PATTERNS, OUTPUT CAPTURE
+//  17. DEBUG - PATTERNS, OUTPUT CAPTURE
 // ============================================================
-describe('debug — pattern matching', () => {
+describe('debug - pattern matching', () => {
 	it('enable/disable patterns work', () => {
 		const debug = require('../../lib/debug');
 		debug.enable('app:*');
@@ -405,7 +405,7 @@ describe('debug — pattern matching', () => {
 	});
 });
 
-describe('debug — output capture', () => {
+describe('debug - output capture', () => {
 	it('writes to custom output stream', () => {
 		const debug = require('../../lib/debug');
 		const lines = [];
@@ -491,4 +491,4 @@ describe('debug — output capture', () => {
 		expect(lines[0]).toContain('obj={"a":1}');
 		debug.reset();
 	});
-});
+});

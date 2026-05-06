@@ -1,5 +1,5 @@
 /**
- * Two-Factor Authentication — comprehensive tests.
+ * Two-Factor Authentication - comprehensive tests.
  * Covers: TOTP generation/verification (RFC 6238), Base32 encoding,
  * backup codes, otpauth URI, require2FA middleware, verifyTOTPMiddleware,
  * timing-safe comparison, brute-force lockout, and edge cases.
@@ -200,7 +200,7 @@ describe('generateTOTP()', () =>
         expect(counterA).not.toBe(counterB);
     });
 
-    // RFC 6238 Test Vectors — SHA1 with known secret
+    // RFC 6238 Test Vectors - SHA1 with known secret
     it('matches RFC 6238 test vector (time=59, SHA1)', () =>
     {
         // RFC 6238 §B: secret = "12345678901234567890" (ASCII)
@@ -603,7 +603,7 @@ describe('2FA Full Flow Integration', () =>
 {
     let app, server, port;
 
-    // Simulated user database — shared across routes in each test
+    // Simulated user database - shared across routes in each test
     let users;
 
     afterEach(() => new Promise((resolve) =>
@@ -614,14 +614,14 @@ describe('2FA Full Flow Integration', () =>
 
     /**
      * Build a realistic app with:
-     *  POST /signup           — create user (no 2FA yet)
-     *  POST /login            — password login → session
-     *  POST /2fa/setup        — generate secret + backup codes, store in user
-     *  POST /2fa/enable       — confirm first TOTP code to activate 2FA
-     *  POST /2fa/verify       — submit TOTP to complete step-up auth
-     *  POST /2fa/backup       — redeem a backup code as fallback
-     *  GET  /dashboard        — protected by require2FA
-     *  GET  /profile          — protected, returns user info
+     *  POST /signup           - create user (no 2FA yet)
+     *  POST /login            - password login → session
+     *  POST /2fa/setup        - generate secret + backup codes, store in user
+     *  POST /2fa/enable       - confirm first TOTP code to activate 2FA
+     *  POST /2fa/verify       - submit TOTP to complete step-up auth
+     *  POST /2fa/backup       - redeem a backup code as fallback
+     *  GET  /dashboard        - protected by require2FA
+     *  GET  /profile          - protected, returns user info
      */
     function buildApp(opts = {})
     {
@@ -692,7 +692,7 @@ describe('2FA Full Flow Integration', () =>
 
                 const result = verifyTOTP(req.body.code, user._pendingSecret);
                 if (!result.valid)
-                    return res.status(401).json({ error: 'Invalid code — scan the QR and try again' });
+                    return res.status(401).json({ error: 'Invalid code - scan the QR and try again' });
 
                 // Activate 2FA
                 user.totpSecret = user._pendingSecret;
@@ -812,7 +812,7 @@ describe('2FA Full Flow Integration', () =>
         const cookie = getCookie(signup);
         expect(cookie).toBeTruthy();
 
-        // Dashboard — no 2FA enabled, isEnabled returns false → passes through
+        // Dashboard - no 2FA enabled, isEnabled returns false → passes through
         const dash = await doFetch(url('/dashboard'), { headers: { Cookie: cookie } });
         expect(dash.status).toBe(200);
         expect(dash.data.welcome).toBe('nofa@test.com');
@@ -832,7 +832,7 @@ describe('2FA Full Flow Integration', () =>
         expect(signup.status).toBe(200);
         let cookie = getCookie(signup);
 
-        // Step 2: Setup 2FA — get secret and backup codes
+        // Step 2: Setup 2FA - get secret and backup codes
         const setup = await doFetch(url('/2fa/setup'), { method: 'POST', headers: { Cookie: cookie } });
         expect(setup.status).toBe(200);
         expect(setup.data.secret).toBeTruthy();
@@ -845,7 +845,7 @@ describe('2FA Full Flow Integration', () =>
         const secret = setup.data.secret;
         const backupCodes = setup.data.backupCodes;
 
-        // Step 3: Enable 2FA — submit a valid TOTP generated from the secret
+        // Step 3: Enable 2FA - submit a valid TOTP generated from the secret
         const enableCode = generateTOTP(secret);
         const enable = await postJSON('/2fa/enable', { code: enableCode }, cookie);
         expect(enable.status).toBe(200);
@@ -867,7 +867,7 @@ describe('2FA Full Flow Integration', () =>
         expect(login.data.needs2FA).toBe(true);
         cookie = getCookie(login);
 
-        // Step 6: Dashboard should be BLOCKED — logged in but 2FA not verified
+        // Step 6: Dashboard should be BLOCKED - logged in but 2FA not verified
         const dash2 = await doFetch(url('/dashboard'), { headers: { Cookie: cookie } });
         expect(dash2.status).toBe(403);
         expect(dash2.data.error).toContain('Two-factor authentication required');
@@ -914,7 +914,7 @@ describe('2FA Full Flow Integration', () =>
         expect(enable.status).toBe(200);
         cookie = getCookie(enable) || cookie;
 
-        // Re-login — needs 2FA
+        // Re-login - needs 2FA
         const login = await postJSON('/login', { email: 'bob@test.com', password: 'pass' });
         expect(login.data.needs2FA).toBe(true);
         cookie = getCookie(login);
@@ -1051,7 +1051,7 @@ describe('2FA Full Flow Integration', () =>
         cookie = getCookie(setup) || cookie;
         const secret = setup.data.secret;
 
-        // Wrong code — 2FA should NOT be activated
+        // Wrong code - 2FA should NOT be activated
         const badEnable = await postJSON('/2fa/enable', { code: '000000' }, cookie);
         expect(badEnable.status).toBe(401);
         expect(badEnable.data.error).toContain('Invalid code');
@@ -1060,7 +1060,7 @@ describe('2FA Full Flow Integration', () =>
         // User DB should NOT have totpSecret activated
         expect(users['frank@test.com'].totpSecret).toBeNull();
 
-        // Correct code — now activate
+        // Correct code - now activate
         const goodEnable = await postJSON('/2fa/enable', { code: generateTOTP(secret) }, cookie);
         expect(goodEnable.status).toBe(200);
         cookie = getCookie(goodEnable) || cookie;
@@ -1094,7 +1094,7 @@ describe('2FA Full Flow Integration', () =>
         expect(dashB.status).toBe(200);
         expect(dashB.data.welcome).toBe('b@test.com');
 
-        // User A re-login — needs 2FA
+        // User A re-login - needs 2FA
         const loginA = await postJSON('/login', { email: 'a@test.com', password: 'pw' });
         cookieA = getCookie(loginA);
 
@@ -1146,7 +1146,7 @@ describe('2FA Full Flow Integration', () =>
             expect(backup.data.codesRemaining).toBe(7 - i);
         }
 
-        // 9th login — no backup codes left
+        // 9th login - no backup codes left
         const login = await postJSON('/login', { email: 'drain@test.com', password: 'pw' });
         cookie = getCookie(login);
 
@@ -1175,12 +1175,12 @@ describe('2FA Full Flow Integration', () =>
         const enable = await postJSON('/2fa/enable', { code: generateTOTP(secret) }, cookie);
         cookie = getCookie(enable) || cookie;
 
-        // Wrong password login — rejected
+        // Wrong password login - rejected
         const bad = await postJSON('/login', { email: 'secure@test.com', password: 'wrong' });
         expect(bad.status).toBe(401);
         expect(bad.data.error).toBe('Invalid credentials');
 
-        // Login with correct password — needs 2FA step-up
+        // Login with correct password - needs 2FA step-up
         const good = await postJSON('/login', { email: 'secure@test.com', password: 'correct' });
         expect(good.status).toBe(200);
         expect(good.data.needs2FA).toBe(true);
@@ -1199,7 +1199,7 @@ describe('2FA Full Flow Integration', () =>
 });
 
 // =========================================================
-// require2FA Middleware — Edge Cases
+// require2FA Middleware - Edge Cases
 // =========================================================
 
 describe('require2FA() edge cases', () =>
@@ -1269,14 +1269,14 @@ describe('require2FA() edge cases', () =>
             }), (req, res) => res.json({ data: 'sensitive' }));
         });
 
-        // User without 2FA enrolled — passes through
+        // User without 2FA enrolled - passes through
         const loginFree = await postJSON('/login', { email: 'free@test.com' });
         const cookieFree = getCookie(loginFree);
         const dataFree = await doFetch(`http://127.0.0.1:${port}/data`, { headers: { Cookie: cookieFree } });
         expect(dataFree.status).toBe(200);
         expect(dataFree.data.data).toBe('sensitive');
 
-        // User WITH 2FA enrolled — blocked
+        // User WITH 2FA enrolled - blocked
         const loginEnrolled = await postJSON('/login', { email: 'enrolled@test.com' });
         const cookieEnrolled = getCookie(loginEnrolled);
         const dataEnrolled = await doFetch(`http://127.0.0.1:${port}/data`, { headers: { Cookie: cookieEnrolled } });
@@ -1337,7 +1337,7 @@ describe('require2FA() edge cases', () =>
 });
 
 // =========================================================
-// verifyTOTPMiddleware — Unit-Level Edge Cases
+// verifyTOTPMiddleware - Unit-Level Edge Cases
 // =========================================================
 
 describe('verifyTOTPMiddleware() edge cases', () =>
@@ -1477,7 +1477,7 @@ describe('verifyTOTPMiddleware() edge cases', () =>
             }), (req, res) => res.json({ ok: true }));
         });
 
-        // Fail first — onFailure should fire
+        // Fail first - onFailure should fire
         const bad = await doFetch(`http://127.0.0.1:${port}/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1488,7 +1488,7 @@ describe('verifyTOTPMiddleware() edge cases', () =>
         expect(bad.data.attemptsLeft).toBe(4);
         expect(failureArgs).toEqual({ attemptsLeft: 4, hasBody: true });
 
-        // Now succeed — onSuccess should fire
+        // Now succeed - onSuccess should fire
         const code = generateTOTP(testSecret.base32);
         const good = await doFetch(`http://127.0.0.1:${port}/verify`, {
             method: 'POST',

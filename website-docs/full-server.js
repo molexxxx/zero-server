@@ -1,6 +1,6 @@
 /**
  * zero-server full-server example
- * Clean entry point — config, middleware, and routes are in separate modules.
+ * Clean entry point - config, middleware, and routes are in separate modules.
  */
 
 // --- Crash protection ---

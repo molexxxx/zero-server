@@ -1,4 +1,4 @@
-/** multipart-branches.test.js — multipart parser branch coverage */
+/** multipart-branches.test.js - multipart parser branch coverage */
 'use strict';
 
 const fs = require('fs');
@@ -66,16 +66,16 @@ function callMw(opts, headers, dataBuffers)
             emitter.emit('end');
         });
 
-        // Safety timeout — if next() is never called check res
+        // Safety timeout - if next() is never called check res
         setTimeout(() => resolve({ req, res, nextCalled: false }), 500);
     });
 }
 
 // ---------------------------------------------------------------------------
-// Tests — HTTP server based (integration)
+// Tests - HTTP server based (integration)
 // ---------------------------------------------------------------------------
 
-describe('multipart — incremental body with partial boundary buffering', () =>
+describe('multipart - incremental body with partial boundary buffering', () =>
 {
     let server, base, tmpDir;
 
@@ -146,10 +146,10 @@ describe('multipart — incremental body with partial boundary buffering', () =>
 });
 
 // ---------------------------------------------------------------------------
-// Tests — Direct middleware calls targeting specific branches
+// Tests - Direct middleware calls targeting specific branches
 // ---------------------------------------------------------------------------
 
-describe('multipart — sanitizeFilename edge cases', () =>
+describe('multipart - sanitizeFilename edge cases', () =>
 {
     let server, base, tmpDir;
 
@@ -196,7 +196,7 @@ describe('multipart — sanitizeFilename edge cases', () =>
     });
 });
 
-describe('multipart — parseContentDisposition edge cases', () =>
+describe('multipart - parseContentDisposition edge cases', () =>
 {
     it('handles segment that does not match key=value regex', async () =>
     {
@@ -214,7 +214,7 @@ describe('multipart — parseContentDisposition edge cases', () =>
     });
 });
 
-describe('multipart — no boundary in content-type', () =>
+describe('multipart - no boundary in content-type', () =>
 {
     it('calls next() when no boundary is present', async () =>
     {
@@ -228,7 +228,7 @@ describe('multipart — no boundary in content-type', () =>
     });
 });
 
-describe('multipart — quoted boundary', () =>
+describe('multipart - quoted boundary', () =>
 {
     it('handles quoted boundary in content-type', async () =>
     {
@@ -244,7 +244,7 @@ describe('multipart — quoted boundary', () =>
     });
 });
 
-describe('multipart — file without extension', () =>
+describe('multipart - file without extension', () =>
 {
     let server, base, tmpDir;
 
@@ -281,7 +281,7 @@ describe('multipart — file without extension', () =>
     });
 });
 
-describe('multipart — relative dir option', () =>
+describe('multipart - relative dir option', () =>
 {
     let server, base, tmpDir;
 
@@ -314,7 +314,7 @@ describe('multipart — relative dir option', () =>
     });
 });
 
-describe('multipart — error event on raw stream', () =>
+describe('multipart - error event on raw stream', () =>
 {
     it('calls next() on error event', async () =>
     {
@@ -337,7 +337,7 @@ describe('multipart — error event on raw stream', () =>
     });
 });
 
-describe('multipart — end event with pending current', () =>
+describe('multipart - end event with pending current', () =>
 {
     it('finishes current field on stream end without final boundary', async () =>
     {
@@ -355,7 +355,7 @@ describe('multipart — end event with pending current', () =>
     });
 });
 
-describe('multipart — maxFileSize enforcement', () =>
+describe('multipart - maxFileSize enforcement', () =>
 {
     let server, base, tmpDir;
 
@@ -402,7 +402,7 @@ describe('multipart — maxFileSize enforcement', () =>
     });
 });
 
-describe('multipart — maxTotalSize enforcement', () =>
+describe('multipart - maxTotalSize enforcement', () =>
 {
     let server, base, tmpDir;
 
@@ -449,7 +449,7 @@ describe('multipart — maxTotalSize enforcement', () =>
     });
 });
 
-describe('multipart — maxFieldSize enforcement', () =>
+describe('multipart - maxFieldSize enforcement', () =>
 {
     let server, base, tmpDir;
 
@@ -497,7 +497,7 @@ describe('multipart — maxFieldSize enforcement', () =>
     });
 });
 
-describe('multipart — maxFiles limit', () =>
+describe('multipart - maxFiles limit', () =>
 {
     let server, base, tmpDir;
 
@@ -531,7 +531,7 @@ describe('multipart — maxFiles limit', () =>
     });
 });
 
-describe('multipart — maxFields limit', () =>
+describe('multipart - maxFields limit', () =>
 {
     let server, base, tmpDir;
 
@@ -565,7 +565,7 @@ describe('multipart — maxFields limit', () =>
     });
 });
 
-describe('multipart — allowedMimeTypes rejection', () =>
+describe('multipart - allowedMimeTypes rejection', () =>
 {
     let server, base, tmpDir;
 
@@ -598,7 +598,7 @@ describe('multipart — allowedMimeTypes rejection', () =>
     });
 });
 
-describe('multipart — _multipartErrorHandled guard (double error)', () =>
+describe('multipart - _multipartErrorHandled guard (double error)', () =>
 {
     it('prevents double error when maxFiles and maxFileSize both trigger', async () =>
     {
@@ -620,7 +620,7 @@ describe('multipart — _multipartErrorHandled guard (double error)', () =>
         setImmediate(() =>
         {
             emitter.emit('data', Buffer.from(raw));
-            // Emit another data event — should hit 'already handled' guard
+            // Emit another data event - should hit 'already handled' guard
             emitter.emit('data', Buffer.from(`\r\n--${bnd}\r\nContent-Disposition: form-data; name="f3"; filename="c.txt"\r\nContent-Type: text/plain\r\n\r\nextra\r\n--${bnd}--\r\n`));
             emitter.emit('end');
         });
@@ -633,7 +633,7 @@ describe('multipart — _multipartErrorHandled guard (double error)', () =>
     });
 });
 
-describe('multipart — closeCurrent writeStream error path', () =>
+describe('multipart - closeCurrent writeStream error path', () =>
 {
     it('resolves on writeStream error event during close', async () =>
     {
@@ -654,7 +654,7 @@ describe('multipart — closeCurrent writeStream error path', () =>
     });
 });
 
-describe('multipart — requireSecure option', () =>
+describe('multipart - requireSecure option', () =>
 {
     it('returns 403 when requireSecure is true and request is not secure', async () =>
     {
@@ -688,7 +688,7 @@ describe('multipart — requireSecure option', () =>
     });
 });
 
-describe('multipart — buffer trimming in start state', () =>
+describe('multipart - buffer trimming in start state', () =>
 {
     it('trims buffer when boundary not found and buffer > boundary length', async () =>
     {
@@ -717,7 +717,7 @@ describe('multipart — buffer trimming in start state', () =>
     });
 });
 
-describe('multipart — incremental maxTotalSize', () =>
+describe('multipart - incremental maxTotalSize', () =>
 {
     it('rejects during incremental writes when maxTotalSize exceeded', async () =>
     {
@@ -749,7 +749,7 @@ describe('multipart — incremental maxTotalSize', () =>
     });
 });
 
-describe('multipart — incremental maxFileSize', () =>
+describe('multipart - incremental maxFileSize', () =>
 {
     it('rejects during incremental writes when maxFileSize exceeded', async () =>
     {
@@ -778,7 +778,7 @@ describe('multipart — incremental maxFileSize', () =>
     });
 });
 
-describe('multipart — incremental maxFieldSize', () =>
+describe('multipart - incremental maxFieldSize', () =>
 {
     it('rejects during incremental writes when field value exceeds maxFieldSize', async () =>
     {

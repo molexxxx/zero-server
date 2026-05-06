@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">zero-server — API Reference</h1>
+<h1 align="center">zero-server - API Reference</h1>
 
 <p align="center">
   <strong>
@@ -218,14 +218,14 @@ const {
 
 ## Installation
 
-Install the `@zero-server/sdk` meta-package from npm — it ships every module and is the recommended install for new projects. Each section is also published as its own standalone scoped package (e.g. `@zero-server/core`, `@zero-server/orm`) for libraries or microservices that only need a slice. No external dependencies are required — everything is built in.
+Install the `@zero-server/sdk` meta-package from npm - it ships every module and is the recommended install for new projects. Each section is also published as its own standalone scoped package (e.g. `@zero-server/core`, `@zero-server/orm`) for libraries or microservices that only need a slice. No external dependencies are required - everything is built in.
 
 ```bash
 npm install @zero-server/sdk
 ```
 
 
-> **Tip:** `@zero-server/sdk` has zero runtime dependencies — npm install is all you need.
+> **Tip:** `@zero-server/sdk` has zero runtime dependencies - npm install is all you need.
 > **Tip:** Requires Node.js 18+ (uses crypto.randomUUID, structuredClone, etc.).
 > **Tip:** TypeScript definitions are bundled inside the SDK and inside every scoped package.
 
@@ -252,7 +252,7 @@ app.listen(3000, () => {
 ```
 
 
-> **Tip:** Middleware runs in registration order — add parsers before route handlers.
+> **Tip:** Middleware runs in registration order - add parsers before route handlers.
 > **Tip:** All route methods (get, post, put, etc.) return the app, so you can chain them.
 > **Tip:** Use app.onError() to register a global error handler for uncaught errors.
 
@@ -263,7 +263,7 @@ app.listen(3000, () => {
 
 ### Overview
 
-The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.
+The full SDK ships as `@zero-server/sdk` - install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.
 
 ```bash
 # Everything (one install)
@@ -288,22 +288,22 @@ Every published `@zero-server/*` package and the surface it narrows to. The full
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `@zero-server/sdk` | meta | `all` | Single full-SDK install with the complete public surface. |
-| `@zero-server/core` | core | `—` | createApp, Router, Request, Response. |
-| `@zero-server/body` | parsers | `—` | json, urlencoded, text, raw, multipart. |
-| `@zero-server/middleware` | middleware | `—` | cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static. |
-| `@zero-server/auth` | auth | `—` | jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment. |
-| `@zero-server/orm` | orm | `—` | Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins. |
-| `@zero-server/realtime` | realtime | `—` | WebSocketConnection, WebSocketPool, SSEStream. |
-| `@zero-server/grpc` | grpc | `—` | GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials. |
-| `@zero-server/observe` | observability | `—` | MetricsRegistry, Tracer, structured Logger, healthCheck. |
-| `@zero-server/lifecycle` | lifecycle | `—` | LifecycleManager, ClusterManager, clusterize. |
-| `@zero-server/env` | env | `—` | Typed `.env` loader and accessor. |
-| `@zero-server/fetch` | http-client | `—` | Server-side fetch with mTLS, timeouts, AbortSignal. |
-| `@zero-server/errors` | errors | `—` | HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError. |
+| `@zero-server/core` | core | `-` | createApp, Router, Request, Response. |
+| `@zero-server/body` | parsers | `-` | json, urlencoded, text, raw, multipart. |
+| `@zero-server/middleware` | middleware | `-` | cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static. |
+| `@zero-server/auth` | auth | `-` | jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment. |
+| `@zero-server/orm` | orm | `-` | Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins. |
+| `@zero-server/realtime` | realtime | `-` | WebSocketConnection, WebSocketPool, SSEStream. |
+| `@zero-server/grpc` | grpc | `-` | GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials. |
+| `@zero-server/observe` | observability | `-` | MetricsRegistry, Tracer, structured Logger, healthCheck. |
+| `@zero-server/lifecycle` | lifecycle | `-` | LifecycleManager, ClusterManager, clusterize. |
+| `@zero-server/env` | env | `-` | Typed `.env` loader and accessor. |
+| `@zero-server/fetch` | http-client | `-` | Server-side fetch with mTLS, timeouts, AbortSignal. |
+| `@zero-server/errors` | errors | `-` | HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError. |
 
 
 ```js
-// Identical at runtime — pick whichever import surface you prefer
+// Identical at runtime - pick whichever import surface you prefer
 const fromSdk  = require('@zero-server/sdk').createApp;
 const fromCore = require('@zero-server/core').createApp;
 ```
@@ -337,7 +337,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 
 | Method | Signature | Description |
 |---|---|---|
-| `use` | `use(pathOrFn, [fn])` | Register middleware or mount a sub-router. - `use(fn)` — global middleware applied to every request. - `use('/prefix', fn)` — path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` — mount a Router sub-app at the given prefix. |
+| `use` | `use(pathOrFn, [fn])` | Register middleware or mount a sub-router. - `use(fn)` - global middleware applied to every request. - `use('/prefix', fn)` - path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` - mount a Router sub-app at the given prefix. |
 | `onError` | `onError(fn)` | Register a global error handler. The handler receives `(err, req, res, next)` and is invoked whenever a middleware or route handler throws or passes an error to `next(err)`. |
 | `param` | `param(name, fn)` | Register a parameter pre-processing handler. Runs before route handlers for any route containing a `:name` parameter. |
 
@@ -362,7 +362,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 
 | Method | Signature | Description |
 |---|---|---|
-| `on` | `on(event, fn)` | Register a lifecycle event listener. Supported events: - `'beforeShutdown'` — fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       — fires after shutdown is complete |
+| `on` | `on(event, fn)` | Register a lifecycle event listener. Supported events: - `'beforeShutdown'` - fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       - fires after shutdown is complete |
 | `off` | `off(event, fn)` | Remove a lifecycle event listener. |
 
 
@@ -375,7 +375,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 | `trackSSE` | `trackSSE(stream)` | Track an SSE stream for graceful shutdown. The stream is automatically untracked when it closes. |
 | `registerDatabase` | `registerDatabase(db)` | Register an ORM Database instance for graceful shutdown. The database connection is closed during shutdown. |
 | `unregisterDatabase` | `unregisterDatabase(db)` | Unregister an ORM Database instance from lifecycle management. |
-| `shutdownTimeout` | `shutdownTimeout(ms)` | Configure the shutdown timeout—the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them. |
+| `shutdownTimeout` | `shutdownTimeout(ms)` | Configure the shutdown timeout-the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them. |
 | `lifecycleState` | `lifecycleState()` | Current lifecycle state. |
 
 
@@ -417,7 +417,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 | `options` | `options(path, ...fns)` | Shortcut for OPTIONS requests. |
 | `head` | `head(path, ...fns)` | Shortcut for HEAD requests. |
 | `all` | `all(path, ...fns)` | Matches every HTTP method. |
-| `chain` | `chain(path)` | Chainable route builder — register multiple methods on the same path. |
+| `chain` | `chain(path)` | Chainable route builder - register multiple methods on the same path. |
 | `group` | `group(prefix, ...middleware)` | Define a route group with shared middleware prefix. All routes registered inside the callback share the given path prefix and middleware stack. |
 
 
@@ -438,7 +438,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 |---|---|---|
 | `jwtAuth` | `jwtAuth(opts)` | Mount JWT authentication middleware. Shorthand for `app.use(jwt(opts))`. |
 | `sessions` | `sessions(opts)` | Mount session middleware. Shorthand for `app.use(session(opts))`. |
-| `oauth` | `oauth(opts)` | Create an OAuth2 client bound to this app. Returns the client — does NOT mount any middleware automatically. |
+| `oauth` | `oauth(opts)` | Create an OAuth2 client bound to this app. Returns the client - does NOT mount any middleware automatically. |
 
 
 ```javascript
@@ -495,7 +495,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 | `options` | `options(path, ...fns)` | Shortcut for OPTIONS requests. |
 | `head` | `head(path, ...fns)` | Shortcut for HEAD requests. |
 | `all` | `all(path, ...fns)` | Matches every HTTP method. |
-| `route` | `route(path)` | Chainable route builder — register multiple methods on the same path. |
+| `route` | `route(path)` | Chainable route builder - register multiple methods on the same path. |
 
 
 #### Introspection
@@ -524,7 +524,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 
 ### Request
 
-Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible — detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.
+Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible - detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.
 
 #### Parameters
 
@@ -545,7 +545,7 @@ Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query strin
 | `is` | `is(type)` | Check if the request Content-Type matches the given type. |
 | `hostname` | `hostname()` | Get the hostname from the Host header (without port). Only reads `X-Forwarded-Host` when `trust proxy` is enabled. On HTTP/2, falls back to the `:authority` pseudo-header. |
 | `subdomains` | `subdomains([offset])` | Get the subdomains as an array (e.g. `['api', 'v2']` for `'v2.api.example.com'`). |
-| `accepts` | `accepts(...types)` | Content negotiation — check if the client accepts the given type(s). Returns the best match, or `false` if none match. |
+| `accepts` | `accepts(...types)` | Content negotiation - check if the client accepts the given type(s). Returns the best match, or `false` if none match. |
 | `fresh` | `fresh()` | Check if the request is "fresh" (client cache is still valid). Compares If-None-Match / If-Modified-Since with ETag / Last-Modified. |
 | `stale` | `stale()` | Inverse of `fresh`. |
 | `xhr` | `xhr()` | Check whether this request was made with XMLHttpRequest. |
@@ -617,12 +617,12 @@ JSON body-parsing middleware. Reads the request body, parses it as JSON, and set
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `limit` | string \| number | `—` | Max body size (e.g. `'10kb'`). Default `'1mb'`. |
-| `reviver` | Function | `—` | `JSON.parse` reviver function. |
+| `limit` | string \| number | `-` | Max body size (e.g. `'10kb'`). Default `'1mb'`. |
+| `reviver` | Function | `-` | `JSON.parse` reviver function. |
 | `strict` | boolean | `true` | When true, reject non-object/array roots. |
 | `type` | string \| string[] \| Function | `'application/json'` | Content-Type(s) to match. |
 | `requireSecure` | boolean | `false` | When true, reject non-HTTPS requests with 403. |
-| `verify` | Function | `—` | `verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403. |
+| `verify` | Function | `-` | `verify(req, res, buf, encoding)` - called before parsing. Throw to reject with 403. |
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
@@ -646,13 +646,13 @@ URL-encoded body-parsing middleware. Supports both flat (`URLSearchParams`) and 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `limit` | string \| number | `—` | Max body size (e.g. `'10kb'`). Default `'1mb'`. |
+| `limit` | string \| number | `-` | Max body size (e.g. `'10kb'`). Default `'1mb'`. |
 | `type` | string \| string[] \| Function | `'application/x-www-form-urlencoded'` | Content-Type(s) to match. |
 | `extended` | boolean | `false` | Use nested bracket parsing (e.g. `a[b][c]=1`). |
 | `requireSecure` | boolean | `false` | When true, reject non-HTTPS requests with 403. |
 | `parameterLimit` | number | `1000` | Max number of parameters. Prevents DoS via huge payloads. |
 | `depth` | number | `32` | Max nesting depth for bracket syntax. Prevents deep-nesting DoS. |
-| `verify` | Function | `—` | `verify(req, res, buf, encoding)` — called before parsing. Throw to reject with 403. |
+| `verify` | Function | `-` | `verify(req, res, buf, encoding)` - called before parsing. Throw to reject with 403. |
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. |
 
 
@@ -680,11 +680,11 @@ Plain-text body-parsing middleware. Reads the request body as a string and sets 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `limit` | string \| number | `—` | Max body size. Default `'1mb'`. |
+| `limit` | string \| number | `-` | Max body size. Default `'1mb'`. |
 | `encoding` | string | `'utf8'` | Fallback character encoding when Content-Type has no charset. |
 | `type` | string \| string[] \| Function | `'text/*'` | Content-Type(s) to match. |
 | `requireSecure` | boolean | `false` | When true, reject non-HTTPS requests with 403. |
-| `verify` | Function | `—` | `verify(req, res, buf, encoding)` — called before decoding. Throw to reject with 403. |
+| `verify` | Function | `-` | `verify(req, res, buf, encoding)` - called before decoding. Throw to reject with 403. |
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
@@ -708,10 +708,10 @@ Raw-buffer body-parsing middleware. Stores the full request body as a Buffer on 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `limit` | string \| number | `—` | Max body size. Default `'1mb'`. |
+| `limit` | string \| number | `-` | Max body size. Default `'1mb'`. |
 | `type` | string \| string[] \| Function | `'application/octet-stream'` | Content-Type(s) to match. |
 | `requireSecure` | boolean | `false` | When true, reject non-HTTPS requests with 403. |
-| `verify` | Function | `—` | `verify(req, res, buf)` — called before setting body. Throw to reject with 403. |
+| `verify` | Function | `-` | `verify(req, res, buf)` - called before setting body. Throw to reject with 403. |
 | `inflate` | boolean | `true` | Decompress gzip/deflate/br bodies. When false, compressed bodies return 415. |
 
 
@@ -735,14 +735,14 @@ Streaming multipart/form-data parser. Writes uploaded files to a temp directory 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `dir` | string | `—` | Upload directory (default: OS temp dir). |
-| `maxFileSize` | number | `—` | Maximum size per file in bytes. |
+| `dir` | string | `-` | Upload directory (default: OS temp dir). |
+| `maxFileSize` | number | `-` | Maximum size per file in bytes. |
 | `requireSecure` | boolean | `false` | When true, reject non-HTTPS requests with 403. |
 | `maxFields` | number | `1000` | Maximum number of non-file fields. Prevents DoS via field flooding. |
 | `maxFiles` | number | `10` | Maximum number of uploaded files. |
-| `maxFieldSize` | number | `—` | Maximum size of a single field value in bytes. Default 1 MB. |
-| `allowedMimeTypes` | string[] | `—` | Whitelist of MIME types for uploaded files (e.g. `['image/png', 'image/jpeg']`). |
-| `maxTotalSize` | number | `—` | Maximum combined size of all uploaded files in bytes. |
+| `maxFieldSize` | number | `-` | Maximum size of a single field value in bytes. Default 1 MB. |
+| `allowedMimeTypes` | string[] | `-` | Whitelist of MIME types for uploaded files (e.g. `['image/png', 'image/jpeg']`). |
+| `maxTotalSize` | number | `-` | Maximum combined size of all uploaded files in bytes. |
 
 
 ```javascript
@@ -780,9 +780,9 @@ an array for a whitelist, or a string
 starting with `'.'` for suffix matching. |
 | `methods` | string | `'GET,POST,PUT,DELETE,OPTIONS'` | Allowed HTTP methods. |
 | `allowedHeaders` | string | `'Content-Type,Authorization'` | Allowed request headers. |
-| `exposedHeaders` | string | `—` | Headers the browser is allowed to read. |
+| `exposedHeaders` | string | `-` | Headers the browser is allowed to read. |
 | `credentials` | boolean | `false` | Whether to set `Access-Control-Allow-Credentials`. |
-| `maxAge` | number | `—` | Preflight cache duration in seconds. |
+| `maxAge` | number | `-` | Preflight cache duration in seconds. |
 
 
 ```javascript
@@ -805,9 +805,9 @@ Response compression middleware using Node's built-in `zlib`. Supports gzip, def
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `threshold` | number | `1024` | Minimum body size in bytes to compress. |
-| `level` | number | `—` | Compression level (zlib.constants.Z_DEFAULT_COMPRESSION). |
-| `encoding` | string \| string[] | `—` | Force specific encoding(s). Default: auto-negotiate. |
-| `filter` | Function | `—` | `(req, res) => boolean` — return false to skip compression. |
+| `level` | number | `-` | Compression level (zlib.constants.Z_DEFAULT_COMPRESSION). |
+| `encoding` | string \| string[] | `-` | Force specific encoding(s). Default: auto-negotiate. |
+| `filter` | Function | `-` | `(req, res) => boolean` - return false to skip compression. |
 
 
 ```javascript
@@ -826,7 +826,7 @@ Security headers middleware. Sets common security-related HTTP response headers 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `contentSecurityPolicy` | object \| false | `—` | CSP directive object or `false` to disable. |
+| `contentSecurityPolicy` | object \| false | `-` | CSP directive object or `false` to disable. |
 | `crossOriginEmbedderPolicy` | boolean | `false` | Set COEP header. |
 | `crossOriginOpenerPolicy` | string \| false | `'same-origin'` | COOP value. |
 | `crossOriginResourcePolicy` | string \| false | `'same-origin'` | CORP value. |
@@ -877,9 +877,9 @@ Static file-serving middleware with MIME detection, directory index files, exten
 | `index` | string \| false | `'index.html'` | Default file for directory requests, or `false` to disable. |
 | `maxAge` | number | `0` | `Cache-Control` max-age in **milliseconds**. |
 | `dotfiles` | string | `'ignore'` | Dotfile policy: `'allow'` \| `'deny'` \| `'ignore'`. |
-| `extensions` | string[] | `—` | Array of fallback extensions (e.g. `['html', 'htm']`). |
-| `setHeaders` | Function | `—` | `(res, filePath) => void` hook to set custom headers. |
-| `pushAssets` | string[] \| Function | `—` | HTTP/2 server push. Array of paths
+| `extensions` | string[] | `-` | Array of fallback extensions (e.g. `['html', 'htm']`). |
+| `setHeaders` | Function | `-` | `(res, filePath) => void` hook to set custom headers. |
+| `pushAssets` | string[] \| Function | `-` | HTTP/2 server push. Array of paths
 (relative to root) to push when serving HTML files, or a function `(filePath) => string[]`. |
 
 
@@ -909,11 +909,11 @@ In-memory rate-limiting middleware. Limits requests per IP address within a fixe
 |---|---|---|---|
 | `windowMs` | number | `60000` | Time window in milliseconds. |
 | `max` | number | `100` | Maximum requests per window per IP. |
-| `message` | string | `—` | Custom error message. |
+| `message` | string | `-` | Custom error message. |
 | `statusCode` | number | `429` | HTTP status for rate-limited responses. |
-| `keyGenerator` | function | `—` | (req) => string; custom key extraction (default: req.ip). |
-| `skip` | function | `—` | (req) => boolean; return true to skip rate limiting. |
-| `handler` | function | `—` | (req, res) => void; custom handler for rate-limited requests. |
+| `keyGenerator` | function | `-` | (req) => string; custom key extraction (default: req.ip). |
+| `skip` | function | `-` | (req) => boolean; return true to skip rate limiting. |
+| `handler` | function | `-` | (req, res) => void; custom handler for rate-limited requests. |
 
 
 ```javascript
@@ -961,7 +961,7 @@ Request ID middleware. Assigns a unique identifier to each incoming request for 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `header` | string | `'X-Request-Id'` | Response header name. |
-| `generator` | Function | `—` | Custom ID generator `() => string`. |
+| `generator` | Function | `-` | Custom ID generator `() => string`. |
 | `trustProxy` | boolean | `false` | Trust incoming X-Request-Id header from proxy. |
 
 
@@ -981,9 +981,9 @@ Simple request-logging middleware. Logs method, url, status code, and response t
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `logger` | function | `—` | Custom log function (default: console.log). |
-| `colors` | boolean | `—` | Colorize output (default: true when TTY). |
-| `format` | string | `—` | 'tiny' \| 'short' \| 'dev' (default: 'dev'). |
+| `logger` | function | `-` | Custom log function (default: console.log). |
+| `colors` | boolean | `-` | Colorize output (default: true when TTY). |
+| `format` | string | `-` | 'tiny' \| 'short' \| 'dev' (default: 'dev'). |
 
 
 ```javascript
@@ -1001,11 +1001,11 @@ Configurable error-handling middleware that formats error responses based on env
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `stack` | boolean | `—` | Include stack traces in responses (default: true when NODE_ENV !== 'production'). |
-| `log` | boolean | `—` | Log errors to console (default: true). |
-| `logger` | function | `—` | Custom log function (default: console.error). |
-| `formatter` | function | `—` | Custom response formatter: (err, req, isDev) => object. |
-| `onError` | function | `—` | Callback on every error: (err, req, res) => void. |
+| `stack` | boolean | `-` | Include stack traces in responses (default: true when NODE_ENV !== 'production'). |
+| `log` | boolean | `-` | Log errors to console (default: true). |
+| `logger` | function | `-` | Custom log function (default: console.error). |
+| `formatter` | function | `-` | Custom response formatter: (err, req, isDev) => object. |
+| `onError` | function | `-` | Callback on every error: (err, req, res) => void. |
 
 
 ```javascript
@@ -1069,10 +1069,10 @@ CSRF (Cross-Site Request Forgery) protection middleware. Uses the double-submit 
 | `cookie` | string | `'_csrf'` | Name of the double-submit cookie. |
 | `header` | string | `'x-csrf-token'` | Request header that carries the token. |
 | `saltLength` | number | `18` | Bytes of randomness for token generation. |
-| `secret` | string | `—` | HMAC secret. Auto-generated per process if omitted. |
-| `ignoreMethods` | string[] | `—` | HTTP methods to skip. Default: GET, HEAD, OPTIONS. |
-| `ignorePaths` | string[] | `—` | Path prefixes to skip (e.g. ['/api/webhooks']). |
-| `onError` | Function | `—` | Custom error handler `(req, res) => {}`. |
+| `secret` | string | `-` | HMAC secret. Auto-generated per process if omitted. |
+| `ignoreMethods` | string[] | `-` | HTTP methods to skip. Default: GET, HEAD, OPTIONS. |
+| `ignorePaths` | string[] | `-` | Path prefixes to skip (e.g. ['/api/webhooks']). |
+| `onError` | Function | `-` | Custom error handler `(req, res) => {}`. |
 
 
 ```javascript
@@ -1112,11 +1112,11 @@ Request validation middleware. Validates `req.body`, `req.query`, and `req.param
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `body` | object | `—` | Rules for req.body fields. |
-| `query` | object | `—` | Rules for req.query fields. |
-| `params` | object | `—` | Rules for req.params fields. |
+| `body` | object | `-` | Rules for req.body fields. |
+| `query` | object | `-` | Rules for req.query fields. |
+| `params` | object | `-` | Rules for req.params fields. |
 | `stripUnknown` | boolean | `true` | Remove fields not in schema. |
-| `onError` | Function | `—` | Custom error handler `(errors, req, res) => {}`. |
+| `onError` | Function | `-` | Custom error handler `(errors, req, res) => {}`. |
 
 
 ```javascript
@@ -1158,7 +1158,7 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
 
 | Method | Signature | Description |
 |---|---|---|
-| `jwt` | `jwt(opts)` | Create JWT authentication middleware. On success, populates: - `req.user` — decoded payload - `req.auth` — `{ header, payload, token }` full decode info - `req.token` — raw JWT string |
+| `jwt` | `jwt(opts)` | Create JWT authentication middleware. On success, populates: - `req.user` - decoded payload - `req.auth` - `{ header, payload, token }` full decode info - `req.token` - raw JWT string |
 
 
 #### JWT Core Functions
@@ -1189,7 +1189,7 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
   const app = createApp();
   const SECRET = process.env.JWT_SECRET;
 
-  // Public — issue tokens
+  // Public - issue tokens
   app.post('/login', json(), async (req, res) => {
       const { email, password } = req.body;
       const user = await db.users.findOne({ email });
@@ -1200,7 +1200,7 @@ Zero-dependency JWT (JSON Web Token) middleware. Supports HMAC (HS256/384/512) a
       res.json({ token });
   });
 
-  // Protected — everything under /api requires a valid token
+  // Protected - everything under /api requires a valid token
   const api = Router();
   api.use(jwt({ secret: SECRET }));
   api.get('/me', (req, res) => res.json({ id: req.user.sub, role: req.user.role }));
@@ -1372,7 +1372,7 @@ Zero-dependency OAuth 2.0 client with PKCE support. Built-in provider presets fo
 
 ## authorize
 
-Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.
+Authorization helpers - role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`.
 
 #### Role-Based Access Control
 
@@ -1385,7 +1385,7 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 
 | Method | Signature | Description |
 |---|---|---|
-| `can` | `can(...permissions)` | Permission-based authorization middleware. Checks `req.user.permissions` (array or Set) for the required permission(s). Permission strings follow a `resource:action` convention: - `'posts:write'` — write access to posts - `'users:delete'` — delete users - `'*'` — superuser wildcard |
+| `can` | `can(...permissions)` | Permission-based authorization middleware. Checks `req.user.permissions` (array or Set) for the required permission(s). Permission strings follow a `resource:action` convention: - `'posts:write'` - write access to posts - `'users:delete'` - delete users - `'*'` - superuser wildcard |
 | `canAny` | `canAny(...permissions)` | Like `can()`, but passes if the user has ANY of the listed permissions. |
 
 
@@ -1401,7 +1401,7 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 
 | Method | Signature | Description |
 |---|---|---|
-| `attachUserHelpers` | `attachUserHelpers()` | Attach convenience authorization methods to `req.user`. Call this middleware after JWT/session middleware. Adds: - `req.user.is(...roles)` — check roles - `req.user.can(...perms)` — check permissions |
+| `attachUserHelpers` | `attachUserHelpers()` | Attach convenience authorization methods to `req.user`. Call this middleware after JWT/session middleware. Adds: - `req.user.is(...roles)` - check roles - `req.user.can(...perms)` - check permissions |
 
 
 ```javascript
@@ -1412,22 +1412,22 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
   app.use(jwt({ secret: process.env.JWT_SECRET }));
   app.use(attachUserHelpers());
 
-  // Role-based — only admins and editors can modify posts
+  // Role-based - only admins and editors can modify posts
   app.put('/posts/:id', authorize('admin', 'editor'), (req, res) => {
       res.json({ updated: true });
   });
 
-  // Permission-based — require ALL listed permissions
+  // Permission-based - require ALL listed permissions
   app.delete('/users/:id', can('users:read', 'users:delete'), (req, res) => {
       res.json({ deleted: true });
   });
 
-  // ANY permission — useful for overlapping access
+  // ANY permission - useful for overlapping access
   app.get('/reports', canAny('reports:read', 'admin:read'), (req, res) => {
       res.json({ reports: [] });
   });
 
-  // Policy class — resource-level authorization
+  // Policy class - resource-level authorization
   class PostPolicy extends Policy {
       before(user) { if (user.role === 'superadmin') return true; }
       update(user, post) { return user.id === post.authorId || user.role === 'admin'; }
@@ -1457,7 +1457,7 @@ Authorization helpers — role-based access control (RBAC), permission-based acc
 
 ### twoFactor
 
-Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages.
+Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` - no external packages.
 
 #### TOTP Replay Prevention (RFC 6238 §5.2)
 
@@ -1497,7 +1497,7 @@ Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 623
 
 | Method | Signature | Description |
 |---|---|---|
-| `require2FA` | `require2FA([opts])` | Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` — returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // — or — app.use(session({ secret })); app.use(require2FA()); |
+| `require2FA` | `require2FA([opts])` | Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` - returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // - or - app.use(session({ secret })); app.use(require2FA()); |
 | `verifyTOTPMiddleware` | `verifyTOTPMiddleware(opts)` | Rate-limited TOTP verification middleware. Wraps `verifyTOTP` with attempt tracking to prevent brute-force attacks. Tracks attempts per-IP in memory with automatic expiry. Supports optional replay prevention (RFC 6238 §5.2) via a `replayStore`. When configured, each successfully verified TOTP counter is recorded and rejected on subsequent use within the validity window. |
 
 
@@ -1599,18 +1599,18 @@ Zero-dependency WebAuthn/FIDO2/Passkeys implementation. Supports registration (a
 
 ### trustedDevice
 
-Trusted Device / "Remember Me" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage.
+Trusted Device / "Remember Me" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption - tokens are encrypted, not just signed, preventing information leakage.
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `secret` | string | `—` | Encryption secret (min 32 chars recommended). |
+| `secret` | string | `-` | Encryption secret (min 32 chars recommended). |
 | `maxAge` | number | `2592000000` | Trust duration in ms (default 30 days). |
 | `cookieName` | string | `'_dt'` | Cookie name. |
-| `fingerprint` | Function | `—` | `(req) => string` device fingerprint.
+| `fingerprint` | Function | `-` | `(req) => string` device fingerprint.
 Defaults to User-Agent hash. |
-| `getUserId` | Function | `—` | `(req) => string` user identifier.
+| `getUserId` | Function | `-` | `(req) => string` user identifier.
 Defaults to `req.user.id \|\| req.user.sub`. |
 
 
@@ -1634,18 +1634,18 @@ Defaults to `req.user.id \|\| req.user.sub`. |
 
 ### enrollment
 
-2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account
+2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` - Generate secret + backup codes, store in session 2. `verify()` - Confirm user can produce a valid TOTP code 3. `complete()` - Persist the verified secret to the database 4. `disable()` - Remove 2FA from the account
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `saveSecret` | Function | `—` | `(req, base32Secret, backupHashes) => Promise<void>`.
+| `saveSecret` | Function | `-` | `(req, base32Secret, backupHashes) => Promise<void>`.
 Persist the verified TOTP secret and backup hashes. |
-| `removeSecret` | Function | `—` | `(req) => Promise<void>`.
+| `removeSecret` | Function | `-` | `(req) => Promise<void>`.
 Remove TOTP secret on disable. |
 | `issuer` | string | `'App'` | Issuer name for the otpauth URI. |
-| `getAccount` | Function | `—` | `(req) => string`. User label for QR code.
+| `getAccount` | Function | `-` | `(req) => string`. User label for QR code.
 Defaults to `req.user.email \|\| req.user.id`. |
 | `sessionKey` | string | `'_2faEnrollment'` | Session key for pending enrollment. |
 | `ttl` | number | `600000` | Enrollment session TTL in ms (default 10 min). |
@@ -1654,7 +1654,7 @@ Defaults to `req.user.email \|\| req.user.id`. |
 | `period` | number | `30` | TOTP period in seconds. |
 | `algorithm` | string | `'sha1'` | HMAC algorithm. |
 | `digits` | number | `6` | Code length. |
-| `isEnabled` | Function | `—` | `(req) => boolean\|Promise<boolean>`.
+| `isEnabled` | Function | `-` | `(req) => boolean\|Promise<boolean>`.
 Check if 2FA is already enabled (for guarding start/disable). |
 
 
@@ -1691,7 +1691,7 @@ Zero-dependency typed environment variable system. Loads `.env` files, validates
 
 | Method | Signature | Description |
 |---|---|---|
-| `load` | `load([schema], [options])` | Load environment variables from `.env` files and validate against a typed schema. Files are loaded in precedence order (later overrides earlier): 1. `.env` — shared defaults 2. `.env.local` — local overrides (gitignored) 3. `.env.{NODE_ENV}` — environment-specific  (e.g. `.env.production`) 4. `.env.{NODE_ENV}.local` — env-specific local overrides Process environment variables (`process.env`) always take precedence. |
+| `load` | `load([schema], [options])` | Load environment variables from `.env` files and validate against a typed schema. Files are loaded in precedence order (later overrides earlier): 1. `.env` - shared defaults 2. `.env.local` - local overrides (gitignored) 3. `.env.{NODE_ENV}` - environment-specific  (e.g. `.env.production`) 4. `.env.{NODE_ENV}.local` - env-specific local overrides Process environment variables (`process.env`) always take precedence. |
 | `get` | `get(key)` | Get a typed environment variable. Can also be called as `env(key)`. |
 | `require` | `require(key)` | Get a required environment variable. Throws if missing. |
 | `has` | `has(key)` | Check if a variable is set (not undefined). |
@@ -1757,15 +1757,15 @@ Supported schema types for env.load() validation. Each type automatically coerce
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `string` | string | `—` | Pass-through. Supports min/max length and match regex constraints. |
-| `number` | number | `—` | Parsed via Number(). Supports min/max range. |
-| `integer` | integer | `—` | Parsed via parseInt(). Supports min/max range. |
-| `port` | port | `—` | Integer 0–65535. Rejects out-of-range values. |
-| `boolean` | boolean | `—` | Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'. |
-| `array` | array | `—` | Split by separator (default ','). |
-| `json` | json | `—` | Parsed via JSON.parse(). |
-| `url` | url | `—` | Validated via new URL(). |
-| `enum` | enum | `—` | Must be one of the 'values' array. |
+| `string` | string | `-` | Pass-through. Supports min/max length and match regex constraints. |
+| `number` | number | `-` | Parsed via Number(). Supports min/max range. |
+| `integer` | integer | `-` | Parsed via parseInt(). Supports min/max range. |
+| `port` | port | `-` | Integer 0–65535. Rejects out-of-range values. |
+| `boolean` | boolean | `-` | Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'. |
+| `array` | array | `-` | Split by separator (default ','). |
+| `json` | json | `-` | Parsed via JSON.parse(). |
+| `url` | url | `-` | Validated via new URL(). |
+| `enum` | enum | `-` | Must be one of the 'values' array. |
 
 
 ```js
@@ -1833,12 +1833,12 @@ Full-featured WebSocket connection wrapper over a raw TCP socket. Implements RFC
 |---|---|---|---|
 | `maxPayload` | number | `1048576` | Maximum incoming frame size in bytes. |
 | `pingInterval` | number | `30000` | Auto-ping interval in ms (0 to disable). |
-| `protocol` | string | `—` | Negotiated WebSocket sub-protocol. |
-| `extensions` | string | `—` | Negotiated WebSocket extensions. |
-| `headers` | object | `—` | HTTP headers from the upgrade request. |
-| `ip` | string | `—` | Remote IP address of the client. |
-| `query` | object | `—` | Parsed query-string parameters from the upgrade URL. |
-| `url` | string | `—` | The request URL path. |
+| `protocol` | string | `-` | Negotiated WebSocket sub-protocol. |
+| `extensions` | string | `-` | Negotiated WebSocket extensions. |
+| `headers` | object | `-` | HTTP headers from the upgrade request. |
+| `ip` | string | `-` | Remote IP address of the client. |
+| `query` | object | `-` | Parsed query-string parameters from the upgrade URL. |
+| `url` | string | `-` | The request URL path. |
 | `secure` | boolean | `false` | Whether the connection is over TLS. |
 
 
@@ -1909,12 +1909,12 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `secure` | boolean | `—` | Whether the connection is over TLS. |
-| `autoId` | boolean | `—` | Auto-increment event IDs. |
-| `startId` | number | `—` | Starting value for auto-ID (default 1). |
-| `lastEventId` | string | `—` | Last-Event-ID from the client reconnection header. |
-| `keepAlive` | number | `—` | Interval (ms) for automatic keep-alive pings. 0 to disable. |
-| `keepAliveComment` | string | `—` | Comment text for keep-alive pings (default `'ping'`). |
+| `secure` | boolean | `-` | Whether the connection is over TLS. |
+| `autoId` | boolean | `-` | Auto-increment event IDs. |
+| `startId` | number | `-` | Starting value for auto-ID (default 1). |
+| `lastEventId` | string | `-` | Last-Event-ID from the client reconnection header. |
+| `keepAlive` | number | `-` | Interval (ms) for automatic keep-alive pings. 0 to disable. |
+| `keepAliveComment` | string | `-` | Comment text for keep-alive pings (default `'ping'`). |
 
 
 ```javascript
@@ -1949,7 +1949,7 @@ gRPC server for zero-server. Intercepts HTTP/2 streams with `content-type: appli
 | `addService` | `addService(schema, serviceName, handlers, [opts])` | Register a service with its handlers. |
 | `addInterceptor` | `addInterceptor(fn)` | Add a global interceptor that runs before every gRPC call. Interceptors receive `(call, next)` and must call `next()` to continue. |
 | `handleStream` | `handleStream(stream, headers)` | Handle an incoming HTTP/2 stream. Determines if it's a gRPC call, routes to the correct handler, and manages the call lifecycle. |
-| `drain` | `drain([timeout])` | Begin draining — reject new calls and wait for active calls to finish. |
+| `drain` | `drain([timeout])` | Begin draining - reject new calls and wait for active calls to finish. |
 | `routes` | `routes()` | Get all registered routes for introspection. |
 
 
@@ -2006,28 +2006,28 @@ Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four c
 
 | Method | Signature | Description |
 |---|---|---|
-| `call` | `call(methodName, request, [opts])` | Make a unary gRPC call — send one message, receive one response. |
+| `call` | `call(methodName, request, [opts])` | Make a unary gRPC call - send one message, receive one response. |
 
 
 #### Server Streaming
 
 | Method | Signature | Description |
 |---|---|---|
-| `serverStream` | `serverStream(methodName, request, [opts])` | Make a server-streaming gRPC call — send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages. |
+| `serverStream` | `serverStream(methodName, request, [opts])` | Make a server-streaming gRPC call - send one request, receive a stream of responses. Returns an async-iterable that yields decoded response messages. |
 
 
 #### Client Streaming
 
 | Method | Signature | Description |
 |---|---|---|
-| `clientStream` | `clientStream(methodName, [opts])` | Make a client-streaming gRPC call — send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise. |
+| `clientStream` | `clientStream(methodName, [opts])` | Make a client-streaming gRPC call - send a stream of requests, receive one response. Returns a writable object with `write()`, `end()`, and a `response` Promise. |
 
 
 #### Bidirectional Streaming
 
 | Method | Signature | Description |
 |---|---|---|
-| `bidiStream` | `bidiStream(methodName, [opts])` | Make a bidirectional streaming gRPC call — send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable. |
+| `bidiStream` | `bidiStream(methodName, [opts])` | Make a bidirectional streaming gRPC call - send and receive streams simultaneously. Returns an object that is both writable (`write`/`end`) and async-iterable. |
 
 
 #### Lifecycle
@@ -2085,7 +2085,7 @@ Zero-dependency gRPC client using Node.js `http2.connect()`. Supports all four c
 
 ### Call Objects
 
-gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` — single request, single response - `ServerStreamCall` — single request, stream of responses - `ClientStreamCall` — stream of requests, single response - `BidiStreamCall` — bidirectional streaming
+gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf encode/decode, metadata, framing, deadline enforcement, and cancellation support. - `UnaryCall` - single request, single response - `ServerStreamCall` - single request, stream of responses - `ClientStreamCall` - stream of requests, single response - `BidiStreamCall` - bidirectional streaming
 
 #### Parameters
 
@@ -2145,7 +2145,7 @@ gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `maxMessageSize` | number | `—` | Max message size in bytes. |
+| `maxMessageSize` | number | `-` | Max message size in bytes. |
 | `compress` | boolean | `false` | Whether to compress outgoing messages. |
 
 
@@ -2184,7 +2184,7 @@ gRPC call objects for the four RPC patterns. Wraps HTTP/2 streams with protobuf 
 
 ### Proto3 Parser
 
-Zero-dependency proto3 parser — reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = "proto3";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`
+Zero-dependency proto3 parser - reads `.proto` file text and produces message descriptors, enum definitions, and service/RPC declarations that the codec and server use at runtime. Supports: - `syntax = "proto3";` - `package`, `option`, `import` (recorded but not resolved) - Scalar types, enums, nested messages, `oneof`, `map`, `repeated` - Services with unary, server-streaming, client-streaming, and bidi RPCs - Comments (// and /* ... *​/) - Reserved fields and field options like `[deprecated = true]`
 
 #### Parameters
 
@@ -2204,17 +2204,17 @@ Zero-dependency proto3 parser — reads `.proto` file text and produces message 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `filename` | string | `—` | File name for error messages. |
-| `basePath` | string | `—` | Base directory for resolving imports. |
+| `filename` | string | `-` | File name for error messages. |
+| `basePath` | string | `-` | Base directory for resolving imports. |
 | `resolveImports` | boolean | `false` | Whether to recursively parse imported files. |
 
 
 ```javascript
   const { parseProto } = require('./proto');
   const schema = parseProto(fs.readFileSync('chat.proto', 'utf8'));
-  // schema.messages  — { MessageName: { fields: [...] } }
-  // schema.enums     — { EnumName: { values: { ... } } }
-  // schema.services  — { ServiceName: { methods: { ... } } }
+  // schema.messages  - { MessageName: { fields: [...] } }
+  // schema.enums     - { EnumName: { values: { ... } } }
+  // schema.services  - { ServiceName: { methods: { ... } } }
 ```
 
 
@@ -2318,7 +2318,7 @@ Standard gRPC status codes (as defined by the gRPC specification). Each code has
 
 ### Metadata
 
-gRPC metadata container — typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.
+gRPC metadata container - typed key-value pairs transmitted as HTTP/2 headers (initial metadata) and trailers (trailing metadata). Keys ending in `-bin` carry binary values (base64-encoded on the wire). All other keys carry ASCII string values.
 
 #### Core Operations
 
@@ -2416,9 +2416,9 @@ gRPC Health Checking Protocol implementation (grpc.health.v1.Health). Supports `
 | `setStatus` | `setStatus(serviceName, status)` | Set the health status for a service. |
 | `getStatus` | `getStatus(serviceName)` | Get the current status for a service. |
 | `setAllNotServing` | `setAllNotServing()` | Set all registered services to NOT_SERVING for graceful shutdown. |
-| `Check` | `Check(call)` | Handle a Check RPC — unary request for current health of a service. |
-| `Watch` | `Watch(call)` | Handle a Watch RPC — server-stream that pushes status changes. Sends the current status immediately, then pushes on every change. |
-| `getSchema` | `getSchema()` | Get the schema object needed for server registration. Avoids requiring proto parsing — returns descriptors directly. |
+| `Check` | `Check(call)` | Handle a Check RPC - unary request for current health of a service. |
+| `Watch` | `Watch(call)` | Handle a Watch RPC - server-stream that pushes status changes. Sends the current status immediately, then pushes on every change. |
+| `getSchema` | `getSchema()` | Get the schema object needed for server registration. Avoids requiring proto parsing - returns descriptors directly. |
 | `getHandlers` | `getHandlers()` | Get the handler map for server registration. Binds methods to this instance. |
 
 
@@ -2521,13 +2521,13 @@ Client-side load balancing for gRPC. Distributes requests across multiple backen
 
 ### Credentials
 
-Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` — no external packages.
+Channel credentials for gRPC connections. Provides factory functions for creating insecure, SSL/TLS, and metadata-based credentials. Supports certificate rotation and credential composition. Uses only Node.js built-in `tls` and `fs` - no external packages.
 
 #### ChannelCredentials Class
 
 | Method | Signature | Description |
 |---|---|---|
-| `createInsecure` | `createInsecure()` | Create insecure (plaintext) credentials. No TLS — suitable for development or service-mesh environments where transport security is handled by the infrastructure. |
+| `createInsecure` | `createInsecure()` | Create insecure (plaintext) credentials. No TLS - suitable for development or service-mesh environments where transport security is handled by the infrastructure. |
 | `createSsl` | `createSsl([rootCerts], [clientKey], [clientCert], [opts])` | Create SSL/TLS credentials. |
 | `createSslFromFiles` | `createSslFromFiles([caPath], [keyPath], [certPath], [opts])` | Create SSL credentials from PEM file paths. Files are read once at creation time. |
 | `createFromMetadata` | `createFromMetadata(metadataGenerator)` | Create per-call metadata credentials. The generator function is called before each RPC to produce metadata headers (e.g. authorization tokens). |
@@ -2592,7 +2592,7 @@ Channel credentials for gRPC connections. Provides factory functions for creatin
 
 ### Proto Watcher
 
-Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** — disabled by default when `NODE_ENV=production`.
+Proto file hot-reload for development. Watches `.proto` files for changes using `fs.watch()` and re-parses/re-registers gRPC services automatically. **Dev-only** - disabled by default when `NODE_ENV=production`.
 
 #### Parameters
 
@@ -2608,13 +2608,13 @@ Proto file hot-reload for development. Watches `.proto` files for changes using 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `interceptors` | Function[] | `—` | Per-service interceptors. |
-| `maxMessageSize` | number | `—` | Max incoming message size. |
+| `interceptors` | Function[] | `-` | Per-service interceptors. |
+| `maxMessageSize` | number | `-` | Max incoming message size. |
 | `compress` | boolean | `false` | Compress outgoing messages. |
 | `debounce` | number | `300` | Debounce interval in ms. |
 | `production` | boolean | `false` | Allow in production. |
-| `onReload` | Function | `—` | `(schema) => void` callback after reload. |
-| `onError` | Function | `—` | `(err) => void` callback on parse/reload error. |
+| `onReload` | Function | `-` | `(schema) => void` callback after reload. |
+| `onError` | Function | `-` | `(err) => void` callback on parse/reload error. |
 
 
 ```javascript
@@ -2648,24 +2648,24 @@ Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS,
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `method` | string | `'GET'` | HTTP method. |
-| `headers` | object | `—` | Request headers. |
-| `body` | string \| Buffer \| object \| ReadableStream | `—` | Request body. |
-| `timeout` | number | `—` | Request timeout in ms. |
-| `signal` | AbortSignal | `—` | Abort signal for cancellation. |
-| `agent` | import('http').Agent | `—` | Custom HTTP agent. |
-| `onDownloadProgress` | Function | `—` | `({ loaded, total }) => void` download progress callback. |
-| `onUploadProgress` | Function | `—` | `({ loaded, total }) => void` upload progress callback. |
-| `rejectUnauthorized` | boolean | `—` | Reject connections with unverified certs (default: Node default `true`). TLS option — passed to `https.request()`. |
-| `ca` | string \| Buffer \| Array | `—` | Override default CA certificates. |
-| `cert` | string \| Buffer | `—` | Client certificate (PEM) for mutual TLS. |
-| `key` | string \| Buffer | `—` | Private key (PEM) for mutual TLS. |
-| `pfx` | string \| Buffer | `—` | PFX / PKCS12 bundle (alternative to cert+key). |
-| `passphrase` | string | `—` | Passphrase for the key or PFX. |
-| `servername` | string | `—` | SNI server name override. |
-| `ciphers` | string | `—` | Colon-separated cipher list. |
-| `secureProtocol` | string | `—` | SSL/TLS protocol method name. |
-| `minVersion` | string | `—` | Minimum TLS version (`'TLSv1.2'`, etc.). |
-| `maxVersion` | string | `—` | Maximum TLS version. |
+| `headers` | object | `-` | Request headers. |
+| `body` | string \| Buffer \| object \| ReadableStream | `-` | Request body. |
+| `timeout` | number | `-` | Request timeout in ms. |
+| `signal` | AbortSignal | `-` | Abort signal for cancellation. |
+| `agent` | import('http').Agent | `-` | Custom HTTP agent. |
+| `onDownloadProgress` | Function | `-` | `({ loaded, total }) => void` download progress callback. |
+| `onUploadProgress` | Function | `-` | `({ loaded, total }) => void` upload progress callback. |
+| `rejectUnauthorized` | boolean | `-` | Reject connections with unverified certs (default: Node default `true`). TLS option - passed to `https.request()`. |
+| `ca` | string \| Buffer \| Array | `-` | Override default CA certificates. |
+| `cert` | string \| Buffer | `-` | Client certificate (PEM) for mutual TLS. |
+| `key` | string \| Buffer | `-` | Private key (PEM) for mutual TLS. |
+| `pfx` | string \| Buffer | `-` | PFX / PKCS12 bundle (alternative to cert+key). |
+| `passphrase` | string | `-` | Passphrase for the key or PFX. |
+| `servername` | string | `-` | SNI server name override. |
+| `ciphers` | string | `-` | Colon-separated cipher list. |
+| `secureProtocol` | string | `-` | SSL/TLS protocol method name. |
+| `minVersion` | string | `-` | Minimum TLS version (`'TLSv1.2'`, etc.). |
+| `maxVersion` | string | `-` | Maximum TLS version. |
 
 
 ```javascript
@@ -2687,7 +2687,7 @@ Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS,
 
 ### Database
 
-ORM entry point.  Provides the `Database` factory that creates a connection to a backing store, the base `Model` class, the `TYPES` enum, and schema helpers. Supported adapters (all optional "bring your own driver"): - `memory`  — in-process (no driver needed) - `json`    — JSON file persistence (no driver needed) - `sqlite`  — requires `better-sqlite3` - `mysql`   — requires `mysql2` - `postgres` — requires `pg` - `mongo`   — requires `mongodb`
+ORM entry point.  Provides the `Database` factory that creates a connection to a backing store, the base `Model` class, the `TYPES` enum, and schema helpers. Supported adapters (all optional "bring your own driver"): - `memory`  - in-process (no driver needed) - `json`    - JSON file persistence (no driver needed) - `sqlite`  - requires `better-sqlite3` - `mysql`   - requires `mysql2` - `postgres` - requires `pg` - `mongo`   - requires `mongodb`
 
 #### Parameters
 
@@ -2703,7 +2703,7 @@ ORM entry point.  Provides the `Database` factory that creates a connection to a
 | `connect` | `connect(type, [options])` | Create a Database connection. |
 | `register` | `register(ModelClass)` | Register a Model class with this database. Binds the adapter to the model so all CRUD operations go through it. |
 | `registerAll` | `registerAll(...models)` | Register multiple Model classes at once. |
-| `sync` | `sync()` | Synchronise all registered models — create tables if they don't exist. Tables are ordered so referenced tables are created first (topological sort). |
+| `sync` | `sync()` | Synchronise all registered models - create tables if they don't exist. Tables are ordered so referenced tables are created first (topological sort). |
 | `drop` | `drop()` | Drop all registered model tables (in reverse order to respect FK deps). |
 | `close` | `close()` | Close the underlying connection / pool. |
 | `model` | `model(name)` | Get a registered model by table name. |
@@ -2825,7 +2825,7 @@ Base Model class for defining database-backed entities. Provides static CRUD met
 | `last` | `last([conditions])` | Find the last record matching optional conditions. |
 | `paginate` | `paginate(page, [perPage], [conditions])` | Rich pagination with metadata. Returns `{ data, total, page, perPage, pages, hasNext, hasPrev }`. |
 | `chunk` | `chunk(size, fn, [conditions])` | Process all matching records in batches. Calls `fn(batch, batchIndex)` for each chunk. |
-| `all` | `all([conditions])` | Get all records, optionally filtered. Alias for find() — for LINQ-familiarity. |
+| `all` | `all([conditions])` | Get all records, optionally filtered. Alias for find() - for LINQ-familiarity. |
 | `random` | `random([conditions])` | Get a random record. |
 | `pluck` | `pluck(field, [conditions])` | Pluck values for a single column across all matching records. |
 
@@ -3130,7 +3130,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 | Method | Signature | Description |
 |---|---|---|
 | `with` | `with(...relations)` | Eager-load one or more relationships. Batches related queries to avoid the N+1 problem. Accepts either relation names or a relation name + a scope function to constrain the sub-query. |
-| `include` | `include(...relations)` | Alias for with() — mirrors Entity Framework include syntax. |
+| `include` | `include(...relations)` | Alias for with() - mirrors Entity Framework include syntax. |
 | `withCount` | `withCount(...relations)` | Eager-count one or more relationships without loading the records. Adds a `RelationName_count` field to each result instance. |
 | `onReplica` | `onReplica()` | Force this query to execute against a read replica (if configured). Falls back to primary adapter if no replica manager is attached. |
 | `explain` | `explain([options])` | Get the query execution plan from the adapter. For SQL adapters, returns EXPLAIN / EXPLAIN QUERY PLAN output. For the memory adapter, returns a plan description object. |
@@ -3151,7 +3151,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 | `avg` | `avg(field)` | AVG of a numeric column. |
 | `min` | `min(field)` | MIN of a column. |
 | `max` | `max(field)` | MAX of a column. |
-| `then` | `then(resolve, reject)` | Make Query thenable — allows `await query`. |
+| `then` | `then(resolve, reject)` | Make Query thenable - allows `await query`. |
 
 
 #### Aliases
@@ -3160,12 +3160,12 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 |---|---|---|
 | `take` | `take(n)` | Alias for limit (LINQ naming). |
 | `skip` | `skip(n)` | Alias for offset (LINQ naming). |
-| `toArray` | `toArray()` | Alias for exec — explicitly convert to array. |
+| `toArray` | `toArray()` | Alias for exec - explicitly convert to array. |
 | `orderByDesc` | `orderByDesc(field)` | Shorthand for orderBy(field, 'desc'). |
 | `orderByDescending` | `orderByDescending(field)` | C# alias: OrderByDescending. |
-| `firstOrDefault` | `firstOrDefault()` | Alias for first() — C# FirstOrDefault returns null on empty. |
-| `average` | `average(field)` | Alias for avg() — C# naming. |
-| `aggregate` | `aggregate(fn, seed)` | Alias for reduce() — C# Aggregate naming. |
+| `firstOrDefault` | `firstOrDefault()` | Alias for first() - C# FirstOrDefault returns null on empty. |
+| `average` | `average(field)` | Alias for avg() - C# naming. |
+| `aggregate` | `aggregate(fn, seed)` | Alias for reduce() - C# Aggregate naming. |
 
 
 #### Element Operators
@@ -3173,7 +3173,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 | Method | Signature | Description |
 |---|---|---|
 | `last` | `last()` | Execute and return the last result. Reverses the first orderBy or defaults to primary key DESC. |
-| `lastOrDefault` | `lastOrDefault()` | Alias for last() — C# naming. |
+| `lastOrDefault` | `lastOrDefault()` | Alias for last() - C# naming. |
 | `single` | `single()` | Returns the only element. Throws if count !== 1. |
 | `singleOrDefault` | `singleOrDefault()` | Returns the only element, or null if empty. Throws if more than one. |
 | `elementAt` | `elementAt(index)` | Get element at a specific index. |
@@ -3205,7 +3205,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 
 | Method | Signature | Description |
 |---|---|---|
-| `selectMany` | `selectMany(fn)` | FlatMap — project each element to an array and flatten. |
+| `selectMany` | `selectMany(fn)` | FlatMap - project each element to an array and flatten. |
 | `zip` | `zip(other, fn)` | Combine two result sets element-wise. |
 | `toDictionary` | `toDictionary(keyFn, [valueFn])` | Convert results to a Map keyed by a selector. |
 | `toLookup` | `toLookup(keyFn)` | Group results into a Map of arrays keyed by a selector. |
@@ -3245,7 +3245,7 @@ Fluent query builder that produces adapter-agnostic query objects. Each method r
 | Method | Signature | Description |
 |---|---|---|
 | `when` | `when(condition, fn)` | Conditionally apply query logic. If `condition` is truthy, calls `fn(query)`. Perfect for optional filters. |
-| `unless` | `unless(condition, fn)` | Inverse of when — apply query logic when condition is falsy. |
+| `unless` | `unless(condition, fn)` | Inverse of when - apply query logic when condition is falsy. |
 | `tap` | `tap(fn)` | Inspect the query without breaking the chain. Calls `fn(this)` for side effects (logging, debugging). |
 | `chunk` | `chunk(size, fn)` | Process results in batches. Calls `fn(batch, batchIndex)` for each chunk. Useful for processing large datasets without loading everything into memory. |
 | `each` | `each(fn)` | Execute and iterate each result with a callback. |
@@ -3313,7 +3313,7 @@ SQLite adapter using the optional `better-sqlite3` driver. Requires: `npm instal
 | `indexes` | `indexes(table)` | Get indexes for a table. |
 | `foreignKeys` | `foreignKeys(table)` | Get foreign keys for a table. |
 | `tableStatus` | `tableStatus([table])` | Get detailed table status (size estimates, row counts). |
-| `overview` | `overview()` | Get counts for all tables — structured database overview. |
+| `overview` | `overview()` | Get counts for all tables - structured database overview. |
 | `pageInfo` | `pageInfo()` | Get the page size and page count (helps estimate table overhead). |
 | `compileOptions` | `compileOptions()` | Get compile-time options that SQLite was built with. |
 | `cacheStatus` | `cacheStatus()` | Get the number of cached prepared statements. |
@@ -3341,9 +3341,9 @@ SQLite adapter using the optional `better-sqlite3` driver. Requires: `npm instal
 | `filename` | string | `':memory:'` | Path to SQLite file, or ':memory:'. |
 | `readonly` | boolean | `false` | Open database in read-only mode. |
 | `fileMustExist` | boolean | `false` | Throw if the database file does not exist. |
-| `verbose` | boolean | `—` | Log every SQL statement (debug). |
+| `verbose` | boolean | `-` | Log every SQL statement (debug). |
 | `createDir` | boolean | `true` | Automatically create parent directories for the file. |
-| `pragmas` | object | `—` | PRAGMA settings to apply on open. |
+| `pragmas` | object | `-` | PRAGMA settings to apply on open. |
 | `pragmas.journal_mode` | string | `'WAL'` | Journal mode (WAL, DELETE, TRUNCATE, MEMORY, OFF). |
 | `pragmas.foreign_keys` | string | `'ON'` | Enforce foreign-key constraints. |
 | `pragmas.busy_timeout` | string | `'5000'` | Milliseconds to wait on a locked database. |
@@ -3351,11 +3351,11 @@ SQLite adapter using the optional `better-sqlite3` driver. Requires: `npm instal
 | `pragmas.cache_size` | string | `'-64000'` | Page cache size (negative = KiB, e.g. -64000 = 64 MB). |
 | `pragmas.temp_store` | string | `'MEMORY'` | Temp tables in memory for speed. |
 | `pragmas.mmap_size` | string | `'268435456'` | Memory-mapped I/O size (256 MB). |
-| `pragmas.page_size` | string | `—` | Page size in bytes (must be set before WAL). |
-| `pragmas.auto_vacuum` | string | `—` | Auto-vacuum mode (NONE, FULL, INCREMENTAL). |
-| `pragmas.secure_delete` | string | `—` | Overwrite deleted content with zeros. |
-| `pragmas.wal_autocheckpoint` | string | `—` | Pages before auto-checkpoint (default 1000). |
-| `pragmas.locking_mode` | string | `—` | NORMAL or EXCLUSIVE. |
+| `pragmas.page_size` | string | `-` | Page size in bytes (must be set before WAL). |
+| `pragmas.auto_vacuum` | string | `-` | Auto-vacuum mode (NONE, FULL, INCREMENTAL). |
+| `pragmas.secure_delete` | string | `-` | Overwrite deleted content with zeros. |
+| `pragmas.wal_autocheckpoint` | string | `-` | Pages before auto-checkpoint (default 1000). |
+| `pragmas.locking_mode` | string | `-` | NORMAL or EXCLUSIVE. |
 
 
 ```javascript
@@ -3407,9 +3407,9 @@ MySQL / MariaDB adapter using the optional `mysql2` driver. Requires: `npm insta
 | `indexes` | `indexes(table)` | Get indexes for a table. |
 | `tableCharset` | `tableCharset(table)` | Get the charset and collation of a table. |
 | `foreignKeys` | `foreignKeys(table)` | Get foreign keys for a table. |
-| `overview` | `overview()` | Get full database overview — all tables with size and row counts. Returns a structured database summary. |
+| `overview` | `overview()` | Get full database overview - all tables with size and row counts. Returns a structured database summary. |
 | `variables` | `variables([filter])` | Get the server variables (global settings). |
-| `processlist` | `processlist()` | Get processlist — active connections/queries. |
+| `processlist` | `processlist()` | Get processlist - active connections/queries. |
 | `alterTable` | `alterTable(table, opts)` | Alter a table's engine, charset, or collation. |
 
 
@@ -3460,7 +3460,7 @@ MySQL / MariaDB adapter using the optional `mysql2` driver. Requires: `npm insta
 | `port` | number | `3306` | Server port. |
 | `user` | string | `'root'` | Database user. |
 | `password` | string | `''` | Database password. |
-| `database` | string | `—` | Database name. |
+| `database` | string | `-` | Database name. |
 | `connectionLimit` | number | `10` | Max pool connections. |
 | `waitForConnections` | boolean | `true` | Queue when pool is full. |
 | `queueLimit` | number | `0` | Max queued requests (0 = unlimited). |
@@ -3469,7 +3469,7 @@ MySQL / MariaDB adapter using the optional `mysql2` driver. Requires: `npm insta
 | `timezone` | string | `'Z'` | Session timezone. |
 | `multipleStatements` | boolean | `false` | Allow multi-statement queries. |
 | `decimalNumbers` | boolean | `false` | Return DECIMAL as numbers instead of strings. |
-| `ssl` | string | `—` | SSL profile or options object. |
+| `ssl` | string | `-` | SSL profile or options object. |
 
 
 ```javascript
@@ -3526,7 +3526,7 @@ PostgreSQL adapter using the optional `pg` driver. Requires: `npm install pg`
 | `tableSizeFormatted` | `tableSizeFormatted(table)` | Get table size in human-readable format. |
 | `indexes` | `indexes(table)` | Get indexes for a table. |
 | `foreignKeys` | `foreignKeys(table)` | Get foreign keys for a table. |
-| `overview` | `overview()` | Get full database overview — all tables with size and row counts. |
+| `overview` | `overview()` | Get full database overview - all tables with size and row counts. |
 | `variables` | `variables([filter])` | Get server settings/variables. |
 | `processlist` | `processlist()` | Get active backends (like MySQL SHOW PROCESSLIST). |
 | `constraints` | `constraints(table)` | Get table constraints (PRIMARY KEY, UNIQUE, CHECK, FK). |
@@ -3577,16 +3577,16 @@ PostgreSQL adapter using the optional `pg` driver. Requires: `npm install pg`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `user` | string | `—` | Database user. |
-| `password` | string | `—` | Database password. |
-| `database` | string | `—` | Database name. |
+| `user` | string | `-` | Database user. |
+| `password` | string | `-` | Database password. |
+| `database` | string | `-` | Database name. |
 | `max` | number | `10` | Max pool size. |
 | `idleTimeoutMillis` | number | `10000` | Idle client timeout. |
 | `connectionTimeoutMillis` | number | `0` | Connection timeout (0 = no limit). |
-| `ssl` | boolean \| object | `—` | SSL mode or TLS options. |
-| `connectionString` | string | `—` | Full connection URI (overrides individual settings). |
-| `application_name` | string | `—` | Identify the app in pg_stat_activity. |
-| `statement_timeout` | number | `—` | Statement timeout in ms. |
+| `ssl` | boolean \| object | `-` | SSL mode or TLS options. |
+| `connectionString` | string | `-` | Full connection URI (overrides individual settings). |
+| `application_name` | string | `-` | Identify the app in pg_stat_activity. |
+| `statement_timeout` | number | `-` | Statement timeout in ms. |
 
 
 ```javascript
@@ -3691,7 +3691,7 @@ MongoDB adapter using the optional `mongodb` driver. Requires: `npm install mong
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `database` | string | `—` | Database name. |
+| `database` | string | `-` | Database name. |
 | `maxPoolSize` | number | `10` | Max connection pool size. |
 | `minPoolSize` | number | `0` | Min connection pool size. |
 | `connectTimeoutMS` | number | `10000` | Connection timeout. |
@@ -3699,9 +3699,9 @@ MongoDB adapter using the optional `mongodb` driver. Requires: `npm install mong
 | `serverSelectionTimeoutMS` | number | `30000` | Server selection timeout. |
 | `retryWrites` | boolean | `true` | Retry writes on network errors. |
 | `retryReads` | boolean | `true` | Retry reads on network errors. |
-| `authSource` | string | `—` | Auth database name. |
-| `replicaSet` | string | `—` | Replica set name. |
-| `clientOptions` | object | `—` | Extra MongoClient options (passed directly). |
+| `authSource` | string | `-` | Auth database name. |
+| `replicaSet` | string | `-` | Replica set name. |
+| `clientOptions` | object | `-` | Extra MongoClient options (passed directly). |
 
 
 ```javascript
@@ -3880,16 +3880,16 @@ Redis database adapter for the zero-server ORM. Uses `ioredis` as the driver. St
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `url` | string | `—` | Redis connection URL. |
+| `url` | string | `-` | Redis connection URL. |
 | `host` | string | `'127.0.0.1'` | Redis host. |
 | `port` | number | `6379` | Redis port. |
-| `password` | string | `—` | Redis password. |
+| `password` | string | `-` | Redis password. |
 | `db` | number | `0` | Redis database index. |
 | `prefix` | string | `'zh:'` | Key prefix for namespacing. |
 | `maxRetries` | number | `3` | Max connection retries. |
 | `lazyConnect` | boolean | `false` | If true, defer connection until first operation. |
-| `tls` | object | `—` | TLS options for secure connections. |
-| `keyPrefix` | string | `—` | Alias for prefix (ioredis compat). |
+| `tls` | object | `-` | TLS options for secure connections. |
+| `keyPrefix` | string | `-` | Alias for prefix (ioredis compat). |
 | `connectTimeout` | number | `10000` | Connection timeout in ms. |
 
 
@@ -3979,7 +3979,7 @@ In-memory database adapter. Zero-dependency, perfect for testing, prototyping, a
 
 ### JSON Adapter
 
-JSON file-backed database adapter. Persists data to JSON files on disk — one file per table. Zero-dependency, suitable for prototyping, small apps, and embedded scenarios. Uses atomic writes for safety.
+JSON file-backed database adapter. Persists data to JSON files on disk - one file per table. Zero-dependency, suitable for prototyping, small apps, and embedded scenarios. Uses atomic writes for safety.
 
 #### JSON Adapter Utilities
 
@@ -4011,7 +4011,7 @@ JSON file-backed database adapter. Persists data to JSON files on disk — one f
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `dir` | string | `—` | Directory to store JSON files. Created if needed. |
+| `dir` | string | `-` | Directory to store JSON files. Created if needed. |
 | `pretty` | boolean | `true` | Pretty-print JSON files. |
 | `flushInterval` | number | `50` | Debounce interval in ms for writes. |
 | `autoFlush` | boolean | `true` | Automatically flush writes (set false for manual flush()). |
@@ -4059,7 +4059,7 @@ Versioned migration framework for the zero-server ORM. Supports up/down migratio
 | `rollback` | `rollback()` | Rollback the last batch of migrations. |
 | `rollbackAll` | `rollbackAll()` | Rollback all migrations (in reverse order, batch by batch). |
 | `reset` | `reset()` | Reset the database: rollback all migrations, then re-run all. |
-| `fresh` | `fresh()` | Fresh start: drop ALL tables (not just migrated ones) then re-migrate. ⚠️  DESTRUCTIVE — use with caution. |
+| `fresh` | `fresh()` | Fresh start: drop ALL tables (not just migrated ones) then re-migrate. ⚠️  DESTRUCTIVE - use with caution. |
 | `status` | `status()` | Get the current migration status. |
 | `hasPending` | `hasPending()` | Check if there are any pending migrations. |
 | `list` | `list()` | Get the list of registered migration names. |
@@ -4137,7 +4137,7 @@ Query caching layer for the zero-server ORM. Provides an in-memory LRU cache wit
 | `maxEntries` | number | `1000` | Maximum cache entries (LRU eviction). |
 | `defaultTTL` | number | `60` | Default TTL in seconds (0 = no expiry). |
 | `prefix` | string | `'qc:'` | Key prefix for cache namespacing. |
-| `redis` | object | `—` | Redis adapter instance for distributed caching. |
+| `redis` | object | `-` | Redis adapter instance for distributed caching. |
 
 
 ```javascript
@@ -4333,7 +4333,7 @@ Base Seeder class and SeederRunner for orchestrating database seeding operations
 | `port` | `port([options])` | Random network port number. |
 | `httpMethod` | `httpMethod([options])` | Random HTTP method. |
 | `userAgent` | `userAgent()` | Random user agent string (realistic browser/client). |
-| `password` | `password([options])` | Random password-like string. NOT suitable for real passwords — uses a PRNG seeded from Math.random, not a CSPRNG. |
+| `password` | `password([options])` | Random password-like string. NOT suitable for real passwords - uses a PRNG seeded from Math.random, not a CSPRNG. |
 
 
 #### Colors
@@ -4394,10 +4394,10 @@ Query profiling, slow query detection, and automatic N+1 detection. Attach to a 
 | `enabled` | boolean | `true` | Enable/disable profiling. |
 | `slowThreshold` | number | `100` | Duration (ms) above which a query is "slow". |
 | `maxHistory` | number | `1000` | Maximum recorded query entries. |
-| `onSlow` | Function | `—` | Callback on slow query: (entry) => {}. |
+| `onSlow` | Function | `-` | Callback on slow query: (entry) => {}. |
 | `n1Threshold` | number | `5` | Minimum rapid same-table SELECTs to flag N+1. |
 | `n1Window` | number | `100` | Time window (ms) for N+1 detection. |
-| `onN1` | Function | `—` | Callback on N+1 detection: (info) => {}. |
+| `onN1` | Function | `-` | Callback on N+1 detection: (info) => {}. |
 
 
 ```javascript
@@ -4489,10 +4489,10 @@ Database view management for the ORM. Supports creating, dropping, and querying 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `query` | Query | `—` | Query builder instance defining the view's SELECT. |
-| `sql` | string | `—` | Raw SQL for the view definition (SQL adapters only). |
-| `model` | typeof Model | `—` | Model class the view is based on. |
-| `schema` | object | `—` | Column schema for the view (optional; inferred from model if omitted). |
+| `query` | Query | `-` | Query builder instance defining the view's SELECT. |
+| `sql` | string | `-` | Raw SQL for the view definition (SQL adapters only). |
+| `model` | typeof Model | `-` | Model class the view is based on. |
+| `schema` | object | `-` | Column schema for the view (optional; inferred from model if omitted). |
 | `materialized` | boolean | `false` | Whether to create a materialized view (PostgreSQL only). |
 
 
@@ -4541,10 +4541,10 @@ Full-text search integration for the ORM. Provides a unified API across PostgreS
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `fields` | string[] | `—` | Column names to include in the search index. |
-| `weights` | Object<string, string> | `—` | Weight map for fields (e.g. `{ title: 'A', body: 'B' }`). |
+| `fields` | string[] | `-` | Column names to include in the search index. |
+| `weights` | Object<string, string> | `-` | Weight map for fields (e.g. `{ title: 'A', body: 'B' }`). |
 | `language` | string | `'english'` | Language for stemming. |
-| `indexName` | string | `—` | Custom index name. |
+| `indexName` | string | `-` | Custom index name. |
 
 
 ```javascript
@@ -4594,8 +4594,8 @@ Geo-spatial query support for the ORM. Provides distance calculations, bounding 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `latField` | string | `—` | Column name for latitude. |
-| `lngField` | string | `—` | Column name for longitude. |
+| `latField` | string | `-` | Column name for latitude. |
+| `lngField` | string | `-` | Column name for longitude. |
 | `unit` | string | `'km'` | Distance unit: 'km' or 'mi'. |
 
 
@@ -4748,11 +4748,11 @@ Automatic audit logging for the ORM. Tracks who changed what and when, with diff
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `table` | string | `'_audit_log'` | Table name for audit entries. |
-| `include` | Array<typeof import('./model')> | `—` | Models to audit (all registered if omitted). |
-| `exclude` | Array<typeof import('./model')> | `—` | Models to exclude from auditing. |
-| `excludeFields` | string[] | `—` | Fields to never log (e.g. passwords). |
-| `actorField` | string | `—` | Context property for the actor identifier. |
-| `storage` | import('./index').Database | `—` | Separate database for audit storage. |
+| `include` | Array<typeof import('./model')> | `-` | Models to audit (all registered if omitted). |
+| `exclude` | Array<typeof import('./model')> | `-` | Models to exclude from auditing. |
+| `excludeFields` | string[] | `-` | Fields to never log (e.g. passwords). |
+| `actorField` | string | `-` | Context property for the actor identifier. |
+| `storage` | import('./index').Database | `-` | Separate database for audit storage. |
 | `timestamps` | boolean | `true` | Include timestamps in audit entries. |
 | `diffs` | boolean | `true` | Store field-level diffs for updates. |
 
@@ -4891,9 +4891,9 @@ Stored procedures, functions, and trigger management for the ORM. Provides a cro
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `params` | Array<{name: string, type: string, direction?: string}> | `[` | ] - Parameters. |
-| `body` | string | `—` | Procedure body (SQL). |
+| `body` | string | `-` | Procedure body (SQL). |
 | `language` | string | `'sql'` | Language (sql, plpgsql, javascript). |
-| `options` | object | `—` | Adapter-specific options. |
+| `options` | object | `-` | Adapter-specific options. |
 
 
 ```javascript
@@ -4944,20 +4944,20 @@ Structured, enterprise-grade request logger. Outputs JSON or pretty-text with co
 
 | Method | Signature | Description |
 |---|---|---|
-| `structuredLogger` | `structuredLogger([opts])` | Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` — a child logger with bound request context so handlers can log with full correlation. |
+| `structuredLogger` | `structuredLogger([opts])` | Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` - a child logger with bound request context so handlers can log with full correlation. |
 
 
 #### Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `level` | string \| number | `—` | Minimum log level. |
-| `context` | object | `—` | Bound context fields merged into every entry. |
-| `transport` | Function | `—` | Custom transport `(entry) => void`. |
+| `level` | string \| number | `-` | Minimum log level. |
+| `context` | object | `-` | Bound context fields merged into every entry. |
+| `transport` | Function | `-` | Custom transport `(entry) => void`. |
 | `json` | boolean | `false` | Force JSON output. |
-| `colors` | boolean | `—` | Enable ANSI colors (default: TTY detection). |
+| `colors` | boolean | `-` | Enable ANSI colors (default: TTY detection). |
 | `timestamps` | boolean | `true` | Include timestamps. |
-| `stream` | WritableStream | `—` | Output stream (default: stdout/stderr). |
+| `stream` | WritableStream | `-` | Output stream (default: stdout/stderr). |
 
 
 ```javascript
@@ -5059,8 +5059,8 @@ Zero-dependency metrics registry with Prometheus-compatible text exposition form
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `name` | string | `—` | Metric name (snake_case recommended). |
-| `help` | string | `—` | Human-readable description. |
+| `name` | string | `-` | Metric name (snake_case recommended). |
+| `help` | string | `-` | Human-readable description. |
 | `labels` | string[] | `[` | ] - Label names. |
 
 
@@ -5144,12 +5144,12 @@ Zero-dependency distributed tracing with W3C Trace Context propagation. Provides
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `name` | string | `—` | Operation name. |
-| `traceId` | string | `—` | Trace ID. |
-| `parentSpanId` | string | `—` | Parent span ID. |
+| `name` | string | `-` | Operation name. |
+| `traceId` | string | `-` | Trace ID. |
+| `parentSpanId` | string | `-` | Parent span ID. |
 | `kind` | string | `'server'` | Span kind: 'server', 'client', 'producer', 'consumer', 'internal'. |
-| `attributes` | object | `—` | Initial attributes. |
-| `tracer` | Tracer | `—` | Tracer instance for export. |
+| `attributes` | object | `-` | Initial attributes. |
+| `tracer` | Tracer | `-` | Tracer instance for export. |
 
 
 ```javascript
@@ -5203,7 +5203,7 @@ Health check middleware with liveness and readiness probes. Kubernetes-compatibl
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `maxHeapUsedPercent` | number | `90` | Max heap usage percentage. |
-| `maxRssBytes` | number | `—` | Max RSS in bytes. |
+| `maxRssBytes` | number | `-` | Max RSS in bytes. |
 
 
 ```javascript
@@ -5271,7 +5271,7 @@ Graceful shutdown manager for zero-server applications. Tracks active connection
 
 | Method | Signature | Description |
 |---|---|---|
-| `installSignalHandlers` | `installSignalHandlers()` | Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times — handlers are only installed once. |
+| `installSignalHandlers` | `installSignalHandlers()` | Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times - handlers are only installed once. |
 | `removeSignalHandlers` | `removeSignalHandlers()` | Remove previously installed signal handlers. Called automatically during shutdown cleanup. |
 
 
@@ -5279,7 +5279,7 @@ Graceful shutdown manager for zero-server applications. Tracks active connection
 
 | Method | Signature | Description |
 |---|---|---|
-| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Drain active gRPC calls 6. Wait for in-flight HTTP requests to complete (with timeout) 7. Close all registered ORM database connections 8. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated. |
+| `shutdown` | `shutdown([opts])` | Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` - run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Drain active gRPC calls 6. Wait for in-flight HTTP requests to complete (with timeout) 7. Close all registered ORM database connections 8. Emit `'shutdown'` - final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated. |
 | `isDraining` | `isDraining()` | Whether the server is currently draining (rejecting new requests). |
 | `isClosed` | `isClosed()` | Whether the server has fully shut down. |
 
@@ -5288,7 +5288,7 @@ Graceful shutdown manager for zero-server applications. Tracks active connection
   const app = createApp();
   app.listen(3000);
 
-  // Automatic — SIGTERM/SIGINT handlers registered by listen()
+  // Automatic - SIGTERM/SIGINT handlers registered by listen()
   // Manual trigger:
   await app.shutdown();
 ```
@@ -5339,7 +5339,7 @@ Clustering support for zero-server applications. Forks worker processes, manages
 
 | Method | Signature | Description |
 |---|---|---|
-| `reload` | `reload()` | Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time — a new worker is spawned and confirmed listening before the old one is disconnected. |
+| `reload` | `reload()` | Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time - a new worker is spawned and confirmed listening before the old one is disconnected. |
 | `shutdown` | `shutdown([opts])` | Shut down the entire cluster gracefully. Sends `'shutdown'` IPC message to all workers, then waits for them to exit. Workers that don't exit within the timeout are killed. |
 
 
@@ -5354,7 +5354,7 @@ Clustering support for zero-server applications. Forks worker processes, manages
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `workers` | number | `—` | Number of worker processes (default: CPU count). |
+| `workers` | number | `-` | Number of worker processes (default: CPU count). |
 | `respawn` | boolean | `true` | Automatically respawn crashed workers. |
 | `respawnDelay` | number | `1000` | Initial delay (ms) before respawning. |
 | `maxRespawnDelay` | number | `30000` | Maximum respawn delay after backoff. |
@@ -5428,33 +5428,33 @@ HTTP error classes with status codes, error codes, and structured details. Every
 
 | Method | Signature | Description |
 |---|---|---|
-| `DatabaseError` | `new DatabaseError([message], [opts])` | Database / ORM error — wraps adapter-level failures. |
-| `ConfigurationError` | `new ConfigurationError([message], [opts])` | Configuration error — thrown when app/adapter configuration is invalid. |
-| `MiddlewareError` | `new MiddlewareError([message], [opts])` | Middleware error — a middleware function failed unexpectedly. |
-| `RoutingError` | `new RoutingError([message], [opts])` | Routing error — thrown when route resolution fails. |
-| `TimeoutError` | `new TimeoutError([message], [opts])` | Timeout error — operation exceeded allowed time. |
+| `DatabaseError` | `new DatabaseError([message], [opts])` | Database / ORM error - wraps adapter-level failures. |
+| `ConfigurationError` | `new ConfigurationError([message], [opts])` | Configuration error - thrown when app/adapter configuration is invalid. |
+| `MiddlewareError` | `new MiddlewareError([message], [opts])` | Middleware error - a middleware function failed unexpectedly. |
+| `RoutingError` | `new RoutingError([message], [opts])` | Routing error - thrown when route resolution fails. |
+| `TimeoutError` | `new TimeoutError([message], [opts])` | Timeout error - operation exceeded allowed time. |
 
 
 #### ORM-Specific Error Classes
 
 | Method | Signature | Description |
 |---|---|---|
-| `ConnectionError` | `new ConnectionError([message], [opts])` | Connection error — database connection failures with retry context. |
-| `MigrationError` | `new MigrationError([message], [opts])` | Migration error — migration execution failures. |
-| `TransactionError` | `new TransactionError([message], [opts])` | Transaction error — transaction commit/rollback failures. |
-| `QueryError` | `new QueryError([message], [opts])` | Query error — query execution failures with SQL context. |
-| `AdapterError` | `new AdapterError([message], [opts])` | Adapter error — adapter-level issues (driver not found, unsupported operation). |
-| `CacheError` | `new CacheError([message], [opts])` | Cache error — caching layer failures. |
+| `ConnectionError` | `new ConnectionError([message], [opts])` | Connection error - database connection failures with retry context. |
+| `MigrationError` | `new MigrationError([message], [opts])` | Migration error - migration execution failures. |
+| `TransactionError` | `new TransactionError([message], [opts])` | Transaction error - transaction commit/rollback failures. |
+| `QueryError` | `new QueryError([message], [opts])` | Query error - query execution failures with SQL context. |
+| `AdapterError` | `new AdapterError([message], [opts])` | Adapter error - adapter-level issues (driver not found, unsupported operation). |
+| `CacheError` | `new CacheError([message], [opts])` | Cache error - caching layer failures. |
 
 
 #### Phase 4 Error Classes
 
 | Method | Signature | Description |
 |---|---|---|
-| `TenancyError` | `new TenancyError([message], [opts])` | Tenancy error — multi-tenancy operation failures. |
-| `AuditError` | `new AuditError([message], [opts])` | Audit error — audit logging failures. |
-| `PluginError` | `new PluginError([message], [opts])` | Plugin error — plugin registration or lifecycle failures. |
-| `ProcedureError` | `new ProcedureError([message], [opts])` | Procedure error — stored procedure/function failures. |
+| `TenancyError` | `new TenancyError([message], [opts])` | Tenancy error - multi-tenancy operation failures. |
+| `AuditError` | `new AuditError([message], [opts])` | Audit error - audit logging failures. |
+| `PluginError` | `new PluginError([message], [opts])` | Plugin error - plugin registration or lifecycle failures. |
+| `ProcedureError` | `new ProcedureError([message], [opts])` | Procedure error - stored procedure/function failures. |
 
 
 #### Utilities
@@ -5483,7 +5483,7 @@ HTTP error classes with status codes, error codes, and structured details. Every
       age:   'must be >= 18',
   });
 
-  // Factory — create by status code
+  // Factory - create by status code
   throw createError(503, 'Try again later');
 ```
 
@@ -5496,23 +5496,23 @@ Specialized error classes for framework internals, ORM operations, and infrastru
 
 | Method | Signature | Description |
 |---|---|---|
-| `DatabaseError` | `new DatabaseError([message], [opts])` | Database / ORM error — wraps adapter-level failures. |
-| `ConfigurationError` | `new ConfigurationError([message], [opts])` | Configuration error — thrown when app/adapter configuration is invalid. |
-| `MiddlewareError` | `new MiddlewareError([message], [opts])` | Middleware error — a middleware function failed unexpectedly. |
-| `RoutingError` | `new RoutingError([message], [opts])` | Routing error — thrown when route resolution fails. |
-| `TimeoutError` | `new TimeoutError([message], [opts])` | Timeout error — operation exceeded allowed time. |
+| `DatabaseError` | `new DatabaseError([message], [opts])` | Database / ORM error - wraps adapter-level failures. |
+| `ConfigurationError` | `new ConfigurationError([message], [opts])` | Configuration error - thrown when app/adapter configuration is invalid. |
+| `MiddlewareError` | `new MiddlewareError([message], [opts])` | Middleware error - a middleware function failed unexpectedly. |
+| `RoutingError` | `new RoutingError([message], [opts])` | Routing error - thrown when route resolution fails. |
+| `TimeoutError` | `new TimeoutError([message], [opts])` | Timeout error - operation exceeded allowed time. |
 
 
 #### ORM-Specific Error Classes
 
 | Method | Signature | Description |
 |---|---|---|
-| `ConnectionError` | `new ConnectionError([message], [opts])` | Connection error — database connection failures with retry context. |
-| `MigrationError` | `new MigrationError([message], [opts])` | Migration error — migration execution failures. |
-| `TransactionError` | `new TransactionError([message], [opts])` | Transaction error — transaction commit/rollback failures. |
-| `QueryError` | `new QueryError([message], [opts])` | Query error — query execution failures with SQL context. |
-| `AdapterError` | `new AdapterError([message], [opts])` | Adapter error — adapter-level issues (driver not found, unsupported operation). |
-| `CacheError` | `new CacheError([message], [opts])` | Cache error — caching layer failures. |
+| `ConnectionError` | `new ConnectionError([message], [opts])` | Connection error - database connection failures with retry context. |
+| `MigrationError` | `new MigrationError([message], [opts])` | Migration error - migration execution failures. |
+| `TransactionError` | `new TransactionError([message], [opts])` | Transaction error - transaction commit/rollback failures. |
+| `QueryError` | `new QueryError([message], [opts])` | Query error - query execution failures with SQL context. |
+| `AdapterError` | `new AdapterError([message], [opts])` | Adapter error - adapter-level issues (driver not found, unsupported operation). |
+| `CacheError` | `new CacheError([message], [opts])` | Cache error - caching layer failures. |
 
 
 ```javascript
@@ -5533,7 +5533,7 @@ Specialized error classes for framework internals, ORM operations, and infrastru
       age:   'must be >= 18',
   });
 
-  // Factory — create by status code
+  // Factory - create by status code
   throw createError(503, 'Try again later');
 ```
 
@@ -5546,11 +5546,11 @@ Configurable error-handling middleware that formats error responses based on env
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `stack` | boolean | `—` | Include stack traces in responses (default: true when NODE_ENV !== 'production'). |
-| `log` | boolean | `—` | Log errors to console (default: true). |
-| `logger` | function | `—` | Custom log function (default: console.error). |
-| `formatter` | function | `—` | Custom response formatter: (err, req, isDev) => object. |
-| `onError` | function | `—` | Callback on every error: (err, req, res) => void. |
+| `stack` | boolean | `-` | Include stack traces in responses (default: true when NODE_ENV !== 'production'). |
+| `log` | boolean | `-` | Log errors to console (default: true). |
+| `logger` | function | `-` | Custom log function (default: console.error). |
+| `formatter` | function | `-` | Custom response formatter: (err, req, isDev) => object. |
+| `onError` | function | `-` | Callback on every error: (err, req, res) => void. |
 
 
 ```javascript
@@ -5597,7 +5597,7 @@ Lightweight namespaced debug logger with levels, colors, and timestamps. Enable 
   log.error('failed to connect', err);
   log('shorthand for debug level');
 
-  // Set minimum level — anything below is silenced
+  // Set minimum level - anything below is silenced
   debug.level('warn');   // only warn, error, fatal
   debug.level('silent'); // suppress all output
   debug.level('trace');  // show everything

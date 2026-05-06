@@ -15,109 +15,109 @@
 				{
 					"option": "headers",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Request headers."
 				},
 				{
 					"option": "body",
 					"type": "string | Buffer | object | ReadableStream",
-					"default": "—",
+					"default": "-",
 					"notes": "Request body."
 				},
 				{
 					"option": "timeout",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Request timeout in ms."
 				},
 				{
 					"option": "signal",
 					"type": "AbortSignal",
-					"default": "—",
+					"default": "-",
 					"notes": "Abort signal for cancellation."
 				},
 				{
 					"option": "agent",
 					"type": "import('http').Agent",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom HTTP agent."
 				},
 				{
 					"option": "onDownloadProgress",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`({ loaded, total }) => void` download progress callback."
 				},
 				{
 					"option": "onUploadProgress",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`({ loaded, total }) => void` upload progress callback."
 				},
 				{
 					"option": "rejectUnauthorized",
 					"type": "boolean",
-					"default": "—",
-					"notes": "Reject connections with unverified certs (default: Node default `true`). TLS option — passed to `https.request()`."
+					"default": "-",
+					"notes": "Reject connections with unverified certs (default: Node default `true`). TLS option - passed to `https.request()`."
 				},
 				{
 					"option": "ca",
 					"type": "string | Buffer | Array",
-					"default": "—",
+					"default": "-",
 					"notes": "Override default CA certificates."
 				},
 				{
 					"option": "cert",
 					"type": "string | Buffer",
-					"default": "—",
+					"default": "-",
 					"notes": "Client certificate (PEM) for mutual TLS."
 				},
 				{
 					"option": "key",
 					"type": "string | Buffer",
-					"default": "—",
+					"default": "-",
 					"notes": "Private key (PEM) for mutual TLS."
 				},
 				{
 					"option": "pfx",
 					"type": "string | Buffer",
-					"default": "—",
+					"default": "-",
 					"notes": "PFX / PKCS12 bundle (alternative to cert+key)."
 				},
 				{
 					"option": "passphrase",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Passphrase for the key or PFX."
 				},
 				{
 					"option": "servername",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "SNI server name override."
 				},
 				{
 					"option": "ciphers",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Colon-separated cipher list."
 				},
 				{
 					"option": "secureProtocol",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "SSL/TLS protocol method name."
 				},
 				{
 					"option": "minVersion",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Minimum TLS version (`'TLSv1.2'`, etc.)."
 				},
 				{
 					"option": "maxVersion",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Maximum TLS version."
 				}
 			],

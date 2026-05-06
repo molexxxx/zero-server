@@ -72,7 +72,7 @@ describe('Error Handling Edge Cases', () => {
 // ===========================================================
 //  route() chaining
 // ===========================================================
-describe('Router — route() chaining', () => {
+describe('Router - route() chaining', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -112,9 +112,9 @@ describe('Router — route() chaining', () => {
 });
 
 // ===========================================================
-//  inspect() — route introspection
+//  inspect() - route introspection
 // ===========================================================
-describe('Router — inspect()', () => {
+describe('Router - inspect()', () => {
     it('lists all routes in flat format', () => {
         const router = Router();
         router.get('/a', () => {});
@@ -163,7 +163,7 @@ describe('Router — inspect()', () => {
 // ===========================================================
 //  Nested sub-routers
 // ===========================================================
-describe('Router — nested sub-routers', () => {
+describe('Router - nested sub-routers', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -201,9 +201,9 @@ describe('Router — nested sub-routers', () => {
 });
 
 // ===========================================================
-//  all() method — matches every HTTP verb
+//  all() method - matches every HTTP verb
 // ===========================================================
-describe('Router — all() catches all methods', () => {
+describe('Router - all() catches all methods', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -227,7 +227,7 @@ describe('Router — all() catches all methods', () => {
 // ===========================================================
 //  HEAD method support
 // ===========================================================
-describe('Router — HEAD method', () => {
+describe('Router - HEAD method', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -253,7 +253,7 @@ describe('Router — HEAD method', () => {
 // ===========================================================
 //  Multiple handlers per route (middleware chain)
 // ===========================================================
-describe('Router — multiple handlers per route', () => {
+describe('Router - multiple handlers per route', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -290,7 +290,7 @@ describe('Router — multiple handlers per route', () => {
 // ===========================================================
 //  URL param decoding
 // ===========================================================
-describe('Router — URL param decoding', () => {
+describe('Router - URL param decoding', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -317,7 +317,7 @@ describe('Router — URL param decoding', () => {
 // ===========================================================
 //  Trailing slash tolerance
 // ===========================================================
-describe('Router — trailing slash', () => {
+describe('Router - trailing slash', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -344,7 +344,7 @@ describe('Router — trailing slash', () => {
 // ===========================================================
 //  Router method chainability
 // ===========================================================
-describe('Router — method chainability', () => {
+describe('Router - method chainability', () => {
     it('methods return router for chaining', () => {
         const router = Router();
         const result = router
@@ -363,7 +363,7 @@ describe('Router — method chainability', () => {
 // ===========================================================
 //  App routes() introspection
 // ===========================================================
-describe('App — routes() introspection', () => {
+describe('App - routes() introspection', () => {
     it('lists all routes including sub-routers', () => {
         const app = createApp();
         app.get('/root', () => {});
@@ -377,7 +377,7 @@ describe('App — routes() introspection', () => {
 });
 
 // =========================================================================
-//  Router — refactored matching (from audit)
+//  Router - refactored matching (from audit)
 // =========================================================================
 
 describe('Router refactored matching', () =>

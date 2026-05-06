@@ -1,5 +1,5 @@
 /**
- * Session middleware — comprehensive tests.
+ * Session middleware - comprehensive tests.
  * Covers: cookie sessions (AES-256-GCM), server-side sessions (MemoryStore),
  * Session API (get/set/has/delete/all/size/clear/destroy/regenerate),
  * flash messages, secret rotation, rolling sessions, cookie options, and edge cases.
@@ -13,7 +13,7 @@ const SECRET = 'session-test-secret-32-bytes-min!';
 const SECRET_2 = 'rotated-secret-for-key-rotation!!';
 
 // =========================================================
-// Session class — unit tests
+// Session class - unit tests
 // =========================================================
 
 describe('Session class', () =>
@@ -147,7 +147,7 @@ describe('Session class', () =>
 });
 
 // =========================================================
-// MemoryStore — unit tests
+// MemoryStore - unit tests
 // =========================================================
 
 describe('MemoryStore', () =>
@@ -217,7 +217,7 @@ describe('MemoryStore', () =>
     it('prune removes expired sessions to make room', async () =>
     {
         const store = new MemoryStore({ maxSessions: 1, pruneInterval: 0 });
-        await store.set('s1', 'a', 1); // 1ms TTL — will expire
+        await store.set('s1', 'a', 1); // 1ms TTL - will expire
         await new Promise(r => setTimeout(r, 10));
         await store.set('s2', 'b'); // should succeed after prune
         expect(store.length).toBe(1);
@@ -584,11 +584,11 @@ describe('Session Middleware: non-rolling skip', () =>
     it('does NOT re-issue cookie when session is unchanged', async () =>
     {
         const r1 = await fetch(`${base}/no-change`);
-        // First request — new session, cookie should be set
+        // First request - new session, cookie should be set
         // (new session starts clean, no dirty flag unless data is set)
         // Since no data is set and not rolling, no cookie should be written
         const setCookie = r1.headers.get('set-cookie');
-        // This depends on whether a brand-new session is "dirty" — it shouldn't be
+        // This depends on whether a brand-new session is "dirty" - it shouldn't be
         // unless data is set
         expect(r1.status).toBe(200);
     });

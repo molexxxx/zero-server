@@ -194,9 +194,9 @@ describe('Multipart Filename Sanitization', () => {
 });
 
 // ===========================================================
-//  JSON Parser — reviver function
+//  JSON Parser - reviver function
 // ===========================================================
-describe('JSON Parser — reviver', () => {
+describe('JSON Parser - reviver', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -226,9 +226,9 @@ describe('JSON Parser — reviver', () => {
 });
 
 // ===========================================================
-//  JSON Parser — strict mode
+//  JSON Parser - strict mode
 // ===========================================================
-describe('JSON Parser — strict mode', () => {
+describe('JSON Parser - strict mode', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -277,9 +277,9 @@ describe('JSON Parser — strict mode', () => {
 });
 
 // ===========================================================
-//  JSON Parser — non-strict mode
+//  JSON Parser - non-strict mode
 // ===========================================================
-describe('JSON Parser — non-strict mode', () => {
+describe('JSON Parser - non-strict mode', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -311,9 +311,9 @@ describe('JSON Parser — non-strict mode', () => {
 });
 
 // ===========================================================
-//  JSON Parser — empty body
+//  JSON Parser - empty body
 // ===========================================================
-describe('JSON Parser — empty body', () => {
+describe('JSON Parser - empty body', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -337,9 +337,9 @@ describe('JSON Parser — empty body', () => {
 });
 
 // ===========================================================
-//  URLEncoded — array bracket notation
+//  URLEncoded - array bracket notation
 // ===========================================================
-describe('URLEncoded — array bracket notation', () => {
+describe('URLEncoded - array bracket notation', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -388,9 +388,9 @@ describe('URLEncoded — array bracket notation', () => {
 });
 
 // ===========================================================
-//  URLEncoded — non-extended (flat)
+//  URLEncoded - non-extended (flat)
 // ===========================================================
-describe('URLEncoded — non-extended', () => {
+describe('URLEncoded - non-extended', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -424,9 +424,9 @@ describe('URLEncoded — non-extended', () => {
 });
 
 // ===========================================================
-//  URLEncoded — requireSecure
+//  URLEncoded - requireSecure
 // ===========================================================
-describe('URLEncoded — requireSecure', () => {
+describe('URLEncoded - requireSecure', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -450,9 +450,9 @@ describe('URLEncoded — requireSecure', () => {
 });
 
 // ===========================================================
-//  Text Parser — encoding
+//  Text Parser - encoding
 // ===========================================================
-describe('Text Parser — behavior', () => {
+describe('Text Parser - behavior', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -487,7 +487,7 @@ describe('Text Parser — behavior', () => {
 // ===========================================================
 //  Raw Buffer Parser
 // ===========================================================
-describe('Raw Parser — behavior', () => {
+describe('Raw Parser - behavior', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -515,9 +515,9 @@ describe('Raw Parser — behavior', () => {
 });
 
 // ===========================================================
-//  Multipart — fields only (no files)
+//  Multipart - fields only (no files)
 // ===========================================================
-describe('Multipart — fields only', () => {
+describe('Multipart - fields only', () => {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-uploads-fields');
 
@@ -554,7 +554,7 @@ describe('Multipart — fields only', () => {
 });
 
 // =========================================================================
-//  JSON Parser — prototype pollution protection (from audit)
+//  JSON Parser - prototype pollution protection (from audit)
 // =========================================================================
 
 describe('JSON Parser prototype pollution protection', () =>
@@ -653,7 +653,7 @@ describe('JSON Parser prototype pollution protection', () =>
 });
 
 // =========================================================================
-//  typeMatch — charset stripping (from audit)
+//  typeMatch - charset stripping (from audit)
 // =========================================================================
 
 describe('typeMatch charset handling', () =>
@@ -685,7 +685,7 @@ describe('typeMatch charset handling', () =>
 });
 
 // =========================================================================
-//  sendError — headersSent check (from audit)
+//  sendError - headersSent check (from audit)
 // =========================================================================
 
 describe('sendError headersSent safety', () =>
@@ -706,10 +706,10 @@ describe('sendError headersSent safety', () =>
 
 
 // =========================================================================
-//  raw body parser — deep branch coverage (from coverage/deep.test.js)
+//  raw body parser - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('raw body parser — deep branch coverage', () => {
+describe('raw body parser - deep branch coverage', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -848,13 +848,13 @@ describe('raw body parser — deep branch coverage', () => {
 });
 
 // =========================================================================
-//  typeMatch/sendError/rawBuffer — coverage gaps (from coverage/gaps.test.js)
+//  typeMatch/sendError/rawBuffer - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  12. BODY PARSERS — TYPEMATCH, SENDERROR, RAWBUFFER, MULTIPART
+//  12. BODY PARSERS - TYPEMATCH, SENDERROR, RAWBUFFER, MULTIPART
 // ============================================================
-describe('typeMatch — function predicate', () => {
+describe('typeMatch - function predicate', () => {
 	it('accepts a function predicate', () => {
 		const isTypeMatch = require('../../lib/body/typeMatch');
 		const fn = (ct) => ct.includes('custom');
@@ -885,7 +885,7 @@ describe('typeMatch — function predicate', () => {
 	});
 });
 
-describe('sendError — utility', () => {
+describe('sendError - utility', () => {
 	it('sends JSON error response', () => {
 		const sendError = require('../../lib/body/sendError');
 		let written = '';
@@ -913,7 +913,7 @@ describe('sendError — utility', () => {
 	});
 });
 
-describe('rawBuffer — parseLimit', () => {
+describe('rawBuffer - parseLimit', () => {
 	it('parses kb units', () => {
 		const rawBuffer = require('../../lib/body/rawBuffer');
 		// parseLimit is not exported, test through the module behavior
@@ -921,7 +921,7 @@ describe('rawBuffer — parseLimit', () => {
 	});
 });
 
-describe('rawBuffer — parseLimit helper (internal)', () => {
+describe('rawBuffer - parseLimit helper (internal)', () => {
 	let parseLimit;
 
 	beforeAll(() => {
@@ -940,4 +940,4 @@ describe('rawBuffer — parseLimit helper (internal)', () => {
 		stream.end();
 		await expect(p).rejects.toThrow('payload too large');
 	});
-});
+});

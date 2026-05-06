@@ -26,19 +26,19 @@
 				{
 					"option": "level",
 					"type": "string | number",
-					"default": "—",
+					"default": "-",
 					"notes": "Minimum log level."
 				},
 				{
 					"option": "context",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Bound context fields merged into every entry."
 				},
 				{
 					"option": "transport",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "Custom transport `(entry) => void`."
 				},
 				{
@@ -50,7 +50,7 @@
 				{
 					"option": "colors",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Enable ANSI colors (default: TTY detection)."
 				},
 				{
@@ -62,7 +62,7 @@
 				{
 					"option": "stream",
 					"type": "WritableStream",
-					"default": "—",
+					"default": "-",
 					"notes": "Output stream (default: stdout/stderr)."
 				}
 			],
@@ -233,7 +233,7 @@
 						{
 							"method": "structuredLogger",
 							"signature": "structuredLogger([opts])",
-							"description": "Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` — a child logger with bound request context so handlers can log with full correlation.",
+							"description": "Create structured request-logging middleware. Automatically logs every completed request with: `requestId`, `method`, `url`, `status`, `duration`, `ip`, `userAgent`, and `contentLength`. Also attaches `req.log` - a child logger with bound request context so handlers can log with full correlation.",
 							"methodParams": [
 								{
 									"param": "opts",
@@ -252,19 +252,19 @@
 								{
 									"option": "format",
 									"type": "'json' | 'pretty'",
-									"default": "—",
+									"default": "-",
 									"notes": "Output format. `'json'` for production, `'pretty'` for dev. Default: `'json'` in production, `'pretty'` otherwise."
 								},
 								{
 									"option": "transport",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom transport `(entry) => void` for each log entry."
 								},
 								{
 									"option": "colors",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "ANSI colors (default: TTY detection). Only applies to pretty format."
 								},
 								{
@@ -276,25 +276,25 @@
 								{
 									"option": "stream",
 									"type": "WritableStream",
-									"default": "—",
+									"default": "-",
 									"notes": "Output stream override."
 								},
 								{
 									"option": "skip",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req, res) => boolean` — skip logging for certain requests."
+									"default": "-",
+									"notes": "`(req, res) => boolean` - skip logging for certain requests."
 								},
 								{
 									"option": "customFields",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req, res) => object` — extra fields to merge into each request log entry."
+									"default": "-",
+									"notes": "`(req, res) => object` - extra fields to merge into each request log entry."
 								},
 								{
 									"option": "msg",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom message template. Supports placeholders: `:method`, `:url`, `:status`, `:duration`."
 								}
 							],
@@ -350,13 +350,13 @@
 				{
 					"option": "name",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Metric name (snake_case recommended)."
 				},
 				{
 					"option": "help",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Human-readable description."
 				},
 				{
@@ -572,7 +572,7 @@
 							],
 							"methodReturns": {
 								"type": "Function",
-								"description": "Stop function — call it to record the duration."
+								"description": "Stop function - call it to record the duration."
 							},
 							"example": "  const end = histogram.startTimer({ method: 'GET' });\r\n  await doWork();\r\n  end(); // records duration",
 							"examples": [
@@ -634,19 +634,19 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Metric name."
 								},
 								{
 									"option": "help",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Description."
 								},
 								{
 									"option": "labels",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Label names."
 								}
 							],
@@ -678,25 +678,25 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Metric name."
 								},
 								{
 									"option": "help",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Description."
 								},
 								{
 									"option": "labels",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Label names."
 								},
 								{
 									"option": "collect",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Dynamic collection callback."
 								}
 							],
@@ -728,25 +728,25 @@
 								{
 									"option": "name",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Metric name."
 								},
 								{
 									"option": "help",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Description."
 								},
 								{
 									"option": "labels",
 									"type": "string[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Label names."
 								},
 								{
 									"option": "buckets",
 									"type": "number[]",
-									"default": "—",
+									"default": "-",
 									"notes": "Bucket boundaries."
 								}
 							],
@@ -894,20 +894,20 @@
 								{
 									"option": "registry",
 									"type": "MetricsRegistry",
-									"default": "—",
+									"default": "-",
 									"notes": "Metrics registry. Creates a new one if not provided."
 								},
 								{
 									"option": "routeLabel",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => string` — extract route label for metrics. Default: `req.route || req.url`."
+									"default": "-",
+									"notes": "`(req) => string` - extract route label for metrics. Default: `req.route || req.url`."
 								},
 								{
 									"option": "skip",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => boolean` — skip metrics for certain requests."
+									"default": "-",
+									"notes": "`(req) => boolean` - skip metrics for certain requests."
 								}
 							],
 							"methodReturns": {
@@ -976,19 +976,19 @@
 				{
 					"option": "name",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Operation name."
 				},
 				{
 					"option": "traceId",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Trace ID."
 				},
 				{
 					"option": "parentSpanId",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Parent span ID."
 				},
 				{
@@ -1000,13 +1000,13 @@
 				{
 					"option": "attributes",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Initial attributes."
 				},
 				{
 					"option": "tracer",
 					"type": "Tracer",
-					"default": "—",
+					"default": "-",
 					"notes": "Tracer instance for export."
 				}
 			],
@@ -1189,13 +1189,13 @@
 								{
 									"option": "traceId",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Trace ID (inherits from parent context or generates new)."
 								},
 								{
 									"option": "parentSpanId",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Parent span ID."
 								},
 								{
@@ -1207,7 +1207,7 @@
 								{
 									"option": "attributes",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Initial attributes."
 								}
 							],
@@ -1288,20 +1288,20 @@
 								{
 									"option": "tracer",
 									"type": "Tracer",
-									"default": "—",
+									"default": "-",
 									"notes": "Tracer instance. Creates a default if not provided."
 								},
 								{
 									"option": "routeLabel",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => string` — extract route label for span name."
+									"default": "-",
+									"notes": "`(req) => string` - extract route label for span name."
 								},
 								{
 									"option": "skip",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => boolean` — skip tracing for certain requests."
+									"default": "-",
+									"notes": "`(req) => boolean` - skip tracing for certain requests."
 								},
 								{
 									"option": "propagate",
@@ -1373,7 +1373,7 @@
 				{
 					"option": "maxRssBytes",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Max RSS in bytes."
 				}
 			],
@@ -1413,7 +1413,7 @@
 								{
 									"option": "checks",
 									"type": "Object<string, Function>",
-									"default": "—",
+									"default": "-",
 									"notes": "Named check functions. Each returns `{ healthy, details }` or a boolean/Promise."
 								},
 								{
@@ -1431,8 +1431,8 @@
 								{
 									"option": "onFailure",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(results) => void` — called when any check fails."
+									"default": "-",
+									"notes": "`(results) => void` - called when any check fails."
 								}
 							],
 							"methodReturns": {
@@ -1477,7 +1477,7 @@
 								{
 									"option": "checks",
 									"type": "Object<string, Function>",
-									"default": "—",
+									"default": "-",
 									"notes": "Named readiness checks."
 								},
 								{

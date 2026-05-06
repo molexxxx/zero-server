@@ -1,5 +1,5 @@
 /**
- * Coverage tests for lib/debug.js — targets uncovered _nsColor, pattern
+ * Coverage tests for lib/debug.js - targets uncovered _nsColor, pattern
  * matching edges, JSON mode error attachment, text output branches,
  * stderr routing, DEBUG_LEVEL env init, and reset().
  */
@@ -29,7 +29,7 @@ describe('Debug Logger: coverage gaps', () =>
     });
 
     // =========================================================
-    // _nsColor coverage — each new namespace gets unique color
+    // _nsColor coverage - each new namespace gets unique color
     // =========================================================
 
     it('assigns unique colors to different namespaces', () =>
@@ -109,7 +109,7 @@ describe('Debug Logger: coverage gaps', () =>
     });
 
     // =========================================================
-    // JSON mode — error attachment
+    // JSON mode - error attachment
     // =========================================================
 
     it('JSON mode attaches error when last arg is Error', () =>

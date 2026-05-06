@@ -135,7 +135,7 @@ if (testsImgRe.test(readme)) readme = readme.replace(testsImgRe, testsImg);
 if (covImgRe.test(readme))   readme = readme.replace(covImgRe, covImg);
 
 fs.writeFileSync(readmePath, readme, 'utf8');
-console.log(`Updated README.md — tests: ${tests.passed}/${tests.total}, coverage: ${coverage.statements}%`);
+console.log(`Updated README.md - tests: ${tests.passed}/${tests.total}, coverage: ${coverage.statements}%`);
 
 /* -- 6. Clean up temp file ------------------------------------------ */
 try { fs.unlinkSync(resultsPath); } catch {}

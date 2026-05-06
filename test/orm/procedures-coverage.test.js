@@ -43,8 +43,8 @@ function fn(name = 'test_fn', opts = {}) {
     });
 }
 
-// --- StoredProcedure — drop() branches -------------------------------------
-describe('StoredProcedure — drop()', () => {
+// --- StoredProcedure - drop() branches -------------------------------------
+describe('StoredProcedure - drop()', () => {
     it('drop with mysql adapter uses backticks', async () => {
         const adapter = mysqlAdapter();
         const p = proc();
@@ -96,8 +96,8 @@ describe('StoredProcedure — drop()', () => {
     });
 });
 
-// --- StoredProcedure — execute() branches ----------------------------------
-describe('StoredProcedure — execute()', () => {
+// --- StoredProcedure - execute() branches ----------------------------------
+describe('StoredProcedure - execute()', () => {
     it('execute calls CALL for mysql', async () => {
         const adapter = mysqlAdapter();
         const p = proc();
@@ -141,8 +141,8 @@ describe('StoredProcedure — execute()', () => {
     });
 });
 
-// --- StoredProcedure — exists() branches -----------------------------------
-describe('StoredProcedure — exists()', () => {
+// --- StoredProcedure - exists() branches -----------------------------------
+describe('StoredProcedure - exists()', () => {
     it('exists returns true when cnt > 0 for mysql', async () => {
         const adapter = mysqlAdapter();
         adapter.execute.mockResolvedValue([{ cnt: 1 }]);
@@ -185,8 +185,8 @@ describe('StoredProcedure — exists()', () => {
     });
 });
 
-// --- StoredProcedure — _buildCreateSQL branches ----------------------------
-describe('StoredProcedure — _buildCreateSQL()', () => {
+// --- StoredProcedure - _buildCreateSQL branches ----------------------------
+describe('StoredProcedure - _buildCreateSQL()', () => {
     it('mysql build includes direction defaults to IN', () => {
         const p = proc('calc', {
             body: 'SET @x = 1;',
@@ -223,8 +223,8 @@ describe('StoredProcedure — _buildCreateSQL()', () => {
     });
 });
 
-// --- StoredFunction — drop() branches --------------------------------------
-describe('StoredFunction — drop()', () => {
+// --- StoredFunction - drop() branches --------------------------------------
+describe('StoredFunction - drop()', () => {
     it('drop with mysql adapter', async () => {
         const adapter = mysqlAdapter();
         const f = fn();
@@ -275,8 +275,8 @@ describe('StoredFunction — drop()', () => {
     });
 });
 
-// --- StoredFunction — call() branches --------------------------------------
-describe('StoredFunction — call()', () => {
+// --- StoredFunction - call() branches --------------------------------------
+describe('StoredFunction - call()', () => {
     it('call with mysql uses backtick SELECT', async () => {
         const adapter = mysqlAdapter();
         adapter.execute.mockResolvedValue([{ result: 42 }]);
@@ -332,8 +332,8 @@ describe('StoredFunction — call()', () => {
     });
 });
 
-// --- StoredFunction — exists() branches ------------------------------------
-describe('StoredFunction — exists()', () => {
+// --- StoredFunction - exists() branches ------------------------------------
+describe('StoredFunction - exists()', () => {
     it('exists returns true for mysql when cnt > 0', async () => {
         const adapter = mysqlAdapter();
         adapter.execute.mockResolvedValue([{ cnt: 3 }]);
@@ -363,8 +363,8 @@ describe('StoredFunction — exists()', () => {
     });
 });
 
-// --- StoredFunction — _buildCreateSQL branches -----------------------------
-describe('StoredFunction — _buildCreateSQL()', () => {
+// --- StoredFunction - _buildCreateSQL branches -----------------------------
+describe('StoredFunction - _buildCreateSQL()', () => {
     it('mysql build includes DETERMINISTIC when true', () => {
         const f = fn('calc', {
             body: 'RETURN a * 2;',
@@ -397,8 +397,8 @@ describe('StoredFunction — _buildCreateSQL()', () => {
     });
 });
 
-// --- TriggerManager — create flow with SQL adapter -------------------------
-describe('TriggerManager — create/drop SQL paths', () => {
+// --- TriggerManager - create flow with SQL adapter -------------------------
+describe('TriggerManager - create/drop SQL paths', () => {
     const trigDef = {
         table: 'users',
         timing: 'AFTER',
@@ -560,8 +560,8 @@ describe('TriggerManager — create/drop SQL paths', () => {
     });
 });
 
-// --- TriggerManager — createAll / list / get -------------------------------
-describe('TriggerManager — utility methods', () => {
+// --- TriggerManager - createAll / list / get -------------------------------
+describe('TriggerManager - utility methods', () => {
     it('createAll creates all defined triggers', async () => {
         const adapter = mysqlAdapter();
         const tm = new TriggerManager({ adapter });
@@ -578,8 +578,8 @@ describe('TriggerManager — utility methods', () => {
     });
 });
 
-// --- StoredProcedure — create flow -----------------------------------------
-describe('StoredProcedure — create()', () => {
+// --- StoredProcedure - create flow -----------------------------------------
+describe('StoredProcedure - create()', () => {
     it('create throws without SQL adapter (no execute)', async () => {
         const a = makeAdapter('MysqlAdapter');
         delete a.execute;
@@ -601,8 +601,8 @@ describe('StoredProcedure — create()', () => {
     });
 });
 
-// --- StoredFunction — create flow ------------------------------------------
-describe('StoredFunction — create()', () => {
+// --- StoredFunction - create flow ------------------------------------------
+describe('StoredFunction - create()', () => {
     it('create throws without SQL adapter', async () => {
         const a = makeAdapter('MysqlAdapter');
         delete a.execute;

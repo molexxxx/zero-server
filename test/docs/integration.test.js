@@ -1,4 +1,4 @@
-/** integration.test.js — end-to-end doc example verification */
+/** integration.test.js - end-to-end doc example verification */
 const http = require('http');
 const net = require('net');
 const crypto = require('crypto');
@@ -89,11 +89,11 @@ function sendCloseFrame(socket) {
 }
 
 // ============================================================
-//  1. CORE — createApp (settings, locals, chaining, groups,
+//  1. CORE - createApp (settings, locals, chaining, groups,
 //            param handlers, route introspection)
 // ============================================================
 
-describe('Docs — Core: createApp', () => {
+describe('Docs - Core: createApp', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -192,10 +192,10 @@ describe('Docs — Core: createApp', () => {
 });
 
 // ============================================================
-//  2. CORE — Router (sub-apps, route chaining, inspect)
+//  2. CORE - Router (sub-apps, route chaining, inspect)
 // ============================================================
 
-describe('Docs — Core: Router', () => {
+describe('Docs - Core: Router', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -280,10 +280,10 @@ describe('Docs — Core: Router', () => {
 });
 
 // ============================================================
-//  3. CORE — Request & Response
+//  3. CORE - Request & Response
 // ============================================================
 
-describe('Docs — Core: Request & Response', () => {
+describe('Docs - Core: Request & Response', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -493,10 +493,10 @@ describe('Docs — Core: Request & Response', () => {
 });
 
 // ============================================================
-//  4. BODY PARSERS — json, urlencoded, text, raw, multipart
+//  4. BODY PARSERS - json, urlencoded, text, raw, multipart
 // ============================================================
 
-describe('Docs — Body Parsers', () => {
+describe('Docs - Body Parsers', () => {
 	let server, base, uploadsDir;
 
 	beforeAll(async () => {
@@ -631,10 +631,10 @@ describe('Docs — Body Parsers', () => {
 });
 
 // ============================================================
-//  4b. BODY PARSERS — extended features (verify, inflate, limits, rawBody)
+//  4b. BODY PARSERS - extended features (verify, inflate, limits, rawBody)
 // ============================================================
 
-describe('Docs — Body Parsers (extended features)', () => {
+describe('Docs - Body Parsers (extended features)', () => {
 	let server, base, uploadsDir;
 
 	beforeAll(async () => {
@@ -966,10 +966,10 @@ describe('Docs — Body Parsers (extended features)', () => {
 });
 
 // ============================================================
-//  5. MIDDLEWARE — cors
+//  5. MIDDLEWARE - cors
 // ============================================================
 
-describe('Docs — Middleware: cors', () => {
+describe('Docs - Middleware: cors', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1031,10 +1031,10 @@ describe('Docs — Middleware: cors', () => {
 });
 
 // ============================================================
-//  6. MIDDLEWARE — compress
+//  6. MIDDLEWARE - compress
 // ============================================================
 
-describe('Docs — Middleware: compress', () => {
+describe('Docs - Middleware: compress', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1048,7 +1048,7 @@ describe('Docs — Middleware: compress', () => {
 			res.json({ data: 'x'.repeat(10000) }); // compressed
 		});
 		app.get('/small', (req, res) => {
-			res.json({ ok: true }); // below threshold — sent raw
+			res.json({ ok: true }); // below threshold - sent raw
 		});
 
 		server = http.createServer(app.handler);
@@ -1103,10 +1103,10 @@ describe('Docs — Middleware: compress', () => {
 });
 
 // ============================================================
-//  7. MIDDLEWARE — helmet
+//  7. MIDDLEWARE - helmet
 // ============================================================
 
-describe('Docs — Middleware: helmet', () => {
+describe('Docs - Middleware: helmet', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1176,10 +1176,10 @@ describe('Docs — Middleware: helmet', () => {
 });
 
 // ============================================================
-//  8. MIDDLEWARE — static
+//  8. MIDDLEWARE - static
 // ============================================================
 
-describe('Docs — Middleware: static', () => {
+describe('Docs - Middleware: static', () => {
 	let server, base, staticDir;
 
 	beforeAll(async () => {
@@ -1247,10 +1247,10 @@ describe('Docs — Middleware: static', () => {
 });
 
 // ============================================================
-//  9. MIDDLEWARE — rateLimit
+//  9. MIDDLEWARE - rateLimit
 // ============================================================
 
-describe('Docs — Middleware: rateLimit', () => {
+describe('Docs - Middleware: rateLimit', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1290,10 +1290,10 @@ describe('Docs — Middleware: rateLimit', () => {
 });
 
 // ============================================================
-//  10. MIDDLEWARE — timeout
+//  10. MIDDLEWARE - timeout
 // ============================================================
 
-describe('Docs — Middleware: timeout', () => {
+describe('Docs - Middleware: timeout', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1331,10 +1331,10 @@ describe('Docs — Middleware: timeout', () => {
 });
 
 // ============================================================
-//  11. MIDDLEWARE — requestId
+//  11. MIDDLEWARE - requestId
 // ============================================================
 
-describe('Docs — Middleware: requestId', () => {
+describe('Docs - Middleware: requestId', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1369,10 +1369,10 @@ describe('Docs — Middleware: requestId', () => {
 });
 
 // ============================================================
-//  12. MIDDLEWARE — logger (no crash)
+//  12. MIDDLEWARE - logger (no crash)
 // ============================================================
 
-describe('Docs — Middleware: logger', () => {
+describe('Docs - Middleware: logger', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1403,10 +1403,10 @@ describe('Docs — Middleware: logger', () => {
 });
 
 // ============================================================
-//  13. COOKIES & SECURITY — cookieParser
+//  13. COOKIES & SECURITY - cookieParser
 // ============================================================
 
-describe('Docs — Cookies: cookieParser', () => {
+describe('Docs - Cookies: cookieParser', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1498,10 +1498,10 @@ describe('Docs — Cookies: cookieParser', () => {
 });
 
 // ============================================================
-//  14. COOKIES & SECURITY — csrf
+//  14. COOKIES & SECURITY - csrf
 // ============================================================
 
-describe('Docs — Cookies: csrf', () => {
+describe('Docs - Cookies: csrf', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1584,10 +1584,10 @@ describe('Docs — Cookies: csrf', () => {
 });
 
 // ============================================================
-//  15. COOKIES & SECURITY — validate
+//  15. COOKIES & SECURITY - validate
 // ============================================================
 
-describe('Docs — Cookies: validate', () => {
+describe('Docs - Cookies: validate', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1714,10 +1714,10 @@ describe('Docs — Cookies: validate', () => {
 });
 
 // ============================================================
-//  16. ENVIRONMENT — env
+//  16. ENVIRONMENT - env
 // ============================================================
 
-describe('Docs — Environment: env', () => {
+describe('Docs - Environment: env', () => {
 	it('env.load with typed schema', () => {
 		const { env } = require('../../');
 		env.reset();
@@ -1821,10 +1821,10 @@ describe('Docs — Environment: env', () => {
 });
 
 // ============================================================
-//  17. ORM — Database (memory), Model, Query, TYPES
+//  17. ORM - Database (memory), Model, Query, TYPES
 // ============================================================
 
-describe('Docs — ORM', () => {
+describe('Docs - ORM', () => {
 	let db, User;
 
 	beforeAll(async () => {
@@ -2180,10 +2180,10 @@ describe('Docs — ORM', () => {
 });
 
 // ============================================================
-//  17b. ORM — Schema DDL (references, check, index, composites, guarded)
+//  17b. ORM - Schema DDL (references, check, index, composites, guarded)
 // ============================================================
 
-describe('Docs — ORM: Schema DDL', () => {
+describe('Docs - ORM: Schema DDL', () => {
 	let db, Post, Enrollment, UserRole;
 	const { Database, Model, TYPES } = require('../../');
 
@@ -2198,7 +2198,7 @@ describe('Docs — ORM: Schema DDL', () => {
 			};
 		}
 
-		// Foreign Keys — CASCADE delete
+		// Foreign Keys - CASCADE delete
 		class PostModel extends Model {
 			static table = 'posts';
 			static schema = {
@@ -2212,7 +2212,7 @@ describe('Docs — ORM: Schema DDL', () => {
 			};
 		}
 
-		// Composite Primary Key — junction table
+		// Composite Primary Key - junction table
 		class EnrollmentModel extends Model {
 			static table = 'enrollments';
 			static schema = {
@@ -2258,7 +2258,7 @@ describe('Docs — ORM: Schema DDL', () => {
 		await db.adapter.insert('posts', { title: 'Hello', authorId: user.id, status: 'draft' });
 		expect(db.adapter._db.prepare('SELECT * FROM "posts"').all().length).toBe(1);
 
-		// Delete parent — CASCADE should remove posts
+		// Delete parent - CASCADE should remove posts
 		db.adapter._db.prepare('DELETE FROM "users" WHERE id = ?').run(user.id);
 		expect(db.adapter._db.prepare('SELECT * FROM "posts"').all().length).toBe(0);
 	});
@@ -2304,10 +2304,10 @@ describe('Docs — ORM: Schema DDL', () => {
 });
 
 // ============================================================
-//  17c. ORM — Migration Methods
+//  17c. ORM - Migration Methods
 // ============================================================
 
-describe('Docs — ORM: Migrations', () => {
+describe('Docs - ORM: Migrations', () => {
 	let db;
 	const { Database, Model, TYPES } = require('../../');
 
@@ -2388,7 +2388,7 @@ describe('Docs — ORM: Migrations', () => {
 		}
 		expect(await db.hasColumn('users', 'avatar')).toBe(true);
 
-		// Running again should be idempotent — column already exists
+		// Running again should be idempotent - column already exists
 		if (await db.hasTable('users') && !await db.hasColumn('users', 'avatar')) {
 			await db.addColumn('users', 'avatar', { type: TYPES.STRING });
 		}
@@ -2397,10 +2397,10 @@ describe('Docs — ORM: Migrations', () => {
 });
 
 // ============================================================
-//  17d. ORM — Memory Adapter Schema DDL & Migrations
+//  17d. ORM - Memory Adapter Schema DDL & Migrations
 // ============================================================
 
-describe('Docs — ORM: Memory Adapter DDL', () => {
+describe('Docs - ORM: Memory Adapter DDL', () => {
 	let db;
 	const { Database, Model, TYPES } = require('../../');
 
@@ -2495,10 +2495,10 @@ describe('Docs — ORM: Memory Adapter DDL', () => {
 });
 
 // ============================================================
-//  18. REAL-TIME — WebSocket
+//  18. REAL-TIME - WebSocket
 // ============================================================
 
-describe('Docs — Real-Time: WebSocket', () => {
+describe('Docs - Real-Time: WebSocket', () => {
 	let wsServer, wsPort;
 
 	beforeAll(async () => {
@@ -2556,10 +2556,10 @@ describe('Docs — Real-Time: WebSocket', () => {
 });
 
 // ============================================================
-//  19. REAL-TIME — WebSocketPool
+//  19. REAL-TIME - WebSocketPool
 // ============================================================
 
-describe('Docs — Real-Time: WebSocketPool', () => {
+describe('Docs - Real-Time: WebSocketPool', () => {
 	let wsServer, wsPort, pool;
 
 	beforeAll(async () => {
@@ -2632,10 +2632,10 @@ describe('Docs — Real-Time: WebSocketPool', () => {
 });
 
 // ============================================================
-//  20. REAL-TIME — SSE
+//  20. REAL-TIME - SSE
 // ============================================================
 
-describe('Docs — Real-Time: SSE', () => {
+describe('Docs - Real-Time: SSE', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -2679,10 +2679,10 @@ describe('Docs — Real-Time: SSE', () => {
 });
 
 // ============================================================
-//  21. NETWORKING — fetch
+//  21. NETWORKING - fetch
 // ============================================================
 
-describe('Docs — Networking: fetch', () => {
+describe('Docs - Networking: fetch', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -2742,10 +2742,10 @@ describe('Docs — Networking: fetch', () => {
 });
 
 // ============================================================
-//  22. ERROR HANDLING — Error Classes
+//  22. ERROR HANDLING - Error Classes
 // ============================================================
 
-describe('Docs — Error Handling: Error Classes', () => {
+describe('Docs - Error Handling: Error Classes', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -2867,10 +2867,10 @@ describe('Docs — Error Handling: Error Classes', () => {
 });
 
 // ============================================================
-//  23. ERROR HANDLING — Framework Errors
+//  23. ERROR HANDLING - Framework Errors
 // ============================================================
 
-describe('Docs — Error Handling: Framework Errors', () => {
+describe('Docs - Error Handling: Framework Errors', () => {
 	it('DatabaseError has query and adapter', () => {
 		const { DatabaseError } = require('../../');
 		const err = new DatabaseError('Failed to fetch', {
@@ -2926,10 +2926,10 @@ describe('Docs — Error Handling: Framework Errors', () => {
 });
 
 // ============================================================
-//  24. ERROR HANDLING — errorHandler middleware
+//  24. ERROR HANDLING - errorHandler middleware
 // ============================================================
 
-describe('Docs — Error Handling: errorHandler', () => {
+describe('Docs - Error Handling: errorHandler', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -2971,10 +2971,10 @@ describe('Docs — Error Handling: errorHandler', () => {
 });
 
 // ============================================================
-//  25. ERROR HANDLING — debug
+//  25. ERROR HANDLING - debug
 // ============================================================
 
-describe('Docs — Error Handling: debug', () => {
+describe('Docs - Error Handling: debug', () => {
 	it('creates namespaced loggers', () => {
 		const { debug } = require('../../');
 		const log = debug('test:docs');
@@ -3012,10 +3012,10 @@ describe('Docs — Error Handling: debug', () => {
 });
 
 // ============================================================
-//  23. ORM — Migrator Framework
+//  23. ORM - Migrator Framework
 // ============================================================
 
-describe('Docs — ORM: Migrator Framework', () => {
+describe('Docs - ORM: Migrator Framework', () => {
 	const { Database, Model, TYPES, Migrator, defineMigration } = require('../../');
 
 	let db;
@@ -3131,7 +3131,7 @@ describe('Docs — ORM: Migrator Framework', () => {
 		expect(migrated).toHaveLength(2);
 		expect(batch).toBe(1);
 
-		// Add more and run again — should create batch 2
+		// Add more and run again - should create batch 2
 		migrator.add({ name: '003', async up() {}, async down() {} });
 		const r2 = await migrator.migrate();
 		expect(r2.batch).toBe(2);
@@ -3139,10 +3139,10 @@ describe('Docs — ORM: Migrator Framework', () => {
 });
 
 // ============================================================
-//  24. ORM — QueryCache
+//  24. ORM - QueryCache
 // ============================================================
 
-describe('Docs — ORM: QueryCache', () => {
+describe('Docs - ORM: QueryCache', () => {
 	const { QueryCache } = require('../../');
 
 	it('set/get/delete/has lifecycle', () => {
@@ -3237,10 +3237,10 @@ describe('Docs — ORM: QueryCache', () => {
 });
 
 // ============================================================
-//  25. ORM — Seeder, Factory & Fake
+//  25. ORM - Seeder, Factory & Fake
 // ============================================================
 
-describe('Docs — ORM: Seeder, Factory & Fake', () => {
+describe('Docs - ORM: Seeder, Factory & Fake', () => {
 	const { Database, Model, TYPES, Seeder, SeederRunner, Factory, Fake } = require('../../');
 
 	let db;
@@ -3335,10 +3335,10 @@ describe('Docs — ORM: Seeder, Factory & Fake', () => {
 });
 
 // ============================================================
-//  26. Error Handling — ORM Error Classes
+//  26. Error Handling - ORM Error Classes
 // ============================================================
 
-describe('Docs — Error Handling: ORM Error Classes', () => {
+describe('Docs - Error Handling: ORM Error Classes', () => {
 	const {
 		ConnectionError, MigrationError, TransactionError,
 		QueryError, AdapterError, CacheError,
@@ -3413,10 +3413,10 @@ describe('Docs — Error Handling: ORM Error Classes', () => {
 });
 
 // ===========================================================
-// 27. ORM — QueryProfiler
+// 27. ORM - QueryProfiler
 // ===========================================================
 
-describe('Docs — ORM: QueryProfiler', () => {
+describe('Docs - ORM: QueryProfiler', () => {
 	const { Database, Model, TYPES, QueryProfiler } = require('../../');
 
 	let db;
@@ -3508,10 +3508,10 @@ describe('Docs — ORM: QueryProfiler', () => {
 });
 
 // ===========================================================
-// 28. ORM — ReplicaManager
+// 28. ORM - ReplicaManager
 // ===========================================================
 
-describe('Docs — ORM: ReplicaManager', () => {
+describe('Docs - ORM: ReplicaManager', () => {
 	const { Database, ReplicaManager } = require('../../');
 
 	it('connectWithReplicas sets up db with replicas', () => {

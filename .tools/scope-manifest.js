@@ -1,8 +1,8 @@
 /**
- * scope-manifest.js — Source of truth for the scoped @zero-server/* packages.
+ * scope-manifest.js - Source of truth for the scoped @zero-server/* packages.
  *
  * Each scope defines what gets published as @zero-server/<name>.  The packages
- * are NOW true standalone bundles — they ship their own copy of the relevant
+ * are NOW true standalone bundles - they ship their own copy of the relevant
  * lib/ source, with no runtime dependency on @zero-server/sdk.
  *
  * Field reference
@@ -31,7 +31,7 @@
  * index.js generation
  *   localMap      { publicName: 'localName' }  when the lib export name differs
  *                 from the public API name (e.g. { jwtSign: 'sign' })
- *   indexJs       explicit index.js body (string) — overrides auto-generation.
+ *   indexJs       explicit index.js body (string) - overrides auto-generation.
  *                 Used for scopes with multiple entry modules or special factories.
  *                 The banner comment is prepended automatically.
  */
@@ -62,7 +62,7 @@ const scopes = [
     // -------------------------------------------------------------------------
     {
         name: 'core',
-        title: 'Core — App, Router, Request/Response',
+        title: 'Core - App, Router, Request/Response',
         summary: 'App factory, Router, and the HTTP Request/Response wrappers.',
         description:
             'The HTTP foundation of @zero-server/sdk: `createApp()`, the Router primitive, ' +
@@ -158,7 +158,7 @@ const scopes = [
 
         sourceDir: 'middleware',
         bundleDebug: true,
-        // errorHandler.js does require('../errors') — redirect to the scoped package
+        // errorHandler.js does require('../errors') - redirect to the scoped package
         requireRewrites: {
             "require('../errors')": "require('@zero-server/errors')",
         },
@@ -192,7 +192,7 @@ const scopes = [
 
         sourceDir: 'auth',
         bundleDebug: true,
-        // jwt.js and oauth.js do require('../fetch') — redirect to the scoped package
+        // jwt.js and oauth.js do require('../fetch') - redirect to the scoped package
         requireRewrites: {
             "require('../fetch')": "require('@zero-server/fetch')",
         },
@@ -236,7 +236,7 @@ const scopes = [
 
         sourceDir: 'orm',
         bundleDebug: true,
-        // model.js does require('../errors') — redirect to the scoped package
+        // model.js does require('../errors') - redirect to the scoped package
         requireRewrites: {
             "require('../errors')": "require('@zero-server/errors')",
         },
@@ -261,7 +261,7 @@ const scopes = [
         // handleUpgrade is added here so @zero-server/core can destructure it
         exports: ['WebSocketConnection', 'handleUpgrade', 'WebSocketPool', 'SSEStream'],
 
-        // ws/ and sse/ are sibling subdirs — each goes into packages/realtime/lib/<dir>/
+        // ws/ and sse/ are sibling subdirs - each goes into packages/realtime/lib/<dir>/
         // debug.js is placed at packages/realtime/lib/debug.js so that
         //   ../debug from lib/ws/* and lib/sse/* resolves correctly without any rewrites.
         sourceDirs: ['ws', 'sse'],
@@ -352,7 +352,7 @@ const scopes = [
             'memoryCheck', 'eventLoopCheck', 'diskSpaceCheck',
         ],
 
-        // observe/* has zero cross-scope imports — fully self-contained
+        // observe/* has zero cross-scope imports - fully self-contained
         sourceDir: 'observe',
         bundleDebug: false,
         requireRewrites: {},
@@ -374,14 +374,14 @@ const scopes = [
             'auto-respawn and exponential backoff.',
         exports: ['LifecycleManager', 'LIFECYCLE_STATE', 'ClusterManager', 'cluster'],
 
-        // Both lifecycle.js and cluster.js use require('./debug') — the bundled
+        // Both lifecycle.js and cluster.js use require('./debug') - the bundled
         // debug.js at packages/lifecycle/lib/debug.js satisfies that path.
         sourceFiles: ['lifecycle.js', 'cluster.js'],
         bundleDebug: true,
         requireRewrites: {},
         pkgDependencies: {},
         typesFiles: ['lifecycle', 'cluster'],
-        // Two separate modules — must use explicit indexJs
+        // Two separate modules - must use explicit indexJs
         indexJs: [
             "'use strict';",
             "const lifecycle = require('./lib/lifecycle');",
@@ -483,7 +483,7 @@ const scopes = [
         requireRewrites: {},
         pkgDependencies: {},
         typesFiles: ['errors'],
-        // errors is a single module; debug is a separate file — explicit indexJs
+        // errors is a single module; debug is a separate file - explicit indexJs
         indexJs: [
             "'use strict';",
             "const errors = require('./lib/errors');",

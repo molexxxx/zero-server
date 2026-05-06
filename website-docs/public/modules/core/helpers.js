@@ -50,7 +50,7 @@ export function formatNotes(s)
                 const lines = rest.map(l => `<span class="note-line">${l}</span>`).join('');
                 return first + `<span class="note-list">${lines}</span>`;
             }
-            // Flowing text (wrapped sentences) — join with spaces
+            // Flowing text (wrapped sentences) - join with spaces
             return first + ' ' + rest.map(l => l.trim()).join(' ');
         }
     }

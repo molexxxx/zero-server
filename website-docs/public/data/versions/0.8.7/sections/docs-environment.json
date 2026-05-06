@@ -19,7 +19,7 @@
 						{
 							"method": "load",
 							"signature": "load([schema], [options])",
-							"description": "Load environment variables from `.env` files and validate against a typed schema. Files are loaded in precedence order (later overrides earlier): 1. `.env` — shared defaults 2. `.env.local` — local overrides (gitignored) 3. `.env.{NODE_ENV}` — environment-specific  (e.g. `.env.production`) 4. `.env.{NODE_ENV}.local` — env-specific local overrides Process environment variables (`process.env`) always take precedence.",
+							"description": "Load environment variables from `.env` files and validate against a typed schema. Files are loaded in precedence order (later overrides earlier): 1. `.env` - shared defaults 2. `.env.local` - local overrides (gitignored) 3. `.env.{NODE_ENV}` - environment-specific  (e.g. `.env.production`) 4. `.env.{NODE_ENV}.local` - env-specific local overrides Process environment variables (`process.env`) always take precedence.",
 							"methodParams": [
 								{
 									"param": "schema",
@@ -38,7 +38,7 @@
 								{
 									"option": "path",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom directory to load from (default: `process.cwd()`)."
 								},
 								{
@@ -158,55 +158,55 @@
 				{
 					"option": "string",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Pass-through. Supports min/max length and match regex constraints."
 				},
 				{
 					"option": "number",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Parsed via Number(). Supports min/max range."
 				},
 				{
 					"option": "integer",
 					"type": "integer",
-					"default": "—",
+					"default": "-",
 					"notes": "Parsed via parseInt(). Supports min/max range."
 				},
 				{
 					"option": "port",
 					"type": "port",
-					"default": "—",
+					"default": "-",
 					"notes": "Integer 0–65535. Rejects out-of-range values."
 				},
 				{
 					"option": "boolean",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'."
 				},
 				{
 					"option": "array",
 					"type": "array",
-					"default": "—",
+					"default": "-",
 					"notes": "Split by separator (default ',')."
 				},
 				{
 					"option": "json",
 					"type": "json",
-					"default": "—",
+					"default": "-",
 					"notes": "Parsed via JSON.parse()."
 				},
 				{
 					"option": "url",
 					"type": "url",
-					"default": "—",
+					"default": "-",
 					"notes": "Validated via new URL()."
 				},
 				{
 					"option": "enum",
 					"type": "enum",
-					"default": "—",
+					"default": "-",
 					"notes": "Must be one of the 'values' array."
 				}
 			]

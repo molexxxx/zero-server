@@ -355,10 +355,10 @@ describe('webauthn.generateAuthenticationOptions', () =>
 });
 
 // =========================================================
-// verifyRegistration — error paths
+// verifyRegistration - error paths
 // =========================================================
 
-describe('webauthn.verifyRegistration — error paths', () =>
+describe('webauthn.verifyRegistration - error paths', () =>
 {
     it('should return error for missing response', () =>
     {
@@ -439,10 +439,10 @@ describe('webauthn.verifyRegistration — error paths', () =>
 });
 
 // =========================================================
-// verifyAuthentication — error paths
+// verifyAuthentication - error paths
 // =========================================================
 
-describe('webauthn.verifyAuthentication — error paths', () =>
+describe('webauthn.verifyAuthentication - error paths', () =>
 {
     it('should return error for missing response', () =>
     {
@@ -1011,7 +1011,7 @@ describe('webauthn end-to-end (ES256)', () =>
             expectedRPID: rpId,
         });
 
-        // Unknown formats are treated as "none" — should still verify
+        // Unknown formats are treated as "none" - should still verify
         expect(result.verified).toBe(true);
     });
 
@@ -1027,7 +1027,7 @@ describe('webauthn end-to-end (ES256)', () =>
         expect(regResult.credential.counter).toBe(0);
 
         const { challenge } = webauthn.generateAuthenticationOptions({ rpId });
-        // Counter=0 again — both zero, skip check
+        // Counter=0 again - both zero, skip check
         const authResp = buildAuthResponse(challenge, regResult.credential, 0);
         const authResult = webauthn.verifyAuthentication({
             response: authResp,
@@ -1179,7 +1179,7 @@ describe('webauthn end-to-end (ES256)', () =>
 // Packed self-attestation
 // =========================================================
 
-describe('webauthn — packed self-attestation', () =>
+describe('webauthn - packed self-attestation', () =>
 {
     const rpId = 'test.example.com';
     const origin = 'https://test.example.com';
@@ -1329,7 +1329,7 @@ describe('webauthn — packed self-attestation', () =>
 // CBOR edge cases
 // =========================================================
 
-describe('CBOR decoder — edge cases', () =>
+describe('CBOR decoder - edge cases', () =>
 {
     it('should decode a large unsigned integer (64-bit)', () =>
     {

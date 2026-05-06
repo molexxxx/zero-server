@@ -50,7 +50,7 @@ registerVersionRefreshSearch(refreshSearchResults);
 
 function boot()
 {
-    // #features is "home" — prevent browser native anchor scroll
+    // #features is "home" - prevent browser native anchor scroll
     if (!location.hash || location.hash === '#features') window.scrollTo(0, 0);
 
     // UI shell (theme, bento, TOC, scroll-spy, progress, FAB)

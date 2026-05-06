@@ -7,7 +7,7 @@ const {
 
 /**
  * Register the standard middleware stack on the app.
- * Order matters — security & utility first, then parsers, then static.
+ * Order matters - security & utility first, then parsers, then static.
  */
 function applyMiddleware(app)
 {

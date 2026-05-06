@@ -1,5 +1,5 @@
 /**
- * Tests for lib/orm/snapshot.js — schema snapshot & diff engine
+ * Tests for lib/orm/snapshot.js - schema snapshot & diff engine
  */
 const fs   = require('fs');
 const path = require('path');
@@ -18,7 +18,7 @@ const { Model, TYPES } = require('../../lib/orm');
 // ===================================================================
 // buildSnapshot
 // ===================================================================
-describe('snapshot — buildSnapshot', () =>
+describe('snapshot - buildSnapshot', () =>
 {
     it('builds snapshot from Model classes', () =>
     {
@@ -126,7 +126,7 @@ describe('snapshot — buildSnapshot', () =>
 // ===================================================================
 // loadSnapshot / saveSnapshot
 // ===================================================================
-describe('snapshot — load / save', () =>
+describe('snapshot - load / save', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_snap__');
 
@@ -163,7 +163,7 @@ describe('snapshot — load / save', () =>
 // ===================================================================
 // diffSnapshots
 // ===================================================================
-describe('snapshot — diffSnapshots', () =>
+describe('snapshot - diffSnapshots', () =>
 {
     it('detects new tables', () =>
     {
@@ -261,7 +261,7 @@ describe('snapshot — diffSnapshots', () =>
 // ===================================================================
 // hasNoChanges
 // ===================================================================
-describe('snapshot — hasNoChanges', () =>
+describe('snapshot - hasNoChanges', () =>
 {
     it('returns true for empty changeset', () =>
     {
@@ -315,7 +315,7 @@ describe('snapshot — hasNoChanges', () =>
 // ===================================================================
 // generateMigrationCode
 // ===================================================================
-describe('snapshot — generateMigrationCode', () =>
+describe('snapshot - generateMigrationCode', () =>
 {
     it('generates createTable for new tables', () =>
     {
@@ -425,7 +425,7 @@ describe('snapshot — generateMigrationCode', () =>
 // ===================================================================
 // discoverModels
 // ===================================================================
-describe('snapshot — discoverModels', () =>
+describe('snapshot - discoverModels', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_snap_models__');
 
@@ -498,7 +498,7 @@ describe('snapshot — discoverModels', () =>
 // ===================================================================
 // SNAPSHOT_FILE constant
 // ===================================================================
-describe('snapshot — SNAPSHOT_FILE', () =>
+describe('snapshot - SNAPSHOT_FILE', () =>
 {
     it('is _schema_snapshot.json', () =>
     {
@@ -509,7 +509,7 @@ describe('snapshot — SNAPSHOT_FILE', () =>
 // ===================================================================
 // Auto-diff migration via CLI integration
 // ===================================================================
-describe('CLI — auto-diff make:migration', () =>
+describe('CLI - auto-diff make:migration', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_snap_cli__');
     const { CLI } = require('../../lib/cli');
@@ -651,9 +651,9 @@ describe('CLI — auto-diff make:migration', () =>
 });
 
 // ===================================================================
-// CLI — migrate:remove
+// CLI - migrate:remove
 // ===================================================================
-describe('CLI — migrate:remove', () =>
+describe('CLI - migrate:remove', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_snap_remove__');
     const { CLI } = require('../../lib/cli');
@@ -767,9 +767,9 @@ describe('CLI — migrate:remove', () =>
 });
 
 // ===================================================================
-// CLI — _loadConfigSync
+// CLI - _loadConfigSync
 // ===================================================================
-describe('CLI — _loadConfigSync', () =>
+describe('CLI - _loadConfigSync', () =>
 {
     const { CLI } = require('../../lib/cli');
 
@@ -781,9 +781,9 @@ describe('CLI — _loadConfigSync', () =>
 });
 
 // ===================================================================
-// CLI — help text includes new commands
+// CLI - help text includes new commands
 // ===================================================================
-describe('CLI — help text updated', () =>
+describe('CLI - help text updated', () =>
 {
     const { CLI } = require('../../lib/cli');
 

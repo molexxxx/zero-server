@@ -136,7 +136,7 @@ export interface CompressOptions {
     level?: number;
     /** Force specific encoding(s). */
     encoding?: string | string[];
-    /** Filter function — return false to skip compression. */
+    /** Filter function - return false to skip compression. */
     filter?: (req: Request, res: Response) => boolean;
 }
 

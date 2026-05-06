@@ -1,5 +1,5 @@
 /**
- * Phase 4 — CLI tests
+ * Phase 4 - CLI tests
  */
 const fs = require('fs');
 const path = require('path');
@@ -8,7 +8,7 @@ const { CLI } = require('../../lib/cli');
 // ===================================================================
 // Constructor / argument parsing
 // ===================================================================
-describe('CLI — constructor', () =>
+describe('CLI - constructor', () =>
 {
     it('defaults to help', () =>
     {
@@ -52,7 +52,7 @@ describe('CLI — constructor', () =>
 // ===================================================================
 // Help / version (no side effects)
 // ===================================================================
-describe('CLI — help / version', () =>
+describe('CLI - help / version', () =>
 {
     it('help prints usage', () =>
     {
@@ -81,7 +81,7 @@ describe('CLI — help / version', () =>
 // ===================================================================
 // make:model
 // ===================================================================
-describe('CLI — make:model', () =>
+describe('CLI - make:model', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_model__');
 
@@ -138,7 +138,7 @@ describe('CLI — make:model', () =>
 // ===================================================================
 // make:migration
 // ===================================================================
-describe('CLI — make:migration', () =>
+describe('CLI - make:migration', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_migration__');
 
@@ -195,7 +195,7 @@ describe('CLI — make:migration', () =>
 // ===================================================================
 // make:seeder
 // ===================================================================
-describe('CLI — make:seeder', () =>
+describe('CLI - make:seeder', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_seeder__');
 
@@ -249,9 +249,9 @@ describe('CLI — make:seeder', () =>
 });
 
 // ===================================================================
-// run() — unknown command
+// run() - unknown command
 // ===================================================================
-describe('CLI — run unknown command', () =>
+describe('CLI - run unknown command', () =>
 {
     it('sets exitCode for unknown command', async () =>
     {
@@ -273,7 +273,7 @@ describe('CLI — run unknown command', () =>
 // ===================================================================
 // Config loading edge cases
 // ===================================================================
-describe('CLI — config loading', () =>
+describe('CLI - config loading', () =>
 {
     it('_loadConfig throws when no config file found', async () =>
     {
@@ -299,7 +299,7 @@ describe('CLI — config loading', () =>
 // ===================================================================
 // run() dispatching aliases
 // ===================================================================
-describe('CLI — run() dispatching', () =>
+describe('CLI - run() dispatching', () =>
 {
     it('dispatches --help to _help', async () =>
     {
@@ -367,7 +367,7 @@ describe('CLI — run() dispatching', () =>
 // ===================================================================
 // Migration commands (with mocked DB)
 // ===================================================================
-describe('CLI — migration commands', () =>
+describe('CLI - migration commands', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_mig_cmds__');
     let cfgPath;
@@ -439,7 +439,7 @@ describe('CLI — migration commands', () =>
 // ===================================================================
 // Migrate with actual migration files
 // ===================================================================
-describe('CLI — migrate with files', () =>
+describe('CLI - migrate with files', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_mig_files__');
     let cfgPath;
@@ -482,7 +482,7 @@ describe('CLI — migrate with files', () =>
 // ===================================================================
 // Seed command
 // ===================================================================
-describe('CLI — seed command', () =>
+describe('CLI - seed command', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_seed__');
 
@@ -530,7 +530,7 @@ describe('CLI — seed command', () =>
 // ===================================================================
 // Scaffolding defaults
 // ===================================================================
-describe('CLI — scaffolding with default dir', () =>
+describe('CLI - scaffolding with default dir', () =>
 {
     const origCwd = process.cwd();
     const tmpDir = path.join(__dirname, '__tmp_cli_scaffold__');
@@ -582,7 +582,7 @@ describe('CLI — scaffolding with default dir', () =>
 // ===================================================================
 // Short flag with no following arg
 // ===================================================================
-describe('CLI — flag edge cases', () =>
+describe('CLI - flag edge cases', () =>
 {
     it('-f with no following value defaults to true', () =>
     {
@@ -594,7 +594,7 @@ describe('CLI — flag edge cases', () =>
 // ===================================================================
 // runCLI entry point
 // ===================================================================
-describe('CLI — runCLI', () =>
+describe('CLI - runCLI', () =>
 {
     it('runCLI runs help', async () =>
     {
@@ -621,9 +621,9 @@ describe('CLI — runCLI', () =>
 });
 
 // ===================================================================
-// Dispatch arrows via run() — covers command map arrow functions
+// Dispatch arrows via run() - covers command map arrow functions
 // ===================================================================
-describe('CLI — dispatch arrows via run()', () =>
+describe('CLI - dispatch arrows via run()', () =>
 {
     const origCwd = process.cwd();
     const tmpDir = path.join(__dirname, '__tmp_cli_dispatch__');
@@ -683,7 +683,7 @@ describe('CLI — dispatch arrows via run()', () =>
 // ===================================================================
 // Rollback / status with actual migration data
 // ===================================================================
-describe('CLI — rollback/status with migrations', () =>
+describe('CLI - rollback/status with migrations', () =>
 {
     const tmpDir = path.join(__dirname, '__tmp_cli_rb__');
     let cfgPath;
@@ -760,7 +760,7 @@ describe('CLI — rollback/status with migrations', () =>
 // ===================================================================
 // pascalCase regex callback coverage
 // ===================================================================
-describe('CLI — pascalCase regex callback', () =>
+describe('CLI - pascalCase regex callback', () =>
 {
     it('converts underscore-delimited names via run() dispatch', async () =>
     {

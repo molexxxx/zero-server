@@ -26,7 +26,7 @@ class TestModel extends Model {
 }
 
 // --- create() with adapter.createView -------------------------------------
-describe('DatabaseView — create() with createView adapter', () => {
+describe('DatabaseView - create() with createView adapter', () => {
     let db;
     afterEach(async () => { await db?.close(); });
 
@@ -66,14 +66,14 @@ describe('DatabaseView — create() with createView adapter', () => {
 });
 
 // --- drop() / refresh() with db argument ----------------------------------
-describe('DatabaseView — drop/refresh with db arg', () => {
+describe('DatabaseView - drop/refresh with db arg', () => {
     let db;
     afterEach(async () => { await db?.close(); });
 
     it('drop() uses db argument adapter over stored adapter', async () => {
         db = makeDb({ dropView: vi.fn().mockResolvedValue() });
         const view = new DatabaseView('v_drop', { sql: 'SELECT 1' });
-        // Don't call create() — _adapter is null
+        // Don't call create() - _adapter is null
         await view.drop(db);
         expect(db.adapter.dropView).toHaveBeenCalledWith('v_drop', { materialized: false });
     });
@@ -94,7 +94,7 @@ describe('DatabaseView — drop/refresh with db arg', () => {
 });
 
 // --- exists() -------------------------------------------------------------
-describe('DatabaseView — exists()', () => {
+describe('DatabaseView - exists()', () => {
     let db;
     afterEach(async () => { await db?.close(); });
 
@@ -115,7 +115,7 @@ describe('DatabaseView — exists()', () => {
 });
 
 // --- _buildSQL where clause operators -------------------------------------
-describe('DatabaseView — _buildSQL() where operators', () => {
+describe('DatabaseView - _buildSQL() where operators', () => {
     let db;
     afterEach(async () => { await db?.close(); });
 
@@ -192,7 +192,7 @@ describe('DatabaseView — _buildSQL() where operators', () => {
 });
 
 // --- _executeQuery fallback with conditions -------------------------------
-describe('DatabaseView — _executeQuery fallback paths', () => {
+describe('DatabaseView - _executeQuery fallback paths', () => {
     let db;
     afterEach(async () => { await db?.close(); });
 
@@ -239,7 +239,7 @@ describe('DatabaseView — _executeQuery fallback paths', () => {
 
         const q = TestModel.query();
         const view = new DatabaseView('v_ct2', { query: q });
-        // Don't call create() — no viewModel
+        // Don't call create() - no viewModel
         const cnt = await view.count();
         expect(cnt).toBe(1);
     });

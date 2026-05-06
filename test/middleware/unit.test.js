@@ -1,5 +1,5 @@
 'use strict';
-/** unit.test.js — middleware unit tests */
+/** unit.test.js - middleware unit tests */
 
 const EventEmitter = require('events');
 const crypto       = require('crypto');
@@ -181,7 +181,7 @@ describe('errorHandler', () =>
         expect(res._body.code).toBe('ITEM_DELETED');
     });
 
-    it('isHttpError path — uses toJSON()', () =>
+    it('isHttpError path - uses toJSON()', () =>
     {
         const { req, res } = makeErrMocks();
         const err = new HttpError(422, 'Unprocessable Entity');
@@ -259,7 +259,7 @@ describe('errorHandler', () =>
         expect(log.mock.calls[0][0]).toContain('/original');
     });
 
-    it('url and originalUrl both absent — falls back to "/"', () =>
+    it('url and originalUrl both absent - falls back to "/"', () =>
     {
         const { res } = makeErrMocks();
         const req = { method: 'POST' };
@@ -486,7 +486,7 @@ describe('cors middleware', () =>
         expect(res._headers['Access-Control-Allow-Origin']).toBe('http://allowed.com');
     });
 
-    it('origin:false — no ACAO header set', () =>
+    it('origin:false - no ACAO header set', () =>
     {
         const req = makeReq({ method: 'GET', headers: { origin: 'http://x.com' } });
         const res = makeRes();
@@ -504,10 +504,10 @@ describe('cors middleware', () =>
 
     it('handles non-string, non-array, non-null origin (returns null)', () =>
     {
-        // When allowOrigin is e.g. a number — the function falls to the last return null
+        // When allowOrigin is e.g. a number - the function falls to the last return null
         const req = makeReq({ method: 'GET', headers: { origin: 'http://x.com' } });
         const res = makeRes();
-        // pass origin:42 — neither string nor array — matchOrigin returns null
+        // pass origin:42 - neither string nor array - matchOrigin returns null
         cors({ origin: 42 })(req, res, noop);
         expect(res._headers['Access-Control-Allow-Origin']).toBeUndefined();
     });
@@ -586,7 +586,7 @@ describe('csrf middleware', () =>
         return { token, secret, mw };
     }
 
-    it('GET request — sets CSRF cookie for fresh client', () =>
+    it('GET request - sets CSRF cookie for fresh client', () =>
     {
         const { mw } = makeSignedToken();
         const req = makeReq({ method: 'GET', cookies: {} });
@@ -597,7 +597,7 @@ describe('csrf middleware', () =>
         expect(setCookies.length).toBe(1);
     });
 
-    it('GET request — populates req.csrfToken', () =>
+    it('GET request - populates req.csrfToken', () =>
     {
         const req = makeReq({ method: 'GET', cookies: {} });
         const res = makeRes();
@@ -618,7 +618,7 @@ describe('csrf middleware', () =>
         res1.set = vi.fn().mockImplementation((k, v) => { tok = v.split('=')[1].split(';')[0]; return res1; });
         mw(req1, res1, noop);
 
-        // Second request with valid existing token — should NOT set a new cookie
+        // Second request with valid existing token - should NOT set a new cookie
         const req2 = makeReq({ method: 'GET', cookies: { _csrf: tok } });
         const res2 = makeRes();
         const sets = [];
@@ -823,7 +823,7 @@ describe('compress middleware', () =>
         return { raw, req, res, origWrite, origEnd, rh };
     }
 
-    it('no accept-encoding — does not patch write/end, calls next()', () =>
+    it('no accept-encoding - does not patch write/end, calls next()', () =>
     {
         const next = vi.fn();
         const { raw, req, res, origWrite } = makeCompressEnv({ encoding: '' });
@@ -834,7 +834,7 @@ describe('compress middleware', () =>
         expect(next).toHaveBeenCalled();
     });
 
-    it('filter fn returning false — skips compression', () =>
+    it('filter fn returning false - skips compression', () =>
     {
         const next = vi.fn();
         const { raw, req, res, origWrite } = makeCompressEnv();
@@ -874,7 +874,7 @@ describe('compress middleware', () =>
             const chunk1 = Buffer.alloc(50, 'a');
             const chunk2 = Buffer.alloc(50, 'b');
             raw.write.call(raw, chunk1, null, null);
-            // second write — headersWritten is now true
+            // second write - headersWritten is now true
             raw.write.call(raw, chunk2, null, null);
 
             setImmediate(() => resolve());
@@ -902,7 +902,7 @@ describe('compress middleware', () =>
         expect(() => raw.end.call(raw)).not.toThrow();
     });
 
-    it('end() with non-compressible content-type — bypasses compression', () =>
+    it('end() with non-compressible content-type - bypasses compression', () =>
     {
         const { raw, req, res, origEnd } = makeCompressEnv({ encoding: 'gzip', contentType: 'image/jpeg' });
         compress({ threshold: 0 })(req, res, noop);
@@ -976,7 +976,7 @@ describe('cookieParser middleware', () =>
         expect(req.cookies.c).toBe('3');
     });
 
-    it('no Cookie header — cookies is empty object', () =>
+    it('no Cookie header - cookies is empty object', () =>
     {
         const req = makeReq({ headers: {} });
         cookieParser()(req, makeRes(), noop);
@@ -1035,7 +1035,7 @@ describe('cookieParser middleware', () =>
         const signed = cookieParser.sign('hello', 'correct-secret');
         const req = makeReq({ headers: { cookie: `tok=${signed}` } });
         cookieParser('wrong-secret')(req, makeRes(), noop);
-        // Silently dropped — not in signedCookies
+        // Silently dropped - not in signedCookies
         expect(req.signedCookies.tok).toBeUndefined();
     });
 
@@ -1046,7 +1046,7 @@ describe('cookieParser middleware', () =>
         expect(req.signedCookies.s).toBeUndefined();
     });
 
-    it('secret rotation — old secret still valid', () =>
+    it('secret rotation - old secret still valid', () =>
     {
         const newSecret = 'new-secret';
         const oldSecret = 'old-secret';
@@ -1090,7 +1090,7 @@ describe('cookieParser middleware', () =>
         expect(req.secrets).toEqual(['my-secret']);
     });
 
-    it('no secret — req.secret is undefined', () =>
+    it('no secret - req.secret is undefined', () =>
     {
         const req = makeReq({ headers: {} });
         cookieParser()(req, makeRes(), noop);
@@ -1159,7 +1159,7 @@ describe('rateLimit middleware', () =>
         mw(req, makeRes(), next); // 1
         mw(req, makeRes(), next); // 2
         const res = makeRes();
-        mw(req, res, next);      // 3 — over limit
+        mw(req, res, next);      // 3 - over limit
         expect(res._status).toBe(429);
     });
 
@@ -1177,9 +1177,9 @@ describe('rateLimit middleware', () =>
     {
         const mw = rateLimit({ max: 1, windowMs: 30_000 });
         const req = makeReq({ ip: '4.4.4.4' });
-        mw(req, makeRes(), noop); // first — ok
+        mw(req, makeRes(), noop); // first - ok
         const res = makeRes();
-        mw(req, res, noop);       // second — blocked
+        mw(req, res, noop);       // second - blocked
         expect(res._headers['Retry-After']).toBeDefined();
     });
 
@@ -1209,8 +1209,8 @@ describe('rateLimit middleware', () =>
         const req1 = makeReq({ headers: { 'x-api-key': 'key-a' } });
         const req2 = makeReq({ headers: { 'x-api-key': 'key-b' } });
         mw(req1, makeRes(), next); // key-a: 1
-        mw(req1, makeRes(), next); // key-a: 2 — over limit (max=1)
-        mw(req2, makeRes(), next); // key-b: 1 — different key, ok
+        mw(req1, makeRes(), next); // key-a: 2 - over limit (max=1)
+        mw(req2, makeRes(), next); // key-b: 1 - different key, ok
         // req2 should have succeeded
         expect(next).toHaveBeenCalledTimes(2); // req1 first + req2
     });
@@ -1229,7 +1229,7 @@ describe('rateLimit middleware', () =>
 
         vi.advanceTimersByTime(windowMs + 100);
         const freshRes = makeRes();
-        mw(req, freshRes, next); // new window — ok
+        mw(req, freshRes, next); // new window - ok
         expect(freshRes._status).not.toBe(429);
         vi.useRealTimers();
     });
@@ -1238,7 +1238,7 @@ describe('rateLimit middleware', () =>
     {
         vi.useFakeTimers();
         const windowMs = 500;
-        // rateLimit is created fresh — the cleanup interval is set at creation
+        // rateLimit is created fresh - the cleanup interval is set at creation
         const mw = rateLimit({ max: 100, windowMs });
         const req = makeReq({ ip: '8.8.8.8' });
         mw(req, makeRes(), noop); // create an entry
@@ -1248,7 +1248,7 @@ describe('rateLimit middleware', () =>
         // Advance by windowMs again to trigger the cleanup interval's own tick
         vi.advanceTimersByTime(windowMs);
         // The cleanup interval fired at least once; no assertion needed beyond
-        // "it didn't throw" — but let's also verify it didn't corrupt subsequent requests
+        // "it didn't throw" - but let's also verify it didn't corrupt subsequent requests
 
         const next = vi.fn();
         mw(makeReq({ ip: '8.8.8.8' }), makeRes(), next);
@@ -1381,7 +1381,7 @@ describe('timeout middleware', () =>
         expect(req._timedOut).toBe(true);
     });
 
-    it('timer cleared on "finish" event — does not fire after response finishes', () =>
+    it('timer cleared on "finish" event - does not fire after response finishes', () =>
     {
         vi.useFakeTimers();
         const req = makeReq();
@@ -1466,7 +1466,7 @@ describe('validator middleware', () =>
         expect(res._status).toBe(422);
     });
 
-    it('validates type:url — valid URL passes', () =>
+    it('validates type:url - valid URL passes', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { href: { type: 'url' } } });
@@ -1475,7 +1475,7 @@ describe('validator middleware', () =>
         expect(next).toHaveBeenCalled();
     });
 
-    it('validates type:url — invalid URL returns error', () =>
+    it('validates type:url - invalid URL returns error', () =>
     {
         const mw = validate({ body: { href: { type: 'url' } } });
         const req = makeReq({ body: { href: 'not a url' } });
@@ -1485,7 +1485,7 @@ describe('validator middleware', () =>
         expect(res._body.errors.join(' ')).toContain('valid URL');
     });
 
-    it('validates type:uuid — valid UUID passes', () =>
+    it('validates type:uuid - valid UUID passes', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { id: { type: 'uuid' } } });
@@ -1494,7 +1494,7 @@ describe('validator middleware', () =>
         expect(next).toHaveBeenCalled();
     });
 
-    it('validates type:uuid — invalid UUID returns error', () =>
+    it('validates type:uuid - invalid UUID returns error', () =>
     {
         const mw = validate({ body: { id: { type: 'uuid' } } });
         const req = makeReq({ body: { id: 'not-a-uuid' } });
@@ -2002,7 +2002,7 @@ describe('serveStatic middleware', () =>
         expect(res._status).toBe(400);
     });
 
-    it('dotfiles default is ignore — calls next() for .hidden', () =>
+    it('dotfiles default is ignore - calls next() for .hidden', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2084,7 +2084,7 @@ describe('serveStatic middleware', () =>
         });
     });
 
-    it('index:false — directory request calls next()', () =>
+    it('index:false - directory request calls next()', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2165,11 +2165,11 @@ describe('serveStatic middleware', () =>
 });
 
 // ===========================================================================
-// Coverage supplement — targeted branch fills across all middleware
+// Coverage supplement - targeted branch fills across all middleware
 // ===========================================================================
 
-// COMPRESS — quality-value parsing paths
-describe('compress — quality-value negotiate()', () =>
+// COMPRESS - quality-value parsing paths
+describe('compress - quality-value negotiate()', () =>
 {
     const compress = require('../../lib/middleware/compress');
 
@@ -2230,8 +2230,8 @@ describe('compress — quality-value negotiate()', () =>
     });
 });
 
-// CORS — maxAge option (lines 73-74)
-describe('cors — maxAge option', () =>
+// CORS - maxAge option (lines 73-74)
+describe('cors - maxAge option', () =>
 {
     const cors = require('../../lib/middleware/cors');
 
@@ -2248,8 +2248,8 @@ describe('cors — maxAge option', () =>
     });
 });
 
-// CSRF — verifyToken with no-dot token (parts.length !== 2 → line 72)
-describe('csrf — verifyToken invalid format', () =>
+// CSRF - verifyToken with no-dot token (parts.length !== 2 → line 72)
+describe('csrf - verifyToken invalid format', () =>
 {
     const csrf = require('../../lib/middleware/csrf');
 
@@ -2270,8 +2270,8 @@ describe('csrf — verifyToken invalid format', () =>
     });
 });
 
-// ERROR HANDLER — req.url missing fallback + err.code in generic body
-describe('errorHandler — uncovered branches', () =>
+// ERROR HANDLER - req.url missing fallback + err.code in generic body
+describe('errorHandler - uncovered branches', () =>
 {
     const errorHandler = require('../../lib/middleware/errorHandler');
 
@@ -2315,8 +2315,8 @@ describe('errorHandler — uncovered branches', () =>
     });
 });
 
-// HELMET — empty directives yields no CSP header (line 51 false branch)
-describe('helmet — empty CSP directives', () =>
+// HELMET - empty directives yields no CSP header (line 51 false branch)
+describe('helmet - empty CSP directives', () =>
 {
     const helmet = require('../../lib/middleware/helmet');
 
@@ -2330,8 +2330,8 @@ describe('helmet — empty CSP directives', () =>
     });
 });
 
-// RATE LIMIT — cleanup interval with mixed expired/fresh entries
-describe('rateLimit — cleanup with mixed entries', () =>
+// RATE LIMIT - cleanup interval with mixed expired/fresh entries
+describe('rateLimit - cleanup with mixed entries', () =>
 {
     const rateLimit = require('../../lib/middleware/rateLimit');
 
@@ -2362,8 +2362,8 @@ describe('rateLimit — cleanup with mixed entries', () =>
     });
 });
 
-// VALIDATOR — additional coerce and constraint paths
-describe('validator — additional coerce and constraint coverage', () =>
+// VALIDATOR - additional coerce and constraint paths
+describe('validator - additional coerce and constraint coverage', () =>
 {
     const validate = require('../../lib/middleware/validator');
 
@@ -2371,7 +2371,7 @@ describe('validator — additional coerce and constraint coverage', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { tags: { type: 'array' } } });
-        // Pass a JSON array string — should be parsed to actual array
+        // Pass a JSON array string - should be parsed to actual array
         const req = makeReq({ body: { tags: '["a","b","c"]' } });
         mw(req, makeRes(), next);
         expect(next).toHaveBeenCalled();
@@ -2383,7 +2383,7 @@ describe('validator — additional coerce and constraint coverage', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { count: { type: 'array' } } });
-        // Pass a number — should pass through (not a string or array)
+        // Pass a number - should pass through (not a string or array)
         const req = makeReq({ body: { count: 42 } });
         mw(req, makeRes(), next);
         // 42 is not an array, validation fails since type:array checks Array.isArray
@@ -2397,7 +2397,7 @@ describe('validator — additional coerce and constraint coverage', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { meta: { type: 'json' } } });
-        // meta is already an object — json coerce just returns it
+        // meta is already an object - json coerce just returns it
         const req = makeReq({ body: { meta: { already: 'parsed' } } });
         mw(req, makeRes(), next);
         expect(next).toHaveBeenCalled();
@@ -2425,15 +2425,15 @@ describe('validator — additional coerce and constraint coverage', () =>
 });
 
 // ===========================================================================
-// helmet — res.raw fallback, CSP string values, disabled options (L51, L76, L136, L148)
+// helmet - res.raw fallback, CSP string values, disabled options (L51, L76, L136, L148)
 // ===========================================================================
-describe('helmet — additional branch coverage', () =>
+describe('helmet - additional branch coverage', () =>
 {
     it('uses res directly when res.raw is absent (L51 || res branch)', () =>
     {
         const mw = helmet();
         const req = makeReq();
-        // fakeRes has no .raw property — raw = res.raw || res = res itself
+        // fakeRes has no .raw property - raw = res.raw || res = res itself
         const fakeRes = {
             _headers: {},
             setHeader:   (k, v) => { fakeRes._headers[k] = v; },
@@ -2480,18 +2480,18 @@ describe('helmet — additional branch coverage', () =>
 });
 
 // ===========================================================================
-// csrf — req.secure=true adds Secure flag to cookie (L126)
+// csrf - req.secure=true adds Secure flag to cookie (L126)
 // ===========================================================================
-describe('csrf — Secure cookie flag when req.secure=true (L126)', () =>
+describe('csrf - Secure cookie flag when req.secure=true (L126)', () =>
 {
     it('appends "; Secure" to rotated CSRF cookie on HTTPS state-changing request', () =>
     {
-        // L126 is in the POST/mutation path — need a valid token round-trip
+        // L126 is in the POST/mutation path - need a valid token round-trip
         const mw = csrf({ secret: 'csrf-secure-l126-key' });
         let capturedToken = null;
         const setCookieCalls1 = [];
 
-        // Step 1 — GET with req.secure=true: establishes the initial token (hits L85)
+        // Step 1 - GET with req.secure=true: establishes the initial token (hits L85)
         const getReq = makeReq({ method: 'GET', headers: {}, cookies: {}, secure: true });
         const getRes = {
             ...makeRes(),
@@ -2501,7 +2501,7 @@ describe('csrf — Secure cookie flag when req.secure=true (L126)', () =>
         capturedToken = getReq.csrfToken;
         expect(capturedToken).toBeTruthy();
 
-        // Step 2 — POST with the captured token + req.secure=true: hits L126
+        // Step 2 - POST with the captured token + req.secure=true: hits L126
         const setCookieCalls2 = [];
         const postReq = makeReq({
             method:  'POST',
@@ -2521,11 +2521,11 @@ describe('csrf — Secure cookie flag when req.secure=true (L126)', () =>
 });
 
 // ===========================================================================
-// csrf — verifyToken internal branch coverage (L56, L61, L69, L72)
+// csrf - verifyToken internal branch coverage (L56, L61, L69, L72)
 // ===========================================================================
-describe('csrf — verifyToken and generateToken internal paths', () =>
+describe('csrf - verifyToken and generateToken internal paths', () =>
 {
-    it('verifyToken returns false for non-string token — covers L61 TRUE branch', () =>
+    it('verifyToken returns false for non-string token - covers L61 TRUE branch', () =>
     {
         // POST request where both clientToken and cookieToken are the same non-string
         // value (number) → verifyToken(123) → typeof 123 !== 'string' → return false → 403
@@ -2546,7 +2546,7 @@ describe('csrf — verifyToken and generateToken internal paths', () =>
         expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it('verifyToken returns false for short hash (length mismatch) — covers L69 TRUE branch', () =>
+    it('verifyToken returns false for short hash (length mismatch) - covers L69 TRUE branch', () =>
     {
         // Token "abc.XX": hash='XX' (2 chars) but HMAC expected is 64 chars → lengths differ
         const mw = csrf({ secret: 'test-verify-hashlength' });
@@ -2566,7 +2566,7 @@ describe('csrf — verifyToken and generateToken internal paths', () =>
         expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it('generateToken catches crypto.randomBytes error — covers L56 catch block', () =>
+    it('generateToken catches crypto.randomBytes error - covers L56 catch block', () =>
     {
         // Mock randomBytes to throw once → generateToken returns null → cookie set to null token
         const spy = vi.spyOn(crypto, 'randomBytes').mockImplementationOnce(() =>
@@ -2582,7 +2582,7 @@ describe('csrf — verifyToken and generateToken internal paths', () =>
         spy.mockRestore();
     });
 
-    it('verifyToken catches crypto.timingSafeEqual error — covers L72 catch block', () =>
+    it('verifyToken catches crypto.timingSafeEqual error - covers L72 catch block', () =>
     {
         // Craft a token with hash of exactly 64 chars (matching expected HMAC length)
         // so the length check passes, then mock timingSafeEqual to throw
@@ -2613,11 +2613,11 @@ describe('csrf — verifyToken and generateToken internal paths', () =>
 });
 
 // ===========================================================================
-// rateLimit — timer.unref() FALSE branch (L38)
+// rateLimit - timer.unref() FALSE branch (L38)
 // The TRUE branch (unref exists) is already taken by every real-Node.js test.
 // Cover the FALSE branch: timer has no .unref property → the call is skipped.
 // ===========================================================================
-describe('rateLimit — cleanupInterval without unref (L38 FALSE branch)', () =>
+describe('rateLimit - cleanupInterval without unref (L38 FALSE branch)', () =>
 {
     it('skips unref() when the cleanup interval has no unref method', () =>
     {
@@ -2630,11 +2630,11 @@ describe('rateLimit — cleanupInterval without unref (L38 FALSE branch)', () =>
 });
 
 // ===========================================================================
-// timeout — timer.unref() FALSE branch (L49)
+// timeout - timer.unref() FALSE branch (L49)
 // The TRUE branch (unref exists) is already taken by every real-Node.js test.
 // Cover the FALSE branch: timer has no .unref property → the call is skipped.
 // ===========================================================================
-describe('timeout — timer without unref (L49 FALSE branch)', () =>
+describe('timeout - timer without unref (L49 FALSE branch)', () =>
 {
     it('skips unref() when the timer has no unref method', () =>
     {
@@ -2648,9 +2648,9 @@ describe('timeout — timer without unref (L49 FALSE branch)', () =>
 });
 
 // ===========================================================================
-// compress — brotli, unknown encoding, write-then-end paths (L70, L98, L101, L166-218)
+// compress - brotli, unknown encoding, write-then-end paths (L70, L98, L101, L166-218)
 // ===========================================================================
-describe('compress — additional encoding and streaming paths', () =>
+describe('compress - additional encoding and streaming paths', () =>
 {
     const zlib = require('zlib');
 
@@ -2680,7 +2680,7 @@ describe('compress — additional encoding and streaming paths', () =>
         expect(raw._headers['Content-Encoding']).toBe('br');
     });
 
-    it('unknown encoding (zstd) is ignored — falls back to gzip (L70 FALSE branch)', () =>
+    it('unknown encoding (zstd) is ignored - falls back to gzip (L70 FALSE branch)', () =>
     {
         const mw = compress({ threshold: 0 });
         const { raw, res, req } = makeCompressSetup3('zstd;q=1, gzip;q=0.5');
@@ -2690,7 +2690,7 @@ describe('compress — additional encoding and streaming paths', () =>
         expect(raw._headers['Content-Encoding']).toBe('gzip');
     });
 
-    it('write() then end(chunk) — headersWritten=true path (L214 + L216)', () =>
+    it('write() then end(chunk) - headersWritten=true path (L214 + L216)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2711,7 +2711,7 @@ describe('compress — additional encoding and streaming paths', () =>
         });
     });
 
-    it('write() then end() no-chunk — L214 + L217 path', () =>
+    it('write() then end() no-chunk - L214 + L217 path', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2762,10 +2762,10 @@ describe('compress — additional encoding and streaming paths', () =>
 });
 
 // ===========================================================================
-// serveStatic — additional branch coverage (L103, L110, L131, L144, L147,
+// serveStatic - additional branch coverage (L103, L110, L131, L144, L147,
 //                                            L239 TRUE, L245, L263, L264)
 // ===========================================================================
-describe('serveStatic — additional path coverage', () =>
+describe('serveStatic - additional path coverage', () =>
 {
     let tmpDirX;
 
@@ -2832,7 +2832,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('If-Modified-Since future date — file not modified → 304 (L131 TRUE)', () =>
+    it('If-Modified-Since future date - file not modified → 304 (L131 TRUE)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2852,7 +2852,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('If-Modified-Since very old date — file is newer, serve normally (L131 FALSE newer-file)', () =>
+    it('If-Modified-Since very old date - file is newer, serve normally (L131 FALSE newer-file)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2871,7 +2871,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('If-Modified-Since with invalid date string — ignored (L131 FALSE NaN side)', () =>
+    it('If-Modified-Since with invalid date string - ignored (L131 FALSE NaN side)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2889,7 +2889,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('range header not matching bytes regex — serves full file (L144 FALSE)', () =>
+    it('range header not matching bytes regex - serves full file (L144 FALSE)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2940,7 +2940,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('dotfile from extension fallback with dotfiles:deny returns 403 (L245 TRUE — deny)', () =>
+    it('dotfile from extension fallback with dotfiles:deny returns 403 (L245 TRUE - deny)', () =>
     {
         // Note: /.page is itself a dotfile → L227 fires before tryExt (tests L227 TRUE branch)
         return new Promise((resolve) =>
@@ -2956,7 +2956,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('dotfile found via extension fallback with dotfiles:ignore — serves it (L245 FALSE — not deny)', () =>
+    it('dotfile found via extension fallback with dotfiles:ignore - serves it (L245 FALSE - not deny)', () =>
     {
         // /.page → isDotfile=TRUE, dotfiles='ignore' → L227 not blocked
         // tryExt → .page.html found → L245: isDotfile=TRUE, dotfiles!='deny' → body NOT taken → serve
@@ -2973,7 +2973,7 @@ describe('serveStatic — additional path coverage', () =>
         });
     });
 
-    it('directory with no index.html — calls next() (L263)', () =>
+    it('directory with no index.html - calls next() (L263)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -2999,10 +2999,10 @@ describe('serveStatic — additional path coverage', () =>
 });
 
 // ===========================================================================
-// validator — COERCE NaN branches, boolean variants, Date, function default,
+// validator - COERCE NaN branches, boolean variants, Date, function default,
 //             unknown type, type-validation failures, minLength, null data
 // ===========================================================================
-describe('validator — COERCE and type-validation branch coverage', () =>
+describe('validator - COERCE and type-validation branch coverage', () =>
 {
     it('integer NaN: "not-a-number" triggers COERCE NaN path → type error (L31 + L109)', () =>
     {
@@ -3129,7 +3129,7 @@ describe('validator — COERCE and type-validation branch coverage', () =>
         expect(res._body.errors[0]).toContain('at least 5 characters');
     });
 
-    it('null request body — validateObject uses empty source (L182 || {} branch)', () =>
+    it('null request body - validateObject uses empty source (L182 || {} branch)', () =>
     {
         const next = vi.fn();
         const mw = validate({ body: { name: { type: 'string' } } });

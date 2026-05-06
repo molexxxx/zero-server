@@ -99,9 +99,9 @@ describe('Request QoL Properties', () => {
 });
 
 // ===========================================================
-//  req.get() — Header retrieval
+//  req.get() - Header retrieval
 // ===========================================================
-describe('Request — get() header retrieval', () => {
+describe('Request - get() header retrieval', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -140,9 +140,9 @@ describe('Request — get() header retrieval', () => {
 });
 
 // ===========================================================
-//  req.is() — Content-Type matching
+//  req.is() - Content-Type matching
 // ===========================================================
-describe('Request — is() content-type matching', () => {
+describe('Request - is() content-type matching', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -201,9 +201,9 @@ describe('Request — is() content-type matching', () => {
 });
 
 // ===========================================================
-//  req.hostname — X-Forwarded-Host
+//  req.hostname - X-Forwarded-Host
 // ===========================================================
-describe('Request — hostname from X-Forwarded-Host', () => {
+describe('Request - hostname from X-Forwarded-Host', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -242,7 +242,7 @@ describe('Request — hostname from X-Forwarded-Host', () => {
 // ===========================================================
 //  req.subdomains()
 // ===========================================================
-describe('Request — subdomains()', () => {
+describe('Request - subdomains()', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -282,9 +282,9 @@ describe('Request — subdomains()', () => {
 });
 
 // ===========================================================
-//  req.accepts() — edge cases
+//  req.accepts() - edge cases
 // ===========================================================
-describe('Request — accepts() edge cases', () => {
+describe('Request - accepts() edge cases', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -332,9 +332,9 @@ describe('Request — accepts() edge cases', () => {
 });
 
 // ===========================================================
-//  req.xhr — false case
+//  req.xhr - false case
 // ===========================================================
-describe('Request — xhr false case', () => {
+describe('Request - xhr false case', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -359,9 +359,9 @@ describe('Request — xhr false case', () => {
 });
 
 // ===========================================================
-//  req.fresh — always false behavior
+//  req.fresh - always false behavior
 // ===========================================================
-describe('Request — fresh/stale behavior', () => {
+describe('Request - fresh/stale behavior', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -393,9 +393,9 @@ describe('Request — fresh/stale behavior', () => {
 });
 
 // ===========================================================
-//  req.range() — multi-range & edge cases
+//  req.range() - multi-range & edge cases
 // ===========================================================
-describe('Request — range() advanced', () => {
+describe('Request - range() advanced', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -431,9 +431,9 @@ describe('Request — range() advanced', () => {
 });
 
 // ===========================================================
-//  req.query — edge cases
+//  req.query - edge cases
 // ===========================================================
-describe('Request — query parsing', () => {
+describe('Request - query parsing', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -472,7 +472,7 @@ describe('Request — query parsing', () => {
 // ===========================================================
 //  req.ip, req.secure, req.method, req.body defaults
 // ===========================================================
-describe('Request — basic properties', () => {
+describe('Request - basic properties', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -619,13 +619,13 @@ describe('Request.accepts', () =>
 
 
 // =========================================================================
-//  request — coverage gaps (from coverage/gaps.test.js)
+//  request - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  13. REQUEST — QUERY PROTO POLLUTION, ACCEPTS NO HEADER
+//  13. REQUEST - QUERY PROTO POLLUTION, ACCEPTS NO HEADER
 // ============================================================
-describe('request — query __proto__ pollution prevention', () => {
+describe('request - query __proto__ pollution prevention', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -658,7 +658,7 @@ describe('request — query __proto__ pollution prevention', () => {
 	});
 });
 
-describe('request — accepts without Accept header', () => {
+describe('request - accepts without Accept header', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -684,7 +684,7 @@ describe('request — accepts without Accept header', () => {
 	});
 });
 
-describe('request — cookies without middleware', () => {
+describe('request - cookies without middleware', () => {
 	let server, base;
 
 	beforeAll(async () => {

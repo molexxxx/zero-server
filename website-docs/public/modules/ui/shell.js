@@ -1,6 +1,6 @@
 /**
  * ui/shell.js
- * Shell UI behaviours — theme toggle, bento grid glow, TOC sidebar,
+ * Shell UI behaviours - theme toggle, bento grid glow, TOC sidebar,
  * smooth-scroll, scroll-spy, progress bar, FAB.
  */
 
@@ -50,7 +50,7 @@ function initThemeToggle()
     });
 }
 
-/* -- Bento Grid — Win11 border glow ------------------------ */
+/* -- Bento Grid - Win11 border glow ------------------------ */
 
 function initBentoGrid()
 {

@@ -1,5 +1,5 @@
 /**
- * Phase 4 — TenantManager tests
+ * Phase 4 - TenantManager tests
  */
 const { Database, Model, TenantManager } = require('../../lib/orm');
 
@@ -28,7 +28,7 @@ function makeModel(db, table, schema, opts = {})
 // ===================================================================
 // Constructor
 // ===================================================================
-describe('TenantManager — constructor', () =>
+describe('TenantManager - constructor', () =>
 {
     it('throws without db', () =>
     {
@@ -75,7 +75,7 @@ describe('TenantManager — constructor', () =>
 // ===================================================================
 // Tenant context
 // ===================================================================
-describe('TenantManager — tenant context', () =>
+describe('TenantManager - tenant context', () =>
 {
     let db, tm;
 
@@ -150,7 +150,7 @@ describe('TenantManager — tenant context', () =>
 // ===================================================================
 // Row-level tenancy
 // ===================================================================
-describe('TenantManager — row-level tenancy', () =>
+describe('TenantManager - row-level tenancy', () =>
 {
     let db, tm, User;
 
@@ -281,7 +281,7 @@ describe('TenantManager — row-level tenancy', () =>
 // ===================================================================
 // Tenant CRUD (row strategy)
 // ===================================================================
-describe('TenantManager — tenant CRUD', () =>
+describe('TenantManager - tenant CRUD', () =>
 {
     let db, tm;
 
@@ -332,7 +332,7 @@ describe('TenantManager — tenant CRUD', () =>
 // ===================================================================
 // Middleware
 // ===================================================================
-describe('TenantManager — middleware', () =>
+describe('TenantManager - middleware', () =>
 {
     let db, tm;
 
@@ -408,7 +408,7 @@ describe('TenantManager — middleware', () =>
 // ===================================================================
 // Schema-based tenancy (row fallback for memory adapter)
 // ===================================================================
-describe('TenantManager — schema strategy edge cases', () =>
+describe('TenantManager - schema strategy edge cases', () =>
 {
     it('createTenant with schema strategy registers tenant when adapter has createTable', async () =>
     {
@@ -438,7 +438,7 @@ describe('TenantManager — schema strategy edge cases', () =>
 // ===================================================================
 // Tenant-aware migrations
 // ===================================================================
-describe('TenantManager — migrations (row strategy)', () =>
+describe('TenantManager - migrations (row strategy)', () =>
 {
     it('migrate delegates to migrator', async () =>
     {
@@ -474,7 +474,7 @@ describe('TenantManager — migrations (row strategy)', () =>
 // ===================================================================
 // TenantId format validation (security)
 // ===================================================================
-describe('TenantManager — tenantId format validation', () =>
+describe('TenantManager - tenantId format validation', () =>
 {
     let db, tm;
 

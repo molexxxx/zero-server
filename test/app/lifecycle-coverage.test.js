@@ -1,5 +1,5 @@
 /**
- * Coverage tests for lib/lifecycle.js — targets installSignalHandlers
+ * Coverage tests for lib/lifecycle.js - targets installSignalHandlers
  * callback branches (successful shutdown → exit(0), failed shutdown → exit(1)),
  * and shutdown error/edge paths.
  */
@@ -88,7 +88,7 @@ describe('LifecycleManager: installSignalHandlers coverage', () =>
 
         lm.installSignalHandlers();
         signalHandlers['SIGTERM']();
-        // Handler uses .then()/.catch() — flush microtasks
+        // Handler uses .then()/.catch() - flush microtasks
         await new Promise(r => setTimeout(r, 10));
 
         expect(exitSpy).toHaveBeenCalledWith(1);
@@ -288,7 +288,7 @@ describe('LifecycleManager: removeSignalHandlers edge cases', () =>
         lm._signalsInstalled = true;
         lm._signalHandlers = { SIGTERM: () => {} };
 
-        // Should not throw — SIGINT is undefined
+        // Should not throw - SIGINT is undefined
         lm.removeSignalHandlers();
         expect(lm._signalsInstalled).toBe(false);
     });

@@ -29,7 +29,7 @@ export interface SchemaColumnDef {
     enum?: string[];
     /** Allowed values (set type). */
     values?: string[];
-    /** Mass-assignment protection — exclude from bulk writes. */
+    /** Mass-assignment protection - exclude from bulk writes. */
     guarded?: boolean;
     /** Precision for decimal types. */
     precision?: number;
@@ -229,7 +229,7 @@ export class Query {
     take(n: number): Query;
     /** Alias for offset (LINQ naming). */
     skip(n: number): Query;
-    /** Alias for exec — explicitly convert to array. */
+    /** Alias for exec - explicitly convert to array. */
     toArray(): Promise<Model[]>;
     /** Shorthand for orderBy(field, 'desc'). */
     orderByDesc(field: string): Query;
@@ -260,7 +260,7 @@ export class Query {
     /** Inject a raw WHERE clause for SQL adapters (ignored by memory/mongo). */
     whereRaw(sql: string, ...params: any[]): Query;
 
-    /** Thenable support — `await query`. */
+    /** Thenable support - `await query`. */
     then<TResult1 = Model[], TResult2 = never>(
         onfulfilled?: ((value: Model[]) => TResult1 | PromiseLike<TResult1>) | null,
         onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null

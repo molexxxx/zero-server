@@ -1,5 +1,5 @@
 /**
- * Phase 3 — GeoQuery tests
+ * Phase 3 - GeoQuery tests
  */
 const { Database, Model, GeoQuery, EARTH_RADIUS_KM, EARTH_RADIUS_MI } = require('../../lib/orm');
 
@@ -43,7 +43,7 @@ describe('Geo constants', () =>
 // ===================================================================
 // Constructor Validation
 // ===================================================================
-describe('GeoQuery — constructor', () =>
+describe('GeoQuery - constructor', () =>
 {
     it('throws without ModelClass', () =>
     {
@@ -76,7 +76,7 @@ describe('GeoQuery — constructor', () =>
 // ===================================================================
 // Haversine
 // ===================================================================
-describe('GeoQuery — haversine', () =>
+describe('GeoQuery - haversine', () =>
 {
     it('distance between same point is 0', () =>
     {
@@ -115,7 +115,7 @@ describe('GeoQuery — haversine', () =>
 // ===================================================================
 // distance (instance method)
 // ===================================================================
-describe('GeoQuery — distance', () =>
+describe('GeoQuery - distance', () =>
 {
     it('uses configured unit', () =>
     {
@@ -137,7 +137,7 @@ describe('GeoQuery — distance', () =>
 // ===================================================================
 // near
 // ===================================================================
-describe('GeoQuery — near', () =>
+describe('GeoQuery - near', () =>
 {
     let db, Store, geo;
 
@@ -252,7 +252,7 @@ describe('GeoQuery — near', () =>
 // ===================================================================
 // within
 // ===================================================================
-describe('GeoQuery — within', () =>
+describe('GeoQuery - within', () =>
 {
     let db, Store, geo;
 
@@ -311,7 +311,7 @@ describe('GeoQuery — within', () =>
 // ===================================================================
 // isWithinRadius
 // ===================================================================
-describe('GeoQuery — isWithinRadius', () =>
+describe('GeoQuery - isWithinRadius', () =>
 {
     let geo;
 
@@ -350,7 +350,7 @@ describe('GeoQuery — isWithinRadius', () =>
 // ===================================================================
 // toGeoJSON
 // ===================================================================
-describe('GeoQuery — toGeoJSON', () =>
+describe('GeoQuery - toGeoJSON', () =>
 {
     let geo;
 
@@ -402,7 +402,7 @@ describe('GeoQuery — toGeoJSON', () =>
 // ===================================================================
 // toGeoJSONCollection
 // ===================================================================
-describe('GeoQuery — toGeoJSONCollection', () =>
+describe('GeoQuery - toGeoJSONCollection', () =>
 {
     it('creates a FeatureCollection', () =>
     {
@@ -437,7 +437,7 @@ describe('GeoQuery — toGeoJSONCollection', () =>
 // ===================================================================
 // fromGeoJSON
 // ===================================================================
-describe('GeoQuery — fromGeoJSON', () =>
+describe('GeoQuery - fromGeoJSON', () =>
 {
     let geo;
 
@@ -477,7 +477,7 @@ describe('GeoQuery — fromGeoJSON', () =>
 // ===================================================================
 // Coordinate validation (security)
 // ===================================================================
-describe('GeoQuery — coordinate validation (security)', () =>
+describe('GeoQuery - coordinate validation (security)', () =>
 {
     let db, geo;
 

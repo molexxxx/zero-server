@@ -1,4 +1,4 @@
-/** methods.test.js — adapter pure method unit tests */
+/** methods.test.js - adapter pure method unit tests */
 
 // ============================================================
 //  MySQL Adapter

@@ -1,5 +1,5 @@
 /**
- * Phase 3 — DatabaseView tests
+ * Phase 3 - DatabaseView tests
  */
 const { Database, Model, DatabaseView } = require('../../lib/orm');
 
@@ -27,7 +27,7 @@ function makeModel(db, table, schema, opts = {})
 // ===================================================================
 // Constructor Validation
 // ===================================================================
-describe('DatabaseView — constructor', () =>
+describe('DatabaseView - constructor', () =>
 {
     it('throws if name is empty', () =>
     {
@@ -78,7 +78,7 @@ describe('DatabaseView — constructor', () =>
 // ===================================================================
 // create / drop / refresh / exists
 // ===================================================================
-describe('DatabaseView — lifecycle', () =>
+describe('DatabaseView - lifecycle', () =>
 {
     let db, User;
 
@@ -180,7 +180,7 @@ describe('DatabaseView — lifecycle', () =>
 // ===================================================================
 // Query Methods (all, find, findOne, count, query)
 // ===================================================================
-describe('DatabaseView — querying', () =>
+describe('DatabaseView - querying', () =>
 {
     let db, User, view;
 
@@ -198,7 +198,7 @@ describe('DatabaseView — querying', () =>
         await User.create({ name: 'Bob', age: 20 });
         await User.create({ name: 'Charlie', age: 35 });
 
-        // Don't call create() — use fallback path with source query for memory adapter
+        // Don't call create() - use fallback path with source query for memory adapter
         view = new DatabaseView('qv_all', {
             query: User.query(),
             model: User,
@@ -272,7 +272,7 @@ describe('DatabaseView — querying', () =>
 // ===================================================================
 // _executeQuery fallback (no viewModel, uses source query)
 // ===================================================================
-describe('DatabaseView — _executeQuery fallback', () =>
+describe('DatabaseView - _executeQuery fallback', () =>
 {
     let db, User;
 
@@ -306,7 +306,7 @@ describe('DatabaseView — _executeQuery fallback', () =>
             query: User.query(),
             model: User,
         });
-        // Do NOT call create() — _viewModel is null, but _query exists
+        // Do NOT call create() - _viewModel is null, but _query exists
         const results = await view._executeQuery();
         expect(results.length).toBe(2);
     });
@@ -333,7 +333,7 @@ describe('DatabaseView — _executeQuery fallback', () =>
 // ===================================================================
 // _buildSQL
 // ===================================================================
-describe('DatabaseView — _buildSQL', () =>
+describe('DatabaseView - _buildSQL', () =>
 {
     let db, User;
 
@@ -392,7 +392,7 @@ describe('DatabaseView — _buildSQL', () =>
 // ===================================================================
 // _createViewModel
 // ===================================================================
-describe('DatabaseView — _createViewModel', () =>
+describe('DatabaseView - _createViewModel', () =>
 {
     it('creates a model registered with the database', async () =>
     {
@@ -463,7 +463,7 @@ describe('DatabaseView — _createViewModel', () =>
 // ===================================================================
 // Name validation (security)
 // ===================================================================
-describe('DatabaseView — name validation (security)', () =>
+describe('DatabaseView - name validation (security)', () =>
 {
     it('rejects SQL injection in view name', () =>
     {

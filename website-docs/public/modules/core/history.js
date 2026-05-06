@@ -3,7 +3,7 @@
  * Browser history substates for modals, sections, and hash routes.
  */
 
-// Disable browser scroll restoration — we manage it in popstate
+// Disable browser scroll restoration - we manage it in popstate
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
 let _stack = [];

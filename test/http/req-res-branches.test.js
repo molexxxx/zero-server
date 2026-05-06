@@ -1,5 +1,5 @@
 'use strict';
-/** req-res-branches.test.js — request/response branch coverage */
+/** req-res-branches.test.js - request/response branch coverage */
 
 const http       = require('http');
 const fs         = require('fs');
@@ -61,9 +61,9 @@ function makeReq(overrides = {})  { return new Request(mockRaw(overrides)); }
 function makeRes(rawOver = {})    { return new Response(mockRawRes(rawOver)); }
 
 // ===========================================================================
-// REQUEST — construction
+// REQUEST - construction
 // ===========================================================================
-describe('Request — construction and base properties', () =>
+describe('Request - construction and base properties', () =>
 {
     it('sets method, url, headers from raw', () =>
     {
@@ -121,9 +121,9 @@ describe('Request — construction and base properties', () =>
 });
 
 // ===========================================================================
-// REQUEST — _parseQuery
+// REQUEST - _parseQuery
 // ===========================================================================
-describe('Request — _parseQuery', () =>
+describe('Request - _parseQuery', () =>
 {
     it('returns empty object when no query string', () =>
     {
@@ -168,7 +168,7 @@ describe('Request — _parseQuery', () =>
         expect(Object.keys(q)).not.toContain('__proto__');
     });
 
-    it('caps at 100 query params — 101st is silently dropped', () =>
+    it('caps at 100 query params - 101st is silently dropped', () =>
     {
         const many = Array.from({ length: 101 }, (_, i) => `k${i}=v`).join('&');
         const q = makeReq({ url: `/?${many}` }).query;
@@ -177,7 +177,7 @@ describe('Request — _parseQuery', () =>
 
     it('ignores malformed percent-encoding in keys gracefully', () =>
     {
-        // %ZZ is invalid — the catch block should silently skip it
+        // %ZZ is invalid - the catch block should silently skip it
         const q = makeReq({ url: '/?%ZZ=value&good=1' }).query;
         expect(q.good).toBe('1');
     });
@@ -187,11 +187,11 @@ describe('Request — _parseQuery', () =>
         const q = makeReq({ url: '/?k=%ZZ' }).query;
         // key-only pair should be skipped; the object should not contain 'k' with broken value
         // The try/catch in the eqIdx !== -1 branch also catches this
-        // Either absent or kept raw is acceptable — what matters is no throw
+        // Either absent or kept raw is acceptable - what matters is no throw
         expect(() => makeReq({ url: '/?k=%ZZ' })).not.toThrow();
     });
 
-    it('uses Object.create(null) — no inherited keys', () =>
+    it('uses Object.create(null) - no inherited keys', () =>
     {
         const q = makeReq({ url: '/?a=1' }).query;
         expect(Object.getPrototypeOf(q)).toBeNull();
@@ -199,9 +199,9 @@ describe('Request — _parseQuery', () =>
 });
 
 // ===========================================================================
-// REQUEST — get(), is()
+// REQUEST - get(), is()
 // ===========================================================================
-describe('Request — get() and is()', () =>
+describe('Request - get() and is()', () =>
 {
     it('get() is case-insensitive', () =>
     {
@@ -235,9 +235,9 @@ describe('Request — get() and is()', () =>
 });
 
 // ===========================================================================
-// REQUEST — hostname and subdomains
+// REQUEST - hostname and subdomains
 // ===========================================================================
-describe('Request — hostname and subdomains', () =>
+describe('Request - hostname and subdomains', () =>
 {
     it('hostname strips port number', () =>
     {
@@ -281,7 +281,7 @@ describe('Request — hostname and subdomains', () =>
         expect(req.subdomains(3)).toEqual(['c', 'b', 'a']);
     });
 
-    it('subdomains() clamps at 0 — never negative slice', () =>
+    it('subdomains() clamps at 0 - never negative slice', () =>
     {
         // offset > parts.length → Math.max(0, negative) → empty
         const req = makeReq({ headers: { host: 'localhost' } });
@@ -290,9 +290,9 @@ describe('Request — hostname and subdomains', () =>
 });
 
 // ===========================================================================
-// REQUEST — accepts()
+// REQUEST - accepts()
 // ===========================================================================
-describe('Request — accepts()', () =>
+describe('Request - accepts()', () =>
 {
     it('wildcard */* accepts first type', () =>
     {
@@ -330,7 +330,7 @@ describe('Request — accepts()', () =>
         expect(req.accepts()).toBe(false);
     });
 
-    it('no Accept header uses */* — returns first type', () =>
+    it('no Accept header uses */* - returns first type', () =>
     {
         const req = makeReq();
         expect(req.accepts('json', 'html')).toBe('json');
@@ -338,9 +338,9 @@ describe('Request — accepts()', () =>
 });
 
 // ===========================================================================
-// REQUEST — xhr, path
+// REQUEST - xhr, path
 // ===========================================================================
-describe('Request — xhr and path', () =>
+describe('Request - xhr and path', () =>
 {
     it('xhr=true for XMLHttpRequest header (case-insensitive check)', () =>
     {
@@ -371,9 +371,9 @@ describe('Request — xhr and path', () =>
 });
 
 // ===========================================================================
-// REQUEST — fresh / stale
+// REQUEST - fresh / stale
 // ===========================================================================
-describe('Request — fresh / stale', () =>
+describe('Request - fresh / stale', () =>
 {
     it('stale=true when no cache headers present', () =>
     {
@@ -440,9 +440,9 @@ describe('Request — fresh / stale', () =>
 });
 
 // ===========================================================================
-// REQUEST — range()
+// REQUEST - range()
 // ===========================================================================
-describe('Request — range()', () =>
+describe('Request - range()', () =>
 {
     it('returns -2 when no Range header', () =>
     {
@@ -527,9 +527,9 @@ describe('Request — range()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — construction and status()
+// RESPONSE - construction and status()
 // ===========================================================================
-describe('Response — status and basic send', () =>
+describe('Response - status and basic send', () =>
 {
     it('default _status is 200', () =>
     {
@@ -644,9 +644,9 @@ describe('Response — status and basic send', () =>
 });
 
 // ===========================================================================
-// RESPONSE — type(), json(), text(), html(), sendStatus()
+// RESPONSE - type(), json(), text(), html(), sendStatus()
 // ===========================================================================
-describe('Response — type aliases and convenience senders', () =>
+describe('Response - type aliases and convenience senders', () =>
 {
     it('type("json") sets application/json', () =>
     {
@@ -730,9 +730,9 @@ describe('Response — type aliases and convenience senders', () =>
 });
 
 // ===========================================================================
-// RESPONSE — set(), get(), append(), vary()
+// RESPONSE - set(), get(), append(), vary()
 // ===========================================================================
-describe('Response — header manipulation', () =>
+describe('Response - header manipulation', () =>
 {
     it('set() stores header', () =>
     {
@@ -819,9 +819,9 @@ describe('Response — header manipulation', () =>
 });
 
 // ===========================================================================
-// RESPONSE — redirect()
+// RESPONSE - redirect()
 // ===========================================================================
-describe('Response — redirect()', () =>
+describe('Response - redirect()', () =>
 {
     it('redirect defaults to 302', () =>
     {
@@ -852,9 +852,9 @@ describe('Response — redirect()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — links(), location()
+// RESPONSE - links(), location()
 // ===========================================================================
-describe('Response — links() and location()', () =>
+describe('Response - links() and location()', () =>
 {
     it('links() builds Link header', () =>
     {
@@ -882,9 +882,9 @@ describe('Response — links() and location()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — cookie() and clearCookie()
+// RESPONSE - cookie() and clearCookie()
 // ===========================================================================
-describe('Response — cookie() and clearCookie()', () =>
+describe('Response - cookie() and clearCookie()', () =>
 {
     it('cookie() sets basic Set-Cookie header', () =>
     {
@@ -1061,9 +1061,9 @@ describe('Response — cookie() and clearCookie()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — format()
+// RESPONSE - format()
 // ===========================================================================
-describe('Response — format()', () =>
+describe('Response - format()', () =>
 {
     it('calls handler matching Accept: application/json', () =>
     {
@@ -1136,9 +1136,9 @@ describe('Response — format()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — sse()
+// RESPONSE - sse()
 // ===========================================================================
-describe('Response — sse()', () =>
+describe('Response - sse()', () =>
 {
     it('returns null when already sent', () =>
     {
@@ -1161,9 +1161,9 @@ describe('Response — sse()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — sendFile() via real tmp file
+// RESPONSE - sendFile() via real tmp file
 // ===========================================================================
-describe('Response — sendFile()', () =>
+describe('Response - sendFile()', () =>
 {
     let tmpFile;
 
@@ -1266,7 +1266,7 @@ describe('Response — sendFile()', () =>
         const rawRes = mockRawRes();
         const res = new Response(rawRes);
         res._sent = true;
-        res.sendFile(tmpFile); // should return immediately — no throw
+        res.sendFile(tmpFile); // should return immediately - no throw
     });
 
     it('opts can be omitted (signature overload)', () =>
@@ -1286,9 +1286,9 @@ describe('Response — sendFile()', () =>
 });
 
 // ===========================================================================
-// RESPONSE — download()
+// RESPONSE - download()
 // ===========================================================================
-describe('Response — download()', () =>
+describe('Response - download()', () =>
 {
     let tmpFile;
     beforeAll(() =>
@@ -1359,9 +1359,9 @@ describe('Response — download()', () =>
 });
 
 // ===========================================================================
-// REQUEST — subdomains no-host branch (line 157)
+// REQUEST - subdomains no-host branch (line 157)
 // ===========================================================================
-describe('Request — subdomains no-host edge case', () =>
+describe('Request - subdomains no-host edge case', () =>
 {
     it('returns empty array when no host header is present', () =>
     {
@@ -1372,9 +1372,9 @@ describe('Request — subdomains no-host edge case', () =>
 });
 
 // ===========================================================================
-// REQUEST — range() NaN-suffix branch (line 285)
+// REQUEST - range() NaN-suffix branch (line 285)
 // ===========================================================================
-describe('Request — range() NaN suffix branch', () =>
+describe('Request - range() NaN suffix branch', () =>
 {
     it('returns -2 for bytes=-abc (NaN suffix)', () =>
     {
@@ -1384,9 +1384,9 @@ describe('Request — range() NaN suffix branch', () =>
 });
 
 // ===========================================================================
-// RESPONSE — sendFile() opts.headers and stream-error branches (lines 340-351)
+// RESPONSE - sendFile() opts.headers and stream-error branches (lines 340-351)
 // ===========================================================================
-describe('Response — sendFile() opts.headers and stream error', () =>
+describe('Response - sendFile() opts.headers and stream error', () =>
 {
     let tmpFile;
 
@@ -1491,9 +1491,9 @@ describe('Response — sendFile() opts.headers and stream error', () =>
 });
 
 // ===========================================================================
-// RESPONSE — sse() pad and retry options (lines 614-621)
+// RESPONSE - sse() pad and retry options (lines 614-621)
 // ===========================================================================
-describe('Response — sse() pad and retry options', () =>
+describe('Response - sse() pad and retry options', () =>
 {
     it('sse({ pad }) writes padding comment', () =>
     {
@@ -1522,9 +1522,9 @@ describe('Response — sse() pad and retry options', () =>
 });
 
 // ===========================================================================
-// RESPONSE — headersSent proxy
+// RESPONSE - headersSent proxy
 // ===========================================================================
-describe('Response — headersSent', () =>
+describe('Response - headersSent', () =>
 {
     it('reflects raw.headersSent=false', () =>
     {
@@ -1540,9 +1540,9 @@ describe('Response — headersSent', () =>
 });
 
 // ===========================================================================
-// RESPONSE — sendFile() error callback paths (L309, L318, L326, L328)
+// RESPONSE - sendFile() error callback paths (L309, L318, L326, L328)
 // ===========================================================================
-describe('Response — sendFile() error paths with callbacks', () =>
+describe('Response - sendFile() error paths with callbacks', () =>
 {
     function makeStreamableRaw3()
     {
@@ -1556,7 +1556,7 @@ describe('Response — sendFile() error paths with callbacks', () =>
         return raw;
     }
 
-    it('path traversal with cb — cb(err) called with 403 (L309)', () =>
+    it('path traversal with cb - cb(err) called with 403 (L309)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -1571,7 +1571,7 @@ describe('Response — sendFile() error paths with callbacks', () =>
         });
     });
 
-    it('null byte in path with cb — cb(err) called with 400 (L318)', () =>
+    it('null byte in path with cb - cb(err) called with 400 (L318)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -1586,7 +1586,7 @@ describe('Response — sendFile() error paths with callbacks', () =>
         });
     });
 
-    it('directory path without cb — L326 right-side new Error branch', () =>
+    it('directory path without cb - L326 right-side new Error branch', () =>
     {
         return new Promise((resolve) =>
         {
@@ -1598,7 +1598,7 @@ describe('Response — sendFile() error paths with callbacks', () =>
         });
     });
 
-    it('directory path with cb — cb(err) called with 404 (L328)', () =>
+    it('directory path with cb - cb(err) called with 404 (L328)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -1614,7 +1614,7 @@ describe('Response — sendFile() error paths with callbacks', () =>
         });
     });
 
-    it('stream error no-cb path — sets statusCode 500 (L350 FALSE branch)', () =>
+    it('stream error no-cb path - sets statusCode 500 (L350 FALSE branch)', () =>
     {
         return new Promise((resolve) =>
         {
@@ -1651,9 +1651,9 @@ describe('Response — sendFile() error paths with callbacks', () =>
 });
 
 // ===========================================================================
-// RESPONSE — download() with callback as 2nd argument (L370)
+// RESPONSE - download() with callback as 2nd argument (L370)
 // ===========================================================================
-describe('Response — download() with callback as 2nd arg', () =>
+describe('Response - download() with callback as 2nd arg', () =>
 {
     let dlFile;
 
@@ -1679,7 +1679,7 @@ describe('Response — download() with callback as 2nd arg', () =>
             raw.resume();
 
             const res = new Response(raw);
-            res.download(dlFile, (err) =>   // callback as 2nd arg — covers L370
+            res.download(dlFile, (err) =>   // callback as 2nd arg - covers L370
             {
                 if (err) reject(err);
                 else resolve();
@@ -1689,9 +1689,9 @@ describe('Response — download() with callback as 2nd arg', () =>
 });
 
 // ===========================================================================
-// RESPONSE — cookie() signed, domain, priority (L422, L434, L450)
+// RESPONSE - cookie() signed, domain, priority (L422, L434, L450)
 // ===========================================================================
-describe('Response — cookie() signed / domain / priority', () =>
+describe('Response - cookie() signed / domain / priority', () =>
 {
     it('signed cookie without secret throws (L422)', () =>
     {
@@ -1736,9 +1736,9 @@ describe('Response — cookie() signed / domain / priority', () =>
 });
 
 // ===========================================================================
-// RESPONSE — redirect() when _sent already true (L560)
+// RESPONSE - redirect() when _sent already true (L560)
 // ===========================================================================
-describe('Response — redirect() is no-op when _sent=true', () =>
+describe('Response - redirect() is no-op when _sent=true', () =>
 {
     it('returns immediately without modifying status or body (L560)', () =>
     {

@@ -302,13 +302,13 @@ describe('Lifecycle Manager', () =>
             const app = createApp();
             app._lifecycle.installSignalHandlers();
             app._lifecycle.removeSignalHandlers();
-            app._lifecycle.removeSignalHandlers(); // second call — no crash
+            app._lifecycle.removeSignalHandlers(); // second call - no crash
         });
     });
 
     describe('Graceful shutdown', () =>
     {
-        it('full shutdown lifecycle — beforeShutdown → close → shutdown', async () =>
+        it('full shutdown lifecycle - beforeShutdown → close → shutdown', async () =>
         {
             const app = createApp();
             app.get('/', (req, res) => res.json({ ok: true }));
@@ -364,7 +364,7 @@ describe('Lifecycle Manager', () =>
             }
             catch (e)
             {
-                // Connection refused is also acceptable — server may have already closed
+                // Connection refused is also acceptable - server may have already closed
                 expect(e.message || e.code).toBeTruthy();
             }
 
@@ -421,7 +421,7 @@ describe('Lifecycle Manager', () =>
             expect(app.lifecycleState).toBe('closed');
             expect(app._lifecycle.activeRequests).toBe(0);
 
-            // The stuck request was force-ended — either it errored (socket destroyed)
+            // The stuck request was force-ended - either it errored (socket destroyed)
             // or received an empty response from forced res.end()
             const result = await reqPromise;
             if (result === 'errored')

@@ -1,5 +1,5 @@
 /**
- * Coverage tests for lib/cli.js — targets uncovered branches:
+ * Coverage tests for lib/cli.js - targets uncovered branches:
  * unknown command, --verbose error stack, resolveConfig edge cases,
  * _loadConfigSync fallback, and flag aliases.
  */
@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { CLI } = require('../../lib/cli');
 
-describe('CLI — coverage gaps', () =>
+describe('CLI - coverage gaps', () =>
 {
     const origCwd = process.cwd();
     const tmpDir = path.join(__dirname, '__tmp_cli_cov__');
@@ -135,7 +135,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:model — missing name
+    // make:model - missing name
     // =========================================================
 
     it('make:model with no name shows usage error', async () =>
@@ -152,7 +152,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:model — file already exists
+    // make:model - file already exists
     // =========================================================
 
     it('make:model rejects when file already exists', async () =>
@@ -172,7 +172,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:migration — no name
+    // make:migration - no name
     // =========================================================
 
     it('make:migration with no name shows usage error', async () =>
@@ -189,7 +189,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:seeder — missing name
+    // make:seeder - missing name
     // =========================================================
 
     it('make:seeder with no name shows usage error', async () =>
@@ -206,7 +206,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:seeder — file already exists
+    // make:seeder - file already exists
     // =========================================================
 
     it('make:seeder rejects when file already exists', async () =>
@@ -226,7 +226,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:migration auto-diff — no models found
+    // make:migration auto-diff - no models found
     // =========================================================
 
     it('make:migration auto-diff with no models shows error', async () =>
@@ -375,7 +375,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // _createMigrator — no migrations directory exists
+    // _createMigrator - no migrations directory exists
     // =========================================================
 
     it('_createMigrator works when migrations dir does not exist', async () =>
@@ -393,7 +393,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // _createMigrator — fallback to config.migrations
+    // _createMigrator - fallback to config.migrations
     // =========================================================
 
     it('_createMigrator uses config.migrations when migrationsDir absent', async () =>
@@ -411,7 +411,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // _seed — fallback config branches and missing seeders dir
+    // _seed - fallback config branches and missing seeders dir
     // =========================================================
 
     it('seed with config.seeders fallback', async () =>
@@ -430,7 +430,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // _removeMigration — no migrations dir, no files, already applied
+    // _removeMigration - no migrations dir, no files, already applied
     // =========================================================
 
     it('_removeMigration with no migrations dir', async () =>
@@ -471,7 +471,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:migration auto-diff — with config having models fallback
+    // make:migration auto-diff - with config having models fallback
     // =========================================================
 
     it('make:migration auto-diff uses config.models fallback', async () =>
@@ -490,7 +490,7 @@ describe('CLI — coverage gaps', () =>
     });
 
     // =========================================================
-    // make:seeder — existing file check
+    // make:seeder - existing file check
     // =========================================================
 
     it('make:seeder handles --dir flag', async () =>

@@ -1,5 +1,5 @@
 /**
- * docs-config.js — Section layout for the docs build.
+ * docs-config.js - Section layout for the docs build.
  *
  * Only defines WHICH source files go in which section and static content.
  * All API content (descriptions, params, options, returns, examples,
@@ -16,11 +16,11 @@ module.exports = [
 			{
 				name: 'Installation',
 				static: true,
-				description: 'Install the `@zero-server/sdk` meta-package from npm — it ships every module and is the recommended install for new projects. Each section is also published as its own standalone scoped package (e.g. `@zero-server/core`, `@zero-server/orm`) for libraries or microservices that only need a slice. No external dependencies are required — everything is built in.',
+				description: 'Install the `@zero-server/sdk` meta-package from npm - it ships every module and is the recommended install for new projects. Each section is also published as its own standalone scoped package (e.g. `@zero-server/core`, `@zero-server/orm`) for libraries or microservices that only need a slice. No external dependencies are required - everything is built in.',
 				example: 'npm install @zero-server/sdk',
 				exampleLang: 'bash',
 				tips: [
-					'`@zero-server/sdk` has zero runtime dependencies — npm install is all you need.',
+					'`@zero-server/sdk` has zero runtime dependencies - npm install is all you need.',
 					'Requires Node.js 18+ (uses crypto.randomUUID, structuredClone, etc.).',
 					'TypeScript definitions are bundled inside the SDK and inside every scoped package.',
 				],
@@ -44,7 +44,7 @@ module.exports = [
 					'})',
 				].join('\n'),
 				tips: [
-					'Middleware runs in registration order — add parsers before route handlers.',
+					'Middleware runs in registration order - add parsers before route handlers.',
 					'All route methods (get, post, put, etc.) return the app, so you can chain them.',
 					'Use app.onError() to register a global error handler for uncaught errors.',
 				],
@@ -61,7 +61,7 @@ module.exports = [
 			{
 				name: 'Overview',
 				static: true,
-				description: 'The full SDK ships as `@zero-server/sdk` — install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.',
+				description: 'The full SDK ships as `@zero-server/sdk` - install that and you have everything. Each section of the framework is also published as a narrow standalone scoped package with its own runtime bundle. Mix and match freely.',
 				example: [
 					'# Everything (one install)',
 					'npm install @zero-server/sdk',
@@ -82,21 +82,21 @@ module.exports = [
 				description: 'Every published `@zero-server/*` package and the surface it narrows to. The full list of exports per package is generated from `.tools/scope-manifest.js` and published to `docs/scopes/<name>.md`.',
 				options: [
 					{ option: '@zero-server/sdk',        type: 'meta',       default: 'all',    notes: 'Single full-SDK install with the complete public surface.' },
-					{ option: '@zero-server/core',       type: 'core',       default: '—',     notes: 'createApp, Router, Request, Response.' },
-					{ option: '@zero-server/body',       type: 'parsers',    default: '—',     notes: 'json, urlencoded, text, raw, multipart.' },
-					{ option: '@zero-server/middleware', type: 'middleware', default: '—',     notes: 'cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static.' },
-					{ option: '@zero-server/auth',       type: 'auth',       default: '—',     notes: 'jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment.' },
-					{ option: '@zero-server/orm',       type: 'orm',         default: '—',    notes: 'Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins.' },
-					{ option: '@zero-server/realtime',   type: 'realtime',   default: '—',     notes: 'WebSocketConnection, WebSocketPool, SSEStream.' },
-					{ option: '@zero-server/grpc',       type: 'grpc',       default: '—',     notes: 'GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials.' },
-					{ option: '@zero-server/observe',    type: 'observability', default: '—',  notes: 'MetricsRegistry, Tracer, structured Logger, healthCheck.' },
-					{ option: '@zero-server/lifecycle',  type: 'lifecycle',  default: '—',     notes: 'LifecycleManager, ClusterManager, clusterize.' },
-					{ option: '@zero-server/env',        type: 'env',        default: '—',     notes: 'Typed `.env` loader and accessor.' },
-					{ option: '@zero-server/fetch',      type: 'http-client', default: '—',    notes: 'Server-side fetch with mTLS, timeouts, AbortSignal.' },
-					{ option: '@zero-server/errors',     type: 'errors',     default: '—',     notes: 'HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError.' },
+					{ option: '@zero-server/core',       type: 'core',       default: '-',     notes: 'createApp, Router, Request, Response.' },
+					{ option: '@zero-server/body',       type: 'parsers',    default: '-',     notes: 'json, urlencoded, text, raw, multipart.' },
+					{ option: '@zero-server/middleware', type: 'middleware', default: '-',     notes: 'cors, helmet, compress, rateLimit, logger, timeout, requestId, cookieParser, csrf, validate, errorHandler, static.' },
+					{ option: '@zero-server/auth',       type: 'auth',       default: '-',     notes: 'jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment.' },
+					{ option: '@zero-server/orm',       type: 'orm',         default: '-',    notes: 'Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins.' },
+					{ option: '@zero-server/realtime',   type: 'realtime',   default: '-',     notes: 'WebSocketConnection, WebSocketPool, SSEStream.' },
+					{ option: '@zero-server/grpc',       type: 'grpc',       default: '-',     notes: 'GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials.' },
+					{ option: '@zero-server/observe',    type: 'observability', default: '-',  notes: 'MetricsRegistry, Tracer, structured Logger, healthCheck.' },
+					{ option: '@zero-server/lifecycle',  type: 'lifecycle',  default: '-',     notes: 'LifecycleManager, ClusterManager, clusterize.' },
+					{ option: '@zero-server/env',        type: 'env',        default: '-',     notes: 'Typed `.env` loader and accessor.' },
+					{ option: '@zero-server/fetch',      type: 'http-client', default: '-',    notes: 'Server-side fetch with mTLS, timeouts, AbortSignal.' },
+					{ option: '@zero-server/errors',     type: 'errors',     default: '-',     notes: 'HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError.' },
 				],
 				example: [
-					"// Identical at runtime — pick whichever import surface you prefer",
+					"// Identical at runtime - pick whichever import surface you prefer",
 					"const fromSdk  = require('@zero-server/sdk').createApp;",
 					"const fromCore = require('@zero-server/core').createApp;",
 				].join('\n'),
@@ -243,15 +243,15 @@ module.exports = [
 				static: true,
 				description: 'Supported schema types for env.load() validation. Each type automatically coerces and validates the raw string from the environment.',
 				options: [
-					{ option: 'string',  type: 'string',  default: '—', notes: 'Pass-through. Supports min/max length and match regex constraints.' },
-					{ option: 'number',  type: 'number',  default: '—', notes: 'Parsed via Number(). Supports min/max range.' },
-					{ option: 'integer', type: 'integer', default: '—', notes: 'Parsed via parseInt(). Supports min/max range.' },
-					{ option: 'port',    type: 'port',    default: '—', notes: 'Integer 0–65535. Rejects out-of-range values.' },
-					{ option: 'boolean', type: 'boolean', default: '—', notes: "Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'." },
-					{ option: 'array',   type: 'array',   default: '—', notes: "Split by separator (default ',')." },
-					{ option: 'json',    type: 'json',    default: '—', notes: 'Parsed via JSON.parse().' },
-					{ option: 'url',     type: 'url',     default: '—', notes: 'Validated via new URL().' },
-					{ option: 'enum',    type: 'enum',    default: '—', notes: "Must be one of the 'values' array." },
+					{ option: 'string',  type: 'string',  default: '-', notes: 'Pass-through. Supports min/max length and match regex constraints.' },
+					{ option: 'number',  type: 'number',  default: '-', notes: 'Parsed via Number(). Supports min/max range.' },
+					{ option: 'integer', type: 'integer', default: '-', notes: 'Parsed via parseInt(). Supports min/max range.' },
+					{ option: 'port',    type: 'port',    default: '-', notes: 'Integer 0–65535. Rejects out-of-range values.' },
+					{ option: 'boolean', type: 'boolean', default: '-', notes: "Truthy: 'true', '1', 'yes', 'on'. Falsy: 'false', '0', 'no', 'off'." },
+					{ option: 'array',   type: 'array',   default: '-', notes: "Split by separator (default ',')." },
+					{ option: 'json',    type: 'json',    default: '-', notes: 'Parsed via JSON.parse().' },
+					{ option: 'url',     type: 'url',     default: '-', notes: 'Validated via new URL().' },
+					{ option: 'enum',    type: 'enum',    default: '-', notes: "Must be one of the 'values' array." },
 				],
 				example: [
 					"env.load({",

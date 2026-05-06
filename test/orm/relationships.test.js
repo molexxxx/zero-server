@@ -1,5 +1,5 @@
 /**
- * Phase 3 — Advanced Relationships
+ * Phase 3 - Advanced Relationships
  * Polymorphic, has-many-through, self-referential, tree structures
  */
 const { Database, Model, TYPES } = require('../../lib/orm');
@@ -546,7 +546,7 @@ describe('Self-Referential Relationships', () =>
 });
 
 // ===================================================================
-// Eager Loading — empty key sets
+// Eager Loading - empty key sets
 // ===================================================================
 describe('Eager loading edge cases for new relation types', () =>
 {

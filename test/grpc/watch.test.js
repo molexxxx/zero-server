@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// watchProto requires app.grpc and parseProtoFile — we test the module in isolation
+// watchProto requires app.grpc and parseProtoFile - we test the module in isolation
 const watchModule = require('../../lib/grpc/watch');
 const watchProto = watchModule.watchProto || watchModule;
 
 // =========================================================
-// watchProto — unit tests
+// watchProto - unit tests
 // =========================================================
 
 describe('watchProto', () =>

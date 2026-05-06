@@ -1,5 +1,5 @@
 /**
- * Phase 3 — Model Events & Observers
+ * Phase 3 - Model Events & Observers
  */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
@@ -289,7 +289,7 @@ describe('Model Observers', () =>
     it('observer with partial methods works fine', async () =>
     {
         const observer = { created: vi.fn() };
-        // No updating/deleted methods — should not throw
+        // No updating/deleted methods - should not throw
         User.observe(observer);
         const u = await User.create({ name: 'A', email: 'a@a.com' });
         await u.update({ name: 'B' });

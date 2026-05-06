@@ -29,7 +29,7 @@
 			"kind": "item",
 			"section": "Authentication & Sessions",
 			"name": "authorize",
-			"description": "Authorization helpers — role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
+			"description": "Authorization helpers - role-based access control (RBAC), permission-based access, and policy classes. Works with any authentication middleware that sets `req.user`."
 		},
 		{
 			"type": "added",

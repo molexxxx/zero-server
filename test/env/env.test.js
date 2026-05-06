@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 
-// We need a fresh env instance each test — import the factory
+// We need a fresh env instance each test - import the factory
 let env;
 
 beforeEach(() =>
@@ -16,7 +16,7 @@ beforeEach(() =>
     env.reset();
 });
 
-describe('Env — parse()', () =>
+describe('Env - parse()', () =>
 {
     it('parses simple key=value pairs', () =>
     {
@@ -67,7 +67,7 @@ describe('Env — parse()', () =>
     });
 });
 
-describe('Env — load() with schema', () =>
+describe('Env - load() with schema', () =>
 {
     const originalEnv = { ...process.env };
 
@@ -165,7 +165,7 @@ describe('Env — load() with schema', () =>
     });
 });
 
-describe('Env — accessor patterns', () =>
+describe('Env - accessor patterns', () =>
 {
     const originalEnv = { ...process.env };
 
@@ -240,7 +240,7 @@ describe('Env — accessor patterns', () =>
     });
 });
 
-describe('Env — process.env sync', () =>
+describe('Env - process.env sync', () =>
 {
     const originalEnv = { ...process.env };
 
@@ -296,10 +296,10 @@ describe('Env — process.env sync', () =>
 
 
 // =========================================================================
-//  env — deep branch coverage (from coverage/deep.test.js)
+//  env - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('env — deep branch coverage', () => {
+describe('env - deep branch coverage', () => {
 	let env;
 	const tmpDir = path.join(os.tmpdir(), 'zero-test-env-deep-' + Date.now());
 
@@ -386,7 +386,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('DYNAMIC_DEFAULT')).toBe('generated');
 	});
 
-	it('coerce — string with min/max length constraints', () => {
+	it('coerce - string with min/max length constraints', () => {
 		delete process.env.SHORT_STR;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'SHORT_STR=ab\n');
 		expect(() => {
@@ -396,7 +396,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/at least 5/);
 	});
 
-	it('coerce — string with max length constraint', () => {
+	it('coerce - string with max length constraint', () => {
 		env.reset();
 		delete process.env.LONG_STR;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'LONG_STR=abcdefgh\n');
@@ -407,7 +407,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/at most 3/);
 	});
 
-	it('coerce — string with match pattern', () => {
+	it('coerce - string with match pattern', () => {
 		env.reset();
 		delete process.env.EMAIL_STR;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'EMAIL_STR=notanemail\n');
@@ -418,7 +418,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/does not match/);
 	});
 
-	it('coerce — number with NaN', () => {
+	it('coerce - number with NaN', () => {
 		env.reset();
 		delete process.env.NUM_NAN;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'NUM_NAN=abc\n');
@@ -429,7 +429,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be a number/);
 	});
 
-	it('coerce — number with min/max constraints', () => {
+	it('coerce - number with min/max constraints', () => {
 		env.reset();
 		delete process.env.NUM_MIN;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'NUM_MIN=5\n');
@@ -440,7 +440,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be >= 10/);
 	});
 
-	it('coerce — number max constraint', () => {
+	it('coerce - number max constraint', () => {
 		env.reset();
 		delete process.env.NUM_MAX;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'NUM_MAX=100\n');
@@ -451,7 +451,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be <= 50/);
 	});
 
-	it('coerce — integer', () => {
+	it('coerce - integer', () => {
 		env.reset();
 		delete process.env.INT_OK;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'INT_OK=42\n');
@@ -459,7 +459,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('INT_OK')).toBe(42);
 	});
 
-	it('coerce — integer NaN', () => {
+	it('coerce - integer NaN', () => {
 		env.reset();
 		delete process.env.INT_NAN;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'INT_NAN=abc\n');
@@ -468,7 +468,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be an integer/);
 	});
 
-	it('coerce — integer min/max', () => {
+	it('coerce - integer min/max', () => {
 		env.reset();
 		delete process.env.INT_MIN;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'INT_MIN=5\n');
@@ -484,7 +484,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be <= 50/);
 	});
 
-	it('coerce — port valid', () => {
+	it('coerce - port valid', () => {
 		env.reset();
 		delete process.env.GOOD_PORT;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'GOOD_PORT=8080\n');
@@ -492,7 +492,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('GOOD_PORT')).toBe(8080);
 	});
 
-	it('coerce — port invalid', () => {
+	it('coerce - port invalid', () => {
 		env.reset();
 		delete process.env.BAD_PORT;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'BAD_PORT=99999\n');
@@ -501,7 +501,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/valid port.*0-65535/);
 	});
 
-	it('coerce — boolean values', () => {
+	it('coerce - boolean values', () => {
 		env.reset();
 		delete process.env.BV1; delete process.env.BV2; delete process.env.BV3; delete process.env.BV4;
 		delete process.env.BV5; delete process.env.BV6; delete process.env.BV7; delete process.env.BV8;
@@ -522,7 +522,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('BV8')).toBe(false);
 	});
 
-	it('coerce — boolean invalid', () => {
+	it('coerce - boolean invalid', () => {
 		env.reset();
 		delete process.env.BOOL_BAD;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'BOOL_BAD=maybe\n');
@@ -531,7 +531,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be a boolean/);
 	});
 
-	it('coerce — array with custom separator', () => {
+	it('coerce - array with custom separator', () => {
 		env.reset();
 		delete process.env.LIST_PIPE;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'LIST_PIPE=a|b|c\n');
@@ -539,7 +539,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('LIST_PIPE')).toEqual(['a', 'b', 'c']);
 	});
 
-	it('coerce — json', () => {
+	it('coerce - json', () => {
 		env.reset();
 		delete process.env.OBJ_GOOD;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'OBJ_GOOD={"key":"val"}\n');
@@ -547,7 +547,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('OBJ_GOOD')).toEqual({ key: 'val' });
 	});
 
-	it('coerce — json invalid', () => {
+	it('coerce - json invalid', () => {
 		env.reset();
 		delete process.env.BAD_JSON;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'BAD_JSON=not-json\n');
@@ -556,7 +556,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be valid JSON/);
 	});
 
-	it('coerce — url valid', () => {
+	it('coerce - url valid', () => {
 		env.reset();
 		delete process.env.URL_GOOD;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'URL_GOOD=https://example.com\n');
@@ -564,7 +564,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('URL_GOOD')).toBe('https://example.com');
 	});
 
-	it('coerce — url invalid', () => {
+	it('coerce - url invalid', () => {
 		env.reset();
 		delete process.env.BAD_URL;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'BAD_URL=notaurl\n');
@@ -573,7 +573,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be a valid URL/);
 	});
 
-	it('coerce — enum valid', () => {
+	it('coerce - enum valid', () => {
 		env.reset();
 		// avoid NODE_ENV collision: use unique env key
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'APP_MODE=production\n');
@@ -581,7 +581,7 @@ describe('env — deep branch coverage', () => {
 		expect(env.get('APP_MODE')).toBe('production');
 	});
 
-	it('coerce — enum invalid', () => {
+	it('coerce - enum invalid', () => {
 		env.reset();
 		delete process.env.ENUM_BAD;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'ENUM_BAD=staging\n');
@@ -590,7 +590,7 @@ describe('env — deep branch coverage', () => {
 		}).toThrow(/must be one of/);
 	});
 
-	it('coerce — unknown type returns raw', () => {
+	it('coerce - unknown type returns raw', () => {
 		env.reset();
 		delete process.env.UNKNOWN_TYPE;
 		fs.writeFileSync(path.join(tmpDir, '.env'), 'UNKNOWN_TYPE=hello\n');
@@ -679,13 +679,13 @@ describe('env — deep branch coverage', () => {
 });
 
 // =========================================================================
-//  env — coverage gaps (from coverage/gaps.test.js)
+//  env - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  16. ENV — MULTILINE, BACKTICK, INTERPOLATION
+//  16. ENV - MULTILINE, BACKTICK, INTERPOLATION
 // ============================================================
-describe('env — parse edge cases', () => {
+describe('env - parse edge cases', () => {
 	it('parses backtick-quoted values', () => {
 		const { env } = require('../../');
 		const result = env.parse('KEY=`hello world`');

@@ -1,4 +1,4 @@
-# Core — App, Router, Request/Response
+# Core - App, Router, Request/Response
 
 > App factory, Router, and the HTTP Request/Response wrappers.
 

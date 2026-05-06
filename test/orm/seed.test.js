@@ -131,7 +131,7 @@ describe('QueryCache', () =>
             // Access 'a' to bump it
             cache.get('a');
 
-            // Add one more to trigger eviction — should evict 'b', not 'a'
+            // Add one more to trigger eviction - should evict 'b', not 'a'
             cache.set('f', 6);
             expect(cache.get('a')).toBe(1);
             expect(cache.get('b')).toBeUndefined();

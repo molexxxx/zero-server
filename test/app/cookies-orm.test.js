@@ -15,7 +15,7 @@ const {
 //  CookieParser Enhancements
 // ===========================================================
 
-describe('CookieParser — JSON cookies', () =>
+describe('CookieParser - JSON cookies', () =>
 {
     let server, base;
 
@@ -76,7 +76,7 @@ describe('CookieParser — JSON cookies', () =>
     });
 });
 
-describe('CookieParser — static helpers', () =>
+describe('CookieParser - static helpers', () =>
 {
     it('unsign() verifies valid signed cookie', () =>
     {
@@ -120,7 +120,7 @@ describe('CookieParser — static helpers', () =>
     });
 });
 
-describe('CookieParser — timing-safe verification', () =>
+describe('CookieParser - timing-safe verification', () =>
 {
     it('uses timing-safe comparison (no simple string equality)', () =>
     {
@@ -137,7 +137,7 @@ describe('CookieParser — timing-safe verification', () =>
     });
 });
 
-describe('res.cookie() — enhanced options', () =>
+describe('res.cookie() - enhanced options', () =>
 {
     let server, base;
 
@@ -282,7 +282,7 @@ beforeEach(async () =>
 
 // -- Scopes ----------------------------------------------
 
-describe('ORM — Scopes', () =>
+describe('ORM - Scopes', () =>
 {
     beforeEach(async () =>
     {
@@ -321,7 +321,7 @@ describe('ORM — Scopes', () =>
 
 // -- Hidden Fields ---------------------------------------
 
-describe('ORM — Hidden Fields', () =>
+describe('ORM - Hidden Fields', () =>
 {
     it('toJSON() excludes hidden fields', async () =>
     {
@@ -341,7 +341,7 @@ describe('ORM — Hidden Fields', () =>
 
 // -- exists() --------------------------------------------
 
-describe('ORM — exists()', () =>
+describe('ORM - exists()', () =>
 {
     it('returns true when records match', async () =>
     {
@@ -364,7 +364,7 @@ describe('ORM — exists()', () =>
 
 // -- upsert() --------------------------------------------
 
-describe('ORM — upsert()', () =>
+describe('ORM - upsert()', () =>
 {
     it('creates when not found', async () =>
     {
@@ -391,7 +391,7 @@ describe('ORM — upsert()', () =>
 
 // -- increment / decrement -------------------------------
 
-describe('ORM — increment / decrement', () =>
+describe('ORM - increment / decrement', () =>
 {
     it('increment() increases a field by 1', async () =>
     {
@@ -426,7 +426,7 @@ describe('ORM — increment / decrement', () =>
 
 // -- belongsToMany ---------------------------------------
 
-describe('ORM — belongsToMany', () =>
+describe('ORM - belongsToMany', () =>
 {
     it('loads related models through junction table', async () =>
     {
@@ -469,7 +469,7 @@ describe('ORM — belongsToMany', () =>
 
 // -- Query Enhancements ----------------------------------
 
-describe('ORM — Query enhancements', () =>
+describe('ORM - Query enhancements', () =>
 {
     beforeEach(async () =>
     {
@@ -555,7 +555,7 @@ describe('ORM — Query enhancements', () =>
 
 // -- Transaction -----------------------------------------
 
-describe('ORM — transaction()', () =>
+describe('ORM - transaction()', () =>
 {
     it('commits on success', async () =>
     {
@@ -628,10 +628,10 @@ describe('App locals prototype chain', () =>
 
 
 // =========================================================================
-//  app — deep branch coverage (from coverage/deep.test.js)
+//  app - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('app — deep branch coverage', () => {
+describe('app - deep branch coverage', () => {
 	it('get() with 1 arg returns setting value', () => {
 		const { createApp } = require('../../');
 		const app = createApp();
@@ -893,4 +893,4 @@ describe('app — deep branch coverage', () => {
 		expect(r.status).toBe(200);
 		app.close();
 	});
-});
+});

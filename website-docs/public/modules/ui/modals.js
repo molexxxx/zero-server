@@ -149,7 +149,7 @@ export function renderCoverageModal(data)
                 opacity: (0.3 + 0.7 * f.statements / 100).toFixed(2),
                 cls: 'sb-arc-outer',
                 dataLabel: f.file, dataPct: fmtPct(f.statements),
-                title: `${safe} — ${fmtPct(f.statements)}%`,
+                title: `${safe} - ${fmtPct(f.statements)}%`,
             });
         });
     }

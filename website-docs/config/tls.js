@@ -22,7 +22,7 @@ if (certPath && keyPath)
     }
     catch (e)
     {
-        console.warn('TLS: could not load certificates, falling back to HTTP —', e.message);
+        console.warn('TLS: could not load certificates, falling back to HTTP -', e.message);
     }
 }
 

@@ -1,4 +1,4 @@
-/** parsers-features.test.js — body parser feature tests */
+/** parsers-features.test.js - body parser feature tests */
 const http = require('http');
 const os = require('os');
 const zlib = require('zlib');
@@ -35,7 +35,7 @@ function makeMultipartBody(boundary, parts)
 // ============================================================
 //  rawBuffer / typeMatch unit tests (no server needed)
 // ============================================================
-describe('typeMatch — array type support', () =>
+describe('typeMatch - array type support', () =>
 {
     const isTypeMatch = require('../../lib/body/typeMatch');
 
@@ -106,9 +106,9 @@ describe('charsetFromContentType', () =>
 });
 
 // ============================================================
-//  rawBuffer — Content-Length pre-check
+//  rawBuffer - Content-Length pre-check
 // ============================================================
-describe('rawBuffer — Content-Length pre-check', () =>
+describe('rawBuffer - Content-Length pre-check', () =>
 {
     const rawBuffer = require('../../lib/body/rawBuffer');
     const { Readable } = require('stream');
@@ -141,9 +141,9 @@ describe('rawBuffer — Content-Length pre-check', () =>
 });
 
 // ============================================================
-//  rawBuffer — Content-Encoding decompression
+//  rawBuffer - Content-Encoding decompression
 // ============================================================
-describe('rawBuffer — Content-Encoding decompression', () =>
+describe('rawBuffer - Content-Encoding decompression', () =>
 {
     const rawBuffer = require('../../lib/body/rawBuffer');
     const { Readable } = require('stream');
@@ -223,9 +223,9 @@ describe('rawBuffer — Content-Encoding decompression', () =>
 });
 
 // ============================================================
-//  JSON parser — verify callback
+//  JSON parser - verify callback
 // ============================================================
-describe('JSON parser — verify callback', () =>
+describe('JSON parser - verify callback', () =>
 {
     let server, base;
 
@@ -278,9 +278,9 @@ describe('JSON parser — verify callback', () =>
 });
 
 // ============================================================
-//  JSON parser — req.rawBody
+//  JSON parser - req.rawBody
 // ============================================================
-describe('JSON parser — req.rawBody', () =>
+describe('JSON parser - req.rawBody', () =>
 {
     let server, base;
 
@@ -313,9 +313,9 @@ describe('JSON parser — req.rawBody', () =>
 });
 
 // ============================================================
-//  JSON parser — type array
+//  JSON parser - type array
 // ============================================================
-describe('JSON parser — type array', () =>
+describe('JSON parser - type array', () =>
 {
     let server, base;
 
@@ -360,9 +360,9 @@ describe('JSON parser — type array', () =>
 });
 
 // ============================================================
-//  JSON parser — gzip decompression
+//  JSON parser - gzip decompression
 // ============================================================
-describe('JSON parser — gzip decompression', () =>
+describe('JSON parser - gzip decompression', () =>
 {
     let server, base;
 
@@ -393,9 +393,9 @@ describe('JSON parser — gzip decompression', () =>
 });
 
 // ============================================================
-//  JSON parser — inflate:false
+//  JSON parser - inflate:false
 // ============================================================
-describe('JSON parser — inflate:false', () =>
+describe('JSON parser - inflate:false', () =>
 {
     let server, base;
 
@@ -433,9 +433,9 @@ describe('JSON parser — inflate:false', () =>
 });
 
 // ============================================================
-//  Text parser — verify + rawBody + charset
+//  Text parser - verify + rawBody + charset
 // ============================================================
-describe('Text parser — verify + rawBody', () =>
+describe('Text parser - verify + rawBody', () =>
 {
     let server, base;
 
@@ -481,9 +481,9 @@ describe('Text parser — verify + rawBody', () =>
 });
 
 // ============================================================
-//  Text parser — gzip decompression
+//  Text parser - gzip decompression
 // ============================================================
-describe('Text parser — gzip decompression', () =>
+describe('Text parser - gzip decompression', () =>
 {
     let server, base;
 
@@ -512,9 +512,9 @@ describe('Text parser — gzip decompression', () =>
 });
 
 // ============================================================
-//  Raw parser — verify + rawBody + inflate
+//  Raw parser - verify + rawBody + inflate
 // ============================================================
-describe('Raw parser — verify + inflate', () =>
+describe('Raw parser - verify + inflate', () =>
 {
     let server, base;
 
@@ -559,9 +559,9 @@ describe('Raw parser — verify + inflate', () =>
 });
 
 // ============================================================
-//  URLEncoded — parameterLimit
+//  URLEncoded - parameterLimit
 // ============================================================
-describe('URLEncoded — parameterLimit', () =>
+describe('URLEncoded - parameterLimit', () =>
 {
     let server, base;
 
@@ -599,9 +599,9 @@ describe('URLEncoded — parameterLimit', () =>
 });
 
 // ============================================================
-//  URLEncoded — parameterLimit (extended mode)
+//  URLEncoded - parameterLimit (extended mode)
 // ============================================================
-describe('URLEncoded — parameterLimit (extended)', () =>
+describe('URLEncoded - parameterLimit (extended)', () =>
 {
     let server, base;
 
@@ -628,9 +628,9 @@ describe('URLEncoded — parameterLimit (extended)', () =>
 });
 
 // ============================================================
-//  URLEncoded — depth limit
+//  URLEncoded - depth limit
 // ============================================================
-describe('URLEncoded — depth limit', () =>
+describe('URLEncoded - depth limit', () =>
 {
     let server, base;
 
@@ -667,9 +667,9 @@ describe('URLEncoded — depth limit', () =>
 });
 
 // ============================================================
-//  URLEncoded — verify callback
+//  URLEncoded - verify callback
 // ============================================================
-describe('URLEncoded — verify callback', () =>
+describe('URLEncoded - verify callback', () =>
 {
     let server, base;
 
@@ -711,9 +711,9 @@ describe('URLEncoded — verify callback', () =>
 });
 
 // ============================================================
-//  URLEncoded — gzip decompression
+//  URLEncoded - gzip decompression
 // ============================================================
-describe('URLEncoded — gzip decompression', () =>
+describe('URLEncoded - gzip decompression', () =>
 {
     let server, base;
 
@@ -743,9 +743,9 @@ describe('URLEncoded — gzip decompression', () =>
 });
 
 // ============================================================
-//  Multipart — maxFiles
+//  Multipart - maxFiles
 // ============================================================
-describe('Multipart — maxFiles', () =>
+describe('Multipart - maxFiles', () =>
 {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-maxfiles');
@@ -800,9 +800,9 @@ describe('Multipart — maxFiles', () =>
 });
 
 // ============================================================
-//  Multipart — maxFields
+//  Multipart - maxFields
 // ============================================================
-describe('Multipart — maxFields', () =>
+describe('Multipart - maxFields', () =>
 {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-maxfields');
@@ -843,9 +843,9 @@ describe('Multipart — maxFields', () =>
 });
 
 // ============================================================
-//  Multipart — allowedMimeTypes
+//  Multipart - allowedMimeTypes
 // ============================================================
-describe('Multipart — allowedMimeTypes', () =>
+describe('Multipart - allowedMimeTypes', () =>
 {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-mimetypes');
@@ -900,9 +900,9 @@ describe('Multipart — allowedMimeTypes', () =>
 });
 
 // ============================================================
-//  Multipart — maxFieldSize
+//  Multipart - maxFieldSize
 // ============================================================
-describe('Multipart — maxFieldSize', () =>
+describe('Multipart - maxFieldSize', () =>
 {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-fieldsize');
@@ -941,9 +941,9 @@ describe('Multipart — maxFieldSize', () =>
 });
 
 // ============================================================
-//  Multipart — maxTotalSize
+//  Multipart - maxTotalSize
 // ============================================================
-describe('Multipart — maxTotalSize', () =>
+describe('Multipart - maxTotalSize', () =>
 {
     let server, base;
     const uploadDir = path.join(__dirname, 'tmp-totalsize');
@@ -1210,7 +1210,7 @@ describe('Multipart — maxTotalSize', () =>
 };
 
 // ===================================================================
-//  WebSocket handshake — function coverage (50% → 100%)
+//  WebSocket handshake - function coverage (50% → 100%)
 // ===================================================================
 
 
@@ -1219,7 +1219,7 @@ describe('Multipart — maxTotalSize', () =>
 //  multipart � deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('multipart — deep branch coverage', () => {
+describe('multipart - deep branch coverage', () => {
 	let server, base, tmpDir;
 
 	beforeAll(async () => {
@@ -1479,7 +1479,7 @@ describe('multipart — deep branch coverage', () => {
 
 
 // =========================================================================
-//  multipart parser — coverage boost (from coverage/boost.test.js)
+//  multipart parser - coverage boost (from coverage/boost.test.js)
 // =========================================================================
 
 {
@@ -1706,15 +1706,15 @@ describe('multipart — deep branch coverage', () => {
 };
 
 // ===================================================================
-//  WebSocket handshake — function coverage (50% → 100%)
+//  WebSocket handshake - function coverage (50% → 100%)
 // ===================================================================
 
 
 // =========================================================================
-//  multipart — deep branch coverage (from coverage/deep.test.js)
+//  multipart - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('multipart — deep branch coverage', () => {
+describe('multipart - deep branch coverage', () => {
 	let server, base, tmpDir;
 
 	beforeAll(async () => {

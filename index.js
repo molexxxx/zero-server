@@ -247,12 +247,12 @@ module.exports = {
     ClusterManager,
     /** @see module:cluster */
     cluster: clusterize,
-    // Observability — Structured Logging
+    // Observability - Structured Logging
     /** @see module:observe/logger */
     Logger,
     /** @see module:observe/logger */
     structuredLogger,
-    // Observability — Metrics
+    // Observability - Metrics
     /** @see module:observe/metrics */
     Counter,
     /** @see module:observe/metrics */
@@ -269,7 +269,7 @@ module.exports = {
     metricsMiddleware,
     /** @see module:observe/metrics */
     metricsEndpoint: metricsEndpointHandler,
-    // Observability — Tracing
+    // Observability - Tracing
     /** @see module:observe/tracing */
     Span,
     /** @see module:observe/tracing */
@@ -282,7 +282,7 @@ module.exports = {
     tracingMiddleware,
     /** @see module:observe/tracing */
     instrumentFetch,
-    // Observability — Health Checks
+    // Observability - Health Checks
     /** @see module:observe/health */
     healthCheck,
     /** @see module:observe/health */

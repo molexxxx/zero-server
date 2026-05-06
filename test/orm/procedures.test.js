@@ -1,12 +1,12 @@
 /**
- * Phase 4 — StoredProcedure, StoredFunction, TriggerManager tests
+ * Phase 4 - StoredProcedure, StoredFunction, TriggerManager tests
  */
 const { StoredProcedure, StoredFunction, TriggerManager } = require('../../lib/orm/procedures');
 
 // ===================================================================
-// StoredProcedure — constructor
+// StoredProcedure - constructor
 // ===================================================================
-describe('StoredProcedure — constructor', () =>
+describe('StoredProcedure - constructor', () =>
 {
     it('creates with valid args', () =>
     {
@@ -60,9 +60,9 @@ describe('StoredProcedure — constructor', () =>
 });
 
 // ===================================================================
-// StoredProcedure — SQL generation
+// StoredProcedure - SQL generation
 // ===================================================================
-describe('StoredProcedure — SQL generation', () =>
+describe('StoredProcedure - SQL generation', () =>
 {
     it('builds MySQL CREATE', () =>
     {
@@ -104,9 +104,9 @@ describe('StoredProcedure — SQL generation', () =>
 });
 
 // ===================================================================
-// StoredProcedure — adapter detection
+// StoredProcedure - adapter detection
 // ===================================================================
-describe('StoredProcedure — adapter detection', () =>
+describe('StoredProcedure - adapter detection', () =>
 {
     it('detects mysql', () =>
     {
@@ -145,9 +145,9 @@ describe('StoredProcedure — adapter detection', () =>
 });
 
 // ===================================================================
-// StoredProcedure — create/drop/execute (mocked adapter)
+// StoredProcedure - create/drop/execute (mocked adapter)
 // ===================================================================
-describe('StoredProcedure — create / drop / execute', () =>
+describe('StoredProcedure - create / drop / execute', () =>
 {
     it('create calls adapter.execute with raw sql', async () =>
     {
@@ -263,9 +263,9 @@ describe('StoredProcedure — create / drop / execute', () =>
 });
 
 // ===================================================================
-// StoredFunction — constructor
+// StoredFunction - constructor
 // ===================================================================
-describe('StoredFunction — constructor', () =>
+describe('StoredFunction - constructor', () =>
 {
     it('creates with valid args', () =>
     {
@@ -330,9 +330,9 @@ describe('StoredFunction — constructor', () =>
 });
 
 // ===================================================================
-// StoredFunction — SQL generation
+// StoredFunction - SQL generation
 // ===================================================================
-describe('StoredFunction — SQL generation', () =>
+describe('StoredFunction - SQL generation', () =>
 {
     it('builds MySQL CREATE', () =>
     {
@@ -383,9 +383,9 @@ describe('StoredFunction — SQL generation', () =>
 });
 
 // ===================================================================
-// StoredFunction — create/drop/call (mocked adapter)
+// StoredFunction - create/drop/call (mocked adapter)
 // ===================================================================
-describe('StoredFunction — create / drop / call', () =>
+describe('StoredFunction - create / drop / call', () =>
 {
     it('create calls adapter.execute', async () =>
     {
@@ -455,9 +455,9 @@ describe('StoredFunction — create / drop / call', () =>
 });
 
 // ===================================================================
-// TriggerManager — constructor
+// TriggerManager - constructor
 // ===================================================================
-describe('TriggerManager — constructor', () =>
+describe('TriggerManager - constructor', () =>
 {
     it('throws without db', () =>
     {
@@ -474,9 +474,9 @@ describe('TriggerManager — constructor', () =>
 });
 
 // ===================================================================
-// TriggerManager — define
+// TriggerManager - define
 // ===================================================================
-describe('TriggerManager — define', () =>
+describe('TriggerManager - define', () =>
 {
     let tm;
 
@@ -575,9 +575,9 @@ describe('TriggerManager — define', () =>
 });
 
 // ===================================================================
-// TriggerManager — SQL generation
+// TriggerManager - SQL generation
 // ===================================================================
-describe('TriggerManager — SQL generation', () =>
+describe('TriggerManager - SQL generation', () =>
 {
     let tm;
 
@@ -648,9 +648,9 @@ describe('TriggerManager — SQL generation', () =>
 });
 
 // ===================================================================
-// TriggerManager — create/drop (mocked adapter)
+// TriggerManager - create/drop (mocked adapter)
 // ===================================================================
-describe('TriggerManager — create / drop', () =>
+describe('TriggerManager - create / drop', () =>
 {
     it('create calls adapter.execute', async () =>
     {

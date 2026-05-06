@@ -1,5 +1,5 @@
 /**
- * Auth integration tests — end-to-end flows combining JWT, Session, and Authorization.
+ * Auth integration tests - end-to-end flows combining JWT, Session, and Authorization.
  */
 const crypto = require('crypto');
 const http = require('http');
@@ -94,7 +94,7 @@ describe('Integration: Session + Authorization', () =>
         app.use(json());
         app.use(session({ secret: SECRET }));
 
-        // Login route — set user in session
+        // Login route - set user in session
         app.post('/login', (req, res) =>
         {
             req.session.set('user', { id: req.body.id, role: req.body.role });

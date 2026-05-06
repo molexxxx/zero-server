@@ -194,7 +194,7 @@ describe('trustedDevice.issue', () =>
 
         let nextCalled = false;
         await mw(req, res, () => { nextCalled = true; });
-        // Should still call next — error is logged but not thrown
+        // Should still call next - error is logged but not thrown
         expect(nextCalled).toBe(true);
     });
 });
@@ -479,10 +479,10 @@ describe('_matchIPSubnet', () =>
 });
 
 // =========================================================
-// verify — checkIP option
+// verify - checkIP option
 // =========================================================
 
-describe('verify — IP subnet check', () =>
+describe('verify - IP subnet check', () =>
 {
     const secret = 'x'.repeat(32);
 
@@ -591,10 +591,10 @@ describe('verify — IP subnet check', () =>
 });
 
 // =========================================================
-// verify — fingerprint error path
+// verify - fingerprint error path
 // =========================================================
 
-describe('verify — fingerprint error catch', () =>
+describe('verify - fingerprint error catch', () =>
 {
     const secret = 'a'.repeat(32);
 

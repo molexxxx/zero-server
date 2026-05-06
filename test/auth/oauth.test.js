@@ -1,5 +1,5 @@
 /**
- * OAuth2 client — comprehensive tests.
+ * OAuth2 client - comprehensive tests.
  * Covers: provider presets, PKCE generation, state generation,
  * authorize URL building, callback token exchange, refresh, userInfo,
  * custom providers, error handling, and security (state validation).
@@ -185,7 +185,7 @@ describe('OAuth2: oauth() factory', () =>
 });
 
 // =========================================================
-// authorize() — URL Building
+// authorize() - URL Building
 // =========================================================
 
 describe('OAuth2: authorize()', () =>
@@ -251,7 +251,7 @@ describe('OAuth2: authorize()', () =>
 });
 
 // =========================================================
-// callback() — Token Exchange (mock)
+// callback() - Token Exchange (mock)
 // =========================================================
 
 describe('OAuth2: callback()', () =>
@@ -370,7 +370,7 @@ describe('OAuth2: callback()', () =>
 });
 
 // =========================================================
-// refresh() — Token Refresh (mock)
+// refresh() - Token Refresh (mock)
 // =========================================================
 
 describe('OAuth2: refresh()', () =>

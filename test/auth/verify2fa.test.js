@@ -35,7 +35,7 @@ function mockRes()
         getHeader(k) { return this._headers[k.toLowerCase()]; },
         end(body) { this._body = body; this.headersSent = true; },
     };
-    // middleware uses res.raw || res — simulate zero-server wrapping
+    // middleware uses res.raw || res - simulate zero-server wrapping
     res.raw = res;
     return res;
 }
@@ -46,7 +46,7 @@ function parseBody(res) { return JSON.parse(res._body); }
 // verifyTOTPMiddleware + Replay Prevention
 // =========================================================
 
-describe('verifyTOTPMiddleware — replay prevention', () =>
+describe('verifyTOTPMiddleware - replay prevention', () =>
 {
     let store;
     const secretObj = generateSecret();
@@ -77,14 +77,14 @@ describe('verifyTOTPMiddleware — replay prevention', () =>
         const code = generateTOTP(secret);
         const mw = createMiddleware({ window: 0 });
 
-        // First use — should pass
+        // First use - should pass
         const req1 = mockReq({ body: { code } });
         const res1 = mockRes();
         let nextCalled = false;
         await mw(req1, res1, () => { nextCalled = true; });
         expect(nextCalled).toBe(true);
 
-        // Replay — same code, same counter
+        // Replay - same code, same counter
         const req2 = mockReq({ body: { code } });
         const res2 = mockRes();
         let nextCalled2 = false;
@@ -97,7 +97,7 @@ describe('verifyTOTPMiddleware — replay prevention', () =>
     {
         const mw = createMiddleware({ window: 0 });
 
-        // Use the current code — should pass
+        // Use the current code - should pass
         const code1 = generateTOTP(secret);
         const req1 = mockReq({ body: { code: code1 } });
         const res1 = mockRes();
@@ -133,7 +133,7 @@ describe('verifyTOTPMiddleware — replay prevention', () =>
         const res = mockRes();
         let nextCalled = false;
         await mw(req, res, () => { nextCalled = true; });
-        // Should fail open — allow the request
+        // Should fail open - allow the request
         expect(nextCalled).toBe(true);
     });
 
@@ -154,10 +154,10 @@ describe('verifyTOTPMiddleware — replay prevention', () =>
 });
 
 // =========================================================
-// verifyTOTPMiddleware — rate limiting and lockout
+// verifyTOTPMiddleware - rate limiting and lockout
 // =========================================================
 
-describe('verifyTOTPMiddleware — rate limiting', () =>
+describe('verifyTOTPMiddleware - rate limiting', () =>
 {
     const secretObj = generateSecret();
     const secret = secretObj.base32;
@@ -294,10 +294,10 @@ describe('verifyTOTPMiddleware — rate limiting', () =>
 });
 
 // =========================================================
-// verify2FA — combined middleware
+// verify2FA - combined middleware
 // =========================================================
 
-describe('verify2FA — combined middleware', () =>
+describe('verify2FA - combined middleware', () =>
 {
     const secretObj = generateSecret();
     const secret = secretObj.base32;
@@ -459,7 +459,7 @@ describe('verify2FA — combined middleware', () =>
             await mw(req, res, () => {});
         }
 
-        // 3rd attempt should be locked out — even with backup code
+        // 3rd attempt should be locked out - even with backup code
         const req = mockReq({ body: { backupCode: codes[0] } });
         const res = mockRes();
         await mw(req, res, () => {});
@@ -587,10 +587,10 @@ describe('verify2FA — combined middleware', () =>
 });
 
 // =========================================================
-// verify2FA — WebAuthn assertion path
+// verify2FA - WebAuthn assertion path
 // =========================================================
 
-describe('verify2FA — WebAuthn assertion', () =>
+describe('verify2FA - WebAuthn assertion', () =>
 {
     const secret = generateSecret();
 
@@ -705,7 +705,7 @@ describe('verify2FA — WebAuthn assertion', () =>
     it('should call updateCredentialCounter on successful WebAuthn verification', async () =>
     {
         // To test a successful path, we need a real WebAuthn assertion
-        // This requires crypto.generateKeyPairSync — let's verify the callback is wired
+        // This requires crypto.generateKeyPairSync - let's verify the callback is wired
         const crypto = require('crypto');
         const { webauthn, _toBase64Url } = require('../../lib/auth/webauthn');
 

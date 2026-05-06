@@ -217,10 +217,10 @@ describe('Database FK methods', () =>
 
 
 // =========================================================================
-//  orm index — deep branch coverage (from coverage/deep.test.js)
+//  orm index - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('orm index — deep branch coverage', () => {
+describe('orm index - deep branch coverage', () => {
 	it('_validateOptions validates mysql host', () => {
 		const { Database } = require('../../');
 		expect(() => Database.connect('mysql', { host: '' })).toThrow(/host/);
@@ -263,7 +263,7 @@ describe('orm index — deep branch coverage', () => {
 
 	it('_validateOptions validates sqlite filename', () => {
 		const { Database } = require('../../');
-		// sqlite with bad options — depends on validation
+		// sqlite with bad options - depends on validation
 		expect(() => Database.connect('sqlite', { filename: 123 })).toThrow();
 	});
 

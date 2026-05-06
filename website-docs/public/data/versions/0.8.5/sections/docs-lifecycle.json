@@ -5,10 +5,10 @@
 		{
 			"name": "LifecycleManager",
 			"description": "Graceful shutdown manager for zero-http applications. Tracks active connections, drains in-flight requests, closes WebSocket and SSE connections, and shuts down ORM databases before exiting.",
-			"example": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic — SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
+			"example": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic - SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
 			"examples": [
 				{
-					"code": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic — SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
+					"code": "  const app = createApp();\r\n  app.listen(3000);\r\n\n  // Automatic - SIGTERM/SIGINT handlers registered by listen()\r\n  // Manual trigger:\r\n  await app.shutdown();",
 					"lang": "javascript"
 				}
 			],
@@ -207,7 +207,7 @@
 						{
 							"method": "installSignalHandlers",
 							"signature": "installSignalHandlers()",
-							"description": "Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times — handlers are only installed once."
+							"description": "Install `SIGTERM` and `SIGINT` process signal handlers that trigger graceful shutdown. Called automatically by `app.listen()`. Safe to call multiple times - handlers are only installed once."
 						},
 						{
 							"method": "removeSignalHandlers",
@@ -222,7 +222,7 @@
 						{
 							"method": "shutdown",
 							"signature": "shutdown([opts])",
-							"description": "Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` — run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Wait for in-flight HTTP requests to complete (with timeout) 6. Close all registered ORM database connections 7. Emit `'shutdown'` — final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated.",
+							"description": "Perform a full graceful shutdown. Shutdown sequence: 1. Emit `'beforeShutdown'` - run pre-shutdown hooks (flush metrics, etc.) 2. Stop accepting new connections (server.close) 3. Close all WebSocket connections with code `1001` (Going Away) 4. Close all SSE streams 5. Wait for in-flight HTTP requests to complete (with timeout) 6. Close all registered ORM database connections 7. Emit `'shutdown'` - final cleanup complete If in-flight requests do not complete within the configured timeout (default 30s), they are forcefully terminated.",
 							"methodParams": [
 								{
 									"param": "opts",
@@ -235,7 +235,7 @@
 								{
 									"option": "timeout",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum ms to wait for in-flight requests. Overrides the configured default."
 								}
 							],
@@ -290,7 +290,7 @@
 				{
 					"option": "workers",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Number of worker processes (default: CPU count)."
 				},
 				{
@@ -561,7 +561,7 @@
 								{
 									"option": "hash",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Custom hash function `(ip, workerCount) => workerIndex`."
 								}
 							],
@@ -585,7 +585,7 @@
 						{
 							"method": "reload",
 							"signature": "reload()",
-							"description": "Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time — a new worker is spawned and confirmed listening before the old one is disconnected.",
+							"description": "Perform a rolling restart of all workers (zero-downtime). Workers are restarted one at a time - a new worker is spawned and confirmed listening before the old one is disconnected.",
 							"methodReturns": {
 								"type": "Promise<void>",
 								"description": "Resolves when all workers have been replaced."

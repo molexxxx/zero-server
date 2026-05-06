@@ -423,9 +423,9 @@ describe('Compression Edge Cases', () => {
 });
 
 // ===========================================================
-//  Compression — deflate
+//  Compression - deflate
 // ===========================================================
-describe('Compression — deflate', () => {
+describe('Compression - deflate', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -458,9 +458,9 @@ describe('Compression — deflate', () => {
 });
 
 // ===========================================================
-//  Compression — threshold enforcement
+//  Compression - threshold enforcement
 // ===========================================================
-describe('Compression — threshold', () => {
+describe('Compression - threshold', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -499,9 +499,9 @@ describe('Compression — threshold', () => {
 });
 
 // ===========================================================
-//  Helmet — COEP, COOP, CORP
+//  Helmet - COEP, COOP, CORP
 // ===========================================================
-describe('Helmet — COEP, COOP, CORP', () => {
+describe('Helmet - COEP, COOP, CORP', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -532,9 +532,9 @@ describe('Helmet — COEP, COOP, CORP', () => {
 });
 
 // ===========================================================
-//  Helmet — custom CSP
+//  Helmet - custom CSP
 // ===========================================================
-describe('Helmet — custom CSP', () => {
+describe('Helmet - custom CSP', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -557,9 +557,9 @@ describe('Helmet — custom CSP', () => {
 });
 
 // ===========================================================
-//  Helmet — HSTS preload & maxAge
+//  Helmet - HSTS preload & maxAge
 // ===========================================================
-describe('Helmet — HSTS options', () => {
+describe('Helmet - HSTS options', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -587,9 +587,9 @@ describe('Helmet — HSTS options', () => {
 });
 
 // ===========================================================
-//  Timeout — custom status and message
+//  Timeout - custom status and message
 // ===========================================================
-describe('Timeout — custom status and message', () => {
+describe('Timeout - custom status and message', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -612,9 +612,9 @@ describe('Timeout — custom status and message', () => {
 });
 
 // ===========================================================
-//  Request ID — custom generator
+//  Request ID - custom generator
 // ===========================================================
-describe('Request ID — custom generator', () => {
+describe('Request ID - custom generator', () => {
     let server, base;
     let counter = 0;
 
@@ -636,9 +636,9 @@ describe('Request ID — custom generator', () => {
 });
 
 // ===========================================================
-//  Request ID — custom header name
+//  Request ID - custom header name
 // ===========================================================
-describe('Request ID — custom header', () => {
+describe('Request ID - custom header', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -659,9 +659,9 @@ describe('Request ID — custom header', () => {
 });
 
 // ===========================================================
-//  Rate Limiter — header values
+//  Rate Limiter - header values
 // ===========================================================
-describe('Rate Limiter — headers', () => {
+describe('Rate Limiter - headers', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -704,9 +704,9 @@ describe('Rate Limiter — headers', () => {
 });
 
 // ===========================================================
-//  CORS — suffix matching
+//  CORS - suffix matching
 // ===========================================================
-describe('CORS — suffix matching', () => {
+describe('CORS - suffix matching', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -732,9 +732,9 @@ describe('CORS — suffix matching', () => {
 });
 
 // ===========================================================
-//  CORS — preflight headers
+//  CORS - preflight headers
 // ===========================================================
-describe('CORS — preflight', () => {
+describe('CORS - preflight', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -763,9 +763,9 @@ describe('CORS — preflight', () => {
 });
 
 // ===========================================================
-//  Cookie Parser — decode option
+//  Cookie Parser - decode option
 // ===========================================================
-describe('Cookie Parser — decode disabled', () => {
+describe('Cookie Parser - decode disabled', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -788,9 +788,9 @@ describe('Cookie Parser — decode disabled', () => {
 });
 
 // ===========================================================
-//  Cookie Parser — multiple secrets
+//  Cookie Parser - multiple secrets
 // ===========================================================
-describe('Cookie Parser — multiple secrets', () => {
+describe('Cookie Parser - multiple secrets', () => {
     let server, base;
     const secrets = ['new-secret', 'old-secret'];
 
@@ -825,7 +825,7 @@ describe('Cookie Parser — multiple secrets', () => {
 // ===========================================================
 //  Promise-returning middleware error handling
 // ===========================================================
-describe('Middleware — async error handling', () => {
+describe('Middleware - async error handling', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -861,7 +861,7 @@ describe('Middleware — async error handling', () => {
 // ===========================================================
 //  Path-scoped middleware
 // ===========================================================
-describe('Middleware — path-scoped', () => {
+describe('Middleware - path-scoped', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -902,7 +902,7 @@ describe('Middleware — path-scoped', () => {
 
 
 // =========================================================================
-//  logger — coverage gaps (from coverage/gaps.test.js)
+//  logger - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
@@ -991,13 +991,13 @@ describe('logger middleware', () => {
 });
 
 // =========================================================================
-//  requestId — coverage gaps (from coverage/gaps.test.js)
+//  requestId - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  10. REQUEST ID — GENERATOR, 128-CHAR LIMIT
+//  10. REQUEST ID - GENERATOR, 128-CHAR LIMIT
 // ============================================================
-describe('requestId — custom generator', () => {
+describe('requestId - custom generator', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1020,7 +1020,7 @@ describe('requestId — custom generator', () => {
 	});
 });
 
-describe('requestId — trustProxy and 128-char limit', () => {
+describe('requestId - trustProxy and 128-char limit', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1054,13 +1054,13 @@ describe('requestId — trustProxy and 128-char limit', () => {
 });
 
 // =========================================================================
-//  timeout — coverage gaps (from coverage/gaps.test.js)
+//  timeout - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  11. TIMEOUT — CUSTOM STATUS
+//  11. TIMEOUT - CUSTOM STATUS
 // ============================================================
-describe('timeout — custom status code', () => {
+describe('timeout - custom status code', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1087,7 +1087,7 @@ describe('timeout — custom status code', () => {
 	});
 });
 
-describe('timeout — timedOut property', () => {
+describe('timeout - timedOut property', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1111,4 +1111,4 @@ describe('timeout — timedOut property', () => {
 		const r = await fetch(`${base}/check`);
 		expect(r.status).toBe(408);
 	});
-});
+});

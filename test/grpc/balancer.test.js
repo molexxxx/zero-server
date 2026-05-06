@@ -278,10 +278,10 @@ describe('LoadBalancer', () =>
 });
 
 // =========================================================
-// Subchannel — getSession, events, backoff
+// Subchannel - getSession, events, backoff
 // =========================================================
 
-describe('Subchannel — getSession and session events', () =>
+describe('Subchannel - getSession and session events', () =>
 {
     it('getSession should return existing session if valid', () =>
     {
@@ -447,7 +447,7 @@ describe('Subchannel — getSession and session events', () =>
 // pickFirst fallback paths
 // =========================================================
 
-describe('pickFirst — fallback paths', () =>
+describe('pickFirst - fallback paths', () =>
 {
     it('should connect idle subchannel when none are ready', () =>
     {
@@ -522,10 +522,10 @@ describe('pickFirst — fallback paths', () =>
 });
 
 // =========================================================
-// LoadBalancer — getSession
+// LoadBalancer - getSession
 // =========================================================
 
-describe('LoadBalancer — getSession', () =>
+describe('LoadBalancer - getSession', () =>
 {
     it('should return null when no subchannels', () =>
     {
@@ -549,10 +549,10 @@ describe('LoadBalancer — getSession', () =>
 });
 
 // =========================================================
-// Subchannel — session event handlers (connect to port with no server)
+// Subchannel - session event handlers (connect to port with no server)
 // =========================================================
 
-describe('Subchannel — session event simulation', () =>
+describe('Subchannel - session event simulation', () =>
 {
     it('should handle error event: set TRANSIENT_FAILURE and schedule reconnect', async () =>
     {
@@ -646,7 +646,7 @@ describe('Subchannel — session event simulation', () =>
         expect(sc._reconnectTimer).not.toBeNull();
         expect(sc._backoff).toBe(100); // doubled from 50
 
-        // Clean up immediately — we only need to verify the timer was set
+        // Clean up immediately - we only need to verify the timer was set
         sc.shutdown();
         expect(sc._reconnectTimer).toBeNull(); // shutdown clears timer
     });

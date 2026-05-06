@@ -1,5 +1,5 @@
 /**
- * Coverage tests for lib/cluster.js — targets uncovered statements,
+ * Coverage tests for lib/cluster.js - targets uncovered statements,
  * branches, and functions in fork() exit handler, reload(), clusterize(),
  * and _waitForAllWorkers().
  */
@@ -8,7 +8,7 @@ const { EventEmitter } = require('events');
 const { ClusterManager, clusterize, _defaultIpHash } = require('../../lib/cluster');
 
 // =========================================================
-// fork() — cluster.on('exit') handler branches
+// fork() - cluster.on('exit') handler branches
 // =========================================================
 
 describe('ClusterManager: fork() exit handler', () =>
@@ -235,7 +235,7 @@ describe('ClusterManager: fork() exit handler', () =>
 });
 
 // =========================================================
-// reload() — rolling restart
+// reload() - rolling restart
 // =========================================================
 
 describe('ClusterManager: reload()', () =>
@@ -391,7 +391,7 @@ describe('ClusterManager: _waitForAllWorkers with workers', () =>
 });
 
 // =========================================================
-// clusterize() — full function
+// clusterize() - full function
 // =========================================================
 
 describe('clusterize: primary path', () =>
@@ -458,7 +458,7 @@ describe('clusterize: primary path', () =>
 
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
         signalHandlers['SIGTERM']();
-        // Signal handler uses .then()/.catch() — flush microtasks
+        // Signal handler uses .then()/.catch() - flush microtasks
         await new Promise(r => setTimeout(r, 10));
         expect(exitSpy).toHaveBeenCalledWith(0);
 
@@ -561,7 +561,7 @@ describe('clusterize: worker path', () =>
 });
 
 // =========================================================
-// enableSticky — remoteAddress fallback
+// enableSticky - remoteAddress fallback
 // =========================================================
 
 describe('ClusterManager: enableSticky edge cases', () =>

@@ -12,7 +12,7 @@ function walk(rel) {
         const relP = path.relative(ROOT, p);
         if (e.isDirectory()) {
             if (['node_modules', '.git', 'coverage', '.myshit'].includes(e.name)) continue;
-            // Skip historical versioned data archives — keep them frozen
+            // Skip historical versioned data archives - keep them frozen
             if (relP.replace(/\\/g, '/').startsWith('website-docs/public/data/versions')) continue;
             walk(relP);
         } else if (/\.(js|mjs|md|html|css|json|d\.ts)$/.test(e.name)) {
@@ -69,9 +69,9 @@ for (const f of targets) {
     // HTML / meta
     s = s.replace(/<title>zero-server\b/g, '<title>zero-server');
     s = s.replace(/<h1 align="center">zero-http<\/h1>/g, '<h1 align="center">zero-server</h1>');
-    s = s.replace(/zero-server — API Reference/g, 'zero-server — API Reference');
-    s = s.replace(/zero-server — demo & reference/g, 'zero-server — demo & reference');
-    s = s.replace(/zero-server — Zero-dependency/g, 'zero-server — Zero-dependency');
+    s = s.replace(/zero-server - API Reference/g, 'zero-server - API Reference');
+    s = s.replace(/zero-server - demo & reference/g, 'zero-server - demo & reference');
+    s = s.replace(/zero-server - Zero-dependency/g, 'zero-server - Zero-dependency');
     s = s.replace(/alt="zero-server logo"/g, 'alt="zero-server logo"');
     s = s.replace(/zero-server animated logo/g, 'zero-server animated logo');
     s = s.replace(/aria-label="zero-server\b/g, 'aria-label="zero-server');
@@ -83,7 +83,7 @@ for (const f of targets) {
     s = s.replace(/WebSocket support for zero-http\./g, 'WebSocket support for zero-server.');
     s = s.replace(/Server-Sent Events support for zero-http\./g, 'Server-Sent Events support for zero-server.');
     s = s.replace(/CLI tool for zero-server\b/g, 'CLI tool for zero-server');
-    s = s.replace(/zh CLI'\)\}\s+— zero-http\b/g, "zh CLI')} — zero-server");
+    s = s.replace(/zh CLI'\)\}\s+- zero-http\b/g, "zh CLI')} - zero-server");
     s = s.replace(/zh v\$\{pkg\.version\} \(zero-http\)/g, 'zh v${pkg.version} (zero-server)');
     s = s.replace(/zero-server version\b/g, 'zero-server version');
     s = s.replace(/Versioned migration framework for the zero-server\b/g, 'Versioned migration framework for the zero-server');
@@ -104,7 +104,7 @@ for (const f of targets) {
     s = s.replace(/img\.shields\.io\/npm\/dm\/zero-http\.svg/g, 'img.shields.io/npm/dm/%40zero-server%2Fsdk.svg');
     s = s.replace(/zero--server/g, 'zero--server');
 
-    // Keep CLI binary `zh` (back-compat) and `zero.config.js`/`.zero-http.js` filename — leave .zero-http.js as legacy fallback
+    // Keep CLI binary `zh` (back-compat) and `zero.config.js`/`.zero-http.js` filename - leave .zero-http.js as legacy fallback
 
     if (s !== o) {
         fs.writeFileSync(f, s);

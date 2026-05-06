@@ -17,8 +17,8 @@ function makeModel(name, overrides = {}) {
     return M;
 }
 
-// --- schema strategy — createTenant / dropTenant --------------------------
-describe('TenantManager — schema strategy flows', () => {
+// --- schema strategy - createTenant / dropTenant --------------------------
+describe('TenantManager - schema strategy flows', () => {
     let db;
 
     beforeEach(() => {
@@ -107,8 +107,8 @@ describe('TenantManager — schema strategy flows', () => {
     });
 });
 
-// --- row-level dropTenant — delete rows -----------------------------------
-describe('TenantManager — row-level dropTenant', () => {
+// --- row-level dropTenant - delete rows -----------------------------------
+describe('TenantManager - row-level dropTenant', () => {
     let db;
 
     beforeEach(() => {
@@ -146,7 +146,7 @@ describe('TenantManager — row-level dropTenant', () => {
 });
 
 // --- findById with _primaryKey as array -----------------------------------
-describe('TenantManager — findById with array primary key', () => {
+describe('TenantManager - findById with array primary key', () => {
     let db;
 
     beforeEach(() => {
@@ -231,7 +231,7 @@ describe('TenantManager — findById with array primary key', () => {
 });
 
 // --- schema-based migrate / migrateAll ------------------------------------
-describe('TenantManager — schema-based migrations', () => {
+describe('TenantManager - schema-based migrations', () => {
     let db;
 
     beforeEach(() => {
@@ -292,7 +292,7 @@ describe('TenantManager — schema-based migrations', () => {
 });
 
 // --- middleware edge branches ---------------------------------------------
-describe('TenantManager — middleware edges', () => {
+describe('TenantManager - middleware edges', () => {
     let db;
 
     beforeEach(() => {
@@ -336,7 +336,7 @@ describe('TenantManager — middleware edges', () => {
 });
 
 // --- uncovered branches: setCurrentTenant non-string, model name fallback -----
-describe('TenantManager — remaining branch coverage', () => {
+describe('TenantManager - remaining branch coverage', () => {
     let db;
 
     beforeEach(() => {
@@ -355,7 +355,7 @@ describe('TenantManager — remaining branch coverage', () => {
         const adapter = db.adapter;
         adapter.execute = vi.fn().mockResolvedValue([]);
 
-        // Model with no table set — falls back to class name
+        // Model with no table set - falls back to class name
         const NoTable = makeModel(undefined);
         NoTable.table = undefined;
         NoTable.sync = vi.fn().mockResolvedValue();

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * publish-package-stubs.js — Publish every packages/* standalone bundle to npm.
+ * publish-package-stubs.js - Publish every packages/* standalone bundle to npm.
  *
- * Each scoped package is a true standalone bundle — it ships its own copy of the
+ * Each scoped package is a true standalone bundle - it ships its own copy of the
  * relevant lib/ source files and has NO runtime dependency on @zero-server/sdk.
  * The SDK is listed only as an optional peerDependency for TypeScript types.
  *

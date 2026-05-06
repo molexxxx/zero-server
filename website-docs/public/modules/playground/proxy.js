@@ -165,7 +165,7 @@ export function initProxy()
                 const blob = new Blob([ab], { type: ct || 'application/octet-stream' });
                 const href = URL.createObjectURL(blob);
                 proxyResult.innerHTML =
-                    `<div class="mono">${escapeHtml('Binary response: ' + ct + ' — ' + ab.byteLength + ' bytes')}</div>` +
+                    `<div class="mono">${escapeHtml('Binary response: ' + ct + ' - ' + ab.byteLength + ' bytes')}</div>` +
                     `<div style="margin-top:8px"><a href="${href}" download="proxied-file">Download file</a></div>`;
             }
         } catch (err)

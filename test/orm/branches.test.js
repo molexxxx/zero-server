@@ -1,4 +1,4 @@
-/** branches.test.js — ORM branch-level coverage */
+/** branches.test.js - ORM branch-level coverage */
 const {
     Database, Model, TYPES, Query,
     validate, validateValue, validateFKAction, validateCheck,
@@ -6,7 +6,7 @@ const {
 } = require('../../lib/orm');
 
 // ===================================================================
-// Helpers — lean model factories for isolated tests
+// Helpers - lean model factories for isolated tests
 // ===================================================================
 
 function memDb()
@@ -32,9 +32,9 @@ function makeModel(db, table, schema, opts = {})
 }
 
 // ===================================================================
-// schema.js — Uncovered Type & Validation Branches
+// schema.js - Uncovered Type & Validation Branches
 // ===================================================================
-describe('schema.js — deep branch coverage', () =>
+describe('schema.js - deep branch coverage', () =>
 {
     // -- set type --
     it('validates set type with allowed values (string input)', () =>
@@ -510,9 +510,9 @@ describe('schema.js — deep branch coverage', () =>
 });
 
 // ===================================================================
-// model.js — Uncovered Branches
+// model.js - Uncovered Branches
 // ===================================================================
-describe('model.js — deep branch coverage', () =>
+describe('model.js - deep branch coverage', () =>
 {
     let db;
 
@@ -528,7 +528,7 @@ describe('model.js — deep branch coverage', () =>
         await db.sync();
 
         const u = await User.create({ name: 'Alice', password: 'secret' });
-        // password is guarded — should not be set
+        // password is guarded - should not be set
         expect(u.password).toBeUndefined();
     });
 
@@ -648,7 +648,7 @@ describe('model.js — deep branch coverage', () =>
         await Item.create({ name: 'B' });
         await Item.deleteWhere({ name: 'A' });
 
-        // Soft-deleted — withDeleted() should find it
+        // Soft-deleted - withDeleted() should find it
         const all = await Item.query().withDeleted().exec();
         expect(all).toHaveLength(2);
         const active = await Item.find();
@@ -962,9 +962,9 @@ describe('model.js — deep branch coverage', () =>
 });
 
 // ===================================================================
-// query.js — Uncovered Branches
+// query.js - Uncovered Branches
 // ===================================================================
-describe('query.js — deep branch coverage', () =>
+describe('query.js - deep branch coverage', () =>
 {
     let db, User, Post;
 
@@ -1553,7 +1553,7 @@ describe('query.js — deep branch coverage', () =>
     it('whereRaw adds raw clause (memory adapter skips it)', async () =>
     {
         const result = await User.query().whereRaw('1=1').exec();
-        // Memory adapter ignores raw WHERE — returns all
+        // Memory adapter ignores raw WHERE - returns all
         expect(result).toHaveLength(3);
     });
 
@@ -1723,9 +1723,9 @@ describe('query.js — deep branch coverage', () =>
 });
 
 // ===================================================================
-// query.js — Eager Loading: belongsToMany, hasOne with/withCount
+// query.js - Eager Loading: belongsToMany, hasOne with/withCount
 // ===================================================================
-describe('query.js — eager loading advanced', () =>
+describe('query.js - eager loading advanced', () =>
 {
     let db, User, Role, UserRole, Profile;
 
@@ -1835,9 +1835,9 @@ describe('query.js — eager loading advanced', () =>
 });
 
 // ===================================================================
-// index.js (Database) — Uncovered Branches
+// index.js (Database) - Uncovered Branches
 // ===================================================================
-describe('index.js (Database) — deep branch coverage', () =>
+describe('index.js (Database) - deep branch coverage', () =>
 {
     it('connect throws for unknown adapter type', () =>
     {
@@ -1900,7 +1900,7 @@ describe('index.js (Database) — deep branch coverage', () =>
     it('transaction wraps in begin/commit', async () =>
     {
         const db = memDb();
-        // Memory adapter has no beginTransaction — fn runs directly
+        // Memory adapter has no beginTransaction - fn runs directly
         const result = await db.transaction(async () => 42);
         expect(result).toBe(42);
     });
@@ -2180,9 +2180,9 @@ describe('index.js (Database) — deep branch coverage', () =>
 });
 
 // ===================================================================
-// replicas.js — Uncovered Branches
+// replicas.js - Uncovered Branches
 // ===================================================================
-describe('replicas.js — deep branch coverage', () =>
+describe('replicas.js - deep branch coverage', () =>
 {
     it('throws on invalid strategy', () =>
     {
@@ -2378,9 +2378,9 @@ describe('replicas.js — deep branch coverage', () =>
 });
 
 // ===================================================================
-// profiler.js — Uncovered Branches
+// profiler.js - Uncovered Branches
 // ===================================================================
-describe('profiler.js — deep branch coverage', () =>
+describe('profiler.js - deep branch coverage', () =>
 {
     it('record is no-op when disabled', () =>
     {
@@ -2510,9 +2510,9 @@ describe('profiler.js — deep branch coverage', () =>
 });
 
 // ===================================================================
-// memory.js (adapter) — Uncovered Branches
+// memory.js (adapter) - Uncovered Branches
 // ===================================================================
-describe('memory adapter — deep branch coverage', () =>
+describe('memory adapter - deep branch coverage', () =>
 {
     let adapter;
 
@@ -2528,7 +2528,7 @@ describe('memory adapter — deep branch coverage', () =>
         await adapter.insert('users', { name: 'Alice' });
         await adapter.insert('users', { name: 'Bob' });
 
-        // NOT LIKE is not in the switch — falls to default (val === value)
+        // NOT LIKE is not in the switch - falls to default (val === value)
         const results = await adapter.execute({
             action: 'select', table: 'users',
             where: [{ field: 'name', op: 'NOT LIKE', value: 'Alice', logic: 'AND' }],
@@ -2991,9 +2991,9 @@ describe('memory adapter — deep branch coverage', () =>
 });
 
 // ===================================================================
-// cache.js — Remaining Branch Coverage
+// cache.js - Remaining Branch Coverage
 // ===================================================================
-describe('cache.js — remaining branch coverage', () =>
+describe('cache.js - remaining branch coverage', () =>
 {
     it('has() returns false for expired entry', () =>
     {
@@ -3071,9 +3071,9 @@ describe('cache.js — remaining branch coverage', () =>
 });
 
 // ===================================================================
-// migrate.js — Edge Cases
+// migrate.js - Edge Cases
 // ===================================================================
-describe('migrate.js — edge cases', () =>
+describe('migrate.js - edge cases', () =>
 {
     let db, migrator;
 
@@ -3250,13 +3250,13 @@ describe('migrate.js — edge cases', () =>
     });
 });
 // ===================================================================
-// ROUND 2 — Targeted Branch Coverage
+// ROUND 2 - Targeted Branch Coverage
 // ===================================================================
 
 // -------------------------------------------------------------------
-// model.js — save() update path with timestamps
+// model.js - save() update path with timestamps
 // -------------------------------------------------------------------
-describe('model.js — save() update path', () =>
+describe('model.js - save() update path', () =>
 {
     it('save on persisted instance with dirty fields triggers update', async () =>
     {
@@ -3315,9 +3315,9 @@ describe('model.js — save() update path', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — createMany with timestamps and afterCreate hooks
+// model.js - createMany with timestamps and afterCreate hooks
 // -------------------------------------------------------------------
-describe('model.js — createMany branches', () =>
+describe('model.js - createMany branches', () =>
 {
     it('createMany with timestamps sets createdAt/updatedAt', async () =>
     {
@@ -3392,9 +3392,9 @@ describe('model.js — createMany branches', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — deleteWhere, findOrCreate, updateWhere branches
+// model.js - deleteWhere, findOrCreate, updateWhere branches
 // -------------------------------------------------------------------
-describe('model.js — CRUD statics', () =>
+describe('model.js - CRUD statics', () =>
 {
     it('deleteWhere without softDelete does hard delete', async () =>
     {
@@ -3530,9 +3530,9 @@ describe('model.js — CRUD statics', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — instance methods: delete, restore, increment, decrement, reload, toJSON
+// model.js - instance methods: delete, restore, increment, decrement, reload, toJSON
 // -------------------------------------------------------------------
-describe('model.js — instance methods', () =>
+describe('model.js - instance methods', () =>
 {
     it('instance delete with softDelete sets deletedAt', async () =>
     {
@@ -3648,9 +3648,9 @@ describe('model.js — instance methods', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _runHook via static method on class
+// model.js - _runHook via static method on class
 // -------------------------------------------------------------------
-describe('model.js — _runHook prefers static method', () =>
+describe('model.js - _runHook prefers static method', () =>
 {
     it('runs static hook method if defined', async () =>
     {
@@ -3697,9 +3697,9 @@ describe('model.js — _runHook prefers static method', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _fullSchema, _primaryKey, _fromRow, _stripGuarded
+// model.js - _fullSchema, _primaryKey, _fromRow, _stripGuarded
 // -------------------------------------------------------------------
-describe('model.js — internal static helpers', () =>
+describe('model.js - internal static helpers', () =>
 {
     it('_fullSchema adds timestamp fields', () =>
     {
@@ -3760,9 +3760,9 @@ describe('model.js — internal static helpers', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — relationships: hasMany, hasOne, belongsTo, belongsToMany + load()
+// model.js - relationships: hasMany, hasOne, belongsTo, belongsToMany + load()
 // -------------------------------------------------------------------
-describe('model.js — relationships and load()', () =>
+describe('model.js - relationships and load()', () =>
 {
     let db, Author, Post, Profile, Tag;
 
@@ -3863,9 +3863,9 @@ describe('model.js — relationships and load()', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — LINQ-style static shortcuts
+// model.js - LINQ-style static shortcuts
 // -------------------------------------------------------------------
-describe('model.js — LINQ shortcuts', () =>
+describe('model.js - LINQ shortcuts', () =>
 {
     let db, M;
 
@@ -3984,9 +3984,9 @@ describe('model.js — LINQ shortcuts', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — eager loading branches (with, withCount, belongsToMany)
+// query.js - eager loading branches (with, withCount, belongsToMany)
 // -------------------------------------------------------------------
-describe('query.js — eager loading', () =>
+describe('query.js - eager loading', () =>
 {
     let db, Author, Post, Comment, Tag, Profile;
 
@@ -4132,9 +4132,9 @@ describe('query.js — eager loading', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — withCount branches
+// query.js - withCount branches
 // -------------------------------------------------------------------
-describe('query.js — withCount', () =>
+describe('query.js - withCount', () =>
 {
     let db, Author, Post, Tag;
 
@@ -4231,9 +4231,9 @@ describe('query.js — withCount', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — aggregate methods with adapter.aggregate (truthy path)
+// query.js - aggregate methods with adapter.aggregate (truthy path)
 // -------------------------------------------------------------------
-describe('query.js — aggregate with adapter.aggregate', () =>
+describe('query.js - aggregate with adapter.aggregate', () =>
 {
     let db, M;
 
@@ -4308,9 +4308,9 @@ describe('query.js — aggregate with adapter.aggregate', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — profiler and replica integration in exec/count
+// query.js - profiler and replica integration in exec/count
 // -------------------------------------------------------------------
-describe('query.js — profiler & replica in exec/count', () =>
+describe('query.js - profiler & replica in exec/count', () =>
 {
     it('exec records to profiler when set', async () =>
     {
@@ -4379,9 +4379,9 @@ describe('query.js — profiler & replica in exec/count', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — where chain operators (OR, BETWEEN, NOT IN, etc.)
+// query.js - where chain operators (OR, BETWEEN, NOT IN, etc.)
 // -------------------------------------------------------------------
-describe('query.js — where operators', () =>
+describe('query.js - where operators', () =>
 {
     let db, M;
 
@@ -4481,9 +4481,9 @@ describe('query.js — where operators', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — misc: withDeleted, explain, scope, distinct, page, then/catch
+// query.js - misc: withDeleted, explain, scope, distinct, page, then/catch
 // -------------------------------------------------------------------
-describe('query.js — misc methods', () =>
+describe('query.js - misc methods', () =>
 {
     it('withDeleted removes soft-delete filter', async () =>
     {
@@ -4643,9 +4643,9 @@ describe('query.js — misc methods', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — paginate
+// query.js - paginate
 // -------------------------------------------------------------------
-describe('query.js — paginate', () =>
+describe('query.js - paginate', () =>
 {
     it('paginate returns correct metadata', async () =>
     {
@@ -4682,9 +4682,9 @@ describe('query.js — paginate', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — chunk
+// query.js - chunk
 // -------------------------------------------------------------------
-describe('query.js — chunk', () =>
+describe('query.js - chunk', () =>
 {
     it('chunk processes all records in batches', async () =>
     {
@@ -4707,9 +4707,9 @@ describe('query.js — chunk', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — join, leftJoin, rightJoin, groupBy, having
+// query.js - join, leftJoin, rightJoin, groupBy, having
 // -------------------------------------------------------------------
-describe('query.js — join and groupBy', () =>
+describe('query.js - join and groupBy', () =>
 {
     it('join adds INNER join', () =>
     {
@@ -4772,9 +4772,9 @@ describe('query.js — join and groupBy', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — last()
+// query.js - last()
 // -------------------------------------------------------------------
-describe('query.js — last()', () =>
+describe('query.js - last()', () =>
 {
     it('last returns the last record by reverse order', async () =>
     {
@@ -4792,9 +4792,9 @@ describe('query.js — last()', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — _validateOptions branches
+// index.js - _validateOptions branches
 // -------------------------------------------------------------------
-describe('index.js — _validateOptions', () =>
+describe('index.js - _validateOptions', () =>
 {
     it('mysql: invalid host throws', () =>
     {
@@ -4877,9 +4877,9 @@ describe('index.js — _validateOptions', () =>
 
     it('redis: valid options pass through (port trim)', () =>
     {
-        // Should not throw — redis adapter constructor may fail but validation passes
+        // Should not throw - redis adapter constructor may fail but validation passes
         try { Database.connect('redis', { host: '  127.0.0.1  ', port: '6379', db: 0 }); }
-        catch (e) { /* adapter constructor may throw, that's OK — validation passed */ }
+        catch (e) { /* adapter constructor may throw, that's OK - validation passed */ }
     });
 
     it('unknown adapter throws', () =>
@@ -4889,9 +4889,9 @@ describe('index.js — _validateOptions', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — topoSort, transaction, close, model, drop
+// index.js - topoSort, transaction, close, model, drop
 // -------------------------------------------------------------------
-describe('index.js — Database lifecycle', () =>
+describe('index.js - Database lifecycle', () =>
 {
     it('_topoSort handles circular references gracefully', async () =>
     {
@@ -5057,13 +5057,13 @@ describe('index.js — Database lifecycle', () =>
 });
 
 // ===================================================================
-// ROUND 3 — Targeted uncovered-branch tests
+// ROUND 3 - Targeted uncovered-branch tests
 // ===================================================================
 
 // -------------------------------------------------------------------
-// model.js — timestamps pre-set during save-insert (L177-178)
+// model.js - timestamps pre-set during save-insert (L177-178)
 // -------------------------------------------------------------------
-describe('model.js — save insert with pre-set timestamps', () =>
+describe('model.js - save insert with pre-set timestamps', () =>
 {
     let db, M;
 
@@ -5100,9 +5100,9 @@ describe('model.js — save insert with pre-set timestamps', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — createMany with pre-set timestamps (L397-398)
+// model.js - createMany with pre-set timestamps (L397-398)
 // -------------------------------------------------------------------
-describe('model.js — createMany timestamps pre-set', () =>
+describe('model.js - createMany timestamps pre-set', () =>
 {
     let db, M;
 
@@ -5132,9 +5132,9 @@ describe('model.js — createMany timestamps pre-set', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — createMany validation failure (L402)
+// model.js - createMany validation failure (L402)
 // -------------------------------------------------------------------
-describe('model.js — createMany validation failure', () =>
+describe('model.js - createMany validation failure', () =>
 {
     let db, M;
 
@@ -5158,9 +5158,9 @@ describe('model.js — createMany validation failure', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _stripGuarded with guarded fields (L879-884)
+// model.js - _stripGuarded with guarded fields (L879-884)
 // -------------------------------------------------------------------
-describe('model.js — _stripGuarded', () =>
+describe('model.js - _stripGuarded', () =>
 {
     let db, M;
 
@@ -5193,9 +5193,9 @@ describe('model.js — _stripGuarded', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — sync/drop without adapter (L949, L959)
+// model.js - sync/drop without adapter (L949, L959)
 // -------------------------------------------------------------------
-describe('model.js — sync/drop without adapter', () =>
+describe('model.js - sync/drop without adapter', () =>
 {
     it('sync throws when model has no adapter', async () =>
     {
@@ -5219,9 +5219,9 @@ describe('model.js — sync/drop without adapter', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — load() unknown relation type (L818 default case)
+// model.js - load() unknown relation type (L818 default case)
 // -------------------------------------------------------------------
-describe('model.js — load unknown relation type', () =>
+describe('model.js - load unknown relation type', () =>
 {
     let db, M;
 
@@ -5243,9 +5243,9 @@ describe('model.js — load unknown relation type', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _runHook fallback to hooks object (L816)
+// model.js - _runHook fallback to hooks object (L816)
 // -------------------------------------------------------------------
-describe('model.js — _runHook hooks object fallback', () =>
+describe('model.js - _runHook hooks object fallback', () =>
 {
     let db, M;
 
@@ -5277,9 +5277,9 @@ describe('model.js — _runHook hooks object fallback', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — validation failure during save-insert (L190)
+// model.js - validation failure during save-insert (L190)
 // -------------------------------------------------------------------
-describe('model.js — save insert validation failure', () =>
+describe('model.js - save insert validation failure', () =>
 {
     let db, M;
 
@@ -5301,9 +5301,9 @@ describe('model.js — save insert validation failure', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — hasMany/hasOne/belongsTo when _relations not initialized (L737,L750,L763)
+// model.js - hasMany/hasOne/belongsTo when _relations not initialized (L737,L750,L763)
 // -------------------------------------------------------------------
-describe('model.js — relationship definition when _relations is falsy', () =>
+describe('model.js - relationship definition when _relations is falsy', () =>
 {
     let db, M, R;
 
@@ -5344,9 +5344,9 @@ describe('model.js — relationship definition when _relations is falsy', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — exec() non-select action (L549)
+// query.js - exec() non-select action (L549)
 // -------------------------------------------------------------------
-describe('query.js — exec non-select returns raw rows', () =>
+describe('query.js - exec non-select returns raw rows', () =>
 {
     let db, M;
 
@@ -5372,9 +5372,9 @@ describe('query.js — exec non-select returns raw rows', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager empty keys paths (L582, L607, L620, L633)
+// query.js - _loadEager empty keys paths (L582, L607, L620, L633)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager with empty related data', () =>
+describe('query.js - _loadEager with empty related data', () =>
 {
     let db, Parent, Child, Related;
 
@@ -5437,9 +5437,9 @@ describe('query.js — _loadEager with empty related data', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager scope functions (L589, L607, L620, L633)
+// query.js - _loadEager scope functions (L589, L607, L620, L633)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager with scope constraints', () =>
+describe('query.js - _loadEager with scope constraints', () =>
 {
     let db, Author, Post, Tag;
 
@@ -5505,9 +5505,9 @@ describe('query.js — _loadEager with scope constraints', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEagerCount empty keys paths (L679, L689, L705, L715)
+// query.js - _loadEagerCount empty keys paths (L679, L689, L705, L715)
 // -------------------------------------------------------------------
-describe('query.js — _loadEagerCount with no related data', () =>
+describe('query.js - _loadEagerCount with no related data', () =>
 {
     let db, Parent, Child, Related;
 
@@ -5561,9 +5561,9 @@ describe('query.js — _loadEagerCount with no related data', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — withCount object branch (L418)
+// query.js - withCount object branch (L418)
 // -------------------------------------------------------------------
-describe('query.js — withCount with object', () =>
+describe('query.js - withCount with object', () =>
 {
     let db, M, R;
 
@@ -5593,9 +5593,9 @@ describe('query.js — withCount with object', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — LINQ element operators (L1025-1052)
+// query.js - LINQ element operators (L1025-1052)
 // -------------------------------------------------------------------
-describe('query.js — LINQ element operators', () =>
+describe('query.js - LINQ element operators', () =>
 {
     let db, M;
 
@@ -5684,9 +5684,9 @@ describe('query.js — LINQ element operators', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — LINQ quantifiers and contains (L1100-1128)
+// query.js - LINQ quantifiers and contains (L1100-1128)
 // -------------------------------------------------------------------
-describe('query.js — LINQ quantifiers', () =>
+describe('query.js - LINQ quantifiers', () =>
 {
     let db, M;
 
@@ -5747,9 +5747,9 @@ describe('query.js — LINQ quantifiers', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — sequenceEqual (L1191)
+// query.js - sequenceEqual (L1191)
 // -------------------------------------------------------------------
-describe('query.js — sequenceEqual', () =>
+describe('query.js - sequenceEqual', () =>
 {
     let db, M;
 
@@ -5800,9 +5800,9 @@ describe('query.js — sequenceEqual', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — concat, union, intersect, except with Query (L1269, L1287)
+// query.js - concat, union, intersect, except with Query (L1269, L1287)
 // -------------------------------------------------------------------
-describe('query.js — set operations with Query objects', () =>
+describe('query.js - set operations with Query objects', () =>
 {
     let db, M;
 
@@ -5855,9 +5855,9 @@ describe('query.js — set operations with Query objects', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — minBy, maxBy, sumBy, averageBy (L1387, L1405, L1436)
+// query.js - minBy, maxBy, sumBy, averageBy (L1387, L1405, L1436)
 // -------------------------------------------------------------------
-describe('query.js — aggregate selectors', () =>
+describe('query.js - aggregate selectors', () =>
 {
     let db, M;
 
@@ -5927,9 +5927,9 @@ describe('query.js — aggregate selectors', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — selectMany, zip, toDictionary, toLookup
+// query.js - selectMany, zip, toDictionary, toLookup
 // -------------------------------------------------------------------
-describe('query.js — LINQ projection operators', () =>
+describe('query.js - LINQ projection operators', () =>
 {
     let db, M;
 
@@ -5983,9 +5983,9 @@ describe('query.js — LINQ projection operators', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — takeWhile, skipWhile (L1350-1380)
+// query.js - takeWhile, skipWhile (L1350-1380)
 // -------------------------------------------------------------------
-describe('query.js — LINQ partitioning', () =>
+describe('query.js - LINQ partitioning', () =>
 {
     let db, M;
 
@@ -6025,9 +6025,9 @@ describe('query.js — LINQ partitioning', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — when/unless/tap (L1500-1530)
+// query.js - when/unless/tap (L1500-1530)
 // -------------------------------------------------------------------
-describe('query.js — conditional and debugging', () =>
+describe('query.js - conditional and debugging', () =>
 {
     let db, M;
 
@@ -6085,9 +6085,9 @@ describe('query.js — conditional and debugging', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — last() ternary for _primaryKey (L1000)
+// query.js - last() ternary for _primaryKey (L1000)
 // -------------------------------------------------------------------
-describe('query.js — last() without _primaryKey method', () =>
+describe('query.js - last() without _primaryKey method', () =>
 {
     let db, M;
 
@@ -6120,9 +6120,9 @@ describe('query.js — last() without _primaryKey method', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — min/max with adapter.aggregate (L864, L884)
+// query.js - min/max with adapter.aggregate (L864, L884)
 // -------------------------------------------------------------------
-describe('query.js — min/max via adapter.aggregate', () =>
+describe('query.js - min/max via adapter.aggregate', () =>
 {
     let db, M;
 
@@ -6189,9 +6189,9 @@ describe('query.js — min/max via adapter.aggregate', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — _validateOptions edge cases (L105, L125, L143, L146, L189)
+// index.js - _validateOptions edge cases (L105, L125, L143, L146, L189)
 // -------------------------------------------------------------------
-describe('index.js — _validateOptions additional branches', () =>
+describe('index.js - _validateOptions additional branches', () =>
 {
     const { Database } = require('../../lib/orm');
 
@@ -6232,9 +6232,9 @@ describe('index.js — _validateOptions additional branches', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — Database DDL methods that throw when adapter lacks support
+// index.js - Database DDL methods that throw when adapter lacks support
 // -------------------------------------------------------------------
-describe('index.js — DDL method error paths', () =>
+describe('index.js - DDL method error paths', () =>
 {
     const { Database } = require('../../lib/orm');
 
@@ -6303,9 +6303,9 @@ describe('index.js — DDL method error paths', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — ping and close (L538, L545)
+// index.js - ping and close (L538, L545)
 // -------------------------------------------------------------------
-describe('index.js — ping and close', () =>
+describe('index.js - ping and close', () =>
 {
     const { Database } = require('../../lib/orm');
 
@@ -6363,9 +6363,9 @@ describe('index.js — ping and close', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — operator branches: start state buffer short (L218)
+// memory.js - operator branches: start state buffer short (L218)
 // -------------------------------------------------------------------
-describe('memory.js — _compareOp all operators', () =>
+describe('memory.js - _compareOp all operators', () =>
 {
     let db;
 
@@ -6394,9 +6394,9 @@ describe('memory.js — _compareOp all operators', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — hasColumn schema fallback (L669), describeTable empty (L685)
+// memory.js - hasColumn schema fallback (L669), describeTable empty (L685)
 // -------------------------------------------------------------------
-describe('memory.js — hasColumn and describeTable edge cases', () =>
+describe('memory.js - hasColumn and describeTable edge cases', () =>
 {
     let db;
 
@@ -6431,9 +6431,9 @@ describe('memory.js — hasColumn and describeTable edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — renameTable when table doesn't exist (L651)
+// memory.js - renameTable when table doesn't exist (L651)
 // -------------------------------------------------------------------
-describe('memory.js — renameTable edge cases', () =>
+describe('memory.js - renameTable edge cases', () =>
 {
     let db;
 
@@ -6459,9 +6459,9 @@ describe('memory.js — renameTable edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — renameColumn when column doesn't exist in row (L606)
+// memory.js - renameColumn when column doesn't exist in row (L606)
 // -------------------------------------------------------------------
-describe('memory.js — renameColumn edge cases', () =>
+describe('memory.js - renameColumn edge cases', () =>
 {
     let db;
 
@@ -6490,9 +6490,9 @@ describe('memory.js — renameColumn edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — dropIndex across tables (L588, L593)
+// memory.js - dropIndex across tables (L588, L593)
 // -------------------------------------------------------------------
-describe('memory.js — dropIndex edge cases', () =>
+describe('memory.js - dropIndex edge cases', () =>
 {
     let db;
 
@@ -6521,9 +6521,9 @@ describe('memory.js — dropIndex edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _applyWhereChain OR logic and raw clause (L379, L402)
+// memory.js - _applyWhereChain OR logic and raw clause (L379, L402)
 // -------------------------------------------------------------------
-describe('memory.js — _applyWhereChain edge cases', () =>
+describe('memory.js - _applyWhereChain edge cases', () =>
 {
     let db;
 
@@ -6559,7 +6559,7 @@ describe('memory.js — _applyWhereChain edge cases', () =>
         const rows = await db.adapter.execute({
             action: 'select', table: 'wc_tbl', fields: null,
             where: [
-                { field: 'name', op: '=', value: 'a', logic: 'OR' }, // first clause — logic ignored
+                { field: 'name', op: '=', value: 'a', logic: 'OR' }, // first clause - logic ignored
             ],
             orderBy: [], joins: [], groupBy: [], having: [],
             limit: null, offset: null, distinct: false,
@@ -6569,9 +6569,9 @@ describe('memory.js — _applyWhereChain edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — execute with SELECT fields + DISTINCT combined
+// memory.js - execute with SELECT fields + DISTINCT combined
 // -------------------------------------------------------------------
-describe('memory.js — execute with fields + distinct', () =>
+describe('memory.js - execute with fields + distinct', () =>
 {
     let db;
 
@@ -6610,9 +6610,9 @@ describe('memory.js — execute with fields + distinct', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _likeSafe DP algorithm edge cases
+// memory.js - _likeSafe DP algorithm edge cases
 // -------------------------------------------------------------------
-describe('memory.js — LIKE operator edge cases', () =>
+describe('memory.js - LIKE operator edge cases', () =>
 {
     let db, M;
 
@@ -6654,9 +6654,9 @@ describe('memory.js — LIKE operator edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — aggregate edge cases
+// memory.js - aggregate edge cases
 // -------------------------------------------------------------------
-describe('memory.js — aggregate edge cases', () =>
+describe('memory.js - aggregate edge cases', () =>
 {
     let db;
 
@@ -6708,9 +6708,9 @@ describe('memory.js — aggregate edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — createTable idempotent (L60)
+// memory.js - createTable idempotent (L60)
 // -------------------------------------------------------------------
-describe('memory.js — createTable idempotent', () =>
+describe('memory.js - createTable idempotent', () =>
 {
     let db;
 
@@ -6732,9 +6732,9 @@ describe('memory.js — createTable idempotent', () =>
 });
 
 // -------------------------------------------------------------------
-// schema.js — binary-expr L72, L144
+// schema.js - binary-expr L72, L144
 // -------------------------------------------------------------------
-describe('schema.js — validate edge cases', () =>
+describe('schema.js - validate edge cases', () =>
 {
     const { validate } = require('../../lib/orm/schema');
 
@@ -6762,9 +6762,9 @@ describe('schema.js — validate edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// profiler.js — L71 binary-expr
+// profiler.js - L71 binary-expr
 // -------------------------------------------------------------------
-describe('profiler.js — metrics edge case', () =>
+describe('profiler.js - metrics edge case', () =>
 {
     const { QueryProfiler } = require('../../lib/orm/profiler');
 
@@ -6779,9 +6779,9 @@ describe('profiler.js — metrics edge case', () =>
 });
 
 // -------------------------------------------------------------------
-// cache.js — L338, L358 binary-expr
+// cache.js - L338, L358 binary-expr
 // -------------------------------------------------------------------
-describe('cache.js — edge cases', () =>
+describe('cache.js - edge cases', () =>
 {
     const { QueryCache } = require('../../lib/orm/cache');
 
@@ -6794,9 +6794,9 @@ describe('cache.js — edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — operator & LIKE branches
+// memory.js - operator & LIKE branches
 // -------------------------------------------------------------------
-describe('memory.js — additional operator branches', () =>
+describe('memory.js - additional operator branches', () =>
 {
     let adapter;
 
@@ -6950,9 +6950,9 @@ describe('memory.js — additional operator branches', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — GROUP BY, HAVING, ORDER BY, DISTINCT, aggregate
+// memory.js - GROUP BY, HAVING, ORDER BY, DISTINCT, aggregate
 // -------------------------------------------------------------------
-describe('memory.js — GROUP BY / HAVING / ORDER BY / DISTINCT / aggregate', () =>
+describe('memory.js - GROUP BY / HAVING / ORDER BY / DISTINCT / aggregate', () =>
 {
     let adapter;
 
@@ -7114,9 +7114,9 @@ describe('memory.js — GROUP BY / HAVING / ORDER BY / DISTINCT / aggregate', ()
 });
 
 // -------------------------------------------------------------------
-// memory.js — DDL: renameColumn, renameTable, hasColumn, hasTable, describeTable
+// memory.js - DDL: renameColumn, renameTable, hasColumn, hasTable, describeTable
 // -------------------------------------------------------------------
-describe('memory.js — DDL methods', () =>
+describe('memory.js - DDL methods', () =>
 {
     let adapter;
 
@@ -7202,9 +7202,9 @@ describe('memory.js — DDL methods', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — fromJSON, toJSON, clone, unique constraints, addColumn with function default
+// memory.js - fromJSON, toJSON, clone, unique constraints, addColumn with function default
 // -------------------------------------------------------------------
-describe('memory.js — data import/export and unique constraints', () =>
+describe('memory.js - data import/export and unique constraints', () =>
 {
     let adapter;
 
@@ -7337,9 +7337,9 @@ describe('memory.js — data import/export and unique constraints', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _compareOp branches
+// memory.js - _compareOp branches
 // -------------------------------------------------------------------
-describe('memory.js — _compareOp', () =>
+describe('memory.js - _compareOp', () =>
 {
     let adapter;
 
@@ -7365,9 +7365,9 @@ describe('memory.js — _compareOp', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — update, delete edge cases
+// memory.js - update, delete edge cases
 // -------------------------------------------------------------------
-describe('memory.js — update/delete edge cases', () =>
+describe('memory.js - update/delete edge cases', () =>
 {
     let adapter;
 
@@ -7480,13 +7480,13 @@ describe('memory.js — update/delete edge cases', () =>
 });
 
 // ===================================================================
-// ROUND 3b — More targeted uncovered-branch tests
+// ROUND 3b - More targeted uncovered-branch tests
 // ===================================================================
 
 // -------------------------------------------------------------------
-// memory.js — createTable without schema (L60 arm[1])
+// memory.js - createTable without schema (L60 arm[1])
 // -------------------------------------------------------------------
-describe('memory.js — createTable without schema', () =>
+describe('memory.js - createTable without schema', () =>
 {
     let db;
 
@@ -7506,9 +7506,9 @@ describe('memory.js — createTable without schema', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _applyWhereChain OR logic (L274-288)
+// memory.js - _applyWhereChain OR logic (L274-288)
 // -------------------------------------------------------------------
-describe('memory.js — _applyWhereChain OR logic', () =>
+describe('memory.js - _applyWhereChain OR logic', () =>
 {
     let db;
 
@@ -7569,9 +7569,9 @@ describe('memory.js — _applyWhereChain OR logic', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _matchClause operators <= and default
+// memory.js - _matchClause operators <= and default
 // -------------------------------------------------------------------
-describe('memory.js — _matchClause additional operators', () =>
+describe('memory.js - _matchClause additional operators', () =>
 {
     let db, M;
 
@@ -7634,9 +7634,9 @@ describe('memory.js — _matchClause additional operators', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — aggregate sum/avg (L348-350 binary-expr)
+// memory.js - aggregate sum/avg (L348-350 binary-expr)
 // -------------------------------------------------------------------
-describe('memory.js — aggregate sum and avg', () =>
+describe('memory.js - aggregate sum and avg', () =>
 {
     let db;
 
@@ -7689,9 +7689,9 @@ describe('memory.js — aggregate sum and avg', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — hasColumn and describeTable via adapter directly
+// memory.js - hasColumn and describeTable via adapter directly
 // -------------------------------------------------------------------
-describe('memory.js — hasColumn with schema present', () =>
+describe('memory.js - hasColumn with schema present', () =>
 {
     let db;
 
@@ -7718,9 +7718,9 @@ describe('memory.js — hasColumn with schema present', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — indexes for table without any (L738 binary-expr)
+// memory.js - indexes for table without any (L738 binary-expr)
 // -------------------------------------------------------------------
-describe('memory.js — indexes edge cases', () =>
+describe('memory.js - indexes edge cases', () =>
 {
     let db;
 
@@ -7735,9 +7735,9 @@ describe('memory.js — indexes edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — updateWhere/deleteWhere error paths (L471)
+// model.js - updateWhere/deleteWhere error paths (L471)
 // -------------------------------------------------------------------
-describe('model.js — static updateWhere/deleteWhere error paths', () =>
+describe('model.js - static updateWhere/deleteWhere error paths', () =>
 {
     let db, M;
 
@@ -7770,9 +7770,9 @@ describe('model.js — static updateWhere/deleteWhere error paths', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _runHook unknown hook name returns data (L816)
+// model.js - _runHook unknown hook name returns data (L816)
 // -------------------------------------------------------------------
-describe('model.js — _runHook with no matching hook', () =>
+describe('model.js - _runHook with no matching hook', () =>
 {
     let db, M;
 
@@ -7794,9 +7794,9 @@ describe('model.js — _runHook with no matching hook', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — orWhere through builder (triggers _applyWhereChain OR)
+// query.js - orWhere through builder (triggers _applyWhereChain OR)
 // -------------------------------------------------------------------
-describe('query.js — orWhere builder', () =>
+describe('query.js - orWhere builder', () =>
 {
     let db, M;
 
@@ -7828,9 +7828,9 @@ describe('query.js — orWhere builder', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — chunk with inner loop (L1538)
+// query.js - chunk with inner loop (L1538)
 // -------------------------------------------------------------------
-describe('query.js — chunk with callback', () =>
+describe('query.js - chunk with callback', () =>
 {
     let db, M;
 
@@ -7854,9 +7854,9 @@ describe('query.js — chunk with callback', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — with(obj) where scope is non-function (L378/L382)
+// query.js - with(obj) where scope is non-function (L378/L382)
 // -------------------------------------------------------------------
-describe('query.js — with() object non-function scope', () =>
+describe('query.js - with() object non-function scope', () =>
 {
     let db, Parent, Child;
 
@@ -7885,9 +7885,9 @@ describe('query.js — with() object non-function scope', () =>
 });
 
 // -------------------------------------------------------------------
-// schema.js — default value from function during validation
+// schema.js - default value from function during validation
 // -------------------------------------------------------------------
-describe('schema.js — default function value', () =>
+describe('schema.js - default function value', () =>
 {
     const { validate: schemaValidate } = require('../../lib/orm/schema');
 
@@ -7913,9 +7913,9 @@ describe('schema.js — default function value', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _stripGuarded with multiple guarded fields
+// model.js - _stripGuarded with multiple guarded fields
 // -------------------------------------------------------------------
-describe('model.js — _stripGuarded deep', () =>
+describe('model.js - _stripGuarded deep', () =>
 {
     let db, M;
 
@@ -7949,9 +7949,9 @@ describe('model.js — _stripGuarded deep', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — _validateOptions string trim (L105)
+// index.js - _validateOptions string trim (L105)
 // -------------------------------------------------------------------
-describe('index.js — _validateOptions string trims', () =>
+describe('index.js - _validateOptions string trims', () =>
 {
     const { Database } = require('../../lib/orm');
 
@@ -7964,9 +7964,9 @@ describe('index.js — _validateOptions string trims', () =>
 });
 
 // -------------------------------------------------------------------
-// cache.js — set and get operations for hitRate
+// cache.js - set and get operations for hitRate
 // -------------------------------------------------------------------
-describe('cache.js — cache hit/miss tracking', () =>
+describe('cache.js - cache hit/miss tracking', () =>
 {
     const { QueryCache } = require('../../lib/orm/cache');
 
@@ -7984,13 +7984,13 @@ describe('cache.js — cache hit/miss tracking', () =>
 });
 
 // ===================================================================
-// ROUND 3c — targeted coverage for memory.js, model.js, query.js
+// ROUND 3c - targeted coverage for memory.js, model.js, query.js
 // ===================================================================
 
 // -------------------------------------------------------------------
-// memory.js — DDL on schema-less tables
+// memory.js - DDL on schema-less tables
 // -------------------------------------------------------------------
-describe('memory.js — DDL on schema-less tables', () =>
+describe('memory.js - DDL on schema-less tables', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8044,9 +8044,9 @@ describe('memory.js — DDL on schema-less tables', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _enforceUnique without schema (L538)
+// memory.js - _enforceUnique without schema (L538)
 // -------------------------------------------------------------------
-describe('memory.js — _enforceUnique without schema', () =>
+describe('memory.js - _enforceUnique without schema', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8061,9 +8061,9 @@ describe('memory.js — _enforceUnique without schema', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — createIndex auto-generated name (L669)
+// memory.js - createIndex auto-generated name (L669)
 // -------------------------------------------------------------------
-describe('memory.js — createIndex auto-name', () =>
+describe('memory.js - createIndex auto-name', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8086,9 +8086,9 @@ describe('memory.js — createIndex auto-name', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — explain method edge cases (L348)
+// memory.js - explain method edge cases (L348)
 // -------------------------------------------------------------------
-describe('memory.js — explain', () =>
+describe('memory.js - explain', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8125,9 +8125,9 @@ describe('memory.js — explain', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — ORDER BY equal values (L274-275 equal path → return 0)
+// memory.js - ORDER BY equal values (L274-275 equal path → return 0)
 // -------------------------------------------------------------------
-describe('memory.js — ORDER BY equal values', () =>
+describe('memory.js - ORDER BY equal values', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8172,9 +8172,9 @@ describe('memory.js — ORDER BY equal values', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — _matchConditions edge cases (L379)
+// memory.js - _matchConditions edge cases (L379)
 // -------------------------------------------------------------------
-describe('memory.js — _matchConditions edge cases', () =>
+describe('memory.js - _matchConditions edge cases', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8191,9 +8191,9 @@ describe('memory.js — _matchConditions edge cases', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — WHERE chain OR with first-clause mismatch (L402)
+// memory.js - WHERE chain OR with first-clause mismatch (L402)
 // -------------------------------------------------------------------
-describe('memory.js — WHERE chain OR edge', () =>
+describe('memory.js - WHERE chain OR edge', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8252,9 +8252,9 @@ describe('memory.js — WHERE chain OR edge', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — aggregate with WHERE filter
+// memory.js - aggregate with WHERE filter
 // -------------------------------------------------------------------
-describe('memory.js — aggregate with WHERE filter', () =>
+describe('memory.js - aggregate with WHERE filter', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8302,9 +8302,9 @@ describe('memory.js — aggregate with WHERE filter', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — HAVING with grouped data (L253)
+// memory.js - HAVING with grouped data (L253)
 // -------------------------------------------------------------------
-describe('memory.js — HAVING with grouped data', () =>
+describe('memory.js - HAVING with grouped data', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8335,9 +8335,9 @@ describe('memory.js — HAVING with grouped data', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — _fullSchema with pre-declared timestamp/softDelete fields (L879-884)
+// model.js - _fullSchema with pre-declared timestamp/softDelete fields (L879-884)
 // -------------------------------------------------------------------
-describe('model.js — _fullSchema with pre-declared fields', () =>
+describe('model.js - _fullSchema with pre-declared fields', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8368,9 +8368,9 @@ describe('model.js — _fullSchema with pre-declared fields', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — save insert when result lacks PK (L190)
+// model.js - save insert when result lacks PK (L190)
 // -------------------------------------------------------------------
-describe('model.js — save insert without PK in result', () =>
+describe('model.js - save insert without PK in result', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8397,9 +8397,9 @@ describe('model.js — save insert without PK in result', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — createMany without timestamps (L402 false)
+// model.js - createMany without timestamps (L402 false)
 // -------------------------------------------------------------------
-describe('model.js — createMany without timestamps', () =>
+describe('model.js - createMany without timestamps', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8419,9 +8419,9 @@ describe('model.js — createMany without timestamps', () =>
 });
 
 // -------------------------------------------------------------------
-// model.js — findOrCreate when record exists (L471)
+// model.js - findOrCreate when record exists (L471)
 // -------------------------------------------------------------------
-describe('model.js — findOrCreate existing record', () =>
+describe('model.js - findOrCreate existing record', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8457,9 +8457,9 @@ describe('model.js — findOrCreate existing record', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — with()/withCount() non-string non-object arg (L378/L418)
+// query.js - with()/withCount() non-string non-object arg (L378/L418)
 // -------------------------------------------------------------------
-describe('query.js — with/withCount ignore invalid arg types', () =>
+describe('query.js - with/withCount ignore invalid arg types', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -8487,9 +8487,9 @@ describe('query.js — with/withCount ignore invalid arg types', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager scopes on belongsTo (L607)
+// query.js - _loadEager scopes on belongsTo (L607)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager scope on belongsTo', () =>
+describe('query.js - _loadEager scope on belongsTo', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8536,9 +8536,9 @@ describe('query.js — _loadEager scope on belongsTo', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager belongsToMany with empty junction (L654/656)
+// query.js - _loadEager belongsToMany with empty junction (L654/656)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager belongsToMany empty junction', () =>
+describe('query.js - _loadEager belongsToMany empty junction', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8581,9 +8581,9 @@ describe('query.js — _loadEager belongsToMany empty junction', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEagerCount for belongsTo and belongsToMany (L705/715)
+// query.js - _loadEagerCount for belongsTo and belongsToMany (L705/715)
 // -------------------------------------------------------------------
-describe('query.js — _loadEagerCount belongsTo and belongsToMany', () =>
+describe('query.js - _loadEagerCount belongsTo and belongsToMany', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8692,9 +8692,9 @@ describe('query.js — _loadEagerCount belongsTo and belongsToMany', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager hasMany/hasOne with empty keys (L589/L607)
+// query.js - _loadEager hasMany/hasOne with empty keys (L589/L607)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager with empty keys', () =>
+describe('query.js - _loadEager with empty keys', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8752,9 +8752,9 @@ describe('query.js — _loadEager with empty keys', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEagerCount with empty keys for hasMany/hasOne (L689)
+// query.js - _loadEagerCount with empty keys for hasMany/hasOne (L689)
 // -------------------------------------------------------------------
-describe('query.js — _loadEagerCount empty keys', () =>
+describe('query.js - _loadEagerCount empty keys', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8787,9 +8787,9 @@ describe('query.js — _loadEagerCount empty keys', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — min/max fallback via reduce when no adapter.aggregate (L864/884)
+// query.js - min/max fallback via reduce when no adapter.aggregate (L864/884)
 // -------------------------------------------------------------------
-describe('query.js — min/max fallback reduce', () =>
+describe('query.js - min/max fallback reduce', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8853,9 +8853,9 @@ describe('query.js — min/max fallback reduce', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager belongsToMany with scope (L633)
+// query.js - _loadEager belongsToMany with scope (L633)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager belongsToMany with scope', () =>
+describe('query.js - _loadEager belongsToMany with scope', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8906,9 +8906,9 @@ describe('query.js — _loadEager belongsToMany with scope', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager hasMany with scope (L589)
+// query.js - _loadEager hasMany with scope (L589)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager hasMany with scope', () =>
+describe('query.js - _loadEager hasMany with scope', () =>
 {
     let db;
     beforeEach(async () =>
@@ -8948,9 +8948,9 @@ describe('query.js — _loadEager hasMany with scope', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — _loadEager hasOne with scope (L607 duplicate check)
+// query.js - _loadEager hasOne with scope (L607 duplicate check)
 // -------------------------------------------------------------------
-describe('query.js — _loadEager hasOne with scope', () =>
+describe('query.js - _loadEager hasOne with scope', () =>
 {
     let db;
     beforeEach(async () => { db = memDb(); });
@@ -8986,9 +8986,9 @@ describe('query.js — _loadEager hasOne with scope', () =>
 });
 
 // -------------------------------------------------------------------
-// query.js — chunk processes multiple pages (L1538)
+// query.js - chunk processes multiple pages (L1538)
 // -------------------------------------------------------------------
-describe('query.js — chunk multiple pages', () =>
+describe('query.js - chunk multiple pages', () =>
 {
     let db;
     beforeEach(async () =>
@@ -9019,9 +9019,9 @@ describe('query.js — chunk multiple pages', () =>
 });
 
 // -------------------------------------------------------------------
-// memory.js — dropIndex across multiple tables (L685)
+// memory.js - dropIndex across multiple tables (L685)
 // -------------------------------------------------------------------
-describe('memory.js — dropIndex multi-table', () =>
+describe('memory.js - dropIndex multi-table', () =>
 {
     let db;
     beforeEach(() => { db = memDb(); });
@@ -9041,9 +9041,9 @@ describe('memory.js — dropIndex multi-table', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — register model without .table (fallback to .name, L207)
+// index.js - register model without .table (fallback to .name, L207)
 // -------------------------------------------------------------------
-describe('index.js — model without table property', () =>
+describe('index.js - model without table property', () =>
 {
     it('register falls back to class name when table not set', () =>
     {
@@ -9058,9 +9058,9 @@ describe('index.js — model without table property', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — sync with model without schema (L260)
+// index.js - sync with model without schema (L260)
 // -------------------------------------------------------------------
-describe('index.js — sync model without schema', () =>
+describe('index.js - sync model without schema', () =>
 {
     it('syncs model that has no schema gracefully', async () =>
     {
@@ -9072,9 +9072,9 @@ describe('index.js — sync model without schema', () =>
 });
 
 // -------------------------------------------------------------------
-// index.js — ping fallback paths (L545)
+// index.js - ping fallback paths (L545)
 // -------------------------------------------------------------------
-describe('index.js — ping fallback', () =>
+describe('index.js - ping fallback', () =>
 {
     it('ping returns true via memory adapter _tables check', async () =>
     {

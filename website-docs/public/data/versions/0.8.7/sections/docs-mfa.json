@@ -4,7 +4,7 @@
 	"items": [
 		{
 			"name": "twoFactor",
-			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` — no external packages.",
+			"description": "Zero-dependency Two-Factor Authentication (2FA) module. Implements TOTP (RFC 6238 / RFC 4226), backup codes, and composable middleware for step-up verification. Uses only Node.js built-in `crypto` - no external packages.",
 			"example": "  const { twoFactor } = require('zero-http');\r\n\n  app.post('/2fa/setup', async (req, res) => {\r\n      const secret = twoFactor.generateSecret();\r\n      const uri    = twoFactor.otpauthURI({ secret, issuer: 'MyApp', account: req.user.email });\r\n      // Store secret.base32 in your database (encrypted)\r\n      res.json({ secret: secret.base32, uri });\r\n  });",
 			"examples": [
 				{
@@ -157,7 +157,7 @@
 								{
 									"option": "time",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Unix timestamp in seconds (defaults to now)."
 								}
 							],
@@ -230,7 +230,7 @@
 								{
 									"option": "time",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Unix timestamp override (seconds)."
 								}
 							],
@@ -272,19 +272,19 @@
 								{
 									"option": "secret",
 									"type": "string | Buffer",
-									"default": "—",
+									"default": "-",
 									"notes": "Base32-encoded secret or raw Buffer."
 								},
 								{
 									"option": "issuer",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Application/company name (e.g. \"MyApp\")."
 								},
 								{
 									"option": "account",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "User identifier (e.g. email)."
 								},
 								{
@@ -391,7 +391,7 @@
 						{
 							"method": "require2FA",
 							"signature": "require2FA([opts])",
-							"description": "Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` — returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // — or — app.use(session({ secret })); app.use(require2FA());",
+							"description": "Middleware that requires completed 2FA verification on the session. Checks `req.session.get('twoFactorVerified')` - returns 403 if not set. Designed to compose with `jwt()` or `session()` middleware: app.use(jwt({ secret })); app.use(require2FA()); // - or - app.use(session({ secret })); app.use(require2FA());",
 							"methodParams": [
 								{
 									"param": "opts",
@@ -422,7 +422,7 @@
 								{
 									"option": "isEnabled",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => boolean|Promise<boolean>`.\nReturn `false` to skip the 2FA check for users who haven't enrolled.\nDefaults to always requiring 2FA."
 								}
 							],
@@ -435,7 +435,7 @@
 								{
 									"code": "  app.use(require2FA());",
 									"lang": "javascript",
-									"title": "Basic — all authenticated users must complete 2FA"
+									"title": "Basic - all authenticated users must complete 2FA"
 								},
 								{
 									"code": "  app.use(require2FA({\r\n      isEnabled: async (req) => {\r\n          const user = await db.users.findById(req.user.sub);\r\n          return !!user.totpSecret;\r\n      },\r\n  }));",
@@ -465,7 +465,7 @@
 								{
 									"option": "getSecret",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => string|Buffer|Promise<string|Buffer>`.\nRetrieves the user's TOTP secret from your database."
 								},
 								{
@@ -519,25 +519,25 @@
 								{
 									"option": "replayStore",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Store for TOTP replay prevention.\nMust implement `get(userId): Promise<number|null>` and\n`set(userId, counter, ttlMs): Promise<void>`."
 								},
 								{
 									"option": "getUserId",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => string|Promise<string>`.\nRequired when `replayStore` is set. Returns a unique user identifier."
 								},
 								{
 									"option": "onSuccess",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, res) => void` called after verification."
 								},
 								{
 									"option": "onFailure",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, res, attemptsLeft) => void` called on failure."
 								}
 							],
@@ -579,43 +579,43 @@
 								{
 									"option": "getSecret",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => string|Buffer|Promise<string|Buffer>`. TOTP secret."
 								},
 								{
 									"option": "getBackupHashes",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => string[]|Promise<string[]>`. Stored backup hashes."
 								},
 								{
 									"option": "onBackupUsed",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, index) => void|Promise<void>`.\nCalled when a backup code is redeemed so the caller can remove it."
 								},
 								{
 									"option": "getCredential",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, credId) => object|Promise<object>`.\nRetrieves a stored WebAuthn credential by ID. Return `{ publicKey, counter, ... }`."
 								},
 								{
 									"option": "updateCredentialCounter",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, credId, newCounter) => void|Promise<void>`.\nPersist the updated signature counter after WebAuthn verification."
 								},
 								{
 									"option": "expectedOrigin",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Expected origin for WebAuthn (e.g. `'https://myapp.com'`)."
 								},
 								{
 									"option": "expectedRPID",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Expected relying party ID for WebAuthn."
 								},
 								{
@@ -675,25 +675,25 @@
 								{
 									"option": "replayStore",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "TOTP replay store."
 								},
 								{
 									"option": "getUserId",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req) => string`. Required with replayStore."
 								},
 								{
 									"option": "onSuccess",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, res, method) => void`. Called on success with the method used."
 								},
 								{
 									"option": "onFailure",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "`(req, res, attemptsLeft) => void`. Called on failure."
 								}
 							],
@@ -744,12 +744,12 @@
 		},
 		{
 			"name": "trustedDevice",
-			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption — tokens are encrypted, not just signed, preventing information leakage.",
+			"description": "Trusted Device / \"Remember Me\" middleware for 2FA. After successful 2FA verification, issues an encrypted device-trust token stored as an HttpOnly, Secure, SameSite=Strict cookie. Subsequent requests skip the 2FA prompt if the trust token is valid. Supports secret rotation, IP binding, and revocation. Uses AES-256-GCM encryption - tokens are encrypted, not just signed, preventing information leakage.",
 			"options": [
 				{
 					"option": "secret",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Encryption secret (min 32 chars recommended)."
 				},
 				{
@@ -767,13 +767,13 @@
 				{
 					"option": "fingerprint",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req) => string` device fingerprint.\nDefaults to User-Agent hash."
 				},
 				{
 					"option": "getUserId",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req) => string` user identifier.\nDefaults to `req.user.id || req.user.sub`."
 				}
 			],
@@ -791,18 +791,18 @@
 		},
 		{
 			"name": "enrollment",
-			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` — Generate secret + backup codes, store in session 2. `verify()` — Confirm user can produce a valid TOTP code 3. `complete()` — Persist the verified secret to the database 4. `disable()` — Remove 2FA from the account",
+			"description": "2FA Enrollment Flow Helper. Provides a session-scoped, multi-step enrollment workflow for TOTP-based two-factor authentication. Steps: 1. `start()` - Generate secret + backup codes, store in session 2. `verify()` - Confirm user can produce a valid TOTP code 3. `complete()` - Persist the verified secret to the database 4. `disable()` - Remove 2FA from the account",
 			"options": [
 				{
 					"option": "saveSecret",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req, base32Secret, backupHashes) => Promise<void>`.\nPersist the verified TOTP secret and backup hashes."
 				},
 				{
 					"option": "removeSecret",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req) => Promise<void>`.\nRemove TOTP secret on disable."
 				},
 				{
@@ -814,7 +814,7 @@
 				{
 					"option": "getAccount",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req) => string`. User label for QR code.\nDefaults to `req.user.email || req.user.id`."
 				},
 				{
@@ -862,7 +862,7 @@
 				{
 					"option": "isEnabled",
 					"type": "Function",
-					"default": "—",
+					"default": "-",
 					"notes": "`(req) => boolean|Promise<boolean>`.\nCheck if 2FA is already enabled (for guarding start/disable)."
 				}
 			],

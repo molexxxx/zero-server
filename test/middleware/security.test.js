@@ -11,7 +11,7 @@ const {
 // ===========================================================
 //  CRLF Header Injection
 // ===========================================================
-describe('Security — CRLF Header Injection', () => {
+describe('Security - CRLF Header Injection', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -72,7 +72,7 @@ describe('Security — CRLF Header Injection', () => {
 // ===========================================================
 //  Prototype Pollution via urlencoded extended
 // ===========================================================
-describe('Security — Prototype Pollution', () => {
+describe('Security - Prototype Pollution', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -123,7 +123,7 @@ describe('Security — Prototype Pollution', () => {
 // ===========================================================
 //  Path Traversal in Static Middleware
 // ===========================================================
-describe('Security — Static Path Traversal', () => {
+describe('Security - Static Path Traversal', () => {
     let server, base;
     const dir = path.join(__dirname, 'sec-static');
 
@@ -177,7 +177,7 @@ describe('Security — Static Path Traversal', () => {
 // ===========================================================
 //  Path Traversal in sendFile with root option
 // ===========================================================
-describe('Security — sendFile Traversal', () => {
+describe('Security - sendFile Traversal', () => {
     let server, base;
     const dir = path.join(__dirname, 'sec-sendfile');
 
@@ -218,7 +218,7 @@ describe('Security — sendFile Traversal', () => {
 // ===========================================================
 //  Body Size Limits
 // ===========================================================
-describe('Security — Body Size Limits', () => {
+describe('Security - Body Size Limits', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -264,7 +264,7 @@ describe('Security — Body Size Limits', () => {
 // ===========================================================
 //  requireSecure option on body parsers
 // ===========================================================
-describe('Security — requireSecure on Body Parsers', () => {
+describe('Security - requireSecure on Body Parsers', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -290,7 +290,7 @@ describe('Security — requireSecure on Body Parsers', () => {
 // ===========================================================
 //  Cookie Name Injection
 // ===========================================================
-describe('Security — Cookie Name Validation', () => {
+describe('Security - Cookie Name Validation', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -333,7 +333,7 @@ describe('Security — Cookie Name Validation', () => {
 // ===========================================================
 //  Signed Cookie Integrity
 // ===========================================================
-describe('Security — Signed Cookie Integrity', () => {
+describe('Security - Signed Cookie Integrity', () => {
     let server, base;
     const secret = 'security-test-secret';
 
@@ -387,7 +387,7 @@ describe('Security — Signed Cookie Integrity', () => {
 // ===========================================================
 //  Helmet Default Headers
 // ===========================================================
-describe('Security — Helmet Headers', () => {
+describe('Security - Helmet Headers', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -430,7 +430,7 @@ describe('Security — Helmet Headers', () => {
 // ===========================================================
 //  Double-Send Protection
 // ===========================================================
-describe('Security — Double Send Protection', () => {
+describe('Security - Double Send Protection', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -475,7 +475,7 @@ describe('Security — Double Send Protection', () => {
 // ===========================================================
 //  Multipart Filename Sanitization
 // ===========================================================
-describe('Security — Multipart Filename Sanitization', () => {
+describe('Security - Multipart Filename Sanitization', () => {
     let server, base;
     const uploadDir = path.join(__dirname, 'sec-uploads');
 
@@ -535,7 +535,7 @@ describe('Security — Multipart Filename Sanitization', () => {
 // ===========================================================
 //  Query String Prototype Pollution
 // ===========================================================
-describe('Security — Query String Prototype Pollution', () => {
+describe('Security - Query String Prototype Pollution', () => {
     let server, base;
 
     beforeAll(async () => {
@@ -578,9 +578,9 @@ describe('Security — Query String Prototype Pollution', () => {
 });
 
 // ===========================================================
-//  MySQL Adapter — SQL Injection Guards
+//  MySQL Adapter - SQL Injection Guards
 // ===========================================================
-describe('Security — MySQL Adapter Injection Guards', () => {
+describe('Security - MySQL Adapter Injection Guards', () => {
     const MysqlAdapter = (() => {
         try { return require('../../lib/orm/adapters/mysql'); } catch { return null; }
     })();
@@ -613,9 +613,9 @@ describe('Security — MySQL Adapter Injection Guards', () => {
 });
 
 // ===========================================================
-//  PostgreSQL Adapter — SQL Injection Guards
+//  PostgreSQL Adapter - SQL Injection Guards
 // ===========================================================
-describe('Security — PostgreSQL Adapter Injection Guards', () => {
+describe('Security - PostgreSQL Adapter Injection Guards', () => {
     const PgAdapter = (() => {
         try { return require('../../lib/orm/adapters/postgres'); } catch { return null; }
     })();
@@ -644,9 +644,9 @@ describe('Security — PostgreSQL Adapter Injection Guards', () => {
 });
 
 // ===========================================================
-//  SQLite Adapter — Pragma Injection Guards
+//  SQLite Adapter - Pragma Injection Guards
 // ===========================================================
-describe('Security — SQLite Adapter Pragma Escaping', () => {
+describe('Security - SQLite Adapter Pragma Escaping', () => {
     const SqliteAdapter = (() => {
         try { return require('../../lib/orm/adapters/sqlite'); } catch { return null; }
     })();
@@ -683,15 +683,15 @@ describe('Security — SQLite Adapter Pragma Escaping', () => {
 });
 
 // ===========================================================
-//  Redis Adapter — Input Validation Guards
+//  Redis Adapter - Input Validation Guards
 // ===========================================================
-describe('Security — Redis Adapter Input Validation', () => {
+describe('Security - Redis Adapter Input Validation', () => {
     const RedisAdapter = (() => {
         try { return require('../../lib/orm/adapters/redis'); } catch { return null; }
     })();
 
     // Build a mock adapter without going through the constructor
-    // (constructor needs ioredis — we're testing validation methods)
+    // (constructor needs ioredis - we're testing validation methods)
     function makeMock() {
         const adapter = Object.create(RedisAdapter.prototype);
         adapter._prefix = 'test:';
@@ -783,7 +783,7 @@ describe('Security — Redis Adapter Input Validation', () => {
 // ===========================================================
 //  ReDoS-Safe LIKE Matcher (Memory & Redis Adapters)
 // ===========================================================
-describe('Security — ReDoS-Safe LIKE Matcher', () => {
+describe('Security - ReDoS-Safe LIKE Matcher', () => {
     const MemoryAdapter = require('../../lib/orm/adapters/memory');
     const { Database, TYPES } = require('../../');
 
@@ -868,9 +868,9 @@ describe('Security — ReDoS-Safe LIKE Matcher', () => {
 });
 
 // ===========================================================
-//  Migrator — Name Validation Guards
+//  Migrator - Name Validation Guards
 // ===========================================================
-describe('Security — Migrator Name Validation', () => {
+describe('Security - Migrator Name Validation', () => {
     const { Database, Migrator, defineMigration } = require('../../');
 
     it('add() rejects empty name', () => {
@@ -929,9 +929,9 @@ describe('Security — Migrator Name Validation', () => {
 });
 
 // ===========================================================
-//  QueryCache — Bounds Validation
+//  QueryCache - Bounds Validation
 // ===========================================================
-describe('Security — QueryCache Bounds Validation', () => {
+describe('Security - QueryCache Bounds Validation', () => {
     const { QueryCache } = require('../../');
 
     it('maxEntries is clamped to at least 1', () => {
@@ -966,9 +966,9 @@ describe('Security — QueryCache Bounds Validation', () => {
 });
 
 // ===========================================================
-//  Factory — Count Validation
+//  Factory - Count Validation
 // ===========================================================
-describe('Security — Factory Count Validation', () => {
+describe('Security - Factory Count Validation', () => {
     const { Factory, Model, TYPES, Database } = require('../../');
 
     class TestModel extends Model {
@@ -1013,7 +1013,7 @@ describe('Security — Factory Count Validation', () => {
 });
 
 // =========================================================================
-//  CORS — credentials + wildcard validation (from audit)
+//  CORS - credentials + wildcard validation (from audit)
 // =========================================================================
 
 describe('CORS credentials + wildcard validation', () =>
@@ -1043,10 +1043,10 @@ describe('CORS credentials + wildcard validation', () =>
 });
 
 // =========================================================================
-//  Rate Limiter — skip and handler options (from audit)
+//  Rate Limiter - skip and handler options (from audit)
 // =========================================================================
 
-describe('Rate Limiter — skip and handler options', () =>
+describe('Rate Limiter - skip and handler options', () =>
 {
     it('skip function bypasses rate limiting', async () =>
     {
@@ -1135,7 +1135,7 @@ describe('CSRF Secure flag', () =>
 });
 
 // =========================================================================
-//  Compress — quality value negotiation (from audit)
+//  Compress - quality value negotiation (from audit)
 // =========================================================================
 
 describe('Compress quality negotiation', () =>
@@ -1194,13 +1194,13 @@ describe('Compress quality negotiation', () =>
 
 
 // =========================================================================
-//  rateLimit — coverage gaps (from coverage/gaps.test.js)
+//  rateLimit - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  3. RATE LIMIT — HEADERS & OPTIONS
+//  3. RATE LIMIT - HEADERS & OPTIONS
 // ============================================================
-describe('rateLimit — headers and options', () => {
+describe('rateLimit - headers and options', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1245,7 +1245,7 @@ describe('rateLimit — headers and options', () => {
 	});
 });
 
-describe('rateLimit — keyGenerator option', () => {
+describe('rateLimit - keyGenerator option', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1279,7 +1279,7 @@ describe('rateLimit — keyGenerator option', () => {
 	});
 });
 
-describe('rateLimit — skip option', () => {
+describe('rateLimit - skip option', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1311,7 +1311,7 @@ describe('rateLimit — skip option', () => {
 	});
 });
 
-describe('rateLimit — custom handler', () => {
+describe('rateLimit - custom handler', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1344,13 +1344,13 @@ describe('rateLimit — custom handler', () => {
 });
 
 // =========================================================================
-//  compress — coverage gaps (from coverage/gaps.test.js)
+//  compress - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  5. COMPRESS — BROTLI, FILTER, SSE, NEGOTIATE
+//  5. COMPRESS - BROTLI, FILTER, SSE, NEGOTIATE
 // ============================================================
-describe('compress — brotli', () => {
+describe('compress - brotli', () => {
 	let server, base;
 	const hasBrotli = typeof zlib.createBrotliCompress === 'function';
 
@@ -1387,7 +1387,7 @@ describe('compress — brotli', () => {
 	});
 });
 
-describe('compress — negotiate quality values', () => {
+describe('compress - negotiate quality values', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1414,7 +1414,7 @@ describe('compress — negotiate quality values', () => {
 	});
 });
 
-describe('compress — filter option', () => {
+describe('compress - filter option', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1456,7 +1456,7 @@ describe('compress — filter option', () => {
 	});
 });
 
-describe('compress — SSE exclusion', () => {
+describe('compress - SSE exclusion', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1497,13 +1497,13 @@ describe('compress — SSE exclusion', () => {
 });
 
 // =========================================================================
-//  cors — coverage gaps (from coverage/gaps.test.js)
+//  cors - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  6. CORS — SUFFIX, METHODS, HEADERS, PREFLIGHT
+//  6. CORS - SUFFIX, METHODS, HEADERS, PREFLIGHT
 // ============================================================
-describe('cors — suffix matching', () => {
+describe('cors - suffix matching', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1530,7 +1530,7 @@ describe('cors — suffix matching', () => {
 	});
 });
 
-describe('cors — custom methods and allowedHeaders', () => {
+describe('cors - custom methods and allowedHeaders', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1572,14 +1572,14 @@ describe('cors — custom methods and allowedHeaders', () => {
 	});
 });
 
-describe('cors — credentials validation', () => {
+describe('cors - credentials validation', () => {
 	it('throws when credentials used with wildcard origin', () => {
 		const { cors } = require('../../');
 		expect(() => cors({ origin: '*', credentials: true })).toThrow(/credentials/i);
 	});
 });
 
-describe('cors — preflight OPTIONS returns 204', () => {
+describe('cors - preflight OPTIONS returns 204', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1607,13 +1607,13 @@ describe('cors — preflight OPTIONS returns 204', () => {
 });
 
 // =========================================================================
-//  helmet — coverage gaps (from coverage/gaps.test.js)
+//  helmet - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  8. HELMET — COEP, COOP, CORP, HIDE POWERED BY, CSP DIRECTIVES
+//  8. HELMET - COEP, COOP, CORP, HIDE POWERED BY, CSP DIRECTIVES
 // ============================================================
-describe('helmet — advanced options', () => {
+describe('helmet - advanced options', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1686,7 +1686,7 @@ describe('helmet — advanced options', () => {
 	});
 });
 
-describe('helmet — disabled options', () => {
+describe('helmet - disabled options', () => {
 	let server, base;
 
 	beforeAll(async () => {
@@ -1736,7 +1736,7 @@ describe('helmet — disabled options', () => {
 	});
 });
 
-describe('helmet — HSTS with preload', () => {
+describe('helmet - HSTS with preload', () => {
 	let server, base;
 
 	beforeAll(async () => {

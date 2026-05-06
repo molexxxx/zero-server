@@ -21,37 +21,37 @@
 				{
 					"option": "protocol",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Negotiated WebSocket sub-protocol."
 				},
 				{
 					"option": "extensions",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Negotiated WebSocket extensions."
 				},
 				{
 					"option": "headers",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "HTTP headers from the upgrade request."
 				},
 				{
 					"option": "ip",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Remote IP address of the client."
 				},
 				{
 					"option": "query",
 					"type": "object",
-					"default": "—",
+					"default": "-",
 					"notes": "Parsed query-string parameters from the upgrade URL."
 				},
 				{
 					"option": "url",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "The request URL path."
 				},
 				{
@@ -209,13 +209,13 @@
 								{
 									"option": "binary",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Force binary frame (opcode 0x02)."
 								},
 								{
 									"option": "callback",
 									"type": "Function",
-									"default": "—",
+									"default": "-",
 									"notes": "Called after the data is flushed."
 								}
 							],
@@ -622,37 +622,37 @@
 				{
 					"option": "secure",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Whether the connection is over TLS."
 				},
 				{
 					"option": "autoId",
 					"type": "boolean",
-					"default": "—",
+					"default": "-",
 					"notes": "Auto-increment event IDs."
 				},
 				{
 					"option": "startId",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Starting value for auto-ID (default 1)."
 				},
 				{
 					"option": "lastEventId",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Last-Event-ID from the client reconnection header."
 				},
 				{
 					"option": "keepAlive",
 					"type": "number",
-					"default": "—",
+					"default": "-",
 					"notes": "Interval (ms) for automatic keep-alive pings. 0 to disable."
 				},
 				{
 					"option": "keepAliveComment",
 					"type": "string",
-					"default": "—",
+					"default": "-",
 					"notes": "Comment text for keep-alive pings (default `'ping'`)."
 				}
 			],

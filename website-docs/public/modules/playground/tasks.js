@@ -65,7 +65,7 @@ export function initTasks()
 
             if (!data.tasks || !data.tasks.length)
             {
-                listEl.innerHTML = '<div style="padding:12px;color:#98a0aa">No tasks yet — add one above.</div>';
+                listEl.innerHTML = '<div style="padding:12px;color:#98a0aa">No tasks yet - add one above.</div>';
                 loadStats();
                 return;
             }

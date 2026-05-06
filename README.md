@@ -19,7 +19,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
 
-> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
+> **Zero-dependency backend framework for Node.js - routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
 
 <p align="center">
   <strong>
@@ -35,9 +35,9 @@
 npm install @zero-server/sdk
 ```
 
-Requires Node.js 18+. No external dependencies — everything is built on Node.js core APIs.
+Requires Node.js 18+. No external dependencies - everything is built on Node.js core APIs.
 
-`@zero-server/sdk` is the recommended install — it re-exports the entire framework from a single import. Use it for new projects, demos, and most production apps.
+`@zero-server/sdk` is the recommended install - it re-exports the entire framework from a single import. Use it for new projects, demos, and most production apps.
 
 ### Or install only what you need (scoped packages)
 
@@ -63,7 +63,7 @@ npm install @zero-server/core @zero-server/body @zero-server/middleware
 | `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
 | `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zh` / `zs` |
 
-> Each scoped package is fully standalone at runtime — its own `index.js`, its own bundled lib, its own types. Mix and match freely; versions stay aligned across the `@zero-server/*` release set.
+> Each scoped package is fully standalone at runtime - its own `index.js`, its own bundled lib, its own types. Mix and match freely; versions stay aligned across the `@zero-server/*` release set.
 
 ---
 
@@ -92,7 +92,7 @@ app.listen(3000, () => console.log('Listening on :3000'))
 
 ### Middleware
 
-20+ built-in middleware — all zero-dependency:
+20+ built-in middleware - all zero-dependency:
 
 | Middleware | Purpose |
 |---|---|
@@ -113,14 +113,14 @@ app.listen(3000, () => console.log('Listening on :3000'))
 
 Full auth stack with no external libraries:
 
-- **JWT** — `jwt()` middleware, `jwtSign()`, `jwtVerify()`, `jwtDecode()`, JWKS key sets, access/refresh token pairs
-- **Sessions** — `session()` middleware with in-memory store (pluggable)
-- **OAuth 2.0** — `oauth()` middleware with PKCE, pre-configured providers (Google, GitHub, Microsoft, etc.)
-- **Authorization** — `authorize()` policies, `can()` / `canAny()` permission checks, `gate()` middleware
+- **JWT** - `jwt()` middleware, `jwtSign()`, `jwtVerify()`, `jwtDecode()`, JWKS key sets, access/refresh token pairs
+- **Sessions** - `session()` middleware with in-memory store (pluggable)
+- **OAuth 2.0** - `oauth()` middleware with PKCE, pre-configured providers (Google, GitHub, Microsoft, etc.)
+- **Authorization** - `authorize()` policies, `can()` / `canAny()` permission checks, `gate()` middleware
 
 ### ORM & Database
 
-Full-featured ORM with 7 adapters — memory, JSON file, SQLite, MySQL, PostgreSQL, MongoDB, and Redis:
+Full-featured ORM with 7 adapters - memory, JSON file, SQLite, MySQL, PostgreSQL, MongoDB, and Redis:
 
 ```js
 const { Database, Model, TYPES } = require('@zero-server/sdk')
@@ -142,7 +142,7 @@ await User.create({ name: 'Alice', email: 'alice@example.com' })
 const users = await User.find({ name: 'Alice' })
 ```
 
-**Query builder** — `where()`, `select()`, `orderBy()`, `limit()`, `offset()`, `join()`, `groupBy()`, `having()`, `paginate()`, `findOrCreate()`
+**Query builder** - `where()`, `select()`, `orderBy()`, `limit()`, `offset()`, `join()`, `groupBy()`, `having()`, `paginate()`, `findOrCreate()`
 
 **Advanced ORM features:**
 
@@ -163,12 +163,12 @@ const users = await User.find({ name: 'Alice' })
 
 ### Real-Time
 
-- **WebSocket** — `app.ws(path, handler)` with RFC 6455, `WebSocketPool` for rooms, broadcasting, and sub-protocols
-- **Server-Sent Events** — `res.sse()` with auto-IDs, named events, and keep-alive
+- **WebSocket** - `app.ws(path, handler)` with RFC 6455, `WebSocketPool` for rooms, broadcasting, and sub-protocols
+- **Server-Sent Events** - `res.sse()` with auto-IDs, named events, and keep-alive
 
 ### Observability
 
-Built-in Prometheus metrics, health checks, distributed tracing, and structured logging — zero dependencies.
+Built-in Prometheus metrics, health checks, distributed tracing, and structured logging - zero dependencies.
 
 ```js
 const { createApp, metricsMiddleware } = require('@zero-server/sdk')
@@ -193,7 +193,7 @@ logins.inc({ provider: 'github' })
 app.listen(3000)
 ```
 
-**Scrape with Prometheus** — create a `prometheus.yml`:
+**Scrape with Prometheus** - create a `prometheus.yml`:
 
 ```yaml
 scrape_configs:
@@ -209,13 +209,13 @@ docker run -d -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml pr
 ```
 
 **Also includes:**
-- **Distributed tracing** — `Tracer` and `Span` with W3C Trace Context (`traceparent` propagation), `instrumentFetch()` for outgoing requests
-- **Structured logging** — `Logger` with levels, JSON output, and namespaced `debug()` logger
+- **Distributed tracing** - `Tracer` and `Span` with W3C Trace Context (`traceparent` propagation), `instrumentFetch()` for outgoing requests
+- **Structured logging** - `Logger` with levels, JSON output, and namespaced `debug()` logger
 
 ### Lifecycle & Clustering
 
-- **Graceful shutdown** — signal handlers (SIGTERM/SIGINT), in-flight request draining, automatic WebSocket/SSE/database cleanup
-- **Clustering** — `clusterize()` for multi-worker processes with auto-respawn and exponential backoff
+- **Graceful shutdown** - signal handlers (SIGTERM/SIGINT), in-flight request draining, automatic WebSocket/SSE/database cleanup
+- **Clustering** - `clusterize()` for multi-worker processes with auto-respawn and exponential backoff
 
 ### CLI
 
@@ -419,35 +419,35 @@ npm run docs
 
 ```
 lib/
-  app.js              — App class (middleware, routing, listen, ws upgrade, lifecycle)
-  auth/               — JWT, OAuth 2.0, sessions, MFA (TOTP/WebAuthn), authorization
-  body/               — body parsers (json, urlencoded, text, raw, multipart)
-  cli.js              — CLI runner (migrate, seed, scaffold commands)
-  cluster.js          — multi-worker clustering with auto-respawn
-  debug.js            — namespaced debug logger
-  env/                — typed .env loader with schema validation
-  errors.js           — 25+ HttpError / framework / ORM error classes
-  fetch/              — HTTP/HTTPS client (mTLS, AbortSignal, retries)
-  grpc/               — HTTP/2 gRPC stack: server, client, codec, framing,
+  app.js              - App class (middleware, routing, listen, ws upgrade, lifecycle)
+  auth/               - JWT, OAuth 2.0, sessions, MFA (TOTP/WebAuthn), authorization
+  body/               - body parsers (json, urlencoded, text, raw, multipart)
+  cli.js              - CLI runner (migrate, seed, scaffold commands)
+  cluster.js          - multi-worker clustering with auto-respawn
+  debug.js            - namespaced debug logger
+  env/                - typed .env loader with schema validation
+  errors.js           - 25+ HttpError / framework / ORM error classes
+  fetch/              - HTTP/HTTPS client (mTLS, AbortSignal, retries)
+  grpc/               - HTTP/2 gRPC stack: server, client, codec, framing,
                          status, metadata, health, reflection, balancer, watch
-  http/               — Request & Response wrappers
-  lifecycle.js        — graceful shutdown and lifecycle management
-  middleware/         — cors, helmet, logger, rateLimit, compress, static, timeout,
+  http/               - Request & Response wrappers
+  lifecycle.js        - graceful shutdown and lifecycle management
+  middleware/         - cors, helmet, logger, rateLimit, compress, static, timeout,
                          requestId, cookieParser, csrf, validate, errorHandler
-  observe/            — Prometheus metrics, W3C tracing, health checks, structured logging
-  orm/                — Database, Model, Query, adapters, migrations, seeds, cache,
+  observe/            - Prometheus metrics, W3C tracing, health checks, structured logging
+  orm/                - Database, Model, Query, adapters, migrations, seeds, cache,
                          replicas, search, geo, tenancy, audit, views, procedures, plugins
-  router/             — Router with sub-app mounting and pattern matching
-  sse/                — SSE stream controller
-  ws/                 — WebSocket connection, handshake, and room management
-packages/             — generated scoped @zero-server/* re-exports (one dir per scope)
+  router/             - Router with sub-app mounting and pattern matching
+  sse/                - SSE stream controller
+  ws/                 - WebSocket connection, handshake, and room management
+packages/             - generated scoped @zero-server/* re-exports (one dir per scope)
 .tools/
-  scope-manifest.js   — single source of truth for scoped packages & their surface
+  scope-manifest.js   - single source of truth for scoped packages & their surface
   generate-package-stubs.js
   generate-scope-docs.js
-types/                — full TypeScript definitions
-website-docs/         — live demo server, controllers, and playground UI
-test/                 — vitest test suite (7000+ tests, 95%+ coverage)
+types/                - full TypeScript definitions
+website-docs/         - live demo server, controllers, and playground UI
+test/                 - vitest test suite (7000+ tests, 95%+ coverage)
 ```
 
 ## Testing

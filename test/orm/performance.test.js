@@ -1,4 +1,4 @@
-/** performance.test.js — ORM performance and scalability tests */
+/** performance.test.js - ORM performance and scalability tests */
 const { Database, Model, TYPES, QueryProfiler, ReplicaManager } = require('../../');
 
 // ============================================================
@@ -813,10 +813,10 @@ describe('2.5 Connection Pool Optimization', () =>
 });
 
 // ============================================================
-//  explain() — Query plan analysis
+//  explain() - Query plan analysis
 // ============================================================
 
-describe('explain() — Query Plan Analysis', () =>
+describe('explain() - Query Plan Analysis', () =>
 {
     it('should return plan info for memory adapter', async () =>
     {
@@ -884,10 +884,10 @@ describe('explain() — Query Plan Analysis', () =>
 });
 
 // ============================================================
-//  onReplica() — Explicit replica routing
+//  onReplica() - Explicit replica routing
 // ============================================================
 
-describe('onReplica() — Replica Routing', () =>
+describe('onReplica() - Replica Routing', () =>
 {
     it('should be chainable', async () =>
     {

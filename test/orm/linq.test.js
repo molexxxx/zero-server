@@ -1,4 +1,4 @@
-/** linq.test.js — LINQ-inspired query builder and Model shortcuts */
+/** linq.test.js - LINQ-inspired query builder and Model shortcuts */
 const { Database, Model, TYPES } = require('../../lib/orm');
 
 // -- Test Models -----------------------------------------
@@ -414,7 +414,7 @@ describe('Query: whereRaw()', () =>
 {
     it('whereRaw is skipped by memory adapter (no crash)', async () =>
     {
-        // Memory adapter ignores raw clauses — should return all rows
+        // Memory adapter ignores raw clauses - should return all rows
         const users = await User.query()
             .whereRaw('age > ?', 20)
             .toArray();
@@ -1247,10 +1247,10 @@ describe('Query: countBy()', () =>
 
 
 // =========================================================================
-//  query — deep branch coverage (from coverage/deep.test.js)
+//  query - deep branch coverage (from coverage/deep.test.js)
 // =========================================================================
 
-describe('query — deep branch coverage', () => {
+describe('query - deep branch coverage', () => {
 	let Model, db;
 	const tableName = 'query_deep_' + Date.now();
 
@@ -1578,13 +1578,13 @@ describe('query — deep branch coverage', () => {
 });
 
 // =========================================================================
-//  ORM Query — coverage gaps (from coverage/gaps.test.js)
+//  ORM Query - coverage gaps (from coverage/gaps.test.js)
 // =========================================================================
 
 // ============================================================
-//  18. ORM QUERY BUILDER — ADVANCED OPERATIONS
+//  18. ORM QUERY BUILDER - ADVANCED OPERATIONS
 // ============================================================
-describe('ORM Query — orWhere, whereNull, whereNotNull, whereNotIn, whereNotBetween', () => {
+describe('ORM Query - orWhere, whereNull, whereNotNull, whereNotIn, whereNotBetween', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 
@@ -1660,7 +1660,7 @@ describe('ORM Query — orWhere, whereNull, whereNotNull, whereNotIn, whereNotBe
 	});
 });
 
-describe('ORM Query — distinct, pluck, aggregates', () => {
+describe('ORM Query - distinct, pluck, aggregates', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 
@@ -1730,7 +1730,7 @@ describe('ORM Query — distinct, pluck, aggregates', () => {
 	});
 });
 
-describe('ORM Query — scopes', () => {
+describe('ORM Query - scopes', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 
@@ -1782,7 +1782,7 @@ describe('ORM Query — scopes', () => {
 	});
 });
 
-describe('ORM Query — eager loading (with/include)', () => {
+describe('ORM Query - eager loading (with/include)', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 
@@ -1842,7 +1842,7 @@ describe('ORM Query — eager loading (with/include)', () => {
 	});
 });
 
-describe('ORM Query — hasOne relationship', () => {
+describe('ORM Query - hasOne relationship', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 
@@ -1883,7 +1883,7 @@ describe('ORM Query — hasOne relationship', () => {
 	});
 });
 
-describe('ORM Query — build() method and operator validation', () => {
+describe('ORM Query - build() method and operator validation', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 
 	class BuildModel extends Model {
@@ -1933,7 +1933,7 @@ describe('ORM Query — build() method and operator validation', () => {
 	});
 });
 
-describe('ORM Query — page helper', () => {
+describe('ORM Query - page helper', () => {
 	const { Database, Model, TYPES } = require('../../lib/orm');
 	let db;
 

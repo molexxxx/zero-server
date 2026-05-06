@@ -571,7 +571,7 @@ describe('ClusterManager: broadcast send errors', () =>
 });
 
 // =========================================================
-// enableMetrics — worker side
+// enableMetrics - worker side
 // =========================================================
 
 describe('ClusterManager: enableMetrics (worker side)', () =>
@@ -594,7 +594,7 @@ describe('ClusterManager: enableMetrics (worker side)', () =>
 });
 
 // =========================================================
-// onMessage — worker listener installation
+// onMessage - worker listener installation
 // =========================================================
 
 describe('ClusterManager: onMessage (worker side)', () =>

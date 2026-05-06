@@ -146,7 +146,7 @@
 						{
 							"method": "use",
 							"signature": "use(pathOrFn, [fn])",
-							"description": "Register middleware or mount a sub-router. - `use(fn)` — global middleware applied to every request. - `use('/prefix', fn)` — path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` — mount a Router sub-app at the given prefix.",
+							"description": "Register middleware or mount a sub-router. - `use(fn)` - global middleware applied to every request. - `use('/prefix', fn)` - path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` - mount a Router sub-app at the given prefix.",
 							"methodParams": [
 								{
 									"param": "pathOrFn",
@@ -262,31 +262,31 @@
 								{
 									"option": "http2",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Create an HTTP/2 server."
 								},
 								{
 									"option": "key",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "Private key for TLS (HTTPS or HTTP/2 with TLS)."
 								},
 								{
 									"option": "cert",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "Certificate for TLS."
 								},
 								{
 									"option": "pfx",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "PFX/PKCS12 bundle (alternative to key+cert)."
 								},
 								{
 									"option": "ca",
 									"type": "Buffer | string",
-									"default": "—",
+									"default": "-",
 									"notes": "CA certificate(s) for client verification."
 								},
 								{
@@ -298,7 +298,7 @@
 								{
 									"option": "settings",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "HTTP/2 settings (SETTINGS frame values)."
 								}
 							],
@@ -359,7 +359,7 @@
 								{
 									"option": "timeout",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Maximum ms to wait for in-flight requests (default 30000)."
 								}
 							],
@@ -383,7 +383,7 @@
 						{
 							"method": "on",
 							"signature": "on(event, fn)",
-							"description": "Register a lifecycle event listener. Supported events: - `'beforeShutdown'` — fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       — fires after shutdown is complete",
+							"description": "Register a lifecycle event listener. Supported events: - `'beforeShutdown'` - fires before shutdown begins (flush caches, finish writes) - `'shutdown'`       - fires after shutdown is complete",
 							"methodParams": [
 								{
 									"param": "event",
@@ -540,7 +540,7 @@
 						{
 							"method": "shutdownTimeout",
 							"signature": "shutdownTimeout(ms)",
-							"description": "Configure the shutdown timeout—the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them.",
+							"description": "Configure the shutdown timeout-the maximum time (ms) to wait for in-flight requests to finish before forcefully terminating them.",
 							"methodParams": [
 								{
 									"param": "ms",
@@ -699,7 +699,7 @@
 								{
 									"option": "registry",
 									"type": "import('./observe/metrics').MetricsRegistry",
-									"default": "—",
+									"default": "-",
 									"notes": "Registry. Uses `app.metrics()` if not provided."
 								}
 							],
@@ -776,8 +776,8 @@
 								{
 									"option": "verifyClient",
 									"type": "Function",
-									"default": "—",
-									"notes": "`(req) => boolean` — return false to reject the upgrade."
+									"default": "-",
+									"notes": "`(req) => boolean` - return false to reject the upgrade."
 								}
 							],
 							"example": "  app.ws('/chat', (ws, req) => {\r\n      ws.on('message', data => ws.send('echo: ' + data));\r\n  });",
@@ -1032,7 +1032,7 @@
 						{
 							"method": "chain",
 							"signature": "chain(path)",
-							"description": "Chainable route builder — register multiple methods on the same path.",
+							"description": "Chainable route builder - register multiple methods on the same path.",
 							"methodParams": [
 								{
 									"param": "path",
@@ -1139,7 +1139,7 @@
 						{
 							"method": "oauth",
 							"signature": "oauth(opts)",
-							"description": "Create an OAuth2 client bound to this app. Returns the client — does NOT mount any middleware automatically.",
+							"description": "Create an OAuth2 client bound to this app. Returns the client - does NOT mount any middleware automatically.",
 							"methodParams": [
 								{
 									"param": "opts",
@@ -1212,7 +1212,7 @@
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "When `true`, route matches only HTTPS requests;\nwhen `false`, only HTTP. Omit to match both."
 								}
 							]
@@ -1451,7 +1451,7 @@
 						{
 							"method": "route",
 							"signature": "route(path)",
-							"description": "Chainable route builder — register multiple methods on the same path.",
+							"description": "Chainable route builder - register multiple methods on the same path.",
 							"methodParams": [
 								{
 									"param": "path",
@@ -1500,7 +1500,7 @@
 		},
 		{
 			"name": "Request",
-			"description": "Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible — detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.",
+			"description": "Lightweight wrapper around Node's `IncomingMessage`. Provides parsed query string, params, body, and convenience helpers. Supports trust-proxy configuration via `app.set('trust proxy', value)` to correctly resolve `req.ip`, `req.ips`, `req.protocol`, `req.secure`, and `req.hostname` when behind reverse proxies. HTTP/2 compatible - detects pseudo-headers (`:method`, `:path`, `:authority`) from HTTP/2 requests automatically.",
 			"params": [
 				{
 					"param": "req",
@@ -1596,7 +1596,7 @@
 						{
 							"method": "accepts",
 							"signature": "accepts(...types)",
-							"description": "Content negotiation — check if the client accepts the given type(s). Returns the best match, or `false` if none match.",
+							"description": "Content negotiation - check if the client accepts the given type(s). Returns the best match, or `false` if none match.",
 							"methodParams": [
 								{
 									"param": "types",
@@ -1702,19 +1702,19 @@
 								{
 									"option": "filePath",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Absolute file path to stream. If omitted, returns the push stream for manual writing."
 								},
 								{
 									"option": "headers",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Extra response headers for the pushed resource."
 								},
 								{
 									"option": "contentType",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Content-Type override (auto-detected from file extension if `filePath` is given)."
 								},
 								{
@@ -1768,13 +1768,13 @@
 								{
 									"option": "retry",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Reconnection interval hint (ms) sent to client."
 								},
 								{
 									"option": "headers",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional headers to set on the response."
 								},
 								{
@@ -2063,13 +2063,13 @@
 								{
 									"option": "headers",
 									"type": "object",
-									"default": "—",
+									"default": "-",
 									"notes": "Additional headers to set."
 								},
 								{
 									"option": "root",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Root directory for relative paths."
 								}
 							],
@@ -2135,7 +2135,7 @@
 								{
 									"option": "domain",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cookie domain."
 								},
 								{
@@ -2147,13 +2147,13 @@
 								{
 									"option": "expires",
 									"type": "Date | number",
-									"default": "—",
+									"default": "-",
 									"notes": "Expiration date."
 								},
 								{
 									"option": "maxAge",
 									"type": "number",
-									"default": "—",
+									"default": "-",
 									"notes": "Max-Age in seconds."
 								},
 								{
@@ -2165,7 +2165,7 @@
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Secure flag."
 								},
 								{
@@ -2177,19 +2177,19 @@
 								{
 									"option": "signed",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Sign the cookie value using req.secret."
 								},
 								{
 									"option": "priority",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Priority attribute (Low, Medium, High)."
 								},
 								{
 									"option": "partitioned",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Partitioned/CHIPS attribute."
 								}
 							],
@@ -2233,19 +2233,19 @@
 								{
 									"option": "domain",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "Cookie domain (must match the original)."
 								},
 								{
 									"option": "secure",
 									"type": "boolean",
-									"default": "—",
+									"default": "-",
 									"notes": "Secure flag."
 								},
 								{
 									"option": "sameSite",
 									"type": "string",
-									"default": "—",
+									"default": "-",
 									"notes": "SameSite attribute."
 								}
 							],
