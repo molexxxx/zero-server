@@ -19,7 +19,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
 
-> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
+> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as a set of focused, standalone scoped packages.**
 
 <p align="center">
   <strong>
@@ -31,15 +31,15 @@
 
 ## Install
 
+zero-server is published as a set of focused, standalone scoped packages under `@zero-server/*`. Install only the surfaces you actually use:
+
 ```bash
-npm install @zero-server/sdk
+npm install @zero-server/core @zero-server/body @zero-server/middleware
 ```
 
 Requires Node.js 18+. No external dependencies — everything is built on Node.js core APIs.
 
-### Or install only what you need (scoped packages)
-
-`@zero-server/sdk` is the full meta-package with every module. If you want a smaller install footprint, every section is also published as its own standalone scoped package:
+### Packages
 
 | Package | Surface |
 |---|---|
@@ -57,18 +57,30 @@ Requires Node.js 18+. No external dependencies — everything is built on Node.j
 | `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
 | `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zh` / `zs` |
 
+> Each scoped package is fully standalone at runtime — its own `index.js`, its own bundled lib, its own types. Install any combination; versions stay aligned across the `@zero-server/*` release set.
+
+### Aggregate install (optional)
+
+For demos, scratch projects, or apps that touch most of the surface, `@zero-server/sdk` is a convenience aggregate that re-exports the entire public API in one install:
+
 ```bash
-npm install @zero-server/core @zero-server/body @zero-server/middleware
+npm install @zero-server/sdk
 ```
 
-> Scoped packages are standalone at runtime and can be installed independently. They stay version-aligned across the `@zero-server/*` release set, and keep an optional `@zero-server/sdk` peer for TypeScript type resolution.
+```js
+const { createApp, json } = require('@zero-server/sdk')
+```
+
+Production apps and libraries should prefer the focused scoped packages above.
 
 ---
 
 ## Quick Start
 
 ```js
-const { createApp, json } = require('@zero-server/sdk')
+const { createApp } = require('@zero-server/core')
+const { json } = require('@zero-server/body')
+
 const app = createApp()
 
 app.use(json())
