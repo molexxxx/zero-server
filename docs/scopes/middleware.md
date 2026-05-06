@@ -8,7 +8,7 @@
 npm install @zero-server/middleware
 ```
 
-_Or install everything via the meta-package:_
+_Or grab everything via the optional aggregate:_
 
 ```bash
 npm install @zero-server/sdk

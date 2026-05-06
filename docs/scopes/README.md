@@ -1,6 +1,6 @@
 # Scoped packages
 
-> The full SDK lives at [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk). Every scope below is published as its own standalone package and released at the same version.
+> zero-server is published as the focused, standalone scoped packages below. Each one is fully self-contained at runtime and released at the same version. [`@zero-server/sdk`](https://www.npmjs.com/package/@zero-server/sdk) remains available as an optional aggregate that re-exports everything in one install.
 
 | Package | Summary |
 | --- | --- |
