@@ -218,16 +218,16 @@ const {
 
 ## Installation
 
-zero-server is published as a set of focused, standalone scoped packages under `@zero-server/*`. Install only the surfaces you actually use (e.g. `@zero-server/core`, `@zero-server/orm`). For demos or apps that touch most of the surface, the optional `@zero-server/sdk` aggregate re-exports everything in one install. No external dependencies are required — everything is built in.
+Install the `@zero-server/sdk` meta-package from npm — it ships every module and is the recommended install for new projects. Each section is also published as its own standalone scoped package (e.g. `@zero-server/core`, `@zero-server/orm`) for libraries or microservices that only need a slice. No external dependencies are required — everything is built in.
 
 ```bash
-npm install @zero-server/core @zero-server/body @zero-server/middleware
+npm install @zero-server/sdk
 ```
 
 
-> **Tip:** Every `@zero-server/*` package has zero runtime dependencies outside other `@zero-server/*` packages — npm install is all you need.
+> **Tip:** `@zero-server/sdk` has zero runtime dependencies — npm install is all you need.
 > **Tip:** Requires Node.js 18+ (uses crypto.randomUUID, structuredClone, etc.).
-> **Tip:** TypeScript definitions are bundled inside each scoped package.
+> **Tip:** TypeScript definitions are bundled inside the SDK and inside every scoped package.
 
 
 ---

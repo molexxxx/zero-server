@@ -19,7 +19,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
 
-> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as a set of focused, standalone scoped packages.**
+> **Zero-dependency backend framework for Node.js — routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
 
 <p align="center">
   <strong>
@@ -31,15 +31,21 @@
 
 ## Install
 
-zero-server is published as a set of focused, standalone scoped packages under `@zero-server/*`. Install only the surfaces you actually use:
-
 ```bash
-npm install @zero-server/core @zero-server/body @zero-server/middleware
+npm install @zero-server/sdk
 ```
 
 Requires Node.js 18+. No external dependencies — everything is built on Node.js core APIs.
 
-### Packages
+`@zero-server/sdk` is the recommended install — it re-exports the entire framework from a single import. Use it for new projects, demos, and most production apps.
+
+### Or install only what you need (scoped packages)
+
+Every section of the framework is also published as its own standalone scoped package, so libraries and microservices that only touch a slice of the surface can install just those packages and skip the rest:
+
+```bash
+npm install @zero-server/core @zero-server/body @zero-server/middleware
+```
 
 | Package | Surface |
 |---|---|
@@ -57,30 +63,14 @@ Requires Node.js 18+. No external dependencies — everything is built on Node.j
 | `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
 | `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zh` / `zs` |
 
-> Each scoped package is fully standalone at runtime — its own `index.js`, its own bundled lib, its own types. Install any combination; versions stay aligned across the `@zero-server/*` release set.
-
-### Aggregate install (optional)
-
-For demos, scratch projects, or apps that touch most of the surface, `@zero-server/sdk` is a convenience aggregate that re-exports the entire public API in one install:
-
-```bash
-npm install @zero-server/sdk
-```
-
-```js
-const { createApp, json } = require('@zero-server/sdk')
-```
-
-Production apps and libraries should prefer the focused scoped packages above.
+> Each scoped package is fully standalone at runtime — its own `index.js`, its own bundled lib, its own types. Mix and match freely; versions stay aligned across the `@zero-server/*` release set.
 
 ---
 
 ## Quick Start
 
 ```js
-const { createApp } = require('@zero-server/core')
-const { json } = require('@zero-server/body')
-
+const { createApp, json } = require('@zero-server/sdk')
 const app = createApp()
 
 app.use(json())

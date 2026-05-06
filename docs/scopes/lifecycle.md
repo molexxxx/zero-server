@@ -8,7 +8,7 @@
 npm install @zero-server/lifecycle
 ```
 
-_Or grab everything via the optional aggregate:_
+_Or install the full SDK to get everything at once:_
 
 ```bash
 npm install @zero-server/sdk

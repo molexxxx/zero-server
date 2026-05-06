@@ -65,7 +65,7 @@ const scopes = [
         title: 'Core — App, Router, Request/Response',
         summary: 'App factory, Router, and the HTTP Request/Response wrappers.',
         description:
-            'The HTTP foundation of zero-server: `createApp()`, the Router primitive, ' +
+            'The HTTP foundation of @zero-server/sdk: `createApp()`, the Router primitive, ' +
             'and the Request/Response wrappers. Everything else builds on this surface.',
         exports: ['createApp', 'Router', 'version'],
 
