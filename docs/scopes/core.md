@@ -8,7 +8,7 @@
 npm install @zero-server/core
 ```
 
-_Or grab everything via the optional aggregate:_
+_Or install the full SDK to get everything at once:_
 
 ```bash
 npm install @zero-server/sdk
@@ -16,7 +16,7 @@ npm install @zero-server/sdk
 
 ## Overview
 
-The HTTP foundation of zero-server: `createApp()`, the Router primitive, and the Request/Response wrappers. Everything else builds on this surface.
+The HTTP foundation of @zero-server/sdk: `createApp()`, the Router primitive, and the Request/Response wrappers. Everything else builds on this surface.
 
 ## Usage
 
