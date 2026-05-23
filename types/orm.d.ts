@@ -1875,13 +1875,4 @@ export class TriggerManager {
     get(name: string): TriggerDefinition | undefined;
 }
 
-// --- CLI (Phase 4) --------------------------------------------------
-
-export class CLI {
-    constructor(argv?: string[]);
-    /** Run the CLI command. */
-    run(): Promise<void>;
-}
-
-/** Create and run the CLI. */
-export function runCLI(argv?: string[]): Promise<void>;
+// CLI declarations live in `./cli` (re-exported from `./index`).

@@ -97,8 +97,8 @@ export {
     StoredProcedure, StoredProcedureOptions, ProcedureParam,
     StoredFunction, StoredFunctionOptions,
     TriggerManager, TriggerDefinition,
-    CLI, runCLI,
 } from './orm';
+export { CLI, runCLI } from './cli';
 // Re-export validate from orm as schemaValidate to avoid collision with middleware validate
 export { validate as schemaValidate } from './orm';
 export {
@@ -161,7 +161,8 @@ import { Database, Model, Query } from './orm';
 import { TYPES, validateFKAction, validateCheck } from './orm';
 import { Migrator, QueryCache, Seeder, SeederRunner, Factory, Fake, defineMigration } from './orm';
 import { QueryProfiler, ReplicaManager } from './orm';
-import { TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager, CLI, runCLI } from './orm';
+import { TenantManager, AuditLog, PluginManager, StoredProcedure, StoredFunction, TriggerManager } from './orm';
+import { CLI, runCLI } from './cli';
 import { LifecycleManager, LIFECYCLE_STATE } from './lifecycle';
 import { ClusterManager, cluster as clusterize } from './cluster';
 import {
