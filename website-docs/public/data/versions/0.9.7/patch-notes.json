@@ -8,21 +8,21 @@
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "SignalingHub",
-			"description": "WebRTC signaling hub - the central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic between participants. The hub itself is transport-agnostic: anything that exposes a `{ send(string), on('message'|'close', cb), close(code?, reason?) }` surface is acceptable.  `createWebRTC(app, opts)` (PR 9 wiring layer) binds an `app.ws()` upgrade handler to a `SignalingHub`."
+			"description": "WebRTC signaling hub — the central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic between participants. The hub itself is transport-agnostic: anything that exposes a `{ send(string), on('message'|'close', cb), close(code?, reason?) }` surface is acceptable.  In production you bind a `SignalingHub` to a Zero Server `app.ws()` upgrade handler; in tests a tiny `EventEmitter` shim works just as well. **Wire protocol (JSON frames):** | direction | `type`       | required fields                              | | --------- | ------------ | -------------------------------------------- | | C → S    | `join`       | `room`, optional `token`                     | | C → S    | `leave`      | —                                            | | C → S    | `offer`      | `sdp` (RFC 8829)                             | | C → S    | `answer`     | `sdp`, `to` (target peerId)                  | | C → S    | `ice`        | `candidate`, `to`                            | | C → S    | `mute`       | `kind: 'audio' | 'video'`                    | | C → S    | `unmute`     | `kind`                                       | | C → S    | `bye`        | optional `reason`                            | | C ↔ S    | `e2ee-key`   | opaque `key`, `to` (relayed without inspect) | | S → C    | `hello`      | `peerId` (sent on attach)                    | | S → C    | `joined`     | `roster: [{id, user}]` (sent on successful join) | | S → C    | `peer-joined`/`peer-left` | `{id, user}` broadcast to room     | | S → C    | `error`      | `code`, `message`                            | All inbound frames are size-checked (`maxSdpSize`), rate-limited (`peerMessageRate`), and counted against `maxProtocolErrors`.  Per-IP attach floods are throttled with `ipAttachRate`."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Room",
-			"description": "Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of `Peer`s plus a list of `require()` policy gates that decide whether a given peer may join.  Membership is in-process; the cluster adapter (PR 8) will fan room state out via pub/sub."
+			"description": "Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of `Peer`s plus a fluent chain of policy gates that decide whether a given peer may join (`require()`), publish (`canPublish()`), or subscribe (`canSubscribe()`).  Membership is process-local; pair the hub with `useCluster()` to share state across multiple Node processes behind a load balancer. You normally never call `new Room(name)` directly — `hub.room(name)` constructs one lazily and returns the same instance on subsequent calls.  Removed-from-hub rooms (after `close()`) are garbage collected once you drop the reference."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Peer",
-			"description": "Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a transport object (typically a `WebSocketConnection` but any duck-typed `{ send, on, close }` works - see the unit tests for a minimal in-memory transport) and exposes the JSEP message types as ordinary events.  The hub is responsible for routing."
+			"description": "Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a transport object (typically the `WebSocketConnection` handed to your `app.ws()` handler, but any duck-typed `{ send, on, close }` works — see the unit tests for a minimal in-memory transport) and exposes the JSEP message types as ordinary events.  The hub is responsible for routing. You very rarely construct `Peer` directly; `hub.attach(transport, info)` returns one.  The interesting surface is the `send` / `sendError` / `close` triad and the read-only fields (`id`, `user`, `ip`, `state`, `room`, `errors`, `connectedAt`, `closed`) which are stable across versions and safe to log."
 		},
 		{
 			"type": "added",
@@ -64,21 +64,21 @@
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "SFU Adapter",
-			"description": "SFU adapter base interface and discovery loader. `SfuAdapter` defines the contract every backend (memory / mediasoup / livekit / custom) must implement.  `loadSfuAdapter()` resolves either a pre-constructed instance, a known name ('memory', 'mediasoup', 'livekit'), or a duck-typed object into a concrete adapter, throwing `WEBRTC_SFU_NOT_INSTALLED` when a native peerDep is missing."
+			"description": "Pluggable Selective Forwarding Unit (SFU) adapter interface. The signaling hub knows nothing about media — the SFU adapter does. Application code asks for a router per room, allocates a transport per peer, then drives `produce()` / `consume()` calls in response to the JSEP traffic flowing through the hub. Three first-party adapters ship in this repo: - {@link MemorySfuAdapter} — zero-deps in-process fake, useful for unit tests and CI.  Forwards `produce` notifications synchronously. - {@link MediasoupSfuAdapter} — wraps `mediasoup` (peerDep). - {@link LiveKitSfuAdapter}  — wraps `livekit-server-sdk` (peerDep). Custom adapters: implement `createRouter`, `createTransport`, `produce`, `consume`, `pauseProducer`, `resumeProducer`, `closeRouter`, and `stats`.  Subclass {@link SfuAdapter} for safe defaults that throw `WEBRTC_SFU_NOT_IMPLEMENTED`."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Memory SFU Adapter",
-			"description": "In-process \"memory\" SFU adapter. A passthrough router that never touches the network: every produce() call records a logical producer, every consume() call records a logical consumer, and events are emitted via {@link SfuAdapter#onEvent}. Perfect for unit tests, ≤ 4-peer audio-only rooms, and local dev where the cost of running mediasoup or LiveKit is unjustified. The adapter does NOT decode or forward media packets - it models bookkeeping only.  Real packet forwarding lives in native adapters (mediasoup, LiveKit)."
+			"description": "In-process \"memory\" SFU adapter. A passthrough router that never touches the network: every `produce()` call records a logical producer, every `consume()` call records a logical consumer, and events are emitted via {@link SfuAdapter#onEvent}. Perfect for unit tests, ≤ 4-peer audio-only rooms, and local dev where the cost of running mediasoup or LiveKit is unjustified. The adapter does NOT decode or forward media packets — it models bookkeeping only.  Real packet forwarding lives in native adapters (mediasoup, LiveKit).  Treat it as a CI-grade stub."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Mediasoup SFU Adapter",
-			"description": "mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single mediasoup `Worker` and one `Router` per createRouter() call.  WebRTC transports are created with `router.createWebRtcTransport()` and produce / consume / pause / resume / close / stats all delegate to the native mediasoup objects. `mediasoup` is loaded lazily.  Tests inject a stub via `opts.mediasoup`; in production the constructor `require('mediasoup')`s the real package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing."
+			"description": "mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single mediasoup `Worker` and one `Router` per `createRouter()` call.  WebRTC transports are created with `router.createWebRtcTransport()` and produce / consume / pause / resume / close / stats all delegate to the native mediasoup objects.  Adapter-level events (`router-new`, `producer-new`, `consumer-new`, `producer-pause`, `producer-resume`, `transport-close`, `router-close`) are fanned out via {@link SfuAdapter#onEvent} so observability is uniform across adapters. `mediasoup` is loaded lazily.  Tests inject a stub via `opts.mediasoup`; in production the constructor `require('mediasoup')`s the real package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing."
 		},
 		{
 			"type": "added",
@@ -92,21 +92,21 @@
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Bot Peer (wrtc)",
-			"description": "Server-side WebRTC peer (\"bot\") built on the `wrtc` peerDependency. `spawnBotPeer({hub, room, ...})` attaches an in-process peer to a {@link SignalingHub}, joins a room, and drives a real {@link RTCPeerConnection} per remote peer (using the Node.js `wrtc` binding).  It implements the standard JSEP perfect-negotiation pattern and is designed for headless workloads such as recording, transcription, AI agents, and SFU verification harnesses. The `wrtc` peerDependency is loaded lazily; in production any of `wrtc` or `@roamhq/wrtc` is acceptable.  Tests inject a fake via `opts.wrtc`."
+			"description": "Server-side WebRTC peer (\"bot\") built on the `wrtc` peerDependency. `spawnBotPeer({hub, room, ...})` attaches an in-process peer to a {@link SignalingHub}, joins a room, and drives a real {@link RTCPeerConnection} per remote peer (using the Node.js `wrtc` binding).  It implements the standard JSEP perfect-negotiation pattern and is designed for headless workloads such as recording, transcription, AI agents, and SFU verification harnesses. The `wrtc` peerDependency is loaded lazily; in production any of `wrtc` or `@roamhq/wrtc` is acceptable.  Tests inject a fake via `opts.wrtc`. The bot is **fully bidirectional**: it accepts inbound tracks via `onTrack` and exposes the underlying `RTCPeerConnection`s through `getPeerConnection(remotePeerId)` so you can `addTrack()` / `createDataChannel()` for outbound media. Use cases: - **Recording bot** — pipe inbound tracks into `wrtc`'s `RTCAudioSink` / `RTCVideoSink` and write to disk. - **Transcription bot** — forward audio frames to Whisper / Deepgram and `room.broadcast('caption', ...)` the result. - **AI participant** — generate TTS audio with an `RTCAudioSource` and `pc.addTrack()` it back to the room. - **Integration tests** — prove the signaling \\u2194 media path end-to-end against a real SFU."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Join Tokens",
-			"description": "Signed, short-TTL join tokens that authenticate a peer's right to join a specific room.  JWT-shaped (HS256 by default) and audience-scoped to `room:<name>` so a token leaked from one channel cannot be replayed against another. Reuses the canonical sign/verify primitives from `lib/auth/jwt.js`."
+			"description": "Signed, short-TTL join tokens that authenticate a peer's right to join a specific WebRTC room. The token is a standard JWT (HS256 by default, RS256 with a PEM key supported via `algorithm`) that is **audience-scoped** to `room:<name>`, so a token leaked from one channel cannot be replayed against another room.  Verification is constant-time and surfaces every failure mode (bad signature, expired, audience mismatch, malformed) as a `WebRTCError({ code: 'INVALID_TOKEN' })`. The hub will refuse `join` messages when constructed with `joinTokenSecret` and the token is missing / invalid — no application wiring required. Reuses the canonical sign / verify primitives from `lib/auth/jwt.js`, so any claim (`iss`, `kid`, custom keys via `opts.claims`) flows through unchanged."
 		},
 		{
 			"type": "added",
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "Observability",
-			"description": "Optional metrics + tracing wiring for a {@link SignalingHub}. Pass a `MetricsRegistry`, a `Tracer`, or both; the binder subscribes to the hub's lifecycle events and exports the six standard `zs_webrtc_*` Prometheus series plus per-operation OpenTelemetry-compatible spans."
+			"description": "Optional metrics + tracing wiring for a {@link SignalingHub}. `bindObservability(hub, { metrics, tracer })` subscribes to the hub's lifecycle events and exports the six standard `zs_webrtc_*` Prometheus series plus per-operation OpenTelemetry-compatible spans.  Both are opt-in — pass only the registry you want. The metrics adapter is duck-typed: any object with `counter()` / `gauge()` / `histogram()` factory methods that return `inc()` / `dec()` / `observe()` style instruments will work.  Zero Server's built-in `app.metrics()` (from `@zero-server/observe`) satisfies the contract out of the box, as do `prom-client`'s `Counter`/`Gauge`/`Histogram` if you wrap them in a thin adapter."
 		},
 		{
 			"type": "added",
@@ -127,7 +127,7 @@
 			"kind": "item",
 			"section": "WebRTC",
 			"name": "WebRTC CLI",
-			"description": "CLI subcommands for the `zh webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`."
+			"description": "CLI subcommands for the `zs webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`."
 		},
 		{
 			"type": "added",

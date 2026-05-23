@@ -95,7 +95,7 @@ module.exports = [
 					{ option: '@zero-server/env',        type: 'env',        default: '-',     notes: 'Typed `.env` loader and accessor.' },
 					{ option: '@zero-server/fetch',      type: 'http-client', default: '-',    notes: 'Server-side fetch with mTLS, timeouts, AbortSignal.' },
 					{ option: '@zero-server/errors',     type: 'errors',     default: '-',     notes: 'HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError.' },
-					{ option: '@zero-server/cli',        type: 'cli',        default: '-',     notes: 'Programmatic access to the `zh` / `zs` CLI runner.' },
+					{ option: '@zero-server/cli',        type: 'cli',        default: '-',     notes: 'Programmatic access to the `zs` CLI runner.' },
 				],
 				example: [
 					"// Identical at runtime - pick whichever import surface you prefer",
