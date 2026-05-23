@@ -1,6 +1,6 @@
 # CLI runner
 
-> Programmatic access to the `zh` / `zs` CLI.
+> Programmatic access to the `zs` CLI.
 
 ## Install
 
@@ -16,7 +16,7 @@ npm install @zero-server/sdk
 
 ## Overview
 
-Programmatic entry points for the bundled CLI (`zh` / `zs`): scaffolding, migrations, seeding, rollback, status. Useful when embedding the CLI inside your own tooling.
+Programmatic entry points for the bundled CLI (`zs`): scaffolding, migrations, seeding, rollback, status. Useful when embedding the CLI inside your own tooling.
 
 ## Usage
 

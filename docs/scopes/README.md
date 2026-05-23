@@ -17,4 +17,4 @@
 | [`@zero-server/env`](./env.md) | Typed .env loader with schema validation. |
 | [`@zero-server/fetch`](./fetch.md) | Server-side fetch with mTLS, timeouts, AbortSignal. |
 | [`@zero-server/errors`](./errors.md) | HttpError + 25+ typed framework and ORM errors. |
-| [`@zero-server/cli`](./cli.md) | Programmatic access to the `zh` / `zs` CLI. |
+| [`@zero-server/cli`](./cli.md) | Programmatic access to the `zs` CLI. |
