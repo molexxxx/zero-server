@@ -2007,7 +2007,7 @@ JWT signed with this secret and audience `room:<name>`. |
       peerMessageRate:        30,
       maxProtocolErrors:      5,
       ipAttachRate:           60,
-      originAllowlist:        ['https://app.example.com'],
+      originAllowlist:        ['https://meet.acme.com'],
       autoCreateRooms:        false,
   });
 
@@ -2644,14 +2644,15 @@ Optional metrics + tracing wiring for a {@link SignalingHub}. `bindObservability
 
 ```javascript
   const { createApp } = require('@zero-server/sdk');
+  const { Tracer } = require('@zero-server/sdk/observe');
   const { SignalingHub, bindObservability } = require('@zero-server/webrtc');
 
   const app = createApp();
   const hub = new SignalingHub({ joinTokenSecret: process.env.JWT });
 
   bindObservability(hub, {
-      metrics: app.metrics(),   // exposes /metrics for Prometheus scraping
-      tracer:  app.tracer(),    // OTel-shaped tracer
+      metrics: app.metrics,        // exposes /metrics for Prometheus scraping
+      tracer:  new Tracer(),       // OTel-shaped tracer
   });
 
   app.ws('/rtc', (ws, req) => hub.attach(ws, { user: req.user, ip: req.ip }));
@@ -2662,7 +2663,7 @@ Optional metrics + tracing wiring for a {@link SignalingHub}. `bindObservability
 
 ```javascript
   const hub = new SignalingHub();
-  bindObservability(hub, { metrics: app.metrics() });
+  bindObservability(hub, { metrics: app.metrics });
   // Scrape /metrics:
   //   zs_webrtc_peers_active{room="lobby"}              3
   //   zs_webrtc_rooms_active                            1
