@@ -55,6 +55,7 @@ npm install @zero-server/core @zero-server/body @zero-server/middleware
 | `@zero-server/auth` | `jwt`, `session`, `oauth`, `authorize`, `twoFactor`, `webauthn`, `trustedDevice`, `enrollment` |
 | `@zero-server/orm` | `Database`, `Model`, `Query`, `TYPES`, migrations, seeders, replicas, search, geo, tenancy, audit |
 | `@zero-server/realtime` | `WebSocketConnection`, `WebSocketPool`, `SSEStream` |
+| `@zero-server/webrtc` | signaling hub, rooms/peers, STUN/TURN, SFU adapters (memory, mediasoup, LiveKit), join tokens, E2EE, `spawnBotPeer` |
 | `@zero-server/grpc` | gRPC server, client, codec, status, metadata, framing, health, reflection, balancer |
 | `@zero-server/observe` | `MetricsRegistry`, `Tracer`, structured `Logger`, health checks |
 | `@zero-server/lifecycle` | `LifecycleManager`, `ClusterManager`, `clusterize` |
