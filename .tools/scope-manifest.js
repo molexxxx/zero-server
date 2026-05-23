@@ -614,12 +614,14 @@ const scopes = [
         sourceFile: 'cli.js',
         bundleDebug: false,
         requireRewrites: {
-            // cli.js lazy-requires orm and orm/snapshot at runtime
+            // cli.js lazy-requires orm, orm/snapshot, and webrtc/cli at runtime
             "require('./orm')":          "require('@zero-server/orm')",
             "require('./orm/snapshot')": "require('@zero-server/orm')",
+            "require('./webrtc/cli')":   "require('@zero-server/webrtc')",
         },
         pkgDependencies: {
-            '@zero-server/orm': true,
+            '@zero-server/orm':    true,
+            '@zero-server/webrtc': true,
         },
         localMap: {},
         typesFiles: ['cli'],
