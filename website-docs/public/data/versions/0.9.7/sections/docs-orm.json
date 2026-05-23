@@ -15215,17 +15215,17 @@
 					"description": "Generate starter files so you don't write boilerplate by hand. Every file is placed in the directory set by your config (or overridden with <code>--dir</code>).",
 					"commands": [
 						{
-							"cmd": "npx zh make:migration <name>",
+							"cmd": "npx zs make:migration <name>",
 							"desc": "Auto-generate a migration by comparing your current Model schemas against the last snapshot. The CLI writes the <code>up()</code> and <code>down()</code> code for you - no manual SQL. Pass <code>--empty</code> to get a blank template instead.",
 							"args": "--dir=<path> --models=<path> --empty"
 						},
 						{
-							"cmd": "npx zh make:model <name>",
+							"cmd": "npx zs make:model <name>",
 							"desc": "Create a new Model class with a table name, primary key, and <code>timestamps</code> enabled.",
 							"args": "--dir=<path>"
 						},
 						{
-							"cmd": "npx zh make:seeder <name>",
+							"cmd": "npx zs make:seeder <name>",
 							"desc": "Create a new Seeder class for inserting sample or default data.",
 							"args": "--dir=<path>"
 						}
@@ -15236,7 +15236,7 @@
 					"description": "Populate your database with initial or test data. Seeders run in alphabetical file order.",
 					"commands": [
 						{
-							"cmd": "npx zh seed",
+							"cmd": "npx zs seed",
 							"desc": "Run every seeder file in the seeders directory."
 						}
 					]
@@ -15246,27 +15246,27 @@
 					"description": "Apply, rollback, and inspect versioned migration files. Each run is tracked in a <code>_migrations</code> table so every environment stays in sync.",
 					"commands": [
 						{
-							"cmd": "npx zh migrate",
+							"cmd": "npx zs migrate",
 							"desc": "Run all pending migrations in order. Tracks each run in a numbered batch for easy rollback."
 						},
 						{
-							"cmd": "npx zh migrate:rollback",
+							"cmd": "npx zs migrate:rollback",
 							"desc": "Undo the last batch of migrations. Calls each migration's <code>down()</code> in reverse order."
 						},
 						{
-							"cmd": "npx zh migrate:status",
+							"cmd": "npx zs migrate:status",
 							"desc": "Show which migrations have been applied and which are still pending."
 						},
 						{
-							"cmd": "npx zh migrate:reset",
+							"cmd": "npx zs migrate:reset",
 							"desc": "Rollback every migration, then re-run them all from the start."
 						},
 						{
-							"cmd": "npx zh migrate:fresh",
+							"cmd": "npx zs migrate:fresh",
 							"desc": "Drop <strong>all</strong> tables and re-run every migration from scratch. Useful during early development."
 						},
 						{
-							"cmd": "npx zh migrate:remove",
+							"cmd": "npx zs migrate:remove",
 							"desc": "Delete the most recent migration file - but only if it hasn't been applied yet. Also reverts the schema snapshot."
 						}
 					]
@@ -15275,11 +15275,11 @@
 					"label": "Info",
 					"commands": [
 						{
-							"cmd": "npx zh help",
+							"cmd": "npx zs help",
 							"desc": "Print the full help message with all commands and options."
 						},
 						{
-							"cmd": "npx zh version",
+							"cmd": "npx zs version",
 							"desc": "Print the installed zero-server version."
 						}
 					]
@@ -15322,7 +15322,7 @@
 							"tabs": [
 								{
 									"tab": "Scaffold new",
-									"code": "$ npx zh make:model User\n$ npx zh make:model Post"
+									"code": "$ npx zs make:model User\n$ npx zs make:model Post"
 								},
 								{
 									"tab": "Use existing",
@@ -15336,15 +15336,15 @@
 						},
 						{
 							"label": "4. Auto-generate the migration",
-							"code": "$ npx zh make:migration initial_schema\n\n  Detected schema changes:\n    + Table users\n\n  Migration created: migrations/20260402120000_initial_schema.js"
+							"code": "$ npx zs make:migration initial_schema\n\n  Detected schema changes:\n    + Table users\n\n  Migration created: migrations/20260402120000_initial_schema.js"
 						},
 						{
 							"label": "5. Apply the migration",
-							"code": "$ npx zh migrate\n\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1)."
+							"code": "$ npx zs migrate\n\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1)."
 						},
 						{
 							"label": "6. Later - add a column",
-							"code": "// Add to models/User.js schema:\n//   avatar: { type: TYPES.STRING, maxLength: 255 },\n\n$ npx zh make:migration add_avatar_to_users\n\n  Detected schema changes:\n    + users.avatar\n\n  Migration created: migrations/20260403090000_add_avatar_to_users.js\n\n$ npx zh migrate"
+							"code": "// Add to models/User.js schema:\n//   avatar: { type: TYPES.STRING, maxLength: 255 },\n\n$ npx zs make:migration add_avatar_to_users\n\n  Detected schema changes:\n    + users.avatar\n\n  Migration created: migrations/20260403090000_add_avatar_to_users.js\n\n$ npx zs migrate"
 						}
 					]
 				},
@@ -15354,7 +15354,7 @@
 					"steps": [
 						{
 							"label": "1. Scaffold a seeder",
-							"code": "$ npx zh make:seeder Users"
+							"code": "$ npx zs make:seeder Users"
 						},
 						{
 							"label": "2. Write your seed data",
@@ -15362,7 +15362,7 @@
 						},
 						{
 							"label": "3. Run your seeders",
-							"code": "$ npx zh seed\n\n  Running seeders...\n    ✓ UsersSeeder\n\n  1 seeder(s) completed."
+							"code": "$ npx zs seed\n\n  Running seeders...\n    ✓ UsersSeeder\n\n  1 seeder(s) completed."
 						}
 					]
 				},
@@ -15372,19 +15372,19 @@
 					"steps": [
 						{
 							"label": "Rollback the last batch",
-							"code": "$ npx zh migrate:rollback\n\n  Rolling back batch 2...\n    ✓ 20260403090000_add_avatar_to_users\n\n  1 migration(s) rolled back."
+							"code": "$ npx zs migrate:rollback\n\n  Rolling back batch 2...\n    ✓ 20260403090000_add_avatar_to_users\n\n  1 migration(s) rolled back."
 						},
 						{
 							"label": "Check current status",
-							"code": "$ npx zh migrate:status\n\n  Applied:\n    ✓ 20260402120000_initial_schema  (batch 1)\n\n  Pending:\n    ○ 20260403090000_add_avatar_to_users"
+							"code": "$ npx zs migrate:status\n\n  Applied:\n    ✓ 20260402120000_initial_schema  (batch 1)\n\n  Pending:\n    ○ 20260403090000_add_avatar_to_users"
 						},
 						{
 							"label": "Remove an unapplied migration",
-							"code": "$ npx zh migrate:remove\n\n  Removed: 20260403090000_add_avatar_to_users.js\n  Snapshot updated."
+							"code": "$ npx zs migrate:remove\n\n  Removed: 20260403090000_add_avatar_to_users.js\n  Snapshot updated."
 						},
 						{
 							"label": "Start completely fresh",
-							"code": "// Drop all tables and re-run every migration\n$ npx zh migrate:fresh\n\n  Dropped all tables.\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1)."
+							"code": "// Drop all tables and re-run every migration\n$ npx zs migrate:fresh\n\n  Dropped all tables.\n  Running migrations...\n    ✓ 20260402120000_initial_schema\n\n  1 migration(s) completed (batch 1)."
 						}
 					]
 				}

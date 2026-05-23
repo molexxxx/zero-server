@@ -93,7 +93,7 @@ describe('CLI - coverage gaps', () =>
         await cli.run();
 
         const output = logSpy.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         logSpy.mockRestore();
     });
 
@@ -104,7 +104,7 @@ describe('CLI - coverage gaps', () =>
         await cli.run();
 
         const output = logSpy.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         logSpy.mockRestore();
     });
 

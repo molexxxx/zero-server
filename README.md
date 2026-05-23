@@ -12,8 +12,8 @@
 
 <p align="center">
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
-  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7767%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
-  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-95.88%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-2%2F7777%20failed-red?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
+  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-0%25-red?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
   <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.dev-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
@@ -62,7 +62,7 @@ npm install @zero-server/core @zero-server/body @zero-server/middleware
 | `@zero-server/env` | typed `.env` loader |
 | `@zero-server/fetch` | server-side `fetch` client |
 | `@zero-server/errors` | every typed `HttpError` class plus ORM/framework errors |
-| `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zh` / `zs` |
+| `@zero-server/cli` | programmatic `CLI` / `runCLI` entry points for `zs` |
 
 > Each scoped package is fully standalone at runtime - its own `index.js`, its own bundled lib, its own types. Mix and match freely; versions stay aligned across the `@zero-server/*` release set.
 
@@ -220,16 +220,16 @@ docker run -d -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml pr
 
 ### CLI
 
-Scaffolding and database management via `npx zh`:
+Scaffolding and database management via `npx zs`:
 
 ```bash
-npx zh migrate              # run pending migrations
-npx zh migrate:rollback     # rollback last migration
-npx zh migrate:status       # show migration status
-npx zh seed                 # run seeders
-npx zh make:model User      # scaffold a model
-npx zh make:migration name  # create migration file
-npx zh make:seeder User     # create seeder file
+npx zs migrate              # run pending migrations
+npx zs migrate:rollback     # rollback last migration
+npx zs migrate:status       # show migration status
+npx zs seed                 # run seeders
+npx zs make:model User      # scaffold a model
+npx zs make:migration name  # create migration file
+npx zs make:seeder User     # create seeder file
 ```
 
 ### Environment Config

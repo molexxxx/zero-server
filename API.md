@@ -320,7 +320,7 @@ Every published `@zero-server/*` package and the surface it narrows to. The full
 | `@zero-server/env` | env | `-` | Typed `.env` loader and accessor. |
 | `@zero-server/fetch` | http-client | `-` | Server-side fetch with mTLS, timeouts, AbortSignal. |
 | `@zero-server/errors` | errors | `-` | HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError. |
-| `@zero-server/cli` | cli | `-` | Programmatic access to the `zh` / `zs` CLI runner. |
+| `@zero-server/cli` | cli | `-` | Programmatic access to the `zs` CLI runner. |
 
 
 ```js
@@ -1961,7 +1961,7 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
 
 ### SignalingHub
 
-WebRTC signaling hub - the central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic between participants. The hub itself is transport-agnostic: anything that exposes a `{ send(string), on('message'|'close', cb), close(code?, reason?) }` surface is acceptable.  `createWebRTC(app, opts)` (PR 9 wiring layer) binds an `app.ws()` upgrade handler to a `SignalingHub`.
+WebRTC signaling hub — the central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic between participants. The hub itself is transport-agnostic: anything that exposes a `{ send(string), on('message'|'close', cb), close(code?, reason?) }` surface is acceptable.  In production you bind a `SignalingHub` to a Zero Server `app.ws()` upgrade handler; in tests a tiny `EventEmitter` shim works just as well. **Wire protocol (JSON frames):** | direction | `type`       | required fields                              | | --------- | ------------ | -------------------------------------------- | | C → S    | `join`       | `room`, optional `token`                     | | C → S    | `leave`      | —                                            | | C → S    | `offer`      | `sdp` (RFC 8829)                             | | C → S    | `answer`     | `sdp`, `to` (target peerId)                  | | C → S    | `ice`        | `candidate`, `to`                            | | C → S    | `mute`       | `kind: 'audio' | 'video'`                    | | C → S    | `unmute`     | `kind`                                       | | C → S    | `bye`        | optional `reason`                            | | C ↔ S    | `e2ee-key`   | opaque `key`, `to` (relayed without inspect) | | S → C    | `hello`      | `peerId` (sent on attach)                    | | S → C    | `joined`     | `roster: [{id, user}]` (sent on successful join) | | S → C    | `peer-joined`/`peer-left` | `{id, user}` broadcast to room     | | S → C    | `error`      | `code`, `message`                            | All inbound frames are size-checked (`maxSdpSize`), rate-limited (`peerMessageRate`), and counted against `maxProtocolErrors`.  Per-IP attach floods are throttled with `ipAttachRate`.
 
 #### Public surface
 
@@ -1970,7 +1970,7 @@ WebRTC signaling hub - the central WS broker that owns the room registry, attach
 | `size` | `size()` | Live peer count across all rooms (and unattached). |
 | `room` | `room(name)` | Get or lazily create a room. |
 | `rooms` | `rooms()` |  |
-| `attach` | `attach(transport, [info])` | Attach a transport (WS connection or mock) as a new signaling peer. Wires up message and close handlers; returns the `Peer`. |
+| `attach` | `attach(transport, [info])` | Attach a transport (WS connection or mock) as a new signaling peer. Wires up message and close handlers, performs origin / IP-rate pre-checks, sends a `hello` frame with the new peer id, and returns the `Peer`.  The returned peer is also registered in `hub.size`. Called from your `app.ws()` upgrade handler in production: ```js app.ws('/rtc', (ws, req) => hub.attach(ws, { user:   req.user, ip:     req.ip, origin: req.headers.origin, })); ``` |
 
 
 #### Per-IP attach rate limit
@@ -1996,9 +1996,45 @@ JWT signed with this secret and audience `room:<name>`. |
 | `autoCreateRooms` | boolean | `true` | If false, joins targeting an unknown room are rejected. |
 
 
+> **Bind a hub to an `app.ws()` route with all production knobs**
+
+```javascript
+  const app = createApp();
+  const hub = new SignalingHub({
+      joinTokenSecret:        process.env.WEBRTC_JWT_SECRET,
+      maxSdpSize:             64 * 1024,
+      maxCandidatesPerOffer:  20,
+      peerMessageRate:        30,
+      maxProtocolErrors:      5,
+      ipAttachRate:           60,
+      originAllowlist:        ['https://app.example.com'],
+      autoCreateRooms:        false,
+  });
+
+  hub.room('lobby').open();
+
+  app.ws('/rtc', (ws, req) => {
+      hub.attach(ws, {
+          user:   req.user,
+          ip:     req.ip,
+          origin: req.headers.origin,
+      });
+  });
+```
+
+
+> **Observe lifecycle events**
+
+```javascript
+  hub.on('join',      ({ peer, room }) => log.info({ peer: peer.id, room: room.name }, 'joined'));
+  hub.on('leave',     ({ peer, room }) => log.info({ peer: peer.id, room: room.name }, 'left'));
+  hub.on('wireError', ({ peer, code })  => log.warn({ peer: peer.id, code }, 'wire-error'));
+```
+
+
 ### Room
 
-Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of `Peer`s plus a list of `require()` policy gates that decide whether a given peer may join.  Membership is in-process; the cluster adapter (PR 8) will fan room state out via pub/sub.
+Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of `Peer`s plus a fluent chain of policy gates that decide whether a given peer may join (`require()`), publish (`canPublish()`), or subscribe (`canSubscribe()`).  Membership is process-local; pair the hub with `useCluster()` to share state across multiple Node processes behind a load balancer. You normally never call `new Room(name)` directly — `hub.room(name)` constructs one lazily and returns the same instance on subsequent calls.  Removed-from-hub rooms (after `close()`) are garbage collected once you drop the reference.
 
 #### Parameters
 
@@ -2043,7 +2079,7 @@ Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of
 
 ### Peer
 
-Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a transport object (typically a `WebSocketConnection` but any duck-typed `{ send, on, close }` works - see the unit tests for a minimal in-memory transport) and exposes the JSEP message types as ordinary events.  The hub is responsible for routing.
+Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a transport object (typically the `WebSocketConnection` handed to your `app.ws()` handler, but any duck-typed `{ send, on, close }` works — see the unit tests for a minimal in-memory transport) and exposes the JSEP message types as ordinary events.  The hub is responsible for routing. You very rarely construct `Peer` directly; `hub.attach(transport, info)` returns one.  The interesting surface is the `send` / `sendError` / `close` triad and the read-only fields (`id`, `user`, `ip`, `state`, `room`, `errors`, `connectedAt`, `closed`) which are stable across versions and safe to log.
 
 #### Parameters
 
@@ -2068,6 +2104,21 @@ Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a trans
 |---|---|---|---|
 | `user` | * | `-` | Authenticated user object (if any). |
 | `ip` | string | `-` | Remote IP for audit / rate limits. |
+
+
+> **Inspect every newly-attached peer**
+
+```javascript
+  hub.on('join', ({ peer, room }) => {
+      console.log(
+          'peer', peer.id,
+          'user=', peer.user && peer.user.id,
+          'ip=', peer.ip,
+          'joined', room.name,
+          'roster size=', room.size,
+      );
+  });
+```
 
 
 ### SDP Parser
@@ -2157,14 +2208,48 @@ Zero-dependency RFC 8489 STUN (Session Traversal Utilities for NAT) client.  Sen
 
 RFC 7635 ephemeral TURN credentials. Generates time-limited username / credential pairs that any RFC 7635-compatible TURN server (notably `coturn` with `use-auth-secret` + `static-auth-secret=<S>`) will accept. Wire format (RFC 7635 §6.2): username   = "<unix-expiry>:<userId>" credential = base64( HMAC-SHA1( <secret>, username ) ) The returned object is shaped like an `RTCIceServer` entry so it can be embedded straight into the ICE-server list a signaling endpoint serves to browsers.
 
+> **Hand a fresh credential to a browser before it joins a room**
+
+```javascript
+  //   coturn.conf:
+  //     use-auth-secret
+  //     static-auth-secret=<TURN_SHARED_SECRET>
+  //     realm=turn.example.com
+  app.get('/rtc/turn', (req, res) => {
+      const creds = issueTurnCredentials({
+          secret:  process.env.TURN_SHARED_SECRET,
+          userId:  req.user.id,
+          ttl:     '20m',
+          servers: ['turn:turn.example.com:3478?transport=udp'],
+      });
+      res.json(creds); // { urls, username, credential, ttl }
+  });
+```
+
+
+> **Multiple URLs (UDP, TCP, TLS) for failover**
+
 ```javascript
   const creds = issueTurnCredentials({
       secret:  process.env.TURN_SHARED_SECRET,
-      userId:  req.user.id,
-      ttl:     '20m',
-      servers: ['turn:turn.example.com:3478?transport=udp'],
+      userId:  'bot-42',
+      ttl:     3600,
+      servers: [
+          'turn:turn.example.com:3478?transport=udp',
+          'turn:turn.example.com:3478?transport=tcp',
+          'turns:turn.example.com:5349',
+          'stun:turn.example.com:3478',
+      ],
   });
-  res.json(creds);
+```
+
+
+> **Use directly in an RTCPeerConnection (browser side)**
+
+```javascript
+  const pc = new RTCPeerConnection({
+      iceServers: [creds], // { urls, username, credential } is RTCIceServer-shaped
+  });
 ```
 
 
@@ -2200,30 +2285,62 @@ Address bound by each per-allocation relay socket.  Production
 deployments should pass the server's public IP. |
 
 
+> **Boot an embedded TURN server alongside Zero Server**
+
 ```javascript
   const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');
 
   const turn = new TurnServer({
-      secret:   process.env.TURN_SECRET,
-      realm:    'rtc.example.com',
+      secret:    process.env.TURN_SECRET,
+      realm:     'rtc.example.com',
+      relayHost: process.env.PUBLIC_IP || '0.0.0.0',
       listeners: [{ proto: 'udp', port: 3478 }],
-      quotas:   { maxAllocationsPerUser: 4, maxBytesPerMinute: 50_000_000 },
+      quotas:    { maxAllocationsPerUser: 4, maxBytesPerMinute: 50_000_000 },
   });
   await turn.start();
 
+  turn.on('allocate',   ({ user, relay })   => log.info({ user, relay }, 'turn allocate'));
+  turn.on('permission', ({ user, peer })    => log.debug({ user, peer }, 'turn permission'));
+  turn.on('relay',      ({ user, bytes })   => metrics.turnBytes.inc(bytes));
+
+  process.on('SIGTERM', () => turn.close());
+```
+
+
+> **Issue creds + return them with the room join payload**
+
+```javascript
+  const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');
   const creds = issueTurnCredentials({
       secret:  process.env.TURN_SECRET,
       userId:  req.user.id,
       servers: ['turn:rtc.example.com:3478'],
       ttl:     '20m',
   });
-  res.json(creds);
+  res.json({ token, iceServers: [creds] });
+```
+
+
+> **Multi-listener (UDP + future TCP) with tight per-user quotas**
+
+```javascript
+  const turn = new TurnServer({
+      secret:    process.env.TURN_SECRET,
+      realm:     'rtc.example.com',
+      listeners: [{ proto: 'udp', port: 3478, host: '0.0.0.0' }],
+      quotas:    {
+          maxAllocationsPerUser: 2,
+          maxBytesPerMinute:     5_000_000, // 5 MB/min per user
+      },
+      defaultLifetime: 300,
+      maxLifetime:     1800,
+  });
 ```
 
 
 ### SFU Adapter
 
-SFU adapter base interface and discovery loader. `SfuAdapter` defines the contract every backend (memory / mediasoup / livekit / custom) must implement.  `loadSfuAdapter()` resolves either a pre-constructed instance, a known name ('memory', 'mediasoup', 'livekit'), or a duck-typed object into a concrete adapter, throwing `WEBRTC_SFU_NOT_INSTALLED` when a native peerDep is missing.
+Pluggable Selective Forwarding Unit (SFU) adapter interface. The signaling hub knows nothing about media — the SFU adapter does. Application code asks for a router per room, allocates a transport per peer, then drives `produce()` / `consume()` calls in response to the JSEP traffic flowing through the hub. Three first-party adapters ship in this repo: - {@link MemorySfuAdapter} — zero-deps in-process fake, useful for unit tests and CI.  Forwards `produce` notifications synchronously. - {@link MediasoupSfuAdapter} — wraps `mediasoup` (peerDep). - {@link LiveKitSfuAdapter}  — wraps `livekit-server-sdk` (peerDep). Custom adapters: implement `createRouter`, `createTransport`, `produce`, `consume`, `pauseProducer`, `resumeProducer`, `closeRouter`, and `stats`.  Subclass {@link SfuAdapter} for safe defaults that throw `WEBRTC_SFU_NOT_IMPLEMENTED`.
 
 #### Methods
 
@@ -2241,13 +2358,71 @@ SFU adapter base interface and discovery loader. `SfuAdapter` defines the contra
 | `loadSfuAdapter` | `loadSfuAdapter(spec, [opts])` | Lazy-load and instantiate an SFU adapter. |
 
 
+> **Select an adapter at boot via env**
+
+```javascript
+  const { loadSfuAdapter } = require('@zero-server/webrtc');
+  const sfu = loadSfuAdapter(process.env.SFU_BACKEND || 'memory', {
+      // adapter-specific options forwarded verbatim
+      workerSettings: { logLevel: 'warn' },
+  });
+
+  sfu.onEvent((event, payload) => log.debug({ event, payload }, 'sfu'));
+```
+
+
+> **Wire an SFU into the signaling hub per room**
+
+```javascript
+  const router = await sfu.createRouter({ room: 'lobby' });
+
+  hub.on('join', async ({ peer, room }) => {
+      if (room.name !== 'lobby') return;
+      const transport = await sfu.createTransport(router, peer);
+      peer.send('sfu-transport', { iceParameters: transport.iceParameters });
+  });
+```
+
+
 ### Memory SFU Adapter
 
-In-process "memory" SFU adapter. A passthrough router that never touches the network: every produce() call records a logical producer, every consume() call records a logical consumer, and events are emitted via {@link SfuAdapter#onEvent}. Perfect for unit tests, ≤ 4-peer audio-only rooms, and local dev where the cost of running mediasoup or LiveKit is unjustified. The adapter does NOT decode or forward media packets - it models bookkeeping only.  Real packet forwarding lives in native adapters (mediasoup, LiveKit).
+In-process "memory" SFU adapter. A passthrough router that never touches the network: every `produce()` call records a logical producer, every `consume()` call records a logical consumer, and events are emitted via {@link SfuAdapter#onEvent}. Perfect for unit tests, ≤ 4-peer audio-only rooms, and local dev where the cost of running mediasoup or LiveKit is unjustified. The adapter does NOT decode or forward media packets — it models bookkeeping only.  Real packet forwarding lives in native adapters (mediasoup, LiveKit).  Treat it as a CI-grade stub.
+
+> **Use the memory adapter inside a vitest suite**
+
+```javascript
+  const { MemorySfuAdapter } = require('@zero-server/webrtc');
+  const sfu = new MemorySfuAdapter();
+
+  const events = [];
+  sfu.onEvent((event, payload) => events.push({ event, payload }));
+
+  const router    = await sfu.createRouter({ room: 'lobby' });
+  const transport = await sfu.createTransport(router, { id: 'peer-1' });
+  const producer  = await sfu.produce(transport, 'audio', { codec: 'opus' });
+  const consumer  = await sfu.consume(transport, producer.id, {});
+
+  expect(events).toEqual([
+      { event: 'router-new',   payload: { routerId: router.id } },
+      { event: 'transport-new', payload: expect.any(Object) },
+      { event: 'producer-new',  payload: expect.objectContaining({ kind: 'audio' }) },
+      { event: 'consumer-new',  payload: expect.objectContaining({ producerId: producer.id }) },
+  ]);
+```
+
+
+> **Drive it through `loadSfuAdapter`**
+
+```javascript
+  const sfu = loadSfuAdapter('memory');
+  const stats = await sfu.stats();
+  console.log(stats); // { routers, transports, producers, consumers }
+```
+
 
 ### Mediasoup SFU Adapter
 
-mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single mediasoup `Worker` and one `Router` per createRouter() call.  WebRTC transports are created with `router.createWebRtcTransport()` and produce / consume / pause / resume / close / stats all delegate to the native mediasoup objects. `mediasoup` is loaded lazily.  Tests inject a stub via `opts.mediasoup`; in production the constructor `require('mediasoup')`s the real package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing.
+mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single mediasoup `Worker` and one `Router` per `createRouter()` call.  WebRTC transports are created with `router.createWebRtcTransport()` and produce / consume / pause / resume / close / stats all delegate to the native mediasoup objects.  Adapter-level events (`router-new`, `producer-new`, `consumer-new`, `producer-pause`, `producer-resume`, `transport-close`, `router-close`) are fanned out via {@link SfuAdapter#onEvent} so observability is uniform across adapters. `mediasoup` is loaded lazily.  Tests inject a stub via `opts.mediasoup`; in production the constructor `require('mediasoup')`s the real package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing.
 
 #### Methods
 
@@ -2265,6 +2440,64 @@ mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single med
 | `workerSettings` | object | `-` | Forwarded to `mediasoup.createWorker(...)`. |
 | `mediaCodecs` | Array | `-` | Default router media codecs. |
 | `webRtcTransportOptions` | object | `-` | Default `router.createWebRtcTransport(...)` options. |
+
+
+> **Production setup with custom RTP port range and announced IP**
+
+```javascript
+  //   npm install mediasoup
+  const { MediasoupSfuAdapter } = require('@zero-server/webrtc');
+
+  const sfu = new MediasoupSfuAdapter({
+      workerSettings: {
+          logLevel:   'warn',
+          rtcMinPort: 40000,
+          rtcMaxPort: 49999,
+      },
+      webRtcTransportOptions: {
+          listenIps:  [{ ip: '0.0.0.0', announcedIp: process.env.PUBLIC_IP }],
+          enableUdp:  true,
+          enableTcp:  true,
+          preferUdp:  true,
+          initialAvailableOutgoingBitrate: 800_000,
+      },
+  });
+```
+
+
+> **One router per room, lazy on first join**
+
+```javascript
+  const routersByRoom = new Map();
+
+  async function getRouter(roomName) {
+      let r = routersByRoom.get(roomName);
+      if (!r) {
+          r = await sfu.createRouter({ room: roomName });
+          routersByRoom.set(roomName, r);
+      }
+      return r;
+  }
+
+  hub.on('join', async ({ peer, room }) => {
+      const router    = await getRouter(room.name);
+      const transport = await sfu.createTransport(router, peer);
+      peer.send('sfu-ready', { transportId: transport.id });
+  });
+```
+
+
+> **Inject a stub for unit tests**
+
+```javascript
+  const stubMediasoup = {
+      createWorker: async () => ({
+          createRouter: async () => fakeRouter,
+          close: () => {},
+      }),
+  };
+  const sfu = new MediasoupSfuAdapter({ mediasoup: stubMediasoup });
+```
 
 
 ### LiveKit SFU Adapter
@@ -2293,9 +2526,45 @@ LiveKit-backed SFU adapter (peerDependency on `livekit-server-sdk`). LiveKit's m
 | `tokenTtl` | string | `'1h'` | AccessToken TTL. |
 
 
+> **Cloud LiveKit project**
+
+```javascript
+  //   npm install livekit-server-sdk
+  const { LiveKitSfuAdapter } = require('@zero-server/webrtc');
+  const sfu = new LiveKitSfuAdapter({
+      host:      'https://my-project.livekit.cloud',
+      apiKey:    process.env.LIVEKIT_API_KEY,
+      apiSecret: process.env.LIVEKIT_API_SECRET,
+      tokenTtl:  '30m',
+  });
+```
+
+
+> **Self-hosted LiveKit + handing the JWT to a browser**
+
+```javascript
+  const router    = await sfu.createRouter({ room: 'standup' });
+  const transport = await sfu.createTransport(router, {
+      id:   peer.id,
+      user: { id: peer.user.id, name: peer.user.name },
+  });
+  peer.send('livekit', { url: transport.url, token: transport.token });
+```
+
+
+> **Mute a noisy publisher (REST passthrough)**
+
+```javascript
+  await sfu.pauseProducer(producer.id);
+  // adapter records the producerId; if it was registered with a
+  // { room, identity, trackSid } hint it issues
+  // RoomServiceClient.mutePublishedTrack() against LiveKit.
+```
+
+
 ### Bot Peer (wrtc)
 
-Server-side WebRTC peer ("bot") built on the `wrtc` peerDependency. `spawnBotPeer({hub, room, ...})` attaches an in-process peer to a {@link SignalingHub}, joins a room, and drives a real {@link RTCPeerConnection} per remote peer (using the Node.js `wrtc` binding).  It implements the standard JSEP perfect-negotiation pattern and is designed for headless workloads such as recording, transcription, AI agents, and SFU verification harnesses. The `wrtc` peerDependency is loaded lazily; in production any of `wrtc` or `@roamhq/wrtc` is acceptable.  Tests inject a fake via `opts.wrtc`.
+Server-side WebRTC peer ("bot") built on the `wrtc` peerDependency. `spawnBotPeer({hub, room, ...})` attaches an in-process peer to a {@link SignalingHub}, joins a room, and drives a real {@link RTCPeerConnection} per remote peer (using the Node.js `wrtc` binding).  It implements the standard JSEP perfect-negotiation pattern and is designed for headless workloads such as recording, transcription, AI agents, and SFU verification harnesses. The `wrtc` peerDependency is loaded lazily; in production any of `wrtc` or `@roamhq/wrtc` is acceptable.  Tests inject a fake via `opts.wrtc`. The bot is **fully bidirectional**: it accepts inbound tracks via `onTrack` and exposes the underlying `RTCPeerConnection`s through `getPeerConnection(remotePeerId)` so you can `addTrack()` / `createDataChannel()` for outbound media. Use cases: - **Recording bot** — pipe inbound tracks into `wrtc`'s `RTCAudioSink` / `RTCVideoSink` and write to disk. - **Transcription bot** — forward audio frames to Whisper / Deepgram and `room.broadcast('caption', ...)` the result. - **AI participant** — generate TTS audio with an `RTCAudioSource` and `pc.addTrack()` it back to the room. - **Integration tests** — prove the signaling \u2194 media path end-to-end against a real SFU.
 
 #### Methods
 
@@ -2306,7 +2575,7 @@ Server-side WebRTC peer ("bot") built on the `wrtc` peerDependency. `spawnBotPee
 
 ### Join Tokens
 
-Signed, short-TTL join tokens that authenticate a peer's right to join a specific room.  JWT-shaped (HS256 by default) and audience-scoped to `room:<name>` so a token leaked from one channel cannot be replayed against another. Reuses the canonical sign/verify primitives from `lib/auth/jwt.js`.
+Signed, short-TTL join tokens that authenticate a peer's right to join a specific WebRTC room. The token is a standard JWT (HS256 by default, RS256 with a PEM key supported via `algorithm`) that is **audience-scoped** to `room:<name>`, so a token leaked from one channel cannot be replayed against another room.  Verification is constant-time and surfaces every failure mode (bad signature, expired, audience mismatch, malformed) as a `WebRTCError({ code: 'INVALID_TOKEN' })`. The hub will refuse `join` messages when constructed with `joinTokenSecret` and the token is missing / invalid — no application wiring required. Reuses the canonical sign / verify primitives from `lib/auth/jwt.js`, so any claim (`iss`, `kid`, custom keys via `opts.claims`) flows through unchanged.
 
 #### Signaling
 
@@ -2329,20 +2598,32 @@ Signed, short-TTL join tokens that authenticate a peer's right to join a specifi
 | `claims` | object | `-` | Additional claims merged into the payload. |
 
 
+> **Browser receives a token from a regular HTTP route**
+
 ```javascript
-  const token = signJoinToken({
-      secret: process.env.JOIN_SECRET,
-      user:   req.user,
-      room:   'boardroom',
-      ttl:    300,
+  // server.js
+  const { signJoinToken } = require('@zero-server/webrtc');
+  app.get('/rtc/token/:room', (req, res) => {
+      const token = signJoinToken({
+          secret: process.env.WEBRTC_JWT_SECRET,
+          user:   req.user,          // { id, name, role }
+          room:   req.params.room,
+          ttl:    300,               // 5 minute window
+          claims: { publish: req.user.isHost === true },
+      });
+      res.json({ wsUrl: '/rtc', token });
   });
-  res.json({ wsUrl: '/rtc', token });
+
+  // client.js (pseudo)
+  const { wsUrl, token } = await fetch(`/rtc/token/${room}`).then(r => r.json());
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', room, token }));
 ```
 
 
 ### Observability
 
-Optional metrics + tracing wiring for a {@link SignalingHub}. Pass a `MetricsRegistry`, a `Tracer`, or both; the binder subscribes to the hub's lifecycle events and exports the six standard `zs_webrtc_*` Prometheus series plus per-operation OpenTelemetry-compatible spans.
+Optional metrics + tracing wiring for a {@link SignalingHub}. `bindObservability(hub, { metrics, tracer })` subscribes to the hub's lifecycle events and exports the six standard `zs_webrtc_*` Prometheus series plus per-operation OpenTelemetry-compatible spans.  Both are opt-in — pass only the registry you want. The metrics adapter is duck-typed: any object with `counter()` / `gauge()` / `histogram()` factory methods that return `inc()` / `dec()` / `observe()` style instruments will work.  Zero Server's built-in `app.metrics()` (from `@zero-server/observe`) satisfies the contract out of the box, as do `prom-client`'s `Counter`/`Gauge`/`Histogram` if you wrap them in a thin adapter.
 
 #### Parameters
 
@@ -2359,11 +2640,50 @@ Optional metrics + tracing wiring for a {@link SignalingHub}. Pass a `MetricsReg
 | `tracer` | Tracer | `-` | Tracer for span emission. |
 
 
-> **Plug into an existing app**
+> **Wire metrics + tracing from Zero Server's observe scope**
+
+```javascript
+  const { createApp } = require('@zero-server/sdk');
+  const { SignalingHub, bindObservability } = require('@zero-server/webrtc');
+
+  const app = createApp();
+  const hub = new SignalingHub({ joinTokenSecret: process.env.JWT });
+
+  bindObservability(hub, {
+      metrics: app.metrics(),   // exposes /metrics for Prometheus scraping
+      tracer:  app.tracer(),    // OTel-shaped tracer
+  });
+
+  app.ws('/rtc', (ws, req) => hub.attach(ws, { user: req.user, ip: req.ip }));
+```
+
+
+> **Metrics only (no tracer)**
 
 ```javascript
   const hub = new SignalingHub();
   bindObservability(hub, { metrics: app.metrics() });
+  // Scrape /metrics:
+  //   zs_webrtc_peers_active{room="lobby"}              3
+  //   zs_webrtc_rooms_active                            1
+  //   zs_webrtc_signaling_messages_total{type="offer",direction="in",result="ok"} 17
+  //   zs_webrtc_offer_duration_ms_bucket{room="lobby",le="250"} 5
+```
+
+
+> **Custom prom-client registry adapter**
+
+```javascript
+  const client = require('prom-client');
+  const reg = new client.Registry();
+  const adapter = {
+      counter:   ({ name, help, labels }) => new client.Counter({ name, help, labelNames: labels, registers: [reg] }),
+      gauge:     ({ name, help, labels }) => new client.Gauge  ({ name, help, labelNames: labels, registers: [reg] }),
+      histogram: ({ name, help, labels, buckets }) =>
+                 new client.Histogram({ name, help, labelNames: labels, buckets, registers: [reg] }),
+  };
+  bindObservability(hub, { metrics: adapter });
+  app.get('/metrics', async (_req, res) => res.type(reg.contentType).send(await reg.metrics()));
 ```
 
 
@@ -2438,7 +2758,7 @@ a random 8-byte hex string. |
 
 ### WebRTC CLI
 
-CLI subcommands for the `zh webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`.
+CLI subcommands for the `zs webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`.
 
 #### Parameters
 
@@ -2463,11 +2783,11 @@ Injection seam for tests. |
 
 ```javascript
   // From the shell, via the top-level CLI:
-  //   npx zh webrtc:stun --host stun.l.google.com --port 19302
-  //   npx zh webrtc:turn-creds --secret $SECRET --user alice \
+  //   npx zs webrtc:stun --host stun.l.google.com --port 19302
+  //   npx zs webrtc:turn-creds --secret $SECRET --user alice \
   //                           --servers turn:turn.example.com:3478
-  //   npx zh webrtc:join-token --secret $JT_SECRET --room lobby --sub u1
-  //   npx zh webrtc:verify-token --secret $JT_SECRET --token $TOKEN
+  //   npx zs webrtc:join-token --secret $JT_SECRET --room lobby --sub u1
+  //   npx zs webrtc:verify-token --secret $JT_SECRET --token $TOKEN
 
   // Programmatically:
   const { runWebRTCCommand } = require('@zero-server/webrtc/cli');

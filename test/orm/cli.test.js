@@ -61,7 +61,7 @@ describe('CLI - help / version', () =>
         cli._help();
         expect(log).toHaveBeenCalled();
         const output = log.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         expect(output).toContain('migrate');
         expect(output).toContain('make:model');
         log.mockRestore();
@@ -73,7 +73,7 @@ describe('CLI - help / version', () =>
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         cli._version();
         const output = log.mock.calls[0][0];
-        expect(output).toMatch(/zh v\d+\.\d+\.\d+ \(zero-server\)/);
+        expect(output).toMatch(/zs v\d+\.\d+\.\d+ \(zero-server\)/);
         log.mockRestore();
     });
 });
@@ -307,7 +307,7 @@ describe('CLI - run() dispatching', () =>
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await cli.run();
         const output = log.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         log.mockRestore();
     });
 
@@ -317,7 +317,7 @@ describe('CLI - run() dispatching', () =>
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await cli.run();
         const output = log.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         log.mockRestore();
     });
 
@@ -326,7 +326,7 @@ describe('CLI - run() dispatching', () =>
         const cli = new CLI(['--version']);
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await cli.run();
-        expect(log.mock.calls[0][0]).toMatch(/zh v\d+\.\d+\.\d+/);
+        expect(log.mock.calls[0][0]).toMatch(/zs v\d+\.\d+\.\d+/);
         log.mockRestore();
     });
 
@@ -335,7 +335,7 @@ describe('CLI - run() dispatching', () =>
         const cli = new CLI(['-v']);
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await cli.run();
-        expect(log.mock.calls[0][0]).toMatch(/zh v\d+\.\d+\.\d+/);
+        expect(log.mock.calls[0][0]).toMatch(/zs v\d+\.\d+\.\d+/);
         log.mockRestore();
     });
 
@@ -602,7 +602,7 @@ describe('CLI - runCLI', () =>
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await runCLI(['help']);
         const output = log.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         log.mockRestore();
     });
 
@@ -610,11 +610,11 @@ describe('CLI - runCLI', () =>
     {
         const { runCLI } = require('../../lib/cli');
         const origArgv = process.argv;
-        process.argv = ['node', 'zh', 'help'];
+        process.argv = ['node', 'zs', 'help'];
         const log = vi.spyOn(console, 'log').mockImplementation(() => {});
         await runCLI();
         const output = log.mock.calls.map(c => c[0]).join('\n');
-        expect(output).toContain('zh CLI');
+        expect(output).toContain('zs CLI');
         process.argv = origArgv;
         log.mockRestore();
     });

@@ -604,9 +604,9 @@ const scopes = [
     {
         name: 'cli',
         title: 'CLI runner',
-        summary: 'Programmatic access to the `zh` / `zs` CLI.',
+        summary: 'Programmatic access to the `zs` CLI.',
         description:
-            'Programmatic entry points for the bundled CLI (`zh` / `zs`): scaffolding, ' +
+            'Programmatic entry points for the bundled CLI (`zs`): scaffolding, ' +
             'migrations, seeding, rollback, status. Useful when embedding the CLI inside ' +
             'your own tooling.',
         exports: ['CLI', 'runCLI'],
