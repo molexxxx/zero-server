@@ -61,6 +61,11 @@ const { createError } = require('@zero-server/errors')
 | `AuditError` |
 | `PluginError` |
 | `ProcedureError` |
+| `WebRTCError` |
+| `SignalingError` |
+| `IceError` |
+| `TurnError` |
+| `SdpError` |
 | `createError` |
 | `isHttpError` |
 | `debug` |

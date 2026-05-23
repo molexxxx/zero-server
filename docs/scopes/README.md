@@ -10,6 +10,7 @@
 | [`@zero-server/auth`](./auth.md) | JWT, sessions, OAuth, authorize, MFA stack. |
 | [`@zero-server/orm`](./orm.md) | Database, Model, Query, migrations, seeds, search, geo, tenancy, audit. |
 | [`@zero-server/realtime`](./realtime.md) | WebSocket connection + room manager and SSE stream controller. |
+| [`@zero-server/webrtc`](./webrtc.md) | WebRTC signaling hub, TURN credentials, STUN client, SFU adapter interface. |
 | [`@zero-server/grpc`](./grpc.md) | gRPC server, client, codec, framing, status, metadata, health, reflection, balancer. |
 | [`@zero-server/observe`](./observe.md) | Metrics, structured logging, distributed tracing, health checks. |
 | [`@zero-server/lifecycle`](./lifecycle.md) | Graceful shutdown manager and multi-worker clustering. |

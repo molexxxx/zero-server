@@ -313,12 +313,14 @@ Every published `@zero-server/*` package and the surface it narrows to. The full
 | `@zero-server/auth` | auth | `-` | jwt, session, oauth, authorize, twoFactor, webauthn, trustedDevice, enrollment. |
 | `@zero-server/orm` | orm | `-` | Database, Model, Query, TYPES, Migrator, Seeder, replicas, search, geo, tenancy, audit, plugins. |
 | `@zero-server/realtime` | realtime | `-` | WebSocketConnection, WebSocketPool, SSEStream. |
+| `@zero-server/webrtc` | webrtc | `-` | Signaling hub, rooms/peers, STUN/TURN, SFU adapters (memory, mediasoup, LiveKit), join tokens, E2EE, spawnBotPeer. |
 | `@zero-server/grpc` | grpc | `-` | GrpcServiceRegistry, GrpcClient, codec, status, metadata, framing, health, reflection, balancer, credentials. |
 | `@zero-server/observe` | observability | `-` | MetricsRegistry, Tracer, structured Logger, healthCheck. |
 | `@zero-server/lifecycle` | lifecycle | `-` | LifecycleManager, ClusterManager, clusterize. |
 | `@zero-server/env` | env | `-` | Typed `.env` loader and accessor. |
 | `@zero-server/fetch` | http-client | `-` | Server-side fetch with mTLS, timeouts, AbortSignal. |
 | `@zero-server/errors` | errors | `-` | HttpError plus 25+ typed framework / ORM error classes, createError, isHttpError. |
+| `@zero-server/cli` | cli | `-` | Programmatic access to the `zh` / `zs` CLI runner. |
 
 
 ```js
