@@ -278,6 +278,38 @@ module.exports = [
 		],
 	},
 
+	/* ------------------------ WebRTC ------------------------ */
+	/* NOTE: Section is registered here so it renders between Real-Time and gRPC
+	 * in the docs sidebar. Source files land under lib/webrtc/ and are wired
+	 * in PR-by-PR per .myshit/WEBRTC-ROADMAP.md. Only entries with a real
+	 * source file on disk are listed here - add new entries as each PR lands
+	 * so the docs site never shows "Source file not found." placeholders. */
+	{
+		file: 'docs-real-time-webrtc.json',
+		section: 'WebRTC',
+		icon: 'video',
+		items: [
+			{ name: 'SignalingHub',         source: 'lib/webrtc/signaling.js' },
+			{ name: 'Room',                 source: 'lib/webrtc/room.js' },
+			{ name: 'Peer',                 source: 'lib/webrtc/peer.js' },
+			{ name: 'SDP Parser',           source: 'lib/webrtc/sdp.js' },
+			{ name: 'ICE Candidates',       source: 'lib/webrtc/ice.js' },
+			{ name: 'STUN Client',          source: 'lib/webrtc/stun.js' },
+			{ name: 'TURN Credentials',     source: 'lib/webrtc/turn/credentials.js' },
+			{ name: 'TURN Server',          source: 'lib/webrtc/turn/server.js' },
+			{ name: 'SFU Adapter',          source: 'lib/webrtc/sfu/index.js' },
+			{ name: 'Memory SFU Adapter',   source: 'lib/webrtc/sfu/memory.js' },
+			{ name: 'Mediasoup SFU Adapter', source: 'lib/webrtc/sfu/mediasoup.js' },
+			{ name: 'LiveKit SFU Adapter', source: 'lib/webrtc/sfu/livekit.js' },
+			{ name: 'Bot Peer (wrtc)',      source: 'lib/webrtc/bot.js' },
+			{ name: 'Join Tokens',          source: 'lib/webrtc/joinToken.js' },
+			{ name: 'Observability',        source: 'lib/webrtc/observe.js' },
+			{ name: 'E2EE Key Relay',       source: 'lib/webrtc/e2ee.js' },
+			{ name: 'Cluster Adapter',      source: 'lib/webrtc/cluster.js' },
+			{ name: 'WebRTC CLI',           source: 'lib/webrtc/cli.js' },
+		],
+	},
+
 	/* ------------------------ gRPC ------------------------ */
 	{
 		file: 'docs-grpc.json',

@@ -65,6 +65,25 @@
   - [WebSocket](#websocket)
   - [WebSocketPool](#websocketpool)
   - [SSE (Server-Sent Events)](#sse-server-sent-events)
+- [WebRTC](#webrtc)
+  - [SignalingHub](#signalinghub)
+  - [Room](#room)
+  - [Peer](#peer)
+  - [SDP Parser](#sdp-parser)
+  - [ICE Candidates](#ice-candidates)
+  - [STUN Client](#stun-client)
+  - [TURN Credentials](#turn-credentials)
+  - [TURN Server](#turn-server)
+  - [SFU Adapter](#sfu-adapter)
+  - [Memory SFU Adapter](#memory-sfu-adapter)
+  - [Mediasoup SFU Adapter](#mediasoup-sfu-adapter)
+  - [LiveKit SFU Adapter](#livekit-sfu-adapter)
+  - [Bot Peer (wrtc)](#bot-peer-wrtc)
+  - [Join Tokens](#join-tokens)
+  - [Observability](#observability)
+  - [E2EE Key Relay](#e2ee-key-relay)
+  - [Cluster Adapter](#cluster-adapter)
+  - [WebRTC CLI](#webrtc-cli)
 - [gRPC](#grpc)
   - [Server](#server)
   - [Client](#client)
@@ -1930,6 +1949,529 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
           console.log('client disconnected after', stream.uptime, 'ms');
       });
   });
+```
+
+
+
+---
+
+## WebRTC
+
+### SignalingHub
+
+WebRTC signaling hub - the central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic between participants. The hub itself is transport-agnostic: anything that exposes a `{ send(string), on('message'|'close', cb), close(code?, reason?) }` surface is acceptable.  `createWebRTC(app, opts)` (PR 9 wiring layer) binds an `app.ws()` upgrade handler to a `SignalingHub`.
+
+#### Public surface
+
+| Method | Signature | Description |
+|---|---|---|
+| `size` | `size()` | Live peer count across all rooms (and unattached). |
+| `room` | `room(name)` | Get or lazily create a room. |
+| `rooms` | `rooms()` |  |
+| `attach` | `attach(transport, [info])` | Attach a transport (WS connection or mock) as a new signaling peer. Wires up message and close handlers; returns the `Peer`. |
+
+
+#### Per-IP attach rate limit
+
+| Method | Signature | Description |
+|---|---|---|
+| `close` | `close()` | Shut down every peer and clear every room. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxSdpSize` | number | `65536` | Hard cap on offer / answer size (bytes). |
+| `maxCandidatesPerOffer` | number | `30` | Hard cap on `a=candidate:` lines per SDP. |
+| `peerMessageRate` | number | `30` | Per-peer signaling message rate, msg / sec. |
+| `maxProtocolErrors` | number | `5` | Disconnect after this many malformed frames. |
+| `ipAttachRate` | number | `0` | Max attaches per IP per minute.  `0` disables. |
+| `originAllowlist` | string[] | `-` | If set, transports whose `info.origin` is not
+on this list are rejected at attach time. |
+| `joinTokenSecret` | string \| Buffer | `-` | If set, every `join` must include a valid
+JWT signed with this secret and audience `room:<name>`. |
+| `autoCreateRooms` | boolean | `true` | If false, joins targeting an unknown room are rejected. |
+
+
+### Room
+
+Room / channel abstraction for the WebRTC signaling hub. A `Room` holds a set of `Peer`s plus a list of `require()` policy gates that decide whether a given peer may join.  Membership is in-process; the cluster adapter (PR 8) will fan room state out via pub/sub.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Room name, used as routing key. |
+
+
+#### Configuration (fluent)
+
+| Method | Signature | Description |
+|---|---|---|
+| `open` | `open()` | Mark the room as public.  Returns `this` for chaining. |
+| `canPublish` | `canPublish(fn)` | Set the publish-permission check.  Hub calls this before relaying offers. |
+| `canSubscribe` | `canSubscribe(fn)` | Set the subscribe-permission check.  Hub calls this before relaying answers. |
+
+
+#### Membership
+
+| Method | Signature | Description |
+|---|---|---|
+| `size` | `size()` | Current member count. |
+| `peers` | `peers()` |  |
+| `has` | `has()` |  |
+| `canJoin` | `canJoin(peer)` | Evaluate every `require()` gate against the candidate peer. |
+
+
+#### Fan-out
+
+| Method | Signature | Description |
+|---|---|---|
+| `broadcast` | `broadcast(type, [payload], [exceptPeerId])` | Send a `{type, ...payload}` JSON frame to every peer in the room. |
+| `close` | `close()` | Kick every peer with code 1001 (going-away) and unregister from the hub. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `hub` | import('./signaling').SignalingHub | `-` | Owning hub. |
+
+
+### Peer
+
+Per-connection state machine for a WebRTC signaling peer. A `Peer` wraps a transport object (typically a `WebSocketConnection` but any duck-typed `{ send, on, close }` works - see the unit tests for a minimal in-memory transport) and exposes the JSEP message types as ordinary events.  The hub is responsible for routing.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `transport` | object | Yes | Anything with `send(string)`, `on('message'\|'close', cb)`, `close(code?, reason?)`. |
+| `info` | object | No | Connection metadata. |
+
+
+#### Peers
+
+| Method | Signature | Description |
+|---|---|---|
+| `send` | `send(type, [payload])` | Send a JSON envelope to this peer.  `type` is added to `payload` and the result is serialised once.  Silently drops sends after close. |
+| `sendError` | `sendError(code, message)` | Send a typed error frame.  Callers SHOULD use this rather than throwing, because exceptions escape the message handler and tear down the process. |
+| `close` | `close([code], [reason])` | Close the underlying transport with a WebSocket-style code and reason. Defaults to 1000 (normal closure). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `user` | * | `-` | Authenticated user object (if any). |
+| `ip` | string | `-` | Remote IP for audit / rate limits. |
+
+
+### SDP Parser
+
+Zero-dependency RFC 8866 Session Description Protocol parser and serializer, with WebRTC-specific attribute extraction (JSEP per RFC 8829: ice-ufrag, ice-pwd, fingerprint, setup, mid, rtcp-mux, direction, rtpmap, fmtp, rid, simulcast, ssrc, extmap, candidate). The parser deliberately does NOT validate semantics that belong to a SignalingHub policy layer (codec allowlists, mDNS blocking, etc.) - it only structures the document.  Policy lives in `lib/webrtc/signaling.js`.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `text` | string | Yes | The SDP document text. |
+
+
+#### Parser helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `stringifySdp` | `stringifySdp(session)` | Serialize a `SessionDescription` back to RFC 8866 text with CRLF line endings.  The serializer is round-trip safe for documents produced by `parseSdp`: it emits the raw attribute list verbatim so any media-level attribute we did not lift into a structured field is still preserved. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxBytes` | number | `65536` | Reject payloads larger than this. |
+
+
+```javascript
+  const { parseSdp } = require('@zero-server/webrtc');
+  const desc = parseSdp(offer.sdp);
+  console.log(desc.media[0].iceUfrag, desc.media[0].fingerprint);
+```
+
+
+### ICE Candidates
+
+Zero-dependency ICE candidate parser, serializer, and address classifiers (private / loopback / link-local / mDNS), plus a `filterCandidates` helper used by `SignalingHub` to enforce privacy-preserving policies on relayed offers/answers. Candidate grammar follows RFC 8839 §5.1 / RFC 5245 §15.1: candidate-attribute = "candidate" ":" foundation SP component-id SP transport SP priority SP connection-address SP port SP cand-type [SP rel-addr] [SP rel-port] *(SP extension-att-name SP extension-att-value)
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `line` | string | Yes | Candidate line, e.g.
+`candidate:842163049 1 udp 1677729535 192.168.1.5 50000 typ host`. |
+
+
+#### ICE & TURN
+
+| Method | Signature | Description |
+|---|---|---|
+| `stringifyCandidate` | `stringifyCandidate(c)` | Serialize a parsed candidate back to its canonical line format. Round-trips outputs of `parseCandidate` exactly, including the insertion order of `extensions`. |
+| `isPrivateIp` | `isPrivateIp(addr)` | True for RFC 1918, RFC 6598 (CGNAT), and IPv6 ULA (RFC 4193) addresses. |
+| `isLoopbackIp` | `isLoopbackIp(addr)` | True for IPv4 127.0.0.0/8 and IPv6 ::1. |
+| `isLinkLocalIp` | `isLinkLocalIp(addr)` | True for IPv4 169.254/16 and IPv6 fe80::/10. |
+| `isMdnsHostname` | `isMdnsHostname(host)` | True for mDNS `.local` hostnames used by browsers to avoid leaking local IPs (Chrome's mDNS ICE candidates - RFC 8624 / draft-ietf-mmusic-mdns-ice-candidates). |
+| `filterCandidates` | `filterCandidates(candidates, [policy])` | Filter an array of candidates (lines or parsed objects) against a policy. Returns the same shape it was given: if you pass strings you get strings back; if you pass parsed objects you get parsed objects back.  Unparseable string lines are silently skipped so a single bad candidate never poisons the whole offer. |
+
+
+```javascript
+  const c = parseCandidate('candidate:1 1 udp 2122194687 1.2.3.4 50001 typ srflx raddr 192.168.1.5 rport 50000');
+  if (c.type === 'relay') { console.log('relay candidate'); }
+```
+
+
+### STUN Client
+
+Zero-dependency RFC 8489 STUN (Session Traversal Utilities for NAT) client.  Sends a Binding Request over UDP, parses the Binding Response, and returns the server-reflexive address decoded from XOR-MAPPED-ADDRESS (or, as a fallback, the deprecated MAPPED-ADDRESS attribute used by some legacy servers). Only the parts of RFC 8489 we need for NAT discovery are implemented: BINDING method, REQUEST and SUCCESS classes, XOR-MAPPED-ADDRESS / MAPPED-ADDRESS attributes for IPv4 + IPv6. Authenticated TURN allocations are handled in `lib/webrtc/turn/`.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `transactionId` | Buffer | No | 12-byte ID; one is generated if omitted. |
+
+
+#### ICE & TURN
+
+| Method | Signature | Description |
+|---|---|---|
+| `stunBinding` | `stunBinding(opts)` | Discover the public (server-reflexive) address by sending a STUN Binding Request to `opts.host:opts.port`. Retries with the same transaction ID until a matching Binding Success is received or `retries` attempts elapse.  Closes the socket on resolve/reject. |
+| `decodeMessage` | `decodeMessage(buf)` | Parse a STUN message (header + attributes). |
+| `encodeXorMappedAddress` | `encodeXorMappedAddress(address, port, transactionId)` | Encode an XOR-MAPPED-ADDRESS attribute body (no TLV header). |
+| `decodeXorMappedAddress` | `decodeXorMappedAddress(buf, transactionId)` | Decode an XOR-MAPPED-ADDRESS attribute body to `{family, address, port}`. |
+
+
+### TURN Credentials
+
+RFC 7635 ephemeral TURN credentials. Generates time-limited username / credential pairs that any RFC 7635-compatible TURN server (notably `coturn` with `use-auth-secret` + `static-auth-secret=<S>`) will accept. Wire format (RFC 7635 §6.2): username   = "<unix-expiry>:<userId>" credential = base64( HMAC-SHA1( <secret>, username ) ) The returned object is shaped like an `RTCIceServer` entry so it can be embedded straight into the ICE-server list a signaling endpoint serves to browsers.
+
+```javascript
+  const creds = issueTurnCredentials({
+      secret:  process.env.TURN_SHARED_SECRET,
+      userId:  req.user.id,
+      ttl:     '20m',
+      servers: ['turn:turn.example.com:3478?transport=udp'],
+  });
+  res.json(creds);
+```
+
+
+### TURN Server
+
+Zero-dependency embedded TURN server (RFC 5766) backing the `TurnServer` public API.  Implements the long-term-credential auth flow paired with `issueTurnCredentials` ephemeral accounts, UDP allocations, permissions, Send / Data indications, channel bindings, lifetimes, and per-user quotas. The hot path is intentionally compact: all framing lives in `lib/webrtc/turn/codec.js` and the server only owns state + relay-socket multiplexing.  TCP and TLS listeners are reserved in the constructor surface and will be implemented in a later PR; calling `start()` against either currently throws `TURN_TRANSPORT_UNSUPPORTED`.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `start` | `start()` | Bind all configured listeners.  Resolves once every listener is listening; rejects on the first bind error. |
+| `stop` | `stop()` | Close all listeners and free every allocation's relay socket. |
+| `address` | `address()` | The bound address of the first listener (handy for tests that ask the kernel for an ephemeral port via `port: 0`). |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `secret` | string | `-` | 
+Shared HMAC secret for ephemeral credentials produced by
+{@link module:webrtc/turn/credentials.issueTurnCredentials}. |
+| `realm` | string | `'zero-server'` |  |
+| `listeners` | Array<{proto:'udp' \| 'tcp' \| 'tls',port:number,host?:string,tls?:object}> | `-` |  |
+| `quotas` | object | `-` |  |
+| `quotas.maxAllocationsPerUser` | number | `Infinity` |  |
+| `quotas.maxBytesPerMinute` | number | `Infinity` |  |
+| `defaultLifetime` | number | `600` |  |
+| `maxLifetime` | number | `3600` |  |
+| `relayHost` | string | `'127.0.0.1'` | 
+Address bound by each per-allocation relay socket.  Production
+deployments should pass the server's public IP. |
+
+
+```javascript
+  const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');
+
+  const turn = new TurnServer({
+      secret:   process.env.TURN_SECRET,
+      realm:    'rtc.example.com',
+      listeners: [{ proto: 'udp', port: 3478 }],
+      quotas:   { maxAllocationsPerUser: 4, maxBytesPerMinute: 50_000_000 },
+  });
+  await turn.start();
+
+  const creds = issueTurnCredentials({
+      secret:  process.env.TURN_SECRET,
+      userId:  req.user.id,
+      servers: ['turn:rtc.example.com:3478'],
+      ttl:     '20m',
+  });
+  res.json(creds);
+```
+
+
+### SFU Adapter
+
+SFU adapter base interface and discovery loader. `SfuAdapter` defines the contract every backend (memory / mediasoup / livekit / custom) must implement.  `loadSfuAdapter()` resolves either a pre-constructed instance, a known name ('memory', 'mediasoup', 'livekit'), or a duck-typed object into a concrete adapter, throwing `WEBRTC_SFU_NOT_INSTALLED` when a native peerDep is missing.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `createRouter` | `createRouter()` | Override to create a routing context for a single room. |
+| `createTransport` | `createTransport()` | Override to allocate a WebRTC transport for a peer in a router. |
+| `produce` | `produce()` | Override to bind a producer ('audio' \| 'video') to a transport. |
+| `consume` | `consume()` | Override to bind a consumer of `producerId` to a transport. |
+| `pauseProducer` | `pauseProducer()` | Override to pause a producer (mute upstream forwarding). |
+| `resumeProducer` | `resumeProducer()` | Override to resume a previously paused producer. |
+| `closeRouter` | `closeRouter()` | Override to close a router and cascade-close its transports. |
+| `stats` | `stats()` | Override to return adapter stats; `scope` may be a routerId/transportId. |
+| `onEvent` | `onEvent()` | Register a handler invoked as `(event, payload)` for adapter-level events ('producer-new', 'producer-pause', 'consumer-new', 'transport-close', 'router-close', etc.). Returns an unsubscribe function. |
+| `loadSfuAdapter` | `loadSfuAdapter(spec, [opts])` | Lazy-load and instantiate an SFU adapter. |
+
+
+### Memory SFU Adapter
+
+In-process "memory" SFU adapter. A passthrough router that never touches the network: every produce() call records a logical producer, every consume() call records a logical consumer, and events are emitted via {@link SfuAdapter#onEvent}. Perfect for unit tests, ≤ 4-peer audio-only rooms, and local dev where the cost of running mediasoup or LiveKit is unjustified. The adapter does NOT decode or forward media packets - it models bookkeeping only.  Real packet forwarding lives in native adapters (mediasoup, LiveKit).
+
+### Mediasoup SFU Adapter
+
+mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a single mediasoup `Worker` and one `Router` per createRouter() call.  WebRTC transports are created with `router.createWebRtcTransport()` and produce / consume / pause / resume / close / stats all delegate to the native mediasoup objects. `mediasoup` is loaded lazily.  Tests inject a stub via `opts.mediasoup`; in production the constructor `require('mediasoup')`s the real package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `close` | `close()` | Best-effort shutdown: closes every router, then the worker if we own it. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `mediasoup` | object | `-` | Injected mediasoup module (testing); defaults to `require('mediasoup')`. |
+| `worker` | object | `-` | Pre-created `mediasoup.Worker`; bypasses the lazy worker bootstrap. |
+| `workerSettings` | object | `-` | Forwarded to `mediasoup.createWorker(...)`. |
+| `mediaCodecs` | Array | `-` | Default router media codecs. |
+| `webRtcTransportOptions` | object | `-` | Default `router.createWebRtcTransport(...)` options. |
+
+
+### LiveKit SFU Adapter
+
+LiveKit-backed SFU adapter (peerDependency on `livekit-server-sdk`). LiveKit's media plane is controlled remotely: rooms live on the LiveKit server, participants connect directly with a signed JWT, and the server SDK exposes a control-plane REST API.  This adapter maps the {@link SfuAdapter} contract onto that model: - createRouter(opts)          -> RoomServiceClient.createRoom(...) - createTransport(router,peer) -> mints an AccessToken (the "transport" handle is the URL + JWT the peer uses to connect to LiveKit directly) - produce / consume           -> local bookkeeping; LiveKit handles the actual media plane client-side - pauseProducer / resume      -> RoomServiceClient.mutePublishedTrack() when the producer was registered with a `{room, identity, trackSid}` hint; otherwise emits the event without touching the server - closeRouter(routerId)       -> RoomServiceClient.deleteRoom(...) - stats()                     -> RoomServiceClient.listRooms() / listParticipants(...) plus local counters `livekit-server-sdk` is loaded lazily.  Tests inject a stub via `opts.livekit`; in production the constructor `require`s the package and throws `WEBRTC_SFU_NOT_INSTALLED` if it is missing.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `createRouter` | `createRouter()` | Create a LiveKit room.  `opts.name` overrides the auto-generated name. Returns a router handle whose `id` is the room name. |
+| `createTransport` | `createTransport()` | Mint an AccessToken for `peer` to join the LiveKit room.  Returns a transport handle containing the JWT and URL the peer hands to the LiveKit client SDK. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `url` | string | `-` | LiveKit server URL (wss://...). |
+| `apiKey` | string | `-` | LiveKit API key. |
+| `apiSecret` | string | `-` | LiveKit API secret. |
+| `livekit` | object | `-` | Injected `livekit-server-sdk` module (testing). |
+| `client` | object | `-` | Pre-built `RoomServiceClient` (testing). |
+| `defaultRoomOpts` | object | `-` | Forwarded to `createRoom()` when fields are missing. |
+| `defaultGrants` | object | `-` | Default `{canPublish, canSubscribe, ...}` for minted tokens. |
+| `tokenTtl` | string | `'1h'` | AccessToken TTL. |
+
+
+### Bot Peer (wrtc)
+
+Server-side WebRTC peer ("bot") built on the `wrtc` peerDependency. `spawnBotPeer({hub, room, ...})` attaches an in-process peer to a {@link SignalingHub}, joins a room, and drives a real {@link RTCPeerConnection} per remote peer (using the Node.js `wrtc` binding).  It implements the standard JSEP perfect-negotiation pattern and is designed for headless workloads such as recording, transcription, AI agents, and SFU verification harnesses. The `wrtc` peerDependency is loaded lazily; in production any of `wrtc` or `@roamhq/wrtc` is acceptable.  Tests inject a fake via `opts.wrtc`.
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `spawnBotPeer` | `spawnBotPeer(opts)` | Spawn a server-side bot peer that joins `room` on the given hub. |
+
+
+### Join Tokens
+
+Signed, short-TTL join tokens that authenticate a peer's right to join a specific room.  JWT-shaped (HS256 by default) and audience-scoped to `room:<name>` so a token leaked from one channel cannot be replayed against another. Reuses the canonical sign/verify primitives from `lib/auth/jwt.js`.
+
+#### Signaling
+
+| Method | Signature | Description |
+|---|---|---|
+| `verifyJoinToken` | `verifyJoinToken(token, opts)` | Verify a join token and return its payload.  Throws a `WebRTCError` with `code: 'INVALID_TOKEN'` on any failure - bad signature, expired, audience mismatch, malformed, etc. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `secret` | string \| Buffer | `-` | HMAC secret (HS256) or PEM key (RS256). |
+| `user` | string \| object | `-` | User identifier (string) or object containing `id`. |
+| `room` | string | `-` | Target room name. |
+| `ttl` | number | `300` | Seconds until expiry.  Negative values are accepted
+(used by tests to mint already-expired tokens). |
+| `algorithm` | string | `'HS256'` |  |
+| `audience` | string \| string[] | `-` | Override the default `room:<name>` audience. |
+| `claims` | object | `-` | Additional claims merged into the payload. |
+
+
+```javascript
+  const token = signJoinToken({
+      secret: process.env.JOIN_SECRET,
+      user:   req.user,
+      room:   'boardroom',
+      ttl:    300,
+  });
+  res.json({ wsUrl: '/rtc', token });
+```
+
+
+### Observability
+
+Optional metrics + tracing wiring for a {@link SignalingHub}. Pass a `MetricsRegistry`, a `Tracer`, or both; the binder subscribes to the hub's lifecycle events and exports the six standard `zs_webrtc_*` Prometheus series plus per-operation OpenTelemetry-compatible spans.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `hub` | SignalingHub | Yes | The hub to instrument. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `metrics` | MetricsRegistry | `-` | Prometheus-compatible registry. |
+| `tracer` | Tracer | `-` | Tracer for span emission. |
+
+
+> **Plug into an existing app**
+
+```javascript
+  const hub = new SignalingHub();
+  bindObservability(hub, { metrics: app.metrics() });
+```
+
+
+### E2EE Key Relay
+
+End-to-end-encrypted key relay channel for WebRTC. The hub never sees plaintext SFrame / Insertable-Streams keys. Publishers wrap each rotation in a sealed envelope (X25519 ECDH + HKDF-SHA-256 + AES-256-GCM) and broadcast it via the `e2ee-key` wire message; subscribers in the same room receive the sealed payload and decrypt locally with their private key. For deployments that use a different sealing primitive (NaCl `crypto_box_seal`, libsignal, etc.) the {@link E2eeChannel} works with any opaque `Buffer` - the {@link sealKey} / {@link openSealedKey} helpers are provided as a zero-dependency default that satisfies the HIPAA / FINRA "server is opaque" requirement.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `peer` | Peer | Yes |  |
+| `hub` | SignalingHub | Yes |  |
+
+
+#### Public crypto helpers
+
+| Method | Signature | Description |
+|---|---|---|
+| `generateE2eeKeyPair` | `generateE2eeKeyPair()` | Generate a fresh X25519 keypair suitable for {@link sealKey} / {@link openSealedKey}. |
+| `sealKey` | `sealKey(plaintext, recipientPubKey)` | Seal an opaque byte string for a single recipient using the project's default envelope (X25519 ECDH + HKDF-SHA-256 + AES-256-GCM). Envelope layout: `[ver:1] [ephPubRaw:32] [nonce:12] [ciphertext:N] [tag:16]` |
+| `openSealedKey` | `openSealedKey(sealed, recipientPrivKey)` | Open an envelope produced by {@link sealKey} with the recipient's private key.  Throws if the envelope is malformed, was sealed for a different recipient, or was tampered with in flight. |
+
+
+#### E2EE
+
+| Method | Signature | Description |
+|---|---|---|
+| `publish` | `publish(epoch, key)` | Broadcast a sealed key to the rest of the peer's room. |
+| `subscribe` | `subscribe(fn)` | Receive sealed keys published by *other* peers in the same room. |
+| `attachE2ee` | `attachE2ee(peer, hub)` | Install an {@link E2eeChannel} on a peer as `peer.e2ee`.  Idempotent: a second call returns the existing channel. |
+
+
+### Cluster Adapter
+
+Cluster adapter for the WebRTC signaling hub. `useCluster(hub, adapter)` glues a `SignalingHub` to any pub/sub adapter that implements `{ publish(channel, message), subscribe( channel, cb) -> unsubscribe }`.  Once attached: - Every local `join` / `leave` is announced cluster-wide so other nodes can resolve a `peer.id` to its owning node. - Every `room.broadcast(...)` is mirrored to peers in the same room on other nodes. - Direct frames (`offer`, `answer`, `ice`) addressed to a peer that lives on a different node are forwarded to that node's inbox. The adapter itself is intentionally tiny so production deployments can wire it up to Redis, NATS, Kafka, or any in-house bus.  A `MemoryClusterAdapter` is provided for tests and single-process simulations.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `hub` | import('./signaling').SignalingHub | Yes |  |
+| `adapter` | {publish:Function, subscribe:Function} | Yes |  |
+
+
+#### Cluster
+
+| Method | Signature | Description |
+|---|---|---|
+| `locate` | `locate(peerId)` | Look up the node that owns a remote peer, if any. |
+| `routeDirect` | `routeDirect(toPeerId, type, payload)` | Forward a direct frame to a peer on another node.  Called by the hub when a routed message (`offer` / `answer` / `ice`) targets a peer id that is not in the local registry. |
+| `fanoutRoom` | `fanoutRoom(roomName, type, payload, [excludeId])` | Mirror a `room.broadcast(...)` to peers in the same room on other nodes.  Called automatically from `Room#broadcast`. |
+| `close` | `close()` | Tear down all subscriptions and clear remote state. |
+| `publish` | `publish(channel, message)` |  |
+| `subscribe` | `subscribe(channel, fn)` |  |
+
+
+#### useCluster
+
+| Method | Signature | Description |
+|---|---|---|
+| `useCluster` | `useCluster(hub, adapter, [opts])` | Attach a cluster adapter to a `SignalingHub`. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `nodeId` | string | `-` | Stable id for this node.  Defaults to
+a random 8-byte hex string. |
+
+
+### WebRTC CLI
+
+CLI subcommands for the `zh webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `subcmd` | string | Yes | 
+One of `stun`, `turn-creds`, `join-token`, `verify-token`, `help`. |
+| `flags` | Map<string,string> | Yes |  |
+| `deps` | object | No | 
+Injection seam for tests. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `out` | (line: string) => void | `-` |  |
+| `err` | (line: string) => void | `-` |  |
+| `setExit` | (code: number) => void | `-` |  |
+| `stunBinding` | typeof defaultStun | `-` |  |
+
+
+```javascript
+  // From the shell, via the top-level CLI:
+  //   npx zh webrtc:stun --host stun.l.google.com --port 19302
+  //   npx zh webrtc:turn-creds --secret $SECRET --user alice \
+  //                           --servers turn:turn.example.com:3478
+  //   npx zh webrtc:join-token --secret $JT_SECRET --room lobby --sub u1
+  //   npx zh webrtc:verify-token --secret $JT_SECRET --token $TOKEN
+
+  // Programmatically:
+  const { runWebRTCCommand } = require('@zero-server/webrtc/cli');
+  await runWebRTCCommand('join-token', new Map([
+      ['secret', 's'], ['room', 'lobby'], ['sub', 'u1'],
+  ]));
 ```
 
 
@@ -5454,6 +5996,17 @@ HTTP error classes with status codes, error codes, and structured details. Every
 | `TenancyError` | `new TenancyError([message], [opts])` | Tenancy error - multi-tenancy operation failures. |
 | `AuditError` | `new AuditError([message], [opts])` | Audit error - audit logging failures. |
 | `PluginError` | `new PluginError([message], [opts])` | Plugin error - plugin registration or lifecycle failures. |
+
+
+#### WebRTC Error Classes
+
+| Method | Signature | Description |
+|---|---|---|
+| `WebRTCError` | `new WebRTCError([message], [opts])` | Base WebRTC error.  All `@zero-server/webrtc` errors extend this so they round-trip through `errorHandler` like every other framework error. |
+| `SignalingError` | `new SignalingError([message], [opts])` | Signaling error - malformed or rejected signaling message (offer / answer / ice / mute / e2ee-key / bye). |
+| `IceError` | `new IceError([message], [opts])` | ICE error - candidate parsing, filtering, or selection failure. |
+| `TurnError` | `new TurnError([message], [opts])` | TURN error - upstream TURN server / credential issuance failure. |
+| `SdpError` | `new SdpError([message], [opts])` | SDP error - malformed or policy-rejected Session Description Protocol payload. |
 | `ProcedureError` | `new ProcedureError([message], [opts])` | Procedure error - stored procedure/function failures. |
 
 

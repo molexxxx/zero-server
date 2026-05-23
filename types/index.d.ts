@@ -11,6 +11,18 @@ export { RouterInstance, RouteChain, RouteEntry, RouteInfo, RouteOptions, RouteH
 export { Request, RangeResult } from './request';
 export { Response, SendFileOptions, CookieOptions, PushOptions } from './response';
 export { SSEOptions, SSEStream } from './sse';
+export {
+    createWebRTC, SignalingHub, Room as WebRTCRoom, Peer as WebRTCPeer,
+    parseSdp, stringifySdp, parseCandidate, stringifyCandidate,
+    stunBinding, encodeBindingRequest, decodeMessage,
+    encodeXorMappedAddress, decodeXorMappedAddress,
+    STUN_MAGIC_COOKIE, STUN_METHOD, STUN_CLASS, STUN_ATTR,
+    issueTurnCredentials, TurnServer, SfuAdapter,
+    signJoinToken, verifyJoinToken,
+    WebRTCOptions, RoomOptions as WebRTCRoomOptions, PeerInfo, SignalingMessage,
+    IceServerConfig, TurnCredentials, IssueTurnCredentialsOptions, ClusterAdapter as WebRTCClusterAdapter,
+    WebRTCError, SignalingError, IceError, TurnError, SdpError,
+} from './webrtc';
 export { LifecycleManager, LifecycleState, LIFECYCLE_STATE } from './lifecycle';
 export { ClusterManager, ClusterOptions, cluster } from './cluster';
 export {
