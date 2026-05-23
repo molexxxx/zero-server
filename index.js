@@ -59,6 +59,23 @@ const {
     ChannelCredentials, createRotatingCredentials,
     watchProto,
 } = require('./lib/grpc');
+const {
+    createWebRTC, SignalingHub, Room, Peer,
+    parseSdp, stringifySdp,
+    parseCandidate, stringifyCandidate, filterCandidates,
+    isPrivateIp, isLoopbackIp, isLinkLocalIp, isMdnsHostname,
+    stunBinding, encodeBindingRequest, decodeMessage,
+    encodeXorMappedAddress, decodeXorMappedAddress,
+    STUN_MAGIC_COOKIE, STUN_METHOD, STUN_CLASS, STUN_ATTR,
+    issueTurnCredentials, TurnServer,
+    SfuAdapter, MemorySfuAdapter, MediasoupSfuAdapter, LiveKitSfuAdapter, loadSfuAdapter, signJoinToken, verifyJoinToken,
+    spawnBotPeer,
+    bindObservability,
+    E2eeChannel, attachE2ee, generateE2eeKeyPair, sealKey, openSealedKey,
+    useCluster, ClusterCoordinator, MemoryClusterAdapter,
+    runWebRTCCommand,
+    WebRTCError, SignalingError, IceError, TurnError, SdpError,
+} = require('./lib/webrtc');
 const { version } = require('./package.json');
 
 module.exports = {
@@ -409,6 +426,101 @@ module.exports = {
     // gRPC: Proto hot-reload
     /** @see module:grpc/watch */
     watchProto,
+    // WebRTC
+    /** @see module:webrtc */
+    createWebRTC,
+    /** @see module:webrtc/signaling */
+    SignalingHub,
+    /** @see module:webrtc/room */
+    Room,
+    /** @see module:webrtc/peer */
+    Peer,
+    /** @see module:webrtc/sdp */
+    parseSdp,
+    /** @see module:webrtc/sdp */
+    stringifySdp,
+    /** @see module:webrtc/ice */
+    parseCandidate,
+    /** @see module:webrtc/ice */
+    stringifyCandidate,
+    /** @see module:webrtc/ice */
+    filterCandidates,
+    /** @see module:webrtc/ice */
+    isPrivateIp,
+    /** @see module:webrtc/ice */
+    isLoopbackIp,
+    /** @see module:webrtc/ice */
+    isLinkLocalIp,
+    /** @see module:webrtc/ice */
+    isMdnsHostname,
+    /** @see module:webrtc/stun */
+    stunBinding,
+    /** @see module:webrtc/stun */
+    encodeBindingRequest,
+    /** @see module:webrtc/stun */
+    decodeMessage,
+    /** @see module:webrtc/stun */
+    encodeXorMappedAddress,
+    /** @see module:webrtc/stun */
+    decodeXorMappedAddress,
+    /** @see module:webrtc/stun */
+    STUN_MAGIC_COOKIE,
+    /** @see module:webrtc/stun */
+    STUN_METHOD,
+    /** @see module:webrtc/stun */
+    STUN_CLASS,
+    /** @see module:webrtc/stun */
+    STUN_ATTR,
+    /** @see module:webrtc/turn/credentials */
+    issueTurnCredentials,
+    /** @see module:webrtc/turn/server */
+    TurnServer,
+    /** @see module:webrtc/sfu */
+    SfuAdapter,
+    /** @see module:webrtc/sfu/memory */
+    MemorySfuAdapter,
+    /** @see module:webrtc/sfu/mediasoup */
+    MediasoupSfuAdapter,
+    /** @see module:webrtc/sfu/livekit */
+    LiveKitSfuAdapter,
+    /** @see module:webrtc/sfu */
+    loadSfuAdapter,
+    /** @see module:webrtc/signaling */
+    signJoinToken,
+    /** @see module:webrtc/signaling */
+    verifyJoinToken,
+    /** @see module:webrtc/bot */
+    spawnBotPeer,
+    /** @see module:webrtc/observe */
+    bindObservability,
+    /** @see module:webrtc/e2ee */
+    E2eeChannel,
+    /** @see module:webrtc/e2ee */
+    attachE2ee,
+    /** @see module:webrtc/e2ee */
+    generateE2eeKeyPair,
+    /** @see module:webrtc/e2ee */
+    sealKey,
+    /** @see module:webrtc/e2ee */
+    openSealedKey,
+    /** @see module:webrtc/cluster */
+    useCluster,
+    /** @see module:webrtc/cluster */
+    ClusterCoordinator,
+    /** @see module:webrtc/cluster */
+    MemoryClusterAdapter,
+    /** @see module:webrtc/cli */
+    runWebRTCCommand,
+    /** @see module:errors */
+    WebRTCError,
+    /** @see module:errors */
+    SignalingError,
+    /** @see module:errors */
+    IceError,
+    /** @see module:errors */
+    TurnError,
+    /** @see module:errors */
+    SdpError,
     /** Package version */
     version,
 };

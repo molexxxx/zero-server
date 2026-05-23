@@ -283,6 +283,71 @@ const scopes = [
     },
 
     // -------------------------------------------------------------------------
+    //  WEBRTC  (signaling + NAT traversal + SFU adapters)
+    //  See .myshit/WEBRTC-ROADMAP.md for the full design.
+    //  Registered ahead of implementation so docs / package scaffolding land
+    //  in the right slot.  generate-package-stubs.js tolerates an empty
+    //  sourceDir until the lib/webrtc/ files exist.
+    // -------------------------------------------------------------------------
+    {
+        name: 'webrtc',
+        title: 'WebRTC',
+        summary: 'WebRTC signaling hub, TURN credentials, STUN client, SFU adapter interface.',
+        description:
+            'First-class WebRTC support: a pure-JS signaling broker built on the realtime WS ' +
+            'layer, room / peer orchestration, RFC 8489 STUN client, RFC 7635 TURN credential ' +
+            'issuance, optional embedded TURN server, SFrame E2EE key relay, and a pluggable ' +
+            'SFU adapter interface (mediasoup / LiveKit / Janus) for enterprise media workloads.',
+        exports: [
+            'createWebRTC',
+            'SignalingHub', 'Room', 'Peer',
+            'parseSdp', 'stringifySdp',
+            'parseCandidate', 'stringifyCandidate', 'filterCandidates',
+            'isPrivateIp', 'isLoopbackIp', 'isLinkLocalIp', 'isMdnsHostname',
+            'stunBinding',
+            'encodeBindingRequest', 'decodeMessage',
+            'encodeXorMappedAddress', 'decodeXorMappedAddress',
+            'STUN_MAGIC_COOKIE', 'STUN_METHOD', 'STUN_CLASS', 'STUN_ATTR',
+            'issueTurnCredentials',
+            'TurnServer',
+            'SfuAdapter',
+            'MemorySfuAdapter',
+            'MediasoupSfuAdapter',
+            'LiveKitSfuAdapter',
+            'loadSfuAdapter',
+            'signJoinToken', 'verifyJoinToken',
+            'spawnBotPeer',
+            'bindObservability',
+            'E2eeChannel', 'attachE2ee', 'generateE2eeKeyPair', 'sealKey', 'openSealedKey',
+            'useCluster', 'ClusterCoordinator', 'MemoryClusterAdapter',
+            'runWebRTCCommand',
+            'WebRTCError', 'SignalingError', 'IceError', 'TurnError', 'SdpError',
+        ],
+
+        sourceDir: 'webrtc',
+        bundleDebug: true,
+
+        // Cross-scope shims - webrtc leans on realtime (WS), auth (authorize / jwt),
+        // observe (metrics + tracing), errors, and middleware (rateLimit).
+        requireRewrites: {},
+        extraShims: [
+            { file: 'ws/index.js',       content: "module.exports = require('@zero-server/realtime');\n" },
+            { file: 'auth/index.js',     content: "module.exports = require('@zero-server/auth');\n" },
+            { file: 'observe/index.js',  content: "module.exports = require('@zero-server/observe');\n" },
+            { file: 'errors.js',         content: "module.exports = require('@zero-server/errors');\n" },
+            { file: 'middleware/index.js', content: "module.exports = require('@zero-server/middleware');\n" },
+        ],
+        pkgDependencies: {
+            '@zero-server/realtime':   true,
+            '@zero-server/auth':       true,
+            '@zero-server/observe':    true,
+            '@zero-server/errors':     true,
+            '@zero-server/middleware': true,
+        },
+        typesFiles: ['webrtc'],
+    },
+
+    // -------------------------------------------------------------------------
     //  gRPC
     // -------------------------------------------------------------------------
     {
@@ -473,6 +538,7 @@ const scopes = [
             'TimeoutError', 'ConnectionError', 'MigrationError', 'TransactionError',
             'QueryError', 'AdapterError', 'CacheError',
             'TenancyError', 'AuditError', 'PluginError', 'ProcedureError',
+            'WebRTCError', 'SignalingError', 'IceError', 'TurnError', 'SdpError',
             'createError', 'isHttpError',
             'debug',
         ],
@@ -520,6 +586,11 @@ const scopes = [
             "    AuditError:                 errors.AuditError,",
             "    PluginError:                errors.PluginError,",
             "    ProcedureError:             errors.ProcedureError,",
+            "    WebRTCError:                errors.WebRTCError,",
+            "    SignalingError:             errors.SignalingError,",
+            "    IceError:                   errors.IceError,",
+            "    TurnError:                  errors.TurnError,",
+            "    SdpError:                   errors.SdpError,",
             "    createError:                errors.createError,",
             "    isHttpError:                errors.isHttpError,",
             "    debug,",
