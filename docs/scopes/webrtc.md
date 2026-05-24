@@ -77,6 +77,8 @@ const { createWebRTC } = require('@zero-server/webrtc')
 | `McuAdapter` |
 | `MemoryMcuAdapter` |
 | `FfmpegMcuAdapter` |
+| `RecordingManager` |
+| `IngressManager` |
 | `runWebRTCCommand` |
 | `WebRTCError` |
 | `SignalingError` |

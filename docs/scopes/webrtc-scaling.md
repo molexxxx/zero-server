@@ -125,7 +125,29 @@ For real mixing, use the `FfmpegMcuAdapter` stub (gated on `npm i ffmpeg-static`
 
 ### 6 — Recording / egress / ingress
 
-Use the LiveKit adapter's `startRoomCompositeEgress` / `startTrackEgress` / `createIngress` for managed recording. For mediasoup, combine `spawnBotPeer` (a `node-wrtc` headless consumer) with `MediaRecorder` or pipe a `PlainTransport` into ffmpeg.
+The `RecordingManager` and `IngressManager` wrap whichever capability the bound SFU adapter exposes. With LiveKit the pipeline auto-resolves to `'livekit'` (calls `startRoomCompositeEgress` / `stopEgress`); with mediasoup pass `pipeline: 'ffmpeg'` and either `ffmpegPath` or install `ffmpeg-static`; with the memory adapter the manager keeps bookkeeping only — useful for tests and capacity planning.
+
+```js
+const { RecordingManager, IngressManager } = require('@zero-server/webrtc');
+
+const recordings = new RecordingManager({ adapter: hub.sfu });
+const ingresses  = new IngressManager({ adapter: hub.sfu });
+
+const session = await recordings.startRecording('lobby', {
+    layout: 'grid',
+    format: 'mp4',
+    sink:   { file: '/var/recordings/lobby.mp4' },
+});
+// ...later
+await session.stop();
+// or stop everything on shutdown
+await recordings.close();
+
+const ingress = await ingresses.createIngress({ kind: 'whip', name: 'studio', roomName: 'lobby' });
+// `ingress.native.url` is the publish URL surfaced by the adapter
+```
+
+For SIP / PSTN bridging, point an upstream gateway (drachtio, jambonz, LiveKit SIP) at the ingress URL — the manager is intentionally transport-agnostic.
 
 ## Migration matrix
 

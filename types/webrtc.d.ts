@@ -545,6 +545,91 @@ export declare class FfmpegMcuAdapter extends McuAdapter {
 }
 
 // ---------------------------------------------------------------------------
+//  Recording / Egress / Ingress facade
+// ---------------------------------------------------------------------------
+
+export type RecordingPipeline = 'livekit' | 'livekit-track' | 'ffmpeg' | 'memory';
+
+export interface RecordingStartOptions {
+    pipeline?: RecordingPipeline;
+    kind?: string;
+    layout?: 'grid' | 'presenter' | 'presenter-strip' | 'dominant' | 'speaker' | 'audio-only' | string;
+    format?: 'mp4' | 'webm' | 'mka' | 'ogg' | 'hls' | string;
+    sink?: { file?: string; url?: string; format?: string };
+    inputs?: Array<{ sdp?: string; url?: string }>;
+    args?: string[];
+    trackId?: string;
+    [extra: string]: unknown;
+}
+
+export interface RecordingInfo {
+    id: string;
+    roomName: string;
+    kind: string;
+    backend: RecordingPipeline | string;
+    status: 'starting' | 'recording' | 'stopping' | 'stopped' | 'failed';
+    startedAt: number;
+    stoppedAt: number | null;
+    pid?: number;
+    native: { id: string | null } | null;
+    error: string | null;
+}
+
+export interface RecordingHandle {
+    id: string;
+    status: string;
+    stop(): Promise<boolean>;
+    info(): RecordingInfo;
+}
+
+export interface RecordingStats {
+    recording: number;
+    stopped:   number;
+    failed:    number;
+    total:     number;
+}
+
+export declare class RecordingManager {
+    constructor(opts: { adapter: SfuAdapter | object; spawn?: (...args: unknown[]) => unknown; ffmpegPath?: string });
+    startRecording(roomName: string, opts?: RecordingStartOptions): Promise<RecordingHandle>;
+    stopRecording(id: string): Promise<boolean>;
+    list(): RecordingInfo[];
+    stats(): RecordingStats;
+    close(): Promise<void>;
+}
+
+export interface IngressStartOptions {
+    kind?: 'rtmp' | 'whip' | 'url-pull' | 'sip' | string;
+    inputType?: string;
+    roomName?: string;
+    room?: string;
+    name?: string;
+    [extra: string]: unknown;
+}
+
+export interface IngressInfo {
+    id: string;
+    kind: string;
+    roomName: string | null;
+    createdAt: number;
+    native: { id: string | null; url: string | null } | null;
+}
+
+export interface IngressHandle {
+    id: string;
+    native: unknown;
+    info(): IngressInfo;
+}
+
+export declare class IngressManager {
+    constructor(opts: { adapter: SfuAdapter | object });
+    createIngress(opts: IngressStartOptions): Promise<IngressHandle>;
+    deleteIngress(id: string): Promise<boolean>;
+    list(): IngressInfo[];
+    close(): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
 //  CLI
 // ---------------------------------------------------------------------------
 
