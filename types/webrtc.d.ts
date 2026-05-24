@@ -387,16 +387,42 @@ export interface ClusterAdapter {
 
 export interface UseClusterOptions {
     nodeId?: string;
+    region?: string;
+    loadProbe?: () => (object | Promise<object>);
+    loadIntervalMs?: number;
+}
+
+export interface ClusterNodeInfo {
+    nodeId: string;
+    region: string | null;
+    load: Record<string, unknown> | null;
+    lastSeen: number;
+}
+
+export type BridgeSelectorStrategy =
+    | 'local-only'
+    | 'least-loaded'
+    | 'region-aware'
+    | 'region-aware-least-loaded';
+
+export interface SelectBridgeOptions {
+    strategy?: BridgeSelectorStrategy;
+    preferRegion?: string | null;
+    compare?: (a: ClusterNodeInfo, b: ClusterNodeInfo) => number;
 }
 
 export declare class ClusterCoordinator {
     readonly hub: SignalingHub;
     readonly adapter: ClusterAdapter;
     readonly nodeId: string;
+    readonly region: string | null;
     constructor(hub: SignalingHub, adapter: ClusterAdapter, opts?: UseClusterOptions);
     locate(peerId: string): { nodeId: string; room: string } | null;
     routeDirect(toPeerId: string, type: string, payload: object): boolean;
     fanoutRoom(roomName: string, type: string, payload: object, excludeId?: string): void;
+    publishLoad(): Promise<Record<string, unknown> | null>;
+    nodes(): ClusterNodeInfo[];
+    selectBridge(opts?: SelectBridgeOptions): string;
     close(): void;
 }
 
