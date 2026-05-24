@@ -389,7 +389,14 @@ describe('Lifecycle Manager', () =>
             app._lifecycle.removeSignalHandlers();
 
             const reqPromise = doFetch(`http://localhost:${port}/drain-test`);
-            await new Promise(r => setTimeout(r, 30));
+            // Wait for the request to actually be tracked before initiating
+            // shutdown — under CI load 30ms is not always enough for the
+            // client connection to be accepted and the request to register.
+            const start = Date.now();
+            while (app._lifecycle.activeRequests === 0 && Date.now() - start < 1000)
+            {
+                await new Promise(r => setTimeout(r, 10));
+            }
 
             await app.shutdown({ timeout: 5000 });
 
