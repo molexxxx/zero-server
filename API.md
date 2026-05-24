@@ -1961,7 +1961,7 @@ SSE (Server-Sent Events) stream controller. Wraps a raw HTTP response and provid
 
 ### SignalingHub
 
-WebRTC signaling hub. Central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic. Transport-agnostic — bind to `app.ws()` in production, an `EventEmitter` shim in tests.
+WebRTC signaling hub. Central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic. Transport-agnostic — bind to `app.ws()` in production, an `EventEmitter` shim in tests. SDP validation is cross-browser by design: session-level `a=fingerprint` / `a=ice-ufrag` / `a=ice-pwd` lines are accepted as a fallback for media sections that omit their own copy (RFC 8839 §5.4, RFC 8122 §5). This is required for Firefox interop — Firefox emits `a=fingerprint` only at session level.
 
 #### Public surface
 
