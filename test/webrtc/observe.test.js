@@ -156,6 +156,35 @@ describe('webrtc observability - metrics', () =>
         ta.inject({ type: 'offer', sdp: restartSdp, target: pb.id });
         expect(counter.get({ room: 'r' })).toBe(1);
     });
+
+    it('tracks peers-per-mesh-room and counts mesh overflow on promotion', () =>
+    {
+        const registry = new MetricsRegistry();
+        const hub = new SignalingHub({ topology: 'auto', maxMeshPeers: 2 });
+        bindObservability(hub, { metrics: registry });
+        hub.room('r').open();
+
+        const gauge = registry.getMetric('zs_webrtc_peers_per_mesh_room');
+        const overflow = registry.getMetric('zs_webrtc_mesh_overflow_total');
+        const promo = registry.getMetric('zs_webrtc_topology_promotions_total');
+
+        const txs = [];
+        for (let i = 0; i < 2; i++)
+        {
+            const t = new MockTransport(); hub.attach(t);
+            t.inject({ type: 'join', room: 'r' });
+            txs.push(t);
+        }
+        expect(gauge.get({ room: 'r' })).toBe(2);
+
+        const t3 = new MockTransport(); hub.attach(t3);
+        t3.inject({ type: 'join', room: 'r' });
+        // 3rd join trips the limit and promotes the room.
+        expect(overflow.get({ room: 'r' })).toBeGreaterThanOrEqual(1);
+        expect(promo.get({ room: 'r', from: 'mesh', to: 'sfu' })).toBeGreaterThanOrEqual(1);
+        // After promotion the mesh gauge is drained.
+        expect(gauge.get({ room: 'r' })).toBe(0);
+    });
 });
 
 describe('webrtc observability - tracing', () =>
