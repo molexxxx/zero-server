@@ -55,7 +55,7 @@ npm install @zero-server/core @zero-server/body @zero-server/middleware
 | `@zero-server/auth` | `jwt`, `session`, `oauth`, `authorize`, `twoFactor`, `webauthn`, `trustedDevice`, `enrollment` |
 | `@zero-server/orm` | `Database`, `Model`, `Query`, `TYPES`, migrations, seeders, replicas, search, geo, tenancy, audit |
 | `@zero-server/realtime` | `WebSocketConnection`, `WebSocketPool`, `SSEStream` |
-| `@zero-server/webrtc` | signaling hub, rooms/peers, STUN/TURN, SFU adapters (memory, mediasoup, LiveKit), join tokens, E2EE, `spawnBotPeer` |
+| `@zero-server/webrtc` | `createWebRTC`, `SignalingHub`, `Room`/`Peer`, SDP/ICE parsers, STUN client, `TurnServer` + `issueTurnCredentials`, SFU adapters (memory, mediasoup, LiveKit), `signJoinToken`/`verifyJoinToken`, E2EE, cluster coordinator, `spawnBotPeer` |
 | `@zero-server/grpc` | gRPC server, client, codec, status, metadata, framing, health, reflection, balancer |
 | `@zero-server/observe` | `MetricsRegistry`, `Tracer`, structured `Logger`, health checks |
 | `@zero-server/lifecycle` | `LifecycleManager`, `ClusterManager`, `clusterize` |
@@ -166,6 +166,41 @@ const users = await User.find({ name: 'Alice' })
 
 - **WebSocket** - `app.ws(path, handler)` with RFC 6455, `WebSocketPool` for rooms, broadcasting, and sub-protocols
 - **Server-Sent Events** - `res.sse()` with auto-IDs, named events, and keep-alive
+
+### WebRTC
+
+Full WebRTC stack - signaling, SDP/ICE parsing, STUN client, TURN credential issuer, SFU adapters, end-to-end encryption, multi-node clustering, and a headless bot peer:
+
+```js
+const { createApp, createWebRTC } = require('@zero-server/sdk')
+const app = createApp()
+
+const rtc = createWebRTC(app, {
+    path: '/rtc',
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+})
+
+rtc.on('peer:joined', ({ room, peer }) => {
+    console.log(`peer ${peer.id} joined ${room.id}`)
+})
+
+app.listen(3000)
+```
+
+| Feature | Description |
+|---|---|
+| Signaling | `SignalingHub` over WebSocket, `Room` / `Peer` model with join/leave/offer/answer/ICE relay |
+| SDP & ICE | `parseSdp` / `stringifySdp`, `parseCandidate` / `stringifyCandidate` / `filterCandidates`, private/loopback/link-local/mDNS detection |
+| STUN | RFC 5389 client - `stunBinding`, `encodeBindingRequest`, `decodeMessage`, XOR-MAPPED-ADDRESS helpers |
+| TURN | Built-in `TurnServer` (UDP allocations, channels, permissions) plus time-limited `issueTurnCredentials` (REST API spec) |
+| SFU adapters | `SfuAdapter` interface with `MemorySfuAdapter`, `MediasoupSfuAdapter`, `LiveKitSfuAdapter`, and `loadSfuAdapter()` for dynamic selection |
+| Join tokens | `signJoinToken` / `verifyJoinToken` for short-lived signed room admission |
+| End-to-end encryption | `E2eeChannel`, `attachE2ee`, `generateE2eeKeyPair`, `sealKey`, `openSealedKey` (sealed-sender key exchange) |
+| Clustering | `useCluster`, `ClusterCoordinator`, `MemoryClusterAdapter` for multi-node room state |
+| Bot peer | `spawnBotPeer()` headless server-side peer for testing, recording, and automated agents |
+| Observability | `bindObservability(rtc, { metrics, logger })` for Prometheus metrics and structured logs |
+| Errors | `WebRTCError`, `SignalingError`, `IceError`, `TurnError`, `SdpError` |
+| CLI | `runWebRTCCommand` - `npx zs webrtc turn:cred`, `webrtc sdp:parse`, etc. |
 
 ### Observability
 
@@ -371,6 +406,23 @@ const {
   // Real-time
   WebSocketConnection, WebSocketPool, SSEStream,
 
+  // WebRTC
+  createWebRTC, SignalingHub, Room, Peer,
+  parseSdp, stringifySdp,
+  parseCandidate, stringifyCandidate, filterCandidates,
+  isPrivateIp, isLoopbackIp, isLinkLocalIp, isMdnsHostname,
+  stunBinding, encodeBindingRequest, decodeMessage,
+  encodeXorMappedAddress, decodeXorMappedAddress,
+  STUN_MAGIC_COOKIE, STUN_METHOD, STUN_CLASS, STUN_ATTR,
+  issueTurnCredentials, TurnServer,
+  SfuAdapter, MemorySfuAdapter, MediasoupSfuAdapter, LiveKitSfuAdapter,
+  loadSfuAdapter, signJoinToken, verifyJoinToken,
+  spawnBotPeer, bindObservability,
+  E2eeChannel, attachE2ee, generateE2eeKeyPair, sealKey, openSealedKey,
+  useCluster, ClusterCoordinator, MemoryClusterAdapter,
+  runWebRTCCommand,
+  WebRTCError, SignalingError, IceError, TurnError, SdpError,
+
   // gRPC
   GrpcStatus, grpcToHttp, grpcStatusName, GRPC_STATUS_NAMES,
   GrpcMetadata, ProtoWriter, ProtoReader, protoEncode, protoDecode,
@@ -440,6 +492,8 @@ lib/
                          replicas, search, geo, tenancy, audit, views, procedures, plugins
   router/             - Router with sub-app mounting and pattern matching
   sse/                - SSE stream controller
+  webrtc/             - signaling hub, SDP/ICE, STUN client, TURN server, SFU adapters,
+                         join tokens, E2EE, clustering, bot peer, CLI
   ws/                 - WebSocket connection, handshake, and room management
 packages/             - generated scoped @zero-server/* re-exports (one dir per scope)
 .tools/
