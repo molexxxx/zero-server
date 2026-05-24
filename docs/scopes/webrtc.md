@@ -88,7 +88,6 @@ const { createWebRTC } = require('@zero-server/webrtc')
 
 ## See also
 
-- [WebRTC scaling guide](./webrtc-scaling.md) — topology decision tree, cluster + cascade + MCU
 - [Top-level README](../../README.md)
 - [Full API reference](../../API.md)
 - [Live docs site](https://z-server.dev)

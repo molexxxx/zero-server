@@ -73,6 +73,9 @@ const {
     bindObservability,
     E2eeChannel, attachE2ee, generateE2eeKeyPair, sealKey, openSealedKey,
     useCluster, ClusterCoordinator, MemoryClusterAdapter,
+    useCascade, CascadeCoordinator, CH_CASCADE,
+    McuAdapter, MemoryMcuAdapter, FfmpegMcuAdapter,
+    RecordingManager, IngressManager,
     runWebRTCCommand,
     WebRTCError, SignalingError, IceError, TurnError, SdpError,
 } = require('./lib/webrtc');
@@ -509,6 +512,22 @@ module.exports = {
     ClusterCoordinator,
     /** @see module:webrtc/cluster */
     MemoryClusterAdapter,
+    /** @see module:webrtc/cascade */
+    useCascade,
+    /** @see module:webrtc/cascade */
+    CascadeCoordinator,
+    /** @see module:webrtc/cascade */
+    CH_CASCADE,
+    /** @see module:webrtc/mcu */
+    McuAdapter,
+    /** @see module:webrtc/mcu */
+    MemoryMcuAdapter,
+    /** @see module:webrtc/mcu/ffmpeg */
+    FfmpegMcuAdapter,
+    /** @see module:webrtc/recording */
+    RecordingManager,
+    /** @see module:webrtc/recording */
+    IngressManager,
     /** @see module:webrtc/cli */
     runWebRTCCommand,
     /** @see module:errors */

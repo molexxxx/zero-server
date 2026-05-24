@@ -66,6 +66,30 @@
 					"type": "boolean",
 					"default": "true",
 					"notes": "If false, joins targeting an unknown room are rejected."
+				},
+				{
+					"option": "topology",
+					"type": "'mesh' | 'sfu' | 'mcu' | 'auto'",
+					"default": "'auto'",
+					"notes": "Default room topology. `auto` starts every room\nas full mesh and promotes to `sfu` once the peer count\nexceeds `maxMeshPeers`. Pure signaling is unchanged;\nthe hint is broadcast to peers and surfaced via\n`hub.stats()` so clients can switch transports."
+				},
+				{
+					"option": "maxMeshPeers",
+					"type": "number",
+					"default": "4",
+					"notes": "Peer count at which an `auto` room is promoted from\nmesh to SFU (and at which a `mesh` room emits\n`peer:limit:reached` for capacity alarms)."
+				},
+				{
+					"option": "sfu",
+					"type": "SfuAdapter | string",
+					"default": "-",
+					"notes": "Optional SFU adapter or spec string (memory|mediasoup|livekit|<pkg>).\nMounts a `hub.media` facade backed by this adapter so\napplication code can drive routers/transports/producers\nthrough the hub without importing the adapter directly."
+				},
+				{
+					"option": "sfuOpts",
+					"type": "object",
+					"default": "-",
+					"notes": "Adapter constructor options, forwarded when `opts.sfu` is a string."
 				}
 			],
 			"methodGroups": [
@@ -162,6 +186,20 @@
 							"method": "close",
 							"signature": "close()",
 							"description": "Shut down every peer and clear every room."
+						}
+					]
+				},
+				{
+					"group": "Topology / capacity",
+					"methods": [
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Snapshot of hub state for dashboards and health checks. Includes the configured topology defaults, current peer/room counts, and a coarse media-plane summary when an SFU adapter is mounted.",
+							"methodReturns": {
+								"type": "Promise<{topology:string, maxMeshPeers:number, peers:number, rooms:object[], mediaPlane:object | null}>",
+								"description": ""
+							}
 						}
 					]
 				}
@@ -263,6 +301,19 @@
 								"type": "boolean",
 								"description": ""
 							}
+						},
+						{
+							"method": "setTopology",
+							"signature": "setTopology(topology)",
+							"description": "Force the room's topology and broadcast the change to every peer. Pure signaling: the hub does not redirect media; client SDKs are responsible for switching transports when the new topology is received via `room-topology`.",
+							"methodParams": [
+								{
+									"param": "topology",
+									"type": "'mesh' | 'sfu' | 'mcu'",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
 						}
 					]
 				},
@@ -893,47 +944,157 @@
 			],
 			"methodGroups": [
 				{
-					"group": "Methods",
+					"group": "Consumer-side BWE / quality knobs",
 					"methods": [
 						{
-							"method": "createRouter",
-							"signature": "createRouter()",
-							"description": "Override to create a routing context for a single room."
+							"method": "setConsumerPreferredLayers",
+							"signature": "setConsumerPreferredLayers(consumerId, layers)",
+							"description": "Switch a consumer to the given simulcast spatial / temporal layer.",
+							"methodParams": [
+								{
+									"param": "consumerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "layers",
+									"type": "{spatialLayer:number, temporalLayer?:number}",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
 						},
 						{
-							"method": "createTransport",
-							"signature": "createTransport()",
-							"description": "Override to allocate a WebRTC transport for a peer in a router."
+							"method": "setConsumerPriority",
+							"signature": "setConsumerPriority()",
+							"description": "Set consumer priority (1-255, higher = more bandwidth budget under congestion)."
 						},
 						{
-							"method": "produce",
-							"signature": "produce()",
-							"description": "Override to bind a producer ('audio' | 'video') to a transport."
+							"method": "requestKeyFrame",
+							"signature": "requestKeyFrame()",
+							"description": "Ask the SFU to forward a PLI/FIR to the producer the consumer is bound to."
 						},
 						{
-							"method": "consume",
-							"signature": "consume()",
-							"description": "Override to bind a consumer of `producerId` to a transport."
+							"method": "pauseConsumer",
+							"signature": "pauseConsumer()",
+							"description": "Pause an individual consumer (stop forwarding to a single subscriber)."
 						},
 						{
-							"method": "pauseProducer",
-							"signature": "pauseProducer()",
-							"description": "Override to pause a producer (mute upstream forwarding)."
+							"method": "resumeConsumer",
+							"signature": "resumeConsumer()",
+							"description": "Resume a previously paused consumer."
+						}
+					]
+				},
+				{
+					"group": "Transport-level BWE caps",
+					"methods": [
+						{
+							"method": "setTransportBitrates",
+							"signature": "setTransportBitrates(transportId, opts)",
+							"description": "Apply incoming/outgoing bitrate hints to a transport.",
+							"methodParams": [
+								{
+									"param": "transportId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "{initial?:number, min?:number, max?:number, maxIncoming?:number, maxOutgoing?:number}",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Data channels",
+					"methods": [
+						{
+							"method": "produceData",
+							"signature": "produceData()",
+							"description": "Create an SCTP data producer on a transport."
 						},
 						{
-							"method": "resumeProducer",
-							"signature": "resumeProducer()",
-							"description": "Override to resume a previously paused producer."
+							"method": "consumeData",
+							"signature": "consumeData()",
+							"description": "Create an SCTP data consumer bound to `dataProducerId`."
+						}
+					]
+				},
+				{
+					"group": "Observers",
+					"methods": [
+						{
+							"method": "observeAudioLevels",
+							"signature": "observeAudioLevels(routerId, [opts])",
+							"description": "Start an audio-level observer on a router. Emits `audio-level` adapter events. Returns `{ id, close() }`.",
+							"methodParams": [
+								{
+									"param": "routerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "{interval?:number, threshold?:number, maxEntries?:number}",
+									"required": "No",
+									"notes": ""
+								}
+							]
 						},
 						{
-							"method": "closeRouter",
-							"signature": "closeRouter()",
-							"description": "Override to close a router and cascade-close its transports."
+							"method": "observeActiveSpeaker",
+							"signature": "observeActiveSpeaker()",
+							"description": "Start an active-speaker observer. Emits `active-speaker` adapter events. Returns `{ id, close() }`."
+						}
+					]
+				},
+				{
+					"group": "Cross-router cascade (SFU mesh)",
+					"methods": [
+						{
+							"method": "pipeToRouter",
+							"signature": "pipeToRouter(opts)",
+							"description": "Pipe a producer from this adapter's local router into another router (possibly on a remote SFU node). Returns `{ pipeProducerId, pipeConsumerId, localRouterId, remoteRouterId }`.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "{producerId:string, localRouterId:string, remoteRouter:object}",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Targeted stats (Phase 2 surface; coarse stats() remains for back-compat)",
+					"methods": [
+						{
+							"method": "getProducerStats",
+							"signature": "getProducerStats()",
+							"description": "Return native stats for a single producer."
 						},
 						{
-							"method": "stats",
-							"signature": "stats()",
-							"description": "Override to return adapter stats; `scope` may be a routerId/transportId."
+							"method": "getConsumerStats",
+							"signature": "getConsumerStats()",
+							"description": "Return native stats for a single consumer."
+						},
+						{
+							"method": "getTransportStats",
+							"signature": "getTransportStats()",
+							"description": "Return native stats for a single transport."
+						},
+						{
+							"method": "enableTraceEvent",
+							"signature": "enableTraceEvent()",
+							"description": "Toggle low-level trace event emission on a router (mediasoup `trace` events: 'probation', 'bwe', 'rtp', 'keyframe', etc.)."
 						},
 						{
 							"method": "onEvent",
@@ -980,6 +1141,51 @@
 									"title": "Third-party adapter package"
 								}
 							]
+						}
+					]
+				},
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "createRouter",
+							"signature": "createRouter()",
+							"description": "Override to create a routing context for a single room."
+						},
+						{
+							"method": "createTransport",
+							"signature": "createTransport()",
+							"description": "Override to allocate a WebRTC transport for a peer in a router."
+						},
+						{
+							"method": "produce",
+							"signature": "produce()",
+							"description": "Override to bind a producer ('audio' | 'video') to a transport."
+						},
+						{
+							"method": "consume",
+							"signature": "consume()",
+							"description": "Override to bind a consumer of `producerId` to a transport."
+						},
+						{
+							"method": "pauseProducer",
+							"signature": "pauseProducer()",
+							"description": "Override to pause a producer (mute upstream forwarding)."
+						},
+						{
+							"method": "resumeProducer",
+							"signature": "resumeProducer()",
+							"description": "Override to resume a previously paused producer."
+						},
+						{
+							"method": "closeRouter",
+							"signature": "closeRouter()",
+							"description": "Override to close a router and cascade-close its transports."
+						},
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Override to return adapter stats; `scope` may be a routerId/transportId."
 						}
 					]
 				}
@@ -1053,6 +1259,18 @@
 					"type": "object",
 					"default": "-",
 					"notes": "Default `router.createWebRtcTransport(...)` options."
+				},
+				{
+					"option": "webRtcServer",
+					"type": "object",
+					"default": "-",
+					"notes": "Pre-created `WebRtcServer` to share a single UDP/TCP port across workers (k8s / single-IP)."
+				},
+				{
+					"option": "webRtcServerOptions",
+					"type": "object",
+					"default": "-",
+					"notes": "`{ listenInfos: [...] }` forwarded to `worker.createWebRtcServer(...)` on first use."
 				}
 			],
 			"methodGroups": [
@@ -1140,6 +1358,16 @@
 				}
 			],
 			"methodGroups": [
+				{
+					"group": "Room / participant REST passthroughs",
+					"methods": [
+						{
+							"method": "getRoomInfo",
+							"signature": "getRoomInfo()",
+							"description": "Fetch one room from LiveKit by name.  Returns the matching entry from `client.listRooms([name])` or `null`."
+						}
+					]
+				},
 				{
 					"group": "Methods",
 					"methods": [
@@ -1662,6 +1890,24 @@
 					"type": "string",
 					"default": "-",
 					"notes": "Stable id for this node.  Defaults to\na random 8-byte hex string."
+				},
+				{
+					"option": "region",
+					"type": "string",
+					"default": "-",
+					"notes": "Region tag (e.g. `'us-east'`).  Surfaces\nin load announcements and lets the\ncascade's bridge selector prefer\nsame-region peers."
+				},
+				{
+					"option": "loadProbe",
+					"type": "Function",
+					"default": "-",
+					"notes": "`() => { cpu?:number, producers?:number,\nconsumers?:number, bandwidthIn?:number,\nbandwidthOut?:number, custom?:object }`.\nSync or async.  When provided, the\ncoordinator publishes a load snapshot\nevery `opts.loadIntervalMs` ms."
+				},
+				{
+					"option": "loadIntervalMs",
+					"type": "number",
+					"default": "5000",
+					"notes": "0 disables the periodic timer\n(callers can call `publishLoad()` manually)."
 				}
 			],
 			"params": [
@@ -1758,6 +2004,57 @@
 									"notes": ""
 								}
 							]
+						},
+						{
+							"method": "publishLoad",
+							"signature": "publishLoad()",
+							"description": "Publish a load snapshot now.  Returns the snapshot that was sent. Called automatically on the configured interval when `loadProbe` is set, but can also be invoked manually (e.g. from tests, or to publish immediately after a producer count changes)."
+						},
+						{
+							"method": "nodes",
+							"signature": "nodes()",
+							"description": "Snapshot of every known node (including self).",
+							"methodReturns": {
+								"type": "Array<{nodeId:string, region:string | null, load:object | null, lastSeen:number}>",
+								"description": ""
+							}
+						},
+						{
+							"method": "selectBridge",
+							"signature": "selectBridge([opts])",
+							"description": "Pick a node for a new bridge using one of the built-in selectors or a custom comparator.  Returns the chosen `nodeId` (which may be this node's own id when it wins).",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "strategy",
+									"type": "'local-only' | 'least-loaded' | 'region-aware' | 'region-aware-least-loaded'",
+									"default": "'region-aware-least-loaded'",
+									"notes": ""
+								},
+								{
+									"option": "preferRegion",
+									"type": "string",
+									"default": "-",
+									"notes": "Override the local region preference."
+								},
+								{
+									"option": "compare",
+									"type": "(a, b) => number",
+									"default": "-",
+									"notes": "Custom comparator; smaller wins."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "nodeId"
+							}
 						},
 						{
 							"method": "close",
@@ -1858,6 +2155,483 @@
 									"title": "Redis adapter (BYO ioredis)"
 								}
 							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Cascade Coordinator",
+			"description": "Cross-node SFU cascade orchestrator. Sits on top of a {@link useCluster}-backed {@link SignalingHub} and a local {@link SfuAdapter} so a single room can span multiple hub nodes' media planes. Each node owns a local Router (a \"bridge\") for its subset of peers; producers are piped to every peer bridge so consumers on any node see every publisher. See [`docs/scopes/webrtc-scaling.md`](../../docs/scopes/webrtc-scaling.md) for the wire protocol, capacity model, and migration matrix.",
+			"example": "  const a = new SignalingHub({ sfu: new MemorySfuAdapter() });\r\n  const b = new SignalingHub({ sfu: new MemorySfuAdapter() });\r\n  const bus = new MemoryClusterAdapter();\r\n  useCluster(a, bus, { nodeId: 'a' });\r\n  useCluster(b, bus, { nodeId: 'b' });\r\n  useCascade(a, { nodeId: 'a' });\r\n  useCascade(b, { nodeId: 'b' });",
+			"examples": [
+				{
+					"code": "  const a = new SignalingHub({ sfu: new MemorySfuAdapter() });\r\n  const b = new SignalingHub({ sfu: new MemorySfuAdapter() });\r\n  const bus = new MemoryClusterAdapter();\r\n  useCluster(a, bus, { nodeId: 'a' });\r\n  useCluster(b, bus, { nodeId: 'b' });\r\n  useCascade(a, { nodeId: 'a' });\r\n  useCascade(b, { nodeId: 'b' });",
+					"lang": "javascript",
+					"title": "Two nodes, one virtual room"
+				},
+				{
+					"code": "  const cascade = useCascade(hub);\r\n  hub.on('room-created', async ({ name }) => {\r\n      const router = await hub.sfu.createRouter();\r\n      cascade.registerLocalBridge(name, router);\r\n  });",
+					"lang": "javascript",
+					"title": "Register a bridge as rooms get created"
+				}
+			],
+			"options": [
+				{
+					"option": "nodeId",
+					"type": "string",
+					"default": "-",
+					"notes": "Falls back to the cluster nodeId or a random id."
+				},
+				{
+					"option": "sfu",
+					"type": "object",
+					"default": "-",
+					"notes": "SfuAdapter; defaults to `hub.sfu` (the one the hub was built with)."
+				},
+				{
+					"option": "listenInfo",
+					"type": "object",
+					"default": "-",
+					"notes": "PipeTransport listen info advertised to peer bridges."
+				},
+				{
+					"option": "enableSrtp",
+					"type": "boolean",
+					"default": "true",
+					"notes": ""
+				}
+			],
+			"params": [
+				{
+					"param": "hub",
+					"type": "import('./signaling').SignalingHub",
+					"required": "Yes",
+					"notes": ""
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Cluster",
+					"methods": [
+						{
+							"method": "registerLocalBridge",
+							"signature": "registerLocalBridge(roomName, router)",
+							"description": "Register the local bridge for `room`.  Idempotent: subsequent calls return the cached entry.  `router` is the handle returned by `sfu.createRouter()`; producers created on that router will be fanned out to every peer bridge.",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "router",
+									"type": "object",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "object",
+								"description": "bridge state"
+							}
+						}
+					]
+				},
+				{
+					"group": "Bridges",
+					"methods": [
+						{
+							"method": "closeLocalBridge",
+							"signature": "closeLocalBridge(roomName)",
+							"description": "Tear down the local bridge for `room`.  Closes every pipe opened to peer bridges and announces `bridge:close` so peer nodes drop their mirrored state.",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "announceProducer",
+							"signature": "announceProducer(roomName, producer)",
+							"description": "Announce that a local producer has been created on the bridge for `room` so peer bridges open a `pipeToRouter` consuming it.  Called automatically when the SFU emits `producer-new` and the producer's transport belongs to a known bridge router.",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "producer",
+									"type": "object",
+									"required": "Yes",
+									"notes": "`{ id|producerId, kind, rtpParameters }`"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Producers",
+					"methods": [
+						{
+							"method": "retractProducer",
+							"signature": "retractProducer(roomName, producerId)",
+							"description": "Tear down fanout for a local producer.",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "producerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "locateRemoteProducer",
+							"signature": "locateRemoteProducer(producerId)",
+							"description": "Resolve a producer id to its remote origin, if any.  Returns null when the producer is local or unknown.",
+							"methodParams": [
+								{
+									"param": "producerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "{producerId:string, room:string, nodeId:string, routerId:string, kind:string} | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Snapshot of the cascade state for observability.",
+							"methodReturns": {
+								"type": "{nodeId:string, bridges:Array<object>, remoteProducers:number}",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Inspection",
+					"methods": [
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Tear down every bridge and stop processing bus messages."
+						}
+					]
+				},
+				{
+					"group": "Bus handlers",
+					"methods": [
+						{
+							"method": "useCascade",
+							"signature": "useCascade(hub, [opts])",
+							"description": "Attach a {@link CascadeCoordinator} to a hub that already has a cluster adapter bound via {@link useCluster}.  Stores it at `hub._cascade` and returns the coordinator so callers can `registerLocalBridge(room, router)` as rooms get created.",
+							"methodParams": [
+								{
+									"param": "hub",
+									"type": "import('./signaling').SignalingHub",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "CascadeCoordinator",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "MCU Adapter",
+			"description": "Optional MCU (multipoint control unit) layer that sits on top of an {@link SfuAdapter}. Where an SFU forwards each publisher's stream untouched, an MCU mixes them down to a smaller number of composite tracks (one audio mix + one tiled video) so receivers only have to decode O(1) streams instead of O(N). The right topology for SIP gateways, low-end clients, regulated recording, and ultra-large rooms where consumer decode cost is the bottleneck. zero-server ships no native mixer — JS-side Opus/H264 transcoding is CPU-prohibitive. The MCU layer is a contract: adapters can spawn ffmpeg (the included {@link FfmpegMcuAdapter}), shell out to a GPU-backed mixer, or call into a managed service. The {@link MemoryMcuAdapter} is bookkeeping only for tests and capacity planning.",
+			"example": "  const mcu = new MemoryMcuAdapter({ sfu });\r\n  const { mixedProducerId } = await mcu.mix('lobby', {\r\n      producerIds: ['p1', 'p2', 'p3'],\r\n      kind:        'audio',\r\n  });",
+			"examples": [
+				{
+					"code": "  const mcu = new MemoryMcuAdapter({ sfu });\r\n  const { mixedProducerId } = await mcu.mix('lobby', {\r\n      producerIds: ['p1', 'p2', 'p3'],\r\n      kind:        'audio',\r\n  });",
+					"lang": "javascript",
+					"title": "Bookkeeping-only mixer (tests, capacity planning)"
+				},
+				{
+					"code": "  const mcu = new FfmpegMcuAdapter({ sfu });\r\n  const mix = await mcu.mix('lobby', {\r\n      producerIds: ['p1', 'p2'],\r\n      inputs:      [{ sdp: '/tmp/in1.sdp' }, { sdp: '/tmp/in2.sdp' }],\r\n      outputs:     [{ url: 'rtp://127.0.0.1:5004' }],\r\n      kind:        'audio',\r\n  });",
+					"lang": "javascript",
+					"title": "Real audio mixing via ffmpeg"
+				}
+			],
+			"options": [
+				{
+					"option": "sfu",
+					"type": "object",
+					"default": "-",
+					"notes": "Bound SfuAdapter, used by subclasses that need to ingest/produce."
+				},
+				{
+					"option": "name",
+					"type": "string",
+					"default": "-",
+					"notes": "Adapter name, defaults to the constructor name."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Inspection",
+					"methods": [
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Snapshot of active mixes.",
+							"methodReturns": {
+								"type": "{mixes: Array<{id:string, sources:string[], layout:McuLayout, kind:string}>}",
+								"description": ""
+							}
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Tear down every active mix."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Ffmpeg MCU Adapter",
+			"description": "Spawns one ffmpeg child process per mix and implements the {@link McuAdapter} contract. The integrator wires mediasoup `PlainTransport` RTP feeds into ffmpeg via `opts.inputs` and consumes ffmpeg's output via `opts.outputs`; the adapter only owns the child lifecycle. Gated on `ffmpeg-static` (or an explicit `{ ffmpegPath }`) so missing binaries fail loudly. For a fully managed equivalent prefer LiveKit egress via {@link LiveKitSfuAdapter}.",
+			"example": "  const mcu = new FfmpegMcuAdapter({ sfu });\r\n  const mix = await mcu.mix('lobby', {\r\n      producerIds: ['p1', 'p2'],\r\n      inputs:      [{ sdp: '/tmp/in1.sdp' }, { sdp: '/tmp/in2.sdp' }],\r\n      outputs:     [{ url: 'rtp://127.0.0.1:5004' }],\r\n      kind:        'audio',\r\n  });\r\n  await mcu.unmix(mix.mixedProducerId);",
+			"examples": [
+				{
+					"code": "  const mcu = new FfmpegMcuAdapter({ sfu });\r\n  const mix = await mcu.mix('lobby', {\r\n      producerIds: ['p1', 'p2'],\r\n      inputs:      [{ sdp: '/tmp/in1.sdp' }, { sdp: '/tmp/in2.sdp' }],\r\n      outputs:     [{ url: 'rtp://127.0.0.1:5004' }],\r\n      kind:        'audio',\r\n  });\r\n  await mcu.unmix(mix.mixedProducerId);",
+					"lang": "javascript",
+					"title": "Spawn an audio mix"
+				}
+			],
+			"options": [
+				{
+					"option": "sfu",
+					"type": "object",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "ffmpegPath",
+					"type": "string",
+					"default": "-",
+					"notes": "Overrides the `ffmpeg-static` lookup."
+				},
+				{
+					"option": "spawn",
+					"type": "Function",
+					"default": "-",
+					"notes": "Injected for tests (defaults to `child_process.spawn`)."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "MCU",
+					"methods": [
+						{
+							"method": "mix",
+							"signature": "mix(roomId, opts)",
+							"description": "Spawn an ffmpeg process to mix the given producers.  The caller is responsible for wiring the SFU's PlainTransport RTP feeds into ffmpeg via `opts.inputs` (an array of `{ producerId, sdp, host, port }`) and consuming ffmpeg's output via `opts.outputs`.",
+							"methodParams": [
+								{
+									"param": "roomId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "`{ producerIds, inputs, outputs, kind, layout, args? }`"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Recording Manager",
+			"description": "Adapter-agnostic recording / egress / ingress facade. {@link RecordingManager} auto-detects which pipeline the bound {@link SfuAdapter} supports (`livekit` egress, `ffmpeg` child, or `memory` bookkeeping) and exposes a uniform `startRecording` / `stopRecording` surface. {@link IngressManager} wraps the adapter's `createIngress` / `deleteIngress` calls for WHIP / RTMP / SIP / URL-pull sources.",
+			"example": "  const rec = new RecordingManager({ adapter: hub.sfu });\r\n  const { id, stop } = await rec.startRecording('lobby', {\r\n      layout: 'grid',\r\n      format: 'mp4',\r\n      sink:   { file: '/var/recordings/lobby.mp4' },\r\n  });\r\n  // later\r\n  await stop();",
+			"examples": [
+				{
+					"code": "  const rec = new RecordingManager({ adapter: hub.sfu });\r\n  const { id, stop } = await rec.startRecording('lobby', {\r\n      layout: 'grid',\r\n      format: 'mp4',\r\n      sink:   { file: '/var/recordings/lobby.mp4' },\r\n  });\r\n  // later\r\n  await stop();",
+					"lang": "javascript",
+					"title": "Auto-pipeline recording on top of any adapter"
+				},
+				{
+					"code": "  const rec = new RecordingManager({ adapter: hub.sfu, ffmpegPath: '/usr/bin/ffmpeg' });\r\n  await rec.startRecording('lobby', {\r\n      pipeline: 'ffmpeg',\r\n      inputs:   [{ sdp: '/tmp/in.sdp' }],\r\n      sink:     { file: '/tmp/out.mp4' },\r\n  });",
+					"lang": "javascript",
+					"title": "Force the ffmpeg pipeline"
+				},
+				{
+					"code": "  const ing = new IngressManager({ adapter: hub.sfu });\r\n  const stream = await ing.createIngress({ kind: 'whip', name: 'studio', roomName: 'lobby' });\r\n  // publish using stream.native.url",
+					"lang": "javascript",
+					"title": "Create a WHIP ingress and route it into a room"
+				}
+			],
+			"options": [
+				{
+					"option": "adapter",
+					"type": "object",
+					"default": "-",
+					"notes": "SfuAdapter (or anything exposing egress methods)."
+				},
+				{
+					"option": "spawn",
+					"type": "Function",
+					"default": "-",
+					"notes": "For `pipeline: 'ffmpeg'` (defaults to `child_process.spawn`)."
+				},
+				{
+					"option": "ffmpegPath",
+					"type": "string",
+					"default": "-",
+					"notes": ""
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Recording",
+					"methods": [
+						{
+							"method": "startRecording",
+							"signature": "startRecording(roomName, [opts])",
+							"description": "Start a new recording for `roomName`.  The `pipeline` field selects the backend: - `'livekit'` — call `adapter.startRoomCompositeEgress`. - `'livekit-track'` — call `adapter.startTrackEgress`. - `'ffmpeg'` — spawn an ffmpeg child process (requires `{ ffmpegPath }` or `ffmpeg-static`; caller wires RTP). - `'memory'` — bookkeeping only (default when no other backend can be inferred).",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<{id:string, status:string, stop:Function, info():object}>",
+								"description": ""
+							}
+						},
+						{
+							"method": "stopRecording",
+							"signature": "stopRecording(id)",
+							"description": "Stop an active recording by id.  Idempotent.",
+							"methodParams": [
+								{
+									"param": "id",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<boolean>",
+								"description": "true if the recording was stopped here."
+							}
+						},
+						{
+							"method": "list",
+							"signature": "list()",
+							"description": "List every recording the manager knows about.",
+							"methodReturns": {
+								"type": "Array<object>",
+								"description": ""
+							}
+						},
+						{
+							"method": "createIngress",
+							"signature": "createIngress(opts)",
+							"description": "Create an ingress (WHIP / RTMP / URL pull / SIP).",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": "`{ kind, roomName, name, ... }`"
+								}
+							]
+						},
+						{
+							"method": "deleteIngress",
+							"signature": "deleteIngress(id)",
+							"description": "Tear down an ingress by id.  Idempotent.",
+							"methodParams": [
+								{
+									"param": "id",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<boolean>",
+								"description": ""
+							}
+						},
+						{
+							"method": "list",
+							"signature": "list()",
+							"description": "List every known ingress.",
+							"methodReturns": {
+								"type": "Array<object>",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Inspection",
+					"methods": [
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Aggregate counts for observability.",
+							"methodReturns": {
+								"type": "{recording:number, stopped:number, failed:number, total:number}",
+								"description": ""
+							}
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Stop every active recording.  Safe to call during shutdown."
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Tear down every active ingress.  Safe to call during shutdown."
 						}
 					]
 				}

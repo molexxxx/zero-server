@@ -12,8 +12,8 @@
 
 <p align="center">
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
-  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7781%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
-  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-95.87%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-7891%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
+  <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-95%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
   <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.dev-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
@@ -55,7 +55,7 @@ npm install @zero-server/core @zero-server/body @zero-server/middleware
 | `@zero-server/auth` | `jwt`, `session`, `oauth`, `authorize`, `twoFactor`, `webauthn`, `trustedDevice`, `enrollment` |
 | `@zero-server/orm` | `Database`, `Model`, `Query`, `TYPES`, migrations, seeders, replicas, search, geo, tenancy, audit |
 | `@zero-server/realtime` | `WebSocketConnection`, `WebSocketPool`, `SSEStream` |
-| `@zero-server/webrtc` | `createWebRTC`, `SignalingHub`, `Room`/`Peer`, SDP/ICE parsers, STUN client, `TurnServer` + `issueTurnCredentials`, SFU adapters (memory, mediasoup, LiveKit), `signJoinToken`/`verifyJoinToken`, E2EE, cluster coordinator, `spawnBotPeer` |
+| `@zero-server/webrtc` | `createWebRTC`, `SignalingHub`, `Room`/`Peer`, SDP/ICE parsers, STUN client, `TurnServer` + `issueTurnCredentials`, SFU adapters (memory, mediasoup, LiveKit), `signJoinToken`/`verifyJoinToken`, E2EE, cluster + cascade coordinators, MCU adapters, `RecordingManager`/`IngressManager`, `spawnBotPeer` |
 | `@zero-server/grpc` | gRPC server, client, codec, status, metadata, framing, health, reflection, balancer |
 | `@zero-server/observe` | `MetricsRegistry`, `Tracer`, structured `Logger`, health checks |
 | `@zero-server/lifecycle` | `LifecycleManager`, `ClusterManager`, `clusterize` |
@@ -196,11 +196,16 @@ app.listen(3000)
 | SFU adapters | `SfuAdapter` interface with `MemorySfuAdapter`, `MediasoupSfuAdapter`, `LiveKitSfuAdapter`, and `loadSfuAdapter()` for dynamic selection |
 | Join tokens | `signJoinToken` / `verifyJoinToken` for short-lived signed room admission |
 | End-to-end encryption | `E2eeChannel`, `attachE2ee`, `generateE2eeKeyPair`, `sealKey`, `openSealedKey` (sealed-sender key exchange) |
-| Clustering | `useCluster`, `ClusterCoordinator`, `MemoryClusterAdapter` for multi-node room state |
+| Clustering | `useCluster`, `ClusterCoordinator`, `MemoryClusterAdapter` for multi-node room state + region-aware bridge selection |
+| Cascade | `useCascade`, `CascadeCoordinator` to fan producers across SFU nodes via `pipeToRouter` (mediasoup-style) |
+| MCU | `McuAdapter`, `MemoryMcuAdapter`, `FfmpegMcuAdapter` for audio/video mixing on top of any SFU |
+| Recording & ingress | `RecordingManager` (LiveKit egress / ffmpeg / bookkeeping) and `IngressManager` (WHIP, RTMP, SIP, URL pull) |
 | Bot peer | `spawnBotPeer()` headless server-side peer for testing, recording, and automated agents |
 | Observability | `bindObservability(rtc, { metrics, logger })` for Prometheus metrics and structured logs |
 | Errors | `WebRTCError`, `SignalingError`, `IceError`, `TurnError`, `SdpError` |
 | CLI | `runWebRTCCommand` - `npx zs webrtc turn:cred`, `webrtc sdp:parse`, etc. |
+
+> **Scaling beyond a single node?** See [docs/scopes/webrtc-scaling.md](docs/scopes/webrtc-scaling.md) for the topology decision tree (mesh → SFU → cascade → MCU), capacity rules of thumb, and end-to-end multi-region examples.
 
 ### Observability
 
@@ -420,6 +425,9 @@ const {
   spawnBotPeer, bindObservability,
   E2eeChannel, attachE2ee, generateE2eeKeyPair, sealKey, openSealedKey,
   useCluster, ClusterCoordinator, MemoryClusterAdapter,
+  useCascade, CascadeCoordinator, CH_CASCADE,
+  McuAdapter, MemoryMcuAdapter, FfmpegMcuAdapter,
+  RecordingManager, IngressManager,
   runWebRTCCommand,
   WebRTCError, SignalingError, IceError, TurnError, SdpError,
 
