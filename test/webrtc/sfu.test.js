@@ -15,7 +15,12 @@ describe('SfuAdapter base class', () =>
     {
         const a = new SfuAdapter();
         for (const m of ['createRouter', 'createTransport', 'produce', 'consume',
-            'pauseProducer', 'resumeProducer', 'closeRouter', 'stats'])
+            'pauseProducer', 'resumeProducer', 'closeRouter', 'stats',
+            'setConsumerPreferredLayers', 'setConsumerPriority', 'requestKeyFrame',
+            'pauseConsumer', 'resumeConsumer', 'setTransportBitrates',
+            'produceData', 'consumeData', 'observeAudioLevels', 'observeActiveSpeaker',
+            'pipeToRouter', 'getProducerStats', 'getConsumerStats', 'getTransportStats',
+            'enableTraceEvent'])
         {
             await expect(a[m]()).rejects.toMatchObject({
                 name: 'WebRTCError', code: 'WEBRTC_SFU_NOT_IMPLEMENTED',
@@ -250,5 +255,152 @@ describe('loadSfuAdapter', () =>
             expect(err).toBeInstanceOf(WebRTCError);
             expect(err.code).toBe('WEBRTC_SFU_NOT_INSTALLED');
         }
+    });
+});
+
+describe('MemorySfuAdapter - extended controls', () =>
+{
+    let sfu, router, tProd, tSub, prod, cons;
+    beforeEach(async () =>
+    {
+        sfu = new MemorySfuAdapter();
+        router = await sfu.createRouter();
+        tProd = await sfu.createTransport(router, { id: 'pub' });
+        tSub = await sfu.createTransport(router, { id: 'sub' });
+        prod = await sfu.produce(tProd, 'video', {});
+        cons = await sfu.consume(tSub, prod.producerId, {});
+    });
+
+    it('setConsumerPreferredLayers persists layers and emits an event', async () =>
+    {
+        const seen = [];
+        sfu.onEvent((e, p) => e === 'consumer-layers-change' && seen.push(p));
+        await sfu.setConsumerPreferredLayers(cons.consumerId, { spatialLayer: 1, temporalLayer: 2 });
+        expect(seen[0]).toMatchObject({ consumerId: cons.consumerId, layers: { spatialLayer: 1, temporalLayer: 2 } });
+    });
+
+    it('setConsumerPreferredLayers validates layers', async () =>
+    {
+        await expect(sfu.setConsumerPreferredLayers(cons.consumerId, null))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_LAYERS' });
+        await expect(sfu.setConsumerPreferredLayers(cons.consumerId, { spatialLayer: 'low' }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_LAYERS' });
+    });
+
+    it('setConsumerPriority clamps to a positive integer', async () =>
+    {
+        await sfu.setConsumerPriority(cons.consumerId, 5);
+        await expect(sfu.setConsumerPriority(cons.consumerId, 0))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_PRIORITY' });
+    });
+
+    it('requestKeyFrame increments a counter and emits an event', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e, p) => e === 'consumer-keyframe' && events.push(p));
+        await sfu.requestKeyFrame(cons.consumerId);
+        await sfu.requestKeyFrame(cons.consumerId);
+        expect(events).toHaveLength(2);
+    });
+
+    it('pauseConsumer / resumeConsumer flip state and are idempotent', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e) => events.push(e));
+        await sfu.pauseConsumer(cons.consumerId);
+        await sfu.pauseConsumer(cons.consumerId);
+        await sfu.resumeConsumer(cons.consumerId);
+        await sfu.resumeConsumer(cons.consumerId);
+        expect(events.filter((e) => e === 'consumer-pause')).toHaveLength(1);
+        expect(events.filter((e) => e === 'consumer-resume')).toHaveLength(1);
+    });
+
+    it('pause/resume reject unknown consumers', async () =>
+    {
+        await expect(sfu.pauseConsumer('c-bogus'))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_CONSUMER' });
+    });
+
+    it('setTransportBitrates stores caller bitrates', async () =>
+    {
+        await sfu.setTransportBitrates(tProd.transportId, { initial: 600000, max: 1500000 });
+        const ts = await sfu.stats(tProd.id);
+        expect(ts.bitrates).toMatchObject({ initial: 600000, max: 1500000 });
+    });
+
+    it('produceData / consumeData wire a DC pair and emit events', async () =>
+    {
+        const evs = [];
+        sfu.onEvent((e, p) => evs.push([e, p]));
+        const dp = await sfu.produceData(tProd, { label: 'chat', ordered: true });
+        const dc = await sfu.consumeData(tSub, dp.dataProducerId);
+        expect(dp.label).toBe('chat');
+        expect(dc.dataProducerId).toBe(dp.dataProducerId);
+        expect(evs.some((e) => e[0] === 'data-producer-new')).toBe(true);
+        expect(evs.some((e) => e[0] === 'data-consumer-new')).toBe(true);
+    });
+
+    it('consumeData rejects unknown data producers', async () =>
+    {
+        await expect(sfu.consumeData(tSub, 'dp-bogus'))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_DATA_PRODUCER' });
+    });
+
+    it('observeAudioLevels emits via the .emit() seam', async () =>
+    {
+        const seen = [];
+        sfu.onEvent((e, p) => e === 'audio-level' && seen.push(p));
+        const obs = await sfu.observeAudioLevels(router.id, { interval: 250 });
+        obs.emit([{ peerId: 'pub', level: -42 }]);
+        obs.close();
+        expect(seen[0]).toMatchObject({ observerId: obs.id, routerId: router.id });
+        expect(seen[0].levels).toEqual([{ peerId: 'pub', level: -42 }]);
+    });
+
+    it('observeActiveSpeaker emits via the .emit() seam', async () =>
+    {
+        const seen = [];
+        sfu.onEvent((e, p) => e === 'active-speaker' && seen.push(p));
+        const obs = await sfu.observeActiveSpeaker(router.id);
+        obs.emit(prod.producerId);
+        expect(seen[0]).toMatchObject({ observerId: obs.id, routerId: router.id, producerId: prod.producerId });
+    });
+
+    it('pipeToRouter returns handle and emits pipe-open', async () =>
+    {
+        const remote = await sfu.createRouter();
+        const seen = [];
+        sfu.onEvent((e, p) => e === 'pipe-open' && seen.push(p));
+        const handle = await sfu.pipeToRouter({
+            producerId: prod.producerId, localRouterId: router.id, remoteRouter: remote,
+        });
+        expect(handle).toMatchObject({
+            producerId:     prod.producerId,
+            localRouterId:  router.id,
+            remoteRouterId: remote.id,
+        });
+        expect(handle.pipeProducerId).toBeTruthy();
+        expect(handle.pipeConsumerId).toBeTruthy();
+        expect(seen).toHaveLength(1);
+    });
+
+    it('pipeToRouter rejects when remoteRouter is missing', async () =>
+    {
+        await expect(sfu.pipeToRouter({ producerId: prod.producerId, localRouterId: router.id }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_PIPE' });
+    });
+
+    it('getProducerStats / getConsumerStats / getTransportStats return arrays', async () =>
+    {
+        await expect(sfu.getProducerStats(prod.producerId)).resolves.toBeInstanceOf(Array);
+        await expect(sfu.getConsumerStats(cons.consumerId)).resolves.toBeInstanceOf(Array);
+        await expect(sfu.getTransportStats(tProd.transportId)).resolves.toBeInstanceOf(Array);
+    });
+
+    it('enableTraceEvent persists requested trace types', async () =>
+    {
+        await sfu.enableTraceEvent(router.id, ['rtp', 'pli']);
+        const s = await sfu.stats(router.id);
+        expect(s.traceTypes).toEqual(['rtp', 'pli']);
     });
 });

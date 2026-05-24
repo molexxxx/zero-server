@@ -675,3 +675,146 @@ describe('Peer', () =>
         expect(new IceError('x')).toBeInstanceOf(Error);
     });
 });
+
+describe('SignalingHub - topology + media facade', () =>
+{
+    it('defaults topology to "auto" with maxMeshPeers=4', () =>
+    {
+        const hub = new SignalingHub();
+        expect(hub.defaultTopology).toBe('auto');
+        expect(hub.maxMeshPeers).toBe(4);
+        const room = hub.room('r');
+        expect(room.topologyMode).toBe('auto');
+        expect(room.topology).toBe('mesh');
+    });
+
+    it('rejects invalid topology in options', () =>
+    {
+        expect(() => new SignalingHub({ topology: 'spaghetti' })).toThrow();
+    });
+
+    it('honors a fixed topology for new rooms', () =>
+    {
+        const hub = new SignalingHub({ topology: 'sfu' });
+        const room = hub.room('r');
+        expect(room.topologyMode).toBe('sfu');
+        expect(room.topology).toBe('sfu');
+    });
+
+    it('includes topology in the joined frame', () =>
+    {
+        const hub = new SignalingHub();
+        hub.room('lobby').open();
+        const { transport } = attachPeer(hub);
+        transport.inject({ type: 'join', room: 'lobby' });
+        const joined = transport.outbox.map(JSON.parse).find(m => m.type === 'joined');
+        expect(joined).toBeTruthy();
+        expect(joined.topology).toBe('mesh');
+    });
+
+    it('auto-promotes mesh→sfu when exceeding maxMeshPeers', async () =>
+    {
+        const hub = new SignalingHub({ topology: 'auto', maxMeshPeers: 2 });
+        const room = hub.room('r').open();
+        const promotions = [];
+        hub.on('topology:promoted', (ev) => promotions.push(ev));
+        hub.on('peer:limit:reached', () => {});
+
+        for (let i = 0; i < 3; i++)
+        {
+            const { transport } = attachPeer(hub);
+            transport.inject({ type: 'join', room: 'r' });
+        }
+        expect(room.topology).toBe('sfu');
+        expect(promotions[0]).toMatchObject({ from: 'mesh', to: 'sfu' });
+    });
+
+    it('auto-demotes sfu→mesh on leave when back at/under maxMeshPeers', () =>
+    {
+        const hub = new SignalingHub({ topology: 'auto', maxMeshPeers: 2 });
+        const room = hub.room('r').open();
+        const tps = [];
+        for (let i = 0; i < 3; i++)
+        {
+            const { transport } = attachPeer(hub);
+            transport.inject({ type: 'join', room: 'r' });
+            tps.push(transport);
+        }
+        expect(room.topology).toBe('sfu');
+        const demotions = [];
+        hub.on('topology:demoted', (ev) => demotions.push(ev));
+        tps[0].close();
+        expect(room.topology).toBe('mesh');
+        expect(demotions[0]).toMatchObject({ from: 'sfu', to: 'mesh' });
+    });
+
+    it('Room.setTopology broadcasts a room-topology frame', () =>
+    {
+        const hub = new SignalingHub({ topology: 'mesh' });
+        const room = hub.room('r').open();
+        const { transport } = attachPeer(hub);
+        transport.inject({ type: 'join', room: 'r' });
+        transport.outbox.length = 0;
+        room.setTopology('sfu');
+        const frame = transport.outbox.map(JSON.parse).find(m => m.type === 'room-topology');
+        expect(frame).toMatchObject({ room: 'r', topology: 'sfu', previous: 'mesh' });
+    });
+
+    it('Room.setTopology rejects invalid values', () =>
+    {
+        const hub = new SignalingHub();
+        const room = hub.room('r');
+        expect(() => room.setTopology('spaghetti')).toThrow();
+    });
+
+    it('hub.media throws WEBRTC_SFU_NOT_CONFIGURED when no adapter is mounted', async () =>
+    {
+        const hub = new SignalingHub();
+        expect(hub.media.configured).toBe(false);
+        expect(hub.media.adapter).toBe(null);
+        await expect(hub.media.createRouter()).rejects.toMatchObject({
+            code: 'WEBRTC_SFU_NOT_CONFIGURED',
+        });
+    });
+
+    it('hub.media delegates to a mounted adapter', async () =>
+    {
+        const hub = new SignalingHub({ sfu: 'memory' });
+        expect(hub.media.configured).toBe(true);
+        const router = await hub.media.createRouter();
+        expect(router.id).toBeTruthy();
+    });
+
+    it('hub.media.onEvent forwards adapter events', async () =>
+    {
+        const hub = new SignalingHub({ sfu: 'memory' });
+        const seen = [];
+        const off = hub.media.onEvent((e) => seen.push(e));
+        await hub.media.createRouter();
+        off();
+        expect(seen).toContain('router-new');
+    });
+
+    it('hub.stats() reports topology, peers, rooms and media plane', async () =>
+    {
+        const hub = new SignalingHub({ topology: 'auto', maxMeshPeers: 4, sfu: 'memory' });
+        hub.room('lobby').open();
+        const { transport } = attachPeer(hub);
+        transport.inject({ type: 'join', room: 'lobby' });
+        const s = await hub.stats();
+        expect(s).toMatchObject({ topology: 'auto', maxMeshPeers: 4, peers: 1 });
+        expect(s.rooms.find(r => r.name === 'lobby')).toMatchObject({
+            size: 1, topology: 'mesh', topologyMode: 'auto',
+        });
+        expect(s.mediaPlane).toMatchObject({ kind: 'global' });
+    });
+
+    it('hub.stats() reports mediaPlane=null when no adapter is mounted', async () =>
+    {
+        const hub = new SignalingHub();
+        const s = await hub.stats();
+        expect(s.mediaPlane).toBe(null);
+    });
+});
+
+

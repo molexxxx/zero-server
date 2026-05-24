@@ -45,11 +45,17 @@ export interface SignalingHubOptions {
     originAllowlist?: string[];
     joinTokenSecret?: string | Buffer;
     autoCreateRooms?: boolean;
+    topology?: 'mesh' | 'sfu' | 'mcu' | 'auto';
+    maxMeshPeers?: number;
+    sfu?: SfuAdapter | 'memory' | 'mediasoup' | 'livekit' | string;
+    sfuOpts?: Record<string, unknown>;
 }
 
 export interface WebRTCOptions extends SignalingHubOptions {
     path?: string;
     iceServers?: IceServerConfig[] | 'auto';
+    metrics?: unknown;
+    tracer?: unknown;
 }
 
 export interface PeerAttachInfo {
@@ -203,11 +209,14 @@ export declare class Room {
     readonly name: string;
     readonly hub: SignalingHub | null;
     isOpen: boolean;
+    topology: 'mesh' | 'sfu' | 'mcu';
+    topologyMode: 'mesh' | 'sfu' | 'mcu' | 'auto';
     constructor(name: string, opts?: { hub?: SignalingHub });
     open(): this;
     require(fn: (peer: Peer) => boolean | Promise<boolean>): this;
     canPublish(fn: (peer: Peer) => boolean): this;
     canSubscribe(fn: (peer: Peer) => boolean): this;
+    setTopology(topology: 'mesh' | 'sfu' | 'mcu'): this;
     readonly size: number;
     peers(): Peer[];
     canJoin(peer: Peer): boolean | Promise<boolean>;
@@ -227,14 +236,67 @@ export interface SignalingHubEvents {
     wireError:       (ev: { peer: Peer; code: string }) => void;
     e2eeKey:         (ev: { peer: Peer; room: Room; epoch: number; key: string }) => void;
     clusterError:    (err: Error) => void;
+    'peer:limit:reached':  (ev: { room: Room; size: number; limit: number }) => void;
+    'topology:promoted':   (ev: { room: Room; from: string; to: string; size: number }) => void;
+    'topology:demoted':    (ev: { room: Room; from: string; to: string; size: number }) => void;
+    'topology:changed':    (ev: { room: Room; topology: string; previous: string }) => void;
+}
+
+export interface HubStatsRoom {
+    name: string;
+    size: number;
+    topology: 'mesh' | 'sfu' | 'mcu';
+    topologyMode: 'mesh' | 'sfu' | 'mcu' | 'auto';
+}
+
+export interface HubStats {
+    topology: 'mesh' | 'sfu' | 'mcu' | 'auto';
+    maxMeshPeers: number;
+    peers: number;
+    rooms: HubStatsRoom[];
+    mediaPlane: SfuStats | { error: string } | null;
+}
+
+export interface MediaFacade {
+    readonly adapter: SfuAdapter | null;
+    readonly configured: boolean;
+    onEvent(handler: SfuEventHandler): () => void;
+    createRouter(opts?: unknown): Promise<SfuRouter>;
+    createTransport(router: SfuRouter, peer: SfuPeerInfo): Promise<SfuTransport>;
+    produce(transport: SfuTransport, kind: 'audio' | 'video', rtpParams: unknown): Promise<SfuProducer>;
+    consume(transport: SfuTransport, producerId: string, rtpCaps: unknown): Promise<SfuConsumer>;
+    pauseProducer(producerId: string): Promise<void>;
+    resumeProducer(producerId: string): Promise<void>;
+    closeRouter(routerId: string): Promise<void>;
+    stats(scope?: string): Promise<SfuStats>;
+    setConsumerPreferredLayers(consumerId: string, layers: { spatialLayer: number; temporalLayer?: number }): Promise<void>;
+    setConsumerPriority(consumerId: string, priority: number): Promise<void>;
+    requestKeyFrame(consumerId: string): Promise<void>;
+    pauseConsumer(consumerId: string): Promise<void>;
+    resumeConsumer(consumerId: string): Promise<void>;
+    setTransportBitrates(transportId: string, opts: { initial?: number; min?: number; max?: number; maxIncoming?: number; maxOutgoing?: number }): Promise<void>;
+    produceData(transport: SfuTransport, opts?: { label?: string; protocol?: string; ordered?: boolean }): Promise<SfuDataProducer>;
+    consumeData(transport: SfuTransport, dataProducerId: string, opts?: { ordered?: boolean }): Promise<SfuDataConsumer>;
+    observeAudioLevels(routerId: string, opts?: { interval?: number; threshold?: number; maxEntries?: number }): Promise<SfuObserver>;
+    observeActiveSpeaker(routerId: string, opts?: { interval?: number }): Promise<SfuObserver>;
+    pipeToRouter(opts: { producerId: string; localRouterId: string; remoteRouter: SfuRouter }): Promise<SfuPipeHandle>;
+    getProducerStats(producerId: string): Promise<Array<Record<string, unknown>>>;
+    getConsumerStats(consumerId: string): Promise<Array<Record<string, unknown>>>;
+    getTransportStats(transportId: string): Promise<Array<Record<string, unknown>>>;
+    enableTraceEvent(routerId: string, types: string[]): Promise<void>;
 }
 
 export declare class SignalingHub extends EventEmitter {
     constructor(opts?: SignalingHubOptions);
     readonly size: number;
+    readonly sfu: SfuAdapter | null;
+    readonly media: MediaFacade;
+    defaultTopology: 'mesh' | 'sfu' | 'mcu' | 'auto';
+    maxMeshPeers: number;
     room(name: string): Room;
     rooms(): Room[];
     attach(transport: PeerTransport, info?: PeerAttachInfo): Peer;
+    stats(): Promise<HubStats>;
     close(): void;
     on<E extends keyof SignalingHubEvents>(event: E, listener: SignalingHubEvents[E]): this;
     on(event: string, listener: (...args: unknown[]) => void): this;
@@ -408,6 +470,46 @@ export interface SfuStats {
     [key: string]: unknown;
 }
 
+export interface SfuDataProducer {
+    id: string;
+    dataProducerId: string;
+    transportId: string;
+    label: string;
+    protocol: string;
+    ordered: boolean;
+}
+
+export interface SfuDataConsumer {
+    id: string;
+    dataConsumerId: string;
+    transportId: string;
+    dataProducerId: string;
+    label: string;
+    protocol: string;
+    ordered: boolean;
+}
+
+export interface SfuObserver {
+    id: string;
+    routerId: string;
+    kind: 'audio-level' | 'active-speaker';
+    interval: number;
+    threshold?: number;
+    maxEntries?: number;
+    close(): void;
+    emit(payload: unknown): void;
+}
+
+export interface SfuPipeHandle {
+    id: string;
+    pipeId: string;
+    producerId: string;
+    localRouterId: string;
+    remoteRouterId: string;
+    pipeProducerId: string;
+    pipeConsumerId: string;
+}
+
 export type SfuEventHandler = (event: string, payload: unknown) => void;
 
 export declare class SfuAdapter {
@@ -420,6 +522,21 @@ export declare class SfuAdapter {
     resumeProducer(producerId: string): Promise<void>;
     closeRouter(routerId: string): Promise<void>;
     stats(scope?: string): Promise<SfuStats>;
+    setConsumerPreferredLayers(consumerId: string, layers: { spatialLayer: number; temporalLayer?: number }): Promise<void>;
+    setConsumerPriority(consumerId: string, priority: number): Promise<void>;
+    requestKeyFrame(consumerId: string): Promise<void>;
+    pauseConsumer(consumerId: string): Promise<void>;
+    resumeConsumer(consumerId: string): Promise<void>;
+    setTransportBitrates(transportId: string, opts: { initial?: number; min?: number; max?: number; maxIncoming?: number; maxOutgoing?: number }): Promise<void>;
+    produceData(transport: SfuTransport, opts?: { label?: string; protocol?: string; ordered?: boolean }): Promise<SfuDataProducer>;
+    consumeData(transport: SfuTransport, dataProducerId: string, opts?: { ordered?: boolean }): Promise<SfuDataConsumer>;
+    observeAudioLevels(routerId: string, opts?: { interval?: number; threshold?: number; maxEntries?: number }): Promise<SfuObserver>;
+    observeActiveSpeaker(routerId: string, opts?: { interval?: number }): Promise<SfuObserver>;
+    pipeToRouter(opts: { producerId: string; localRouterId: string; remoteRouter: SfuRouter }): Promise<SfuPipeHandle>;
+    getProducerStats(producerId: string): Promise<Array<Record<string, unknown>>>;
+    getConsumerStats(consumerId: string): Promise<Array<Record<string, unknown>>>;
+    getTransportStats(transportId: string): Promise<Array<Record<string, unknown>>>;
+    enableTraceEvent(routerId: string, types: string[]): Promise<void>;
     onEvent(handler: SfuEventHandler): () => void;
 }
 
