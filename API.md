@@ -83,6 +83,10 @@
   - [Observability](#observability)
   - [E2EE Key Relay](#e2ee-key-relay)
   - [Cluster Adapter](#cluster-adapter)
+  - [Cascade Coordinator](#cascade-coordinator)
+  - [MCU Adapter](#mcu-adapter)
+  - [Ffmpeg MCU Adapter](#ffmpeg-mcu-adapter)
+  - [Recording Manager](#recording-manager)
   - [WebRTC CLI](#webrtc-cli)
 - [gRPC](#grpc)
   - [Server](#server)
@@ -1980,6 +1984,13 @@ WebRTC signaling hub. Central WS broker that owns the room registry, attaches pe
 | `close` | `close()` | Shut down every peer and clear every room. |
 
 
+#### Topology / capacity
+
+| Method | Signature | Description |
+|---|---|---|
+| `stats` | `stats()` | Snapshot of hub state for dashboards and health checks. Includes the configured topology defaults, current peer/room counts, and a coarse media-plane summary when an SFU adapter is mounted. |
+
+
 #### Options
 
 | Option | Type | Default | Description |
@@ -1994,6 +2005,19 @@ on this list are rejected at attach time. |
 | `joinTokenSecret` | string \| Buffer | `-` | If set, every `join` must include a valid
 JWT signed with this secret and audience `room:<name>`. |
 | `autoCreateRooms` | boolean | `true` | If false, joins targeting an unknown room are rejected. |
+| `topology` | 'mesh' \| 'sfu' \| 'mcu' \| 'auto' | `'auto'` | Default room topology. `auto` starts every room
+as full mesh and promotes to `sfu` once the peer count
+exceeds `maxMeshPeers`. Pure signaling is unchanged;
+the hint is broadcast to peers and surfaced via
+`hub.stats()` so clients can switch transports. |
+| `maxMeshPeers` | number | `4` | Peer count at which an `auto` room is promoted from
+mesh to SFU (and at which a `mesh` room emits
+`peer:limit:reached` for capacity alarms). |
+| `sfu` | SfuAdapter \| string | `-` | Optional SFU adapter or spec string (memory\|mediasoup\|livekit\|<pkg>).
+Mounts a `hub.media` facade backed by this adapter so
+application code can drive routers/transports/producers
+through the hub without importing the adapter directly. |
+| `sfuOpts` | object | `-` | Adapter constructor options, forwarded when `opts.sfu` is a string. |
 
 
 > **Bind a hub to an `app.ws()` route with all production knobs**
@@ -2060,6 +2084,7 @@ Room / channel abstraction for the signaling hub. Holds a set of peers plus a fl
 | `peers` | `peers()` |  |
 | `has` | `has()` |  |
 | `canJoin` | `canJoin(peer)` | Evaluate every `require()` gate against the candidate peer. |
+| `setTopology` | `setTopology(topology)` | Force the room's topology and broadcast the change to every peer. Pure signaling: the hub does not redirect media; client SDKs are responsible for switching transports when the new topology is received via `room-topology`. |
 
 
 #### Fan-out
@@ -2342,6 +2367,59 @@ deployments should pass the server's public IP. |
 
 Pluggable Selective Forwarding Unit (SFU) adapter interface. The signaling hub stays media-agnostic; the adapter owns routers, transports, producers, and consumers. Ships with `MemorySfuAdapter`, `MediasoupSfuAdapter`, and `LiveKitSfuAdapter`. Subclass `SfuAdapter` for custom backends.
 
+#### Consumer-side BWE / quality knobs
+
+| Method | Signature | Description |
+|---|---|---|
+| `setConsumerPreferredLayers` | `setConsumerPreferredLayers(consumerId, layers)` | Switch a consumer to the given simulcast spatial / temporal layer. |
+| `setConsumerPriority` | `setConsumerPriority()` | Set consumer priority (1-255, higher = more bandwidth budget under congestion). |
+| `requestKeyFrame` | `requestKeyFrame()` | Ask the SFU to forward a PLI/FIR to the producer the consumer is bound to. |
+| `pauseConsumer` | `pauseConsumer()` | Pause an individual consumer (stop forwarding to a single subscriber). |
+| `resumeConsumer` | `resumeConsumer()` | Resume a previously paused consumer. |
+
+
+#### Transport-level BWE caps
+
+| Method | Signature | Description |
+|---|---|---|
+| `setTransportBitrates` | `setTransportBitrates(transportId, opts)` | Apply incoming/outgoing bitrate hints to a transport. |
+
+
+#### Data channels
+
+| Method | Signature | Description |
+|---|---|---|
+| `produceData` | `produceData()` | Create an SCTP data producer on a transport. |
+| `consumeData` | `consumeData()` | Create an SCTP data consumer bound to `dataProducerId`. |
+
+
+#### Observers
+
+| Method | Signature | Description |
+|---|---|---|
+| `observeAudioLevels` | `observeAudioLevels(routerId, [opts])` | Start an audio-level observer on a router. Emits `audio-level` adapter events. Returns `{ id, close() }`. |
+| `observeActiveSpeaker` | `observeActiveSpeaker()` | Start an active-speaker observer. Emits `active-speaker` adapter events. Returns `{ id, close() }`. |
+
+
+#### Cross-router cascade (SFU mesh)
+
+| Method | Signature | Description |
+|---|---|---|
+| `pipeToRouter` | `pipeToRouter(opts)` | Pipe a producer from this adapter's local router into another router (possibly on a remote SFU node). Returns `{ pipeProducerId, pipeConsumerId, localRouterId, remoteRouterId }`. |
+
+
+#### Targeted stats (Phase 2 surface; coarse stats() remains for back-compat)
+
+| Method | Signature | Description |
+|---|---|---|
+| `getProducerStats` | `getProducerStats()` | Return native stats for a single producer. |
+| `getConsumerStats` | `getConsumerStats()` | Return native stats for a single consumer. |
+| `getTransportStats` | `getTransportStats()` | Return native stats for a single transport. |
+| `enableTraceEvent` | `enableTraceEvent()` | Toggle low-level trace event emission on a router (mediasoup `trace` events: 'probation', 'bwe', 'rtp', 'keyframe', etc.). |
+| `onEvent` | `onEvent()` | Register a handler invoked as `(event, payload)` for adapter-level events ('producer-new', 'producer-pause', 'consumer-new', 'transport-close', 'router-close', etc.). Returns an unsubscribe function. |
+| `loadSfuAdapter` | `loadSfuAdapter(spec, [opts])` | Lazy-load and instantiate an SFU adapter. |
+
+
 #### Methods
 
 | Method | Signature | Description |
@@ -2354,8 +2432,6 @@ Pluggable Selective Forwarding Unit (SFU) adapter interface. The signaling hub s
 | `resumeProducer` | `resumeProducer()` | Override to resume a previously paused producer. |
 | `closeRouter` | `closeRouter()` | Override to close a router and cascade-close its transports. |
 | `stats` | `stats()` | Override to return adapter stats; `scope` may be a routerId/transportId. |
-| `onEvent` | `onEvent()` | Register a handler invoked as `(event, payload)` for adapter-level events ('producer-new', 'producer-pause', 'consumer-new', 'transport-close', 'router-close', etc.). Returns an unsubscribe function. |
-| `loadSfuAdapter` | `loadSfuAdapter(spec, [opts])` | Lazy-load and instantiate an SFU adapter. |
 
 
 > **Select an adapter at boot via env**
@@ -2440,6 +2516,8 @@ mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a `Worker` p
 | `workerSettings` | object | `-` | Forwarded to `mediasoup.createWorker(...)`. |
 | `mediaCodecs` | Array | `-` | Default router media codecs. |
 | `webRtcTransportOptions` | object | `-` | Default `router.createWebRtcTransport(...)` options. |
+| `webRtcServer` | object | `-` | Pre-created `WebRtcServer` to share a single UDP/TCP port across workers (k8s / single-IP). |
+| `webRtcServerOptions` | object | `-` | `{ listenInfos: [...] }` forwarded to `worker.createWebRtcServer(...)` on first use. |
 
 
 > **Production setup with custom RTP port range and announced IP**
@@ -2503,6 +2581,13 @@ mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a `Worker` p
 ### LiveKit SFU Adapter
 
 LiveKit-backed SFU adapter (peerDependency on `livekit-server-sdk`). Maps the `SfuAdapter` contract onto LiveKit's remote media plane: `createTransport` mints an AccessToken, mute/close delegate to `RoomServiceClient`, and produce/consume are local bookkeeping while LiveKit handles media client-side.
+
+#### Room / participant REST passthroughs
+
+| Method | Signature | Description |
+|---|---|---|
+| `getRoomInfo` | `getRoomInfo()` | Fetch one room from LiveKit by name.  Returns the matching entry from `client.listRooms([name])` or `null`. |
+
 
 #### Methods
 
@@ -2737,6 +2822,9 @@ Cluster adapter for the signaling hub. `useCluster(hub, adapter)` glues a `Signa
 | `locate` | `locate(peerId)` | Look up the node that owns a remote peer, if any. |
 | `routeDirect` | `routeDirect(toPeerId, type, payload)` | Forward a direct frame to a peer on another node.  Called by the hub when a routed message (`offer` / `answer` / `ice`) targets a peer id that is not in the local registry. |
 | `fanoutRoom` | `fanoutRoom(roomName, type, payload, [excludeId])` | Mirror a `room.broadcast(...)` to peers in the same room on other nodes.  Called automatically from `Room#broadcast`. |
+| `publishLoad` | `publishLoad()` | Publish a load snapshot now.  Returns the snapshot that was sent. Called automatically on the configured interval when `loadProbe` is set, but can also be invoked manually (e.g. from tests, or to publish immediately after a producer count changes). |
+| `nodes` | `nodes()` | Snapshot of every known node (including self). |
+| `selectBridge` | `selectBridge([opts])` | Pick a node for a new bridge using one of the built-in selectors or a custom comparator.  Returns the chosen `nodeId` (which may be this node's own id when it wins). |
 | `close` | `close()` | Tear down all subscriptions and clear remote state. |
 | `publish` | `publish(channel, message)` |  |
 | `subscribe` | `subscribe(channel, fn)` |  |
@@ -2755,6 +2843,248 @@ Cluster adapter for the signaling hub. `useCluster(hub, adapter)` glues a `Signa
 |---|---|---|---|
 | `nodeId` | string | `-` | Stable id for this node.  Defaults to
 a random 8-byte hex string. |
+| `region` | string | `-` | Region tag (e.g. `'us-east'`).  Surfaces
+in load announcements and lets the
+cascade's bridge selector prefer
+same-region peers. |
+| `loadProbe` | Function | `-` | `() => { cpu?:number, producers?:number,
+consumers?:number, bandwidthIn?:number,
+bandwidthOut?:number, custom?:object }`.
+Sync or async.  When provided, the
+coordinator publishes a load snapshot
+every `opts.loadIntervalMs` ms. |
+| `loadIntervalMs` | number | `5000` | 0 disables the periodic timer
+(callers can call `publishLoad()` manually). |
+
+
+### Cascade Coordinator
+
+Cross-node SFU cascade orchestrator. Sits on top of a {@link useCluster}-backed {@link SignalingHub} and a local {@link SfuAdapter} so a single room can span multiple hub nodes' media planes. Each node owns a local Router (a "bridge") for its subset of peers; producers are piped to every peer bridge so consumers on any node see every publisher. See [`docs/scopes/webrtc-scaling.md`](../../docs/scopes/webrtc-scaling.md) for the wire protocol, capacity model, and migration matrix.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `hub` | import('./signaling').SignalingHub | Yes |  |
+
+
+#### Cluster
+
+| Method | Signature | Description |
+|---|---|---|
+| `registerLocalBridge` | `registerLocalBridge(roomName, router)` | Register the local bridge for `room`.  Idempotent: subsequent calls return the cached entry.  `router` is the handle returned by `sfu.createRouter()`; producers created on that router will be fanned out to every peer bridge. |
+
+
+#### Bridges
+
+| Method | Signature | Description |
+|---|---|---|
+| `closeLocalBridge` | `closeLocalBridge(roomName)` | Tear down the local bridge for `room`.  Closes every pipe opened to peer bridges and announces `bridge:close` so peer nodes drop their mirrored state. |
+| `announceProducer` | `announceProducer(roomName, producer)` | Announce that a local producer has been created on the bridge for `room` so peer bridges open a `pipeToRouter` consuming it.  Called automatically when the SFU emits `producer-new` and the producer's transport belongs to a known bridge router. |
+
+
+#### Producers
+
+| Method | Signature | Description |
+|---|---|---|
+| `retractProducer` | `retractProducer(roomName, producerId)` | Tear down fanout for a local producer. |
+| `locateRemoteProducer` | `locateRemoteProducer(producerId)` | Resolve a producer id to its remote origin, if any.  Returns null when the producer is local or unknown. |
+| `stats` | `stats()` | Snapshot of the cascade state for observability. |
+
+
+#### Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `close` | `close()` | Tear down every bridge and stop processing bus messages. |
+
+
+#### Bus handlers
+
+| Method | Signature | Description |
+|---|---|---|
+| `useCascade` | `useCascade(hub, [opts])` | Attach a {@link CascadeCoordinator} to a hub that already has a cluster adapter bound via {@link useCluster}.  Stores it at `hub._cascade` and returns the coordinator so callers can `registerLocalBridge(room, router)` as rooms get created. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `nodeId` | string | `-` | Falls back to the cluster nodeId or a random id. |
+| `sfu` | object | `-` | SfuAdapter; defaults to `hub.sfu` (the one the hub was built with). |
+| `listenInfo` | object | `-` | PipeTransport listen info advertised to peer bridges. |
+| `enableSrtp` | boolean | `true` |  |
+
+
+> **Two nodes, one virtual room**
+
+```javascript
+  const a = new SignalingHub({ sfu: new MemorySfuAdapter() });
+  const b = new SignalingHub({ sfu: new MemorySfuAdapter() });
+  const bus = new MemoryClusterAdapter();
+  useCluster(a, bus, { nodeId: 'a' });
+  useCluster(b, bus, { nodeId: 'b' });
+  useCascade(a, { nodeId: 'a' });
+  useCascade(b, { nodeId: 'b' });
+```
+
+
+> **Register a bridge as rooms get created**
+
+```javascript
+  const cascade = useCascade(hub);
+  hub.on('room-created', async ({ name }) => {
+      const router = await hub.sfu.createRouter();
+      cascade.registerLocalBridge(name, router);
+  });
+```
+
+
+### MCU Adapter
+
+Optional MCU (multipoint control unit) layer that sits on top of an {@link SfuAdapter}. Where an SFU forwards each publisher's stream untouched, an MCU mixes them down to a smaller number of composite tracks (one audio mix + one tiled video) so receivers only have to decode O(1) streams instead of O(N). The right topology for SIP gateways, low-end clients, regulated recording, and ultra-large rooms where consumer decode cost is the bottleneck. zero-server ships no native mixer — JS-side Opus/H264 transcoding is CPU-prohibitive. The MCU layer is a contract: adapters can spawn ffmpeg (the included {@link FfmpegMcuAdapter}), shell out to a GPU-backed mixer, or call into a managed service. The {@link MemoryMcuAdapter} is bookkeeping only for tests and capacity planning.
+
+#### Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `stats` | `stats()` | Snapshot of active mixes. |
+| `close` | `close()` | Tear down every active mix. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `sfu` | object | `-` | Bound SfuAdapter, used by subclasses that need to ingest/produce. |
+| `name` | string | `-` | Adapter name, defaults to the constructor name. |
+
+
+> **Bookkeeping-only mixer (tests, capacity planning)**
+
+```javascript
+  const mcu = new MemoryMcuAdapter({ sfu });
+  const { mixedProducerId } = await mcu.mix('lobby', {
+      producerIds: ['p1', 'p2', 'p3'],
+      kind:        'audio',
+  });
+```
+
+
+> **Real audio mixing via ffmpeg**
+
+```javascript
+  const mcu = new FfmpegMcuAdapter({ sfu });
+  const mix = await mcu.mix('lobby', {
+      producerIds: ['p1', 'p2'],
+      inputs:      [{ sdp: '/tmp/in1.sdp' }, { sdp: '/tmp/in2.sdp' }],
+      outputs:     [{ url: 'rtp://127.0.0.1:5004' }],
+      kind:        'audio',
+  });
+```
+
+
+### Ffmpeg MCU Adapter
+
+Spawns one ffmpeg child process per mix and implements the {@link McuAdapter} contract. The integrator wires mediasoup `PlainTransport` RTP feeds into ffmpeg via `opts.inputs` and consumes ffmpeg's output via `opts.outputs`; the adapter only owns the child lifecycle. Gated on `ffmpeg-static` (or an explicit `{ ffmpegPath }`) so missing binaries fail loudly. For a fully managed equivalent prefer LiveKit egress via {@link LiveKitSfuAdapter}.
+
+#### MCU
+
+| Method | Signature | Description |
+|---|---|---|
+| `mix` | `mix(roomId, opts)` | Spawn an ffmpeg process to mix the given producers.  The caller is responsible for wiring the SFU's PlainTransport RTP feeds into ffmpeg via `opts.inputs` (an array of `{ producerId, sdp, host, port }`) and consuming ffmpeg's output via `opts.outputs`. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `sfu` | object | `-` |  |
+| `ffmpegPath` | string | `-` | Overrides the `ffmpeg-static` lookup. |
+| `spawn` | Function | `-` | Injected for tests (defaults to `child_process.spawn`). |
+
+
+> **Spawn an audio mix**
+
+```javascript
+  const mcu = new FfmpegMcuAdapter({ sfu });
+  const mix = await mcu.mix('lobby', {
+      producerIds: ['p1', 'p2'],
+      inputs:      [{ sdp: '/tmp/in1.sdp' }, { sdp: '/tmp/in2.sdp' }],
+      outputs:     [{ url: 'rtp://127.0.0.1:5004' }],
+      kind:        'audio',
+  });
+  await mcu.unmix(mix.mixedProducerId);
+```
+
+
+### Recording Manager
+
+Adapter-agnostic recording / egress / ingress facade. {@link RecordingManager} auto-detects which pipeline the bound {@link SfuAdapter} supports (`livekit` egress, `ffmpeg` child, or `memory` bookkeeping) and exposes a uniform `startRecording` / `stopRecording` surface. {@link IngressManager} wraps the adapter's `createIngress` / `deleteIngress` calls for WHIP / RTMP / SIP / URL-pull sources.
+
+#### Recording
+
+| Method | Signature | Description |
+|---|---|---|
+| `startRecording` | `startRecording(roomName, [opts])` | Start a new recording for `roomName`.  The `pipeline` field selects the backend: - `'livekit'` — call `adapter.startRoomCompositeEgress`. - `'livekit-track'` — call `adapter.startTrackEgress`. - `'ffmpeg'` — spawn an ffmpeg child process (requires `{ ffmpegPath }` or `ffmpeg-static`; caller wires RTP). - `'memory'` — bookkeeping only (default when no other backend can be inferred). |
+| `stopRecording` | `stopRecording(id)` | Stop an active recording by id.  Idempotent. |
+| `list` | `list()` | List every recording the manager knows about. |
+| `createIngress` | `createIngress(opts)` | Create an ingress (WHIP / RTMP / URL pull / SIP). |
+| `deleteIngress` | `deleteIngress(id)` | Tear down an ingress by id.  Idempotent. |
+| `list` | `list()` | List every known ingress. |
+
+
+#### Inspection
+
+| Method | Signature | Description |
+|---|---|---|
+| `stats` | `stats()` | Aggregate counts for observability. |
+| `close` | `close()` | Stop every active recording.  Safe to call during shutdown. |
+| `close` | `close()` | Tear down every active ingress.  Safe to call during shutdown. |
+
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `adapter` | object | `-` | SfuAdapter (or anything exposing egress methods). |
+| `spawn` | Function | `-` | For `pipeline: 'ffmpeg'` (defaults to `child_process.spawn`). |
+| `ffmpegPath` | string | `-` |  |
+
+
+> **Auto-pipeline recording on top of any adapter**
+
+```javascript
+  const rec = new RecordingManager({ adapter: hub.sfu });
+  const { id, stop } = await rec.startRecording('lobby', {
+      layout: 'grid',
+      format: 'mp4',
+      sink:   { file: '/var/recordings/lobby.mp4' },
+  });
+  // later
+  await stop();
+```
+
+
+> **Force the ffmpeg pipeline**
+
+```javascript
+  const rec = new RecordingManager({ adapter: hub.sfu, ffmpegPath: '/usr/bin/ffmpeg' });
+  await rec.startRecording('lobby', {
+      pipeline: 'ffmpeg',
+      inputs:   [{ sdp: '/tmp/in.sdp' }],
+      sink:     { file: '/tmp/out.mp4' },
+  });
+```
+
+
+> **Create a WHIP ingress and route it into a room**
+
+```javascript
+  const ing = new IngressManager({ adapter: hub.sfu });
+  const stream = await ing.createIngress({ kind: 'whip', name: 'studio', roomName: 'lobby' });
+  // publish using stream.native.url
+```
 
 
 ### WebRTC CLI

@@ -1,6 +1,182 @@
 {
 	"version": "0.9.10",
-	"previousVersion": "0.9.9",
+	"previousVersion": "0.9.7",
 	"date": "2026-05-24",
-	"changes": []
+	"changes": [
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "WebRTC",
+			"name": "Cascade Coordinator",
+			"description": "Cross-node SFU cascade orchestrator. Sits on top of a {@link useCluster}-backed {@link SignalingHub} and a local {@link SfuAdapter} so a single room can span multiple hub nodes' media planes. Each node owns a local Router (a \"bridge\") for its subset of peers; producers are piped to every peer bridge so consumers on any node see every publisher. See [`docs/scopes/webrtc-scaling.md`](../../docs/scopes/webrtc-scaling.md) for the wire protocol, capacity model, and migration matrix."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "WebRTC",
+			"name": "MCU Adapter",
+			"description": "Optional MCU (multipoint control unit) layer that sits on top of an {@link SfuAdapter}. Where an SFU forwards each publisher's stream untouched, an MCU mixes them down to a smaller number of composite tracks (one audio mix + one tiled video) so receivers only have to decode O(1) streams instead of O(N). The right topology for SIP gateways, low-end clients, regulated recording, and ultra-large rooms where consumer decode cost is the bottleneck. zero-server ships no native mixer — JS-side Opus/H264 transcoding is CPU-prohibitive. The MCU layer is a contract: adapters can spawn ffmpeg (the included {@link FfmpegMcuAdapter}), shell out to a GPU-backed mixer, or call into a managed service. The {@link MemoryMcuAdapter} is bookkeeping only for tests and capacity planning."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "WebRTC",
+			"name": "Ffmpeg MCU Adapter",
+			"description": "Spawns one ffmpeg child process per mix and implements the {@link McuAdapter} contract. The integrator wires mediasoup `PlainTransport` RTP feeds into ffmpeg via `opts.inputs` and consumes ffmpeg's output via `opts.outputs`; the adapter only owns the child lifecycle. Gated on `ffmpeg-static` (or an explicit `{ ffmpegPath }`) so missing binaries fail loudly. For a fully managed equivalent prefer LiveKit egress via {@link LiveKitSfuAdapter}."
+		},
+		{
+			"type": "added",
+			"kind": "item",
+			"section": "WebRTC",
+			"name": "Recording Manager",
+			"description": "Adapter-agnostic recording / egress / ingress facade. {@link RecordingManager} auto-detects which pipeline the bound {@link SfuAdapter} supports (`livekit` egress, `ffmpeg` child, or `memory` bookkeeping) and exposes a uniform `startRecording` / `stopRecording` surface. {@link IngressManager} wraps the adapter's `createIngress` / `deleteIngress` calls for WHIP / RTMP / SIP / URL-pull sources."
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SignalingHub",
+			"method": "stats"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "Room",
+			"method": "setTopology"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "setConsumerPreferredLayers"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "setConsumerPriority"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "requestKeyFrame"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "pauseConsumer"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "resumeConsumer"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "setTransportBitrates"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "produceData"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "consumeData"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "observeAudioLevels"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "observeActiveSpeaker"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "pipeToRouter"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "getProducerStats"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "getConsumerStats"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "getTransportStats"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "SFU Adapter",
+			"method": "enableTraceEvent"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "LiveKit SFU Adapter",
+			"method": "getRoomInfo"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "Cluster Adapter",
+			"method": "publishLoad"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "Cluster Adapter",
+			"method": "nodes"
+		},
+		{
+			"type": "added",
+			"kind": "method",
+			"section": "WebRTC",
+			"name": "Cluster Adapter",
+			"method": "selectBridge"
+		}
+	]
 }
