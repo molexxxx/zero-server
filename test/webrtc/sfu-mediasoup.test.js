@@ -32,6 +32,8 @@ function makeProducer({ kind, rtpParameters })
         closed:  false,
         async pause()  { p.paused = true; },
         async resume() { p.paused = false; },
+        async getStats() { return [{ id, type: 'producer-stats' }]; },
+        async enableTraceEvent(_types) { p._traceTypes = _types; },
         on:      ee.on.bind(ee),
         emit:    ee.emit.bind(ee),
     };
@@ -42,15 +44,67 @@ function makeConsumer({ producerId, rtpCapabilities, producer })
 {
     const id = nextId('consumer');
     const ee = new EventEmitter();
-    return {
+    const c = {
         id,
         producerId,
         rtpCapabilities,
         kind:          producer.kind,
         rtpParameters: producer.rtpParameters,
         closed:        false,
+        paused:        false,
+        priority:      1,
+        preferredLayers: null,
+        keyFrames:     0,
+        async setPreferredLayers(layers)  { c.preferredLayers = layers; },
+        async setPriority(p)              { c.priority = p; },
+        async requestKeyFrame()           { c.keyFrames += 1; },
+        async pause()                     { c.paused = true; },
+        async resume()                    { c.paused = false; },
+        async getStats()                  { return [{ id, type: 'consumer-stats' }]; },
+        async enableTraceEvent(types)     { c._traceTypes = types; },
         on:    ee.on.bind(ee),
         emit:  ee.emit.bind(ee),
+    };
+    return c;
+}
+
+function makeDataProducer({ label, protocol, ordered })
+{
+    const id = nextId('dataProducer');
+    const ee = new EventEmitter();
+    return {
+        id, label: label || '', protocol: protocol || '',
+        sctpStreamParameters: { ordered: ordered !== false },
+        on: ee.on.bind(ee), emit: ee.emit.bind(ee),
+    };
+}
+
+function makeDataConsumer({ dataProducerId, ordered })
+{
+    const id = nextId('dataConsumer');
+    const ee = new EventEmitter();
+    return {
+        id, dataProducerId, label: '', protocol: '',
+        sctpStreamParameters: { ordered: ordered !== false },
+        on: ee.on.bind(ee), emit: ee.emit.bind(ee),
+    };
+}
+
+function makeAudioLevelObserver()
+{
+    const ee = new EventEmitter();
+    return {
+        on: ee.on.bind(ee), emit: ee.emit.bind(ee),
+        async close() { /* noop */ },
+    };
+}
+
+function makeActiveSpeakerObserver()
+{
+    const ee = new EventEmitter();
+    return {
+        on: ee.on.bind(ee), emit: ee.emit.bind(ee),
+        async close() { /* noop */ },
     };
 }
 
@@ -80,6 +134,20 @@ function makeTransport()
             return c;
         },
         async getStats() { return [{ id, type: 'transport-stats' }]; },
+        async setMaxIncomingBitrate(v) { t.maxIncoming = v; },
+        async setMaxOutgoingBitrate(v) { t.maxOutgoing = v; },
+        async setMinOutgoingBitrate(v) { t.minOutgoing = v; },
+        async produceData(opts)
+        {
+            const dp = makeDataProducer(opts || {});
+            return dp;
+        },
+        async consumeData(opts)
+        {
+            const dc = makeDataConsumer(opts || {});
+            return dc;
+        },
+        async enableTraceEvent(types) { t._traceTypes = types; },
         close()
         {
             t.closed = true;
@@ -122,6 +190,14 @@ function makeRouter()
         },
         canConsume({ producerId }) { return canConsumeReturn && producers.has(producerId); },
         async getStats() { return [{ id, type: 'router-stats' }]; },
+        async createAudioLevelObserver(_opts) { return makeAudioLevelObserver(); },
+        async createActiveSpeakerObserver(_opts) { return makeActiveSpeakerObserver(); },
+        async pipeToRouter(opts)
+        {
+            const pp = { id: nextId('pipeProducer') };
+            const pc = { id: nextId('pipeConsumer') };
+            return { pipeProducer: pp, pipeConsumer: pc, opts };
+        },
         async close()
         {
             for (const t of transports.values())
@@ -337,6 +413,163 @@ describe('MediasoupSfuAdapter', () =>
         await sfu.createRouter();
         stub._workers[0].emit('died', new Error('rip'));
         expect(events.find((e) => e[0] === 'worker-died')).toEqual(['worker-died', { error: 'rip' }]);
+    });
+});
+
+describe('MediasoupSfuAdapter - extended controls', () =>
+{
+    let stub, sfu, r, t, prod, cons;
+    beforeEach(async () =>
+    {
+        stub = makeMediasoupStub();
+        sfu  = new MediasoupSfuAdapter({ mediasoup: stub });
+        r    = await sfu.createRouter();
+        t    = await sfu.createTransport(r, { id: 'p' });
+        prod = await sfu.produce(t, 'video', { codecs: [] });
+        cons = await sfu.consume(t, prod.producerId, { codecs: [] });
+    });
+    afterEach(async () => { try { await sfu.close(); } catch (_) { /* */ } });
+
+    it('produce forwards simulcast encodings to the native transport', async () =>
+    {
+        const t2 = await sfu.createTransport(r, { id: 'p2' });
+        const p2 = await sfu.produce(t2, 'video', { codecs: [] }, {
+            encodings: [
+                { rid: 'q', maxBitrate: 100000, scalabilityMode: 'L1T3' },
+                { rid: 'h', maxBitrate: 300000, scalabilityMode: 'L1T3' },
+                { rid: 'f', maxBitrate: 900000, scalabilityMode: 'L1T3' },
+            ],
+        });
+        expect(p2.rtpParameters.encodings).toHaveLength(3);
+        expect(p2.rtpParameters.encodings[2].rid).toBe('f');
+    });
+
+    it('setConsumerPreferredLayers calls native and validates', async () =>
+    {
+        await sfu.setConsumerPreferredLayers(cons.consumerId, { spatialLayer: 1, temporalLayer: 2 });
+        const c = sfu._consumers.get(cons.consumerId);
+        expect(c.preferredLayers).toEqual({ spatialLayer: 1, temporalLayer: 2 });
+        await expect(sfu.setConsumerPreferredLayers('nope', { spatialLayer: 0 }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_CONSUMER' });
+        await expect(sfu.setConsumerPreferredLayers(cons.consumerId, {}))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_LAYERS' });
+    });
+
+    it('setConsumerPriority validates the range', async () =>
+    {
+        await sfu.setConsumerPriority(cons.consumerId, 7);
+        expect(sfu._consumers.get(cons.consumerId).priority).toBe(7);
+        await expect(sfu.setConsumerPriority(cons.consumerId, 0))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_PRIORITY' });
+        await expect(sfu.setConsumerPriority(cons.consumerId, 999))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_PRIORITY' });
+    });
+
+    it('requestKeyFrame, pauseConsumer, resumeConsumer drive the native consumer', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e) => events.push(e));
+        await sfu.requestKeyFrame(cons.consumerId);
+        await sfu.pauseConsumer(cons.consumerId);
+        await sfu.resumeConsumer(cons.consumerId);
+        const native = sfu._consumers.get(cons.consumerId);
+        expect(native.keyFrames).toBe(1);
+        expect(native.paused).toBe(false);
+        expect(events).toContain('consumer-pause');
+        expect(events).toContain('consumer-resume');
+    });
+
+    it('setTransportBitrates passes through every clamp', async () =>
+    {
+        await sfu.setTransportBitrates(t.transportId, { maxIncoming: 1, maxOutgoing: 2, min: 3 });
+        const native = sfu._transports.get(t.transportId);
+        expect(native.maxIncoming).toBe(1);
+        expect(native.maxOutgoing).toBe(2);
+        expect(native.minOutgoing).toBe(3);
+        await expect(sfu.setTransportBitrates('nope', {}))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_TRANSPORT' });
+    });
+
+    it('produceData / consumeData wire SCTP data channels', async () =>
+    {
+        const dp = await sfu.produceData(t, { label: 'chat', ordered: true });
+        expect(dp.dataProducerId).toMatch(/^dataProducer-/);
+        expect(dp.label).toBe('chat');
+        const dc = await sfu.consumeData(t, dp.dataProducerId, {});
+        expect(dc.dataConsumerId).toMatch(/^dataConsumer-/);
+        expect(dc.dataProducerId).toBe(dp.dataProducerId);
+        await expect(sfu.produceData({ id: 'nope' }, {}))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_TRANSPORT' });
+    });
+
+    it('observeAudioLevels exposes a closable handle that emits audio-level events', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e, p) => events.push([e, p]));
+        const handle = await sfu.observeAudioLevels(r.id, { interval: 500 });
+        expect(handle.id).toMatch(/^audioObserver-/);
+        handle.emit([{ producerId: 'x', volume: -40 }]);
+        expect(events).toContainEqual(['audio-level', expect.objectContaining({ observerId: handle.id })]);
+        await handle.close();
+        expect(handle.closed).toBe(true);
+    });
+
+    it('observeActiveSpeaker exposes a closable handle that emits active-speaker events', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e, p) => events.push([e, p]));
+        const handle = await sfu.observeActiveSpeaker(r.id, {});
+        handle.emit('producer-x');
+        expect(events).toContainEqual(['active-speaker', expect.objectContaining({ producerId: 'producer-x' })]);
+        await handle.close();
+    });
+
+    it('pipeToRouter delegates to the native router and tracks the pipe', async () =>
+    {
+        const r2 = await sfu.createRouter();
+        const pipe = await sfu.pipeToRouter({
+            producerId:    prod.producerId,
+            localRouterId: r.id,
+            remoteRouter:  r2,
+        });
+        expect(pipe.pipeId).toMatch(/^pipe-/);
+        expect(pipe.pipeProducerId).toMatch(/^pipeProducer-/);
+        expect(pipe.pipeConsumerId).toMatch(/^pipeConsumer-/);
+        await expect(sfu.pipeToRouter({ producerId: 'x', localRouterId: r.id, remoteRouter: r2 }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_PRODUCER' });
+        await expect(sfu.pipeToRouter({ producerId: prod.producerId, localRouterId: 'x', remoteRouter: r2 }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_ROUTER' });
+        await expect(sfu.pipeToRouter({ producerId: prod.producerId, localRouterId: r.id }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_INVALID_PIPE' });
+    });
+
+    it('getProducerStats / getConsumerStats / getTransportStats hit the native objects', async () =>
+    {
+        await expect(sfu.getProducerStats(prod.producerId)).resolves.toEqual([{ id: expect.any(String), type: 'producer-stats' }]);
+        await expect(sfu.getConsumerStats(cons.consumerId)).resolves.toEqual([{ id: expect.any(String), type: 'consumer-stats' }]);
+        await expect(sfu.getTransportStats(t.transportId)).resolves.toEqual([{ id: expect.any(String), type: 'transport-stats' }]);
+        await expect(sfu.getProducerStats('nope')).rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_PRODUCER' });
+        await expect(sfu.getConsumerStats('nope')).rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_CONSUMER' });
+        await expect(sfu.getTransportStats('nope')).rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_TRANSPORT' });
+    });
+
+    it('enableTraceEvent fans out to every entity attached to the router', async () =>
+    {
+        const events = [];
+        sfu.onEvent((e, p) => events.push([e, p]));
+        await sfu.enableTraceEvent(r.id, ['probation', 'bwe']);
+        const native = sfu._transports.get(t.transportId);
+        expect(native._traceTypes).toEqual(['probation', 'bwe']);
+        expect(events).toContainEqual(['trace-enabled', { routerId: r.id, types: ['probation', 'bwe'] }]);
+    });
+
+    it('default media codecs include VP9, H264, and AV1 with standard rtcpFeedback', () =>
+    {
+        const codecs = sfu._mediaCodecs;
+        const names = codecs.map((c) => c.mimeType);
+        expect(names).toEqual(expect.arrayContaining(['audio/opus', 'video/VP8', 'video/VP9', 'video/H264', 'video/AV1']));
+        const vp9 = codecs.find((c) => c.mimeType === 'video/VP9');
+        expect(vp9.rtcpFeedback.map((f) => f.type)).toEqual(expect.arrayContaining(['nack', 'goog-remb', 'transport-cc']));
     });
 });
 

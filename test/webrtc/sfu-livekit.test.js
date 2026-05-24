@@ -282,6 +282,184 @@ describe('LiveKitSfuAdapter', () =>
     });
 });
 
+describe('LiveKitSfuAdapter - extended REST + Phase-2 surface', () =>
+{
+    test('listParticipants / removeParticipant / updateRoomMetadata pass through', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const removed = [];
+        const meta    = [];
+        adapter._client.removeParticipant   = async (room, id) => { removed.push([room, id]); };
+        adapter._client.updateRoomMetadata  = async (room, m)  => { meta.push([room, m]); };
+        const r = await adapter.createRouter({ name: 'rrr' });
+        await expect(adapter.listParticipants(r.id)).resolves.toEqual([]);
+        await adapter.removeParticipant(r.id, 'kicked');
+        await adapter.updateRoomMetadata(r.id, { foo: 1 });
+        expect(removed).toEqual([['rrr', 'kicked']]);
+        expect(meta).toEqual([['rrr', '{"foo":1}']]);
+    });
+
+    test('removeParticipant throws NOT_SUPPORTED when client lacks the method', async () =>
+    {
+        const { adapter } = makeAdapter();
+        adapter._client.removeParticipant = undefined;
+        await expect(adapter.removeParticipant('r', 'i'))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NOT_SUPPORTED' });
+    });
+
+    test('sendData forwards a binary payload to RoomServiceClient.sendData', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const sent = [];
+        adapter._client.sendData = async (room, data, kind, dests) => { sent.push({ room, data, kind, dests }); };
+        const r = await adapter.createRouter({ name: 'rd' });
+        await adapter.sendData(r.id, { hello: 'world' });
+        expect(sent).toHaveLength(1);
+        expect(sent[0].room).toBe('rd');
+        expect(Buffer.isBuffer(sent[0].data)).toBe(true);
+        expect(sent[0].data.toString()).toBe('{"hello":"world"}');
+    });
+
+    test('egress methods delegate to EgressClient', async () =>
+    {
+        const { adapter, livekit } = makeAdapter();
+        const log = [];
+        class EgressClient
+        {
+            constructor(url, key, secret) { this.url = url; this.key = key; this.secret = secret; }
+            async startRoomCompositeEgress(room, output, opts) { log.push(['rc', room, output, opts]); return { egressId: 'EG_1' }; }
+            async startTrackEgress(room, output, trackId)      { log.push(['tr', room, output, trackId]); return { egressId: 'EG_2' }; }
+            async stopEgress(egressId)                          { log.push(['stop', egressId]); return { egressId }; }
+            async listEgress(opts)                              { log.push(['list', opts]); return [{ egressId: 'EG_1' }]; }
+        }
+        livekit.EgressClient = EgressClient;
+        const r = await adapter.createRouter({ name: 'eg' });
+        const a = await adapter.startRoomCompositeEgress(r.id, { fileOutput: 'x.mp4' });
+        const b = await adapter.startTrackEgress(r.id, 'TR_42', { fileOutput: 'y.mp4' });
+        const c = await adapter.stopEgress('EG_1');
+        const d = await adapter.listEgress({ roomName: r.id });
+        expect(a.egressId).toBe('EG_1');
+        expect(b.egressId).toBe('EG_2');
+        expect(c.egressId).toBe('EG_1');
+        expect(d).toHaveLength(1);
+        expect(log[0][0]).toBe('rc');
+        expect(log[1][3]).toBe('TR_42');
+    });
+
+    test('egress without an EgressClient surfaces WEBRTC_SFU_NOT_INSTALLED', async () =>
+    {
+        const { adapter } = makeAdapter();
+        await expect(adapter.startRoomCompositeEgress('r', {}))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NOT_INSTALLED' });
+    });
+
+    test('ingress delegates to IngressClient', async () =>
+    {
+        const { adapter, livekit } = makeAdapter();
+        const log = [];
+        class IngressClient
+        {
+            constructor() {}
+            async createIngress(type, opts) { log.push(['create', type, opts]); return { ingressId: 'IN_1' }; }
+            async deleteIngress(id)         { log.push(['delete', id]); return { ingressId: id }; }
+        }
+        livekit.IngressClient = IngressClient;
+        const a = await adapter.createIngress({ inputType: 'WHIP_INPUT', roomName: 'r', name: 'whip' });
+        const b = await adapter.deleteIngress('IN_1');
+        expect(a.ingressId).toBe('IN_1');
+        expect(b.ingressId).toBe('IN_1');
+        expect(log[0][1]).toBe('WHIP_INPUT');
+    });
+
+    test('Phase-2 consumer controls behave as cooperative no-ops with validation', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const t = await adapter.createTransport(r);
+        const p = await adapter.produce(t, 'video', {});
+        const c = await adapter.consume(t, p.id, {});
+        const events = [];
+        adapter.onEvent((e) => events.push(e));
+        await adapter.setConsumerPreferredLayers(c.id, { spatialLayer: 0 });
+        await adapter.setConsumerPriority(c.id, 5);
+        await adapter.requestKeyFrame(c.id);
+        await adapter.pauseConsumer(c.id);
+        await adapter.resumeConsumer(c.id);
+        expect(events).toContain('consumer-layers-change');
+        expect(events).toContain('consumer-priority');
+        expect(events).toContain('consumer-pause');
+        expect(events).toContain('consumer-resume');
+        await expect(adapter.setConsumerPreferredLayers('nope', { spatialLayer: 0 }))
+            .rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_CONSUMER' });
+    });
+
+    test('setTransportBitrates records the clamps', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const t = await adapter.createTransport(r);
+        await adapter.setTransportBitrates(t.id, { maxIncoming: 1, maxOutgoing: 2 });
+        expect(adapter._transports.get(t.id).bitrates).toEqual({ maxIncoming: 1, maxOutgoing: 2 });
+    });
+
+    test('produceData / consumeData manufacture synthetic data channels', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const t = await adapter.createTransport(r);
+        const dp = await adapter.produceData(t, { label: 'chat' });
+        const dc = await adapter.consumeData(t, dp.id, {});
+        expect(dp.dataProducerId).toMatch(/^dataProducer-/);
+        expect(dc.dataConsumerId).toMatch(/^dataConsumer-/);
+        expect(dc.dataProducerId).toBe(dp.id);
+    });
+
+    test('observers return closable handles that emit through _emit', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const events = [];
+        adapter.onEvent((e, p) => events.push([e, p]));
+        const al = await adapter.observeAudioLevels(r.id, {});
+        const as = await adapter.observeActiveSpeaker(r.id, {});
+        al.emit([{ producerId: 'x', volume: -20 }]);
+        as.emit('px');
+        expect(events.some(([e]) => e === 'audio-level')).toBe(true);
+        expect(events.some(([e]) => e === 'active-speaker')).toBe(true);
+        await al.close();
+        await as.close();
+    });
+
+    test('pipeToRouter is not supported by LiveKit', async () =>
+    {
+        const { adapter } = makeAdapter();
+        await expect(adapter.pipeToRouter({})).rejects.toMatchObject({ code: 'WEBRTC_SFU_NOT_SUPPORTED' });
+    });
+
+    test('per-entity stats return empty arrays and validate ids', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const t = await adapter.createTransport(r);
+        const p = await adapter.produce(t, 'audio', {});
+        const c = await adapter.consume(t, p.id, {});
+        await expect(adapter.getProducerStats(p.id)).resolves.toEqual([]);
+        await expect(adapter.getConsumerStats(c.id)).resolves.toEqual([]);
+        await expect(adapter.getTransportStats(t.id)).resolves.toEqual([]);
+        await expect(adapter.getProducerStats('nope')).rejects.toMatchObject({ code: 'WEBRTC_SFU_NO_PRODUCER' });
+    });
+
+    test('enableTraceEvent emits trace-enabled', async () =>
+    {
+        const { adapter } = makeAdapter();
+        const r = await adapter.createRouter();
+        const events = [];
+        adapter.onEvent((e, p) => events.push([e, p]));
+        await adapter.enableTraceEvent(r.id, ['probation']);
+        expect(events).toContainEqual(['trace-enabled', { routerId: r.id, types: ['probation'] }]);
+    });
+});
+
 describe('loadSfuAdapter("livekit") without peerDep', () =>
 {
     test('throws WEBRTC_SFU_NOT_INSTALLED with install hint', () =>

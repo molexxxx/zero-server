@@ -550,6 +550,8 @@ export interface MediasoupAdapterOptions {
     workerSettings?: Record<string, unknown>;
     mediaCodecs?: Array<Record<string, unknown>>;
     webRtcTransportOptions?: Record<string, unknown>;
+    webRtcServer?: unknown;
+    webRtcServerOptions?: Record<string, unknown>;
 }
 
 export declare class MediasoupSfuAdapter extends SfuAdapter {
@@ -570,6 +572,17 @@ export interface LiveKitAdapterOptions {
 
 export declare class LiveKitSfuAdapter extends SfuAdapter {
     constructor(opts: LiveKitAdapterOptions);
+    getRoomInfo(routerId: string): Promise<Record<string, unknown> | null>;
+    listParticipants(routerId: string): Promise<Array<Record<string, unknown>>>;
+    removeParticipant(routerId: string, identity: string): Promise<void>;
+    updateRoomMetadata(routerId: string, metadata: string | Record<string, unknown>): Promise<void>;
+    sendData(routerId: string, payload: unknown, opts?: { kind?: number; destinationIdentities?: string[]; destinations?: string[] }): Promise<void>;
+    startRoomCompositeEgress(routerId: string, opts?: Record<string, unknown>): Promise<Record<string, unknown>>;
+    startTrackEgress(routerId: string, trackId: string, opts?: Record<string, unknown>): Promise<Record<string, unknown>>;
+    stopEgress(egressId: string): Promise<Record<string, unknown>>;
+    listEgress(opts?: Record<string, unknown>): Promise<Array<Record<string, unknown>>>;
+    createIngress(opts: Record<string, unknown>): Promise<Record<string, unknown>>;
+    deleteIngress(ingressId: string): Promise<Record<string, unknown>>;
 }
 
 export declare function loadSfuAdapter(
