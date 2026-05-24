@@ -1,0 +1,1928 @@
+{
+	"section": "WebRTC",
+	"icon": "video",
+	"items": [
+		{
+			"name": "SignalingHub",
+			"description": "WebRTC signaling hub. Central WS broker that owns the room registry, attaches peers, validates JSEP messages, and routes offer / answer / ICE traffic. Transport-agnostic — bind to `app.ws()` in production, an `EventEmitter` shim in tests. SDP validation is cross-browser by design: session-level `a=fingerprint` / `a=ice-ufrag` / `a=ice-pwd` lines are accepted as a fallback for media sections that omit their own copy (RFC 8839 §5.4, RFC 8122 §5). This is required for Firefox interop — Firefox emits `a=fingerprint` only at session level.",
+			"example": "  const app = createApp();\r\n  const hub = new SignalingHub({\r\n      joinTokenSecret:        process.env.WEBRTC_JWT_SECRET,\r\n      maxSdpSize:             64 * 1024,\r\n      maxCandidatesPerOffer:  20,\r\n      peerMessageRate:        30,\r\n      maxProtocolErrors:      5,\r\n      ipAttachRate:           60,\r\n      originAllowlist:        ['https://meet.acme.com'],\r\n      autoCreateRooms:        false,\r\n  });\r\n\n  hub.room('lobby').open();\r\n\n  app.ws('/rtc', (ws, req) => {\r\n      hub.attach(ws, {\r\n          user:   req.user,\r\n          ip:     req.ip,\r\n          origin: req.headers.origin,\r\n      });\r\n  });",
+			"examples": [
+				{
+					"code": "  const app = createApp();\r\n  const hub = new SignalingHub({\r\n      joinTokenSecret:        process.env.WEBRTC_JWT_SECRET,\r\n      maxSdpSize:             64 * 1024,\r\n      maxCandidatesPerOffer:  20,\r\n      peerMessageRate:        30,\r\n      maxProtocolErrors:      5,\r\n      ipAttachRate:           60,\r\n      originAllowlist:        ['https://meet.acme.com'],\r\n      autoCreateRooms:        false,\r\n  });\r\n\n  hub.room('lobby').open();\r\n\n  app.ws('/rtc', (ws, req) => {\r\n      hub.attach(ws, {\r\n          user:   req.user,\r\n          ip:     req.ip,\r\n          origin: req.headers.origin,\r\n      });\r\n  });",
+					"lang": "javascript",
+					"title": "Bind a hub to an `app.ws()` route with all production knobs"
+				},
+				{
+					"code": "  hub.on('join',      ({ peer, room }) => log.info({ peer: peer.id, room: room.name }, 'joined'));\r\n  hub.on('leave',     ({ peer, room }) => log.info({ peer: peer.id, room: room.name }, 'left'));\r\n  hub.on('wireError', ({ peer, code })  => log.warn({ peer: peer.id, code }, 'wire-error'));",
+					"lang": "javascript",
+					"title": "Observe lifecycle events"
+				}
+			],
+			"options": [
+				{
+					"option": "maxSdpSize",
+					"type": "number",
+					"default": "65536",
+					"notes": "Hard cap on offer / answer size (bytes)."
+				},
+				{
+					"option": "maxCandidatesPerOffer",
+					"type": "number",
+					"default": "30",
+					"notes": "Hard cap on `a=candidate:` lines per SDP."
+				},
+				{
+					"option": "peerMessageRate",
+					"type": "number",
+					"default": "30",
+					"notes": "Per-peer signaling message rate, msg / sec."
+				},
+				{
+					"option": "maxProtocolErrors",
+					"type": "number",
+					"default": "5",
+					"notes": "Disconnect after this many malformed frames."
+				},
+				{
+					"option": "ipAttachRate",
+					"type": "number",
+					"default": "0",
+					"notes": "Max attaches per IP per minute.  `0` disables."
+				},
+				{
+					"option": "originAllowlist",
+					"type": "string[]",
+					"default": "-",
+					"notes": "If set, transports whose `info.origin` is not\non this list are rejected at attach time."
+				},
+				{
+					"option": "joinTokenSecret",
+					"type": "string | Buffer",
+					"default": "-",
+					"notes": "If set, every `join` must include a valid\nJWT signed with this secret and audience `room:<name>`."
+				},
+				{
+					"option": "autoCreateRooms",
+					"type": "boolean",
+					"default": "true",
+					"notes": "If false, joins targeting an unknown room are rejected."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Public surface",
+					"methods": [
+						{
+							"method": "size",
+							"signature": "size()",
+							"description": "Live peer count across all rooms (and unattached)."
+						},
+						{
+							"method": "room",
+							"signature": "room(name)",
+							"description": "Get or lazily create a room.",
+							"methodParams": [
+								{
+									"param": "name",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Room",
+								"description": ""
+							}
+						},
+						{
+							"method": "rooms",
+							"signature": "rooms()",
+							"methodReturns": {
+								"type": "Room[]",
+								"description": ""
+							}
+						},
+						{
+							"method": "attach",
+							"signature": "attach(transport, [info])",
+							"description": "Attach a transport (WS connection or mock) as a new signaling peer. Wires up message and close handlers, performs origin / IP-rate pre-checks, sends a `hello` frame with the new peer id, and returns the `Peer`.  The returned peer is also registered in `hub.size`. Called from your `app.ws()` upgrade handler in production: ```js app.ws('/rtc', (ws, req) => hub.attach(ws, { user:   req.user, ip:     req.ip, origin: req.headers.origin, })); ```",
+							"methodParams": [
+								{
+									"param": "transport",
+									"type": "object",
+									"required": "Yes",
+									"notes": "`{ send, on, close }`-shaped object."
+								},
+								{
+									"param": "info",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "user",
+									"type": "*",
+									"default": "-",
+									"notes": "Authenticated user (forwarded to room gates)."
+								},
+								{
+									"option": "ip",
+									"type": "string",
+									"default": "-",
+									"notes": "Remote IP for audit + `ipAttachRate`."
+								},
+								{
+									"option": "origin",
+									"type": "string",
+									"default": "-",
+									"notes": "Origin header for `originAllowlist`."
+								}
+							],
+							"methodReturns": {
+								"type": "Peer",
+								"description": ""
+							},
+							"example": "  const mock = new EventEmitter();\r\n  mock.send  = (frame) => mock.emit('out', frame);\r\n  mock.close = ()      => mock.emit('close');\r\n  const peer = hub.attach(mock, { user: { id: 'u1' }, ip: '127.0.0.1' });\r\n  mock.emit('message', JSON.stringify({ type: 'join', room: 'lobby' }));",
+							"examples": [
+								{
+									"code": "  const mock = new EventEmitter();\r\n  mock.send  = (frame) => mock.emit('out', frame);\r\n  mock.close = ()      => mock.emit('close');\r\n  const peer = hub.attach(mock, { user: { id: 'u1' }, ip: '127.0.0.1' });\r\n  mock.emit('message', JSON.stringify({ type: 'join', room: 'lobby' }));",
+									"lang": "javascript",
+									"title": "Test harness: attach a mock transport"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Per-IP attach rate limit",
+					"methods": [
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Shut down every peer and clear every room."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Room",
+			"description": "Room / channel abstraction for the signaling hub. Holds a set of peers plus a fluent chain of policy gates (`require()`, `canPublish()`, `canSubscribe()`). Constructed lazily via `hub.room(name)`; pair with `useCluster()` for multi-node membership.",
+			"options": [
+				{
+					"option": "hub",
+					"type": "import('./signaling').SignalingHub",
+					"default": "-",
+					"notes": "Owning hub."
+				}
+			],
+			"params": [
+				{
+					"param": "name",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Room name, used as routing key."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Configuration (fluent)",
+					"methods": [
+						{
+							"method": "open",
+							"signature": "open()",
+							"description": "Mark the room as public.  Returns `this` for chaining."
+						},
+						{
+							"method": "canPublish",
+							"signature": "canPublish(fn)",
+							"description": "Set the publish-permission check.  Hub calls this before relaying offers.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "(peer:import('./peer').Peer) => boolean",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "canSubscribe",
+							"signature": "canSubscribe(fn)",
+							"description": "Set the subscribe-permission check.  Hub calls this before relaying answers.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "(peer:import('./peer').Peer) => boolean",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "Membership",
+					"methods": [
+						{
+							"method": "size",
+							"signature": "size()",
+							"description": "Current member count."
+						},
+						{
+							"method": "peers",
+							"signature": "peers()",
+							"methodReturns": {
+								"type": "import('./peer').Peer[]",
+								"description": ""
+							}
+						},
+						{
+							"method": "has",
+							"signature": "has()",
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "canJoin",
+							"signature": "canJoin(peer)",
+							"description": "Evaluate every `require()` gate against the candidate peer.",
+							"methodParams": [
+								{
+									"param": "peer",
+									"type": "import('./peer').Peer",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						}
+					]
+				},
+				{
+					"group": "Fan-out",
+					"methods": [
+						{
+							"method": "broadcast",
+							"signature": "broadcast(type, [payload], [exceptPeerId])",
+							"description": "Send a `{type, ...payload}` JSON frame to every peer in the room.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								},
+								{
+									"param": "exceptPeerId",
+									"type": "string",
+									"required": "No",
+									"notes": "Optional peer id to skip (e.g. the originator)."
+								}
+							]
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Kick every peer with code 1001 (going-away) and unregister from the hub."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Peer",
+			"description": "Per-connection state machine for a signaling peer. Wraps a `{ send, on, close }` transport (typically `app.ws()`'s `WebSocketConnection`) and exposes JSEP message types as events. Constructed by `hub.attach(transport, info)` — not directly.",
+			"example": "  hub.on('join', ({ peer, room }) => {\r\n      console.log(\r\n          'peer', peer.id,\r\n          'user=', peer.user && peer.user.id,\r\n          'ip=', peer.ip,\r\n          'joined', room.name,\r\n          'roster size=', room.size,\r\n      );\r\n  });",
+			"examples": [
+				{
+					"code": "  hub.on('join', ({ peer, room }) => {\r\n      console.log(\r\n          'peer', peer.id,\r\n          'user=', peer.user && peer.user.id,\r\n          'ip=', peer.ip,\r\n          'joined', room.name,\r\n          'roster size=', room.size,\r\n      );\r\n  });",
+					"lang": "javascript",
+					"title": "Inspect every newly-attached peer"
+				}
+			],
+			"options": [
+				{
+					"option": "user",
+					"type": "*",
+					"default": "-",
+					"notes": "Authenticated user object (if any)."
+				},
+				{
+					"option": "ip",
+					"type": "string",
+					"default": "-",
+					"notes": "Remote IP for audit / rate limits."
+				}
+			],
+			"params": [
+				{
+					"param": "transport",
+					"type": "object",
+					"required": "Yes",
+					"notes": "Anything with `send(string)`, `on('message'|'close', cb)`, `close(code?, reason?)`."
+				},
+				{
+					"param": "info",
+					"type": "object",
+					"required": "No",
+					"notes": "Connection metadata."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Peers",
+					"methods": [
+						{
+							"method": "send",
+							"signature": "send(type, [payload])",
+							"description": "Send a JSON envelope to this peer.  `type` is added to `payload` and the result is serialised once.  Silently drops sends after close.",
+							"methodParams": [
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "sendError",
+							"signature": "sendError(code, message)",
+							"description": "Send a typed error frame.  Callers SHOULD use this rather than throwing, because exceptions escape the message handler and tear down the process.",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "message",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "close",
+							"signature": "close([code], [reason])",
+							"description": "Close the underlying transport with a WebSocket-style code and reason. Defaults to 1000 (normal closure).",
+							"methodParams": [
+								{
+									"param": "code",
+									"type": "number",
+									"required": "No",
+									"notes": ""
+								},
+								{
+									"param": "reason",
+									"type": "string",
+									"required": "No",
+									"notes": ""
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "SDP Parser",
+			"description": "Zero-dependency RFC 8866 SDP parser and serializer with WebRTC-specific attribute extraction per RFC 8829 (ice-ufrag, ice-pwd, fingerprint, setup, mid, rtcp-mux, rtpmap, fmtp, ssrc, etc.). Pure structure — policy lives in the signaling layer.",
+			"options": [
+				{
+					"option": "maxBytes",
+					"type": "number",
+					"default": "65536",
+					"notes": "Reject payloads larger than this."
+				}
+			],
+			"params": [
+				{
+					"param": "text",
+					"type": "string",
+					"required": "Yes",
+					"notes": "The SDP document text."
+				}
+			],
+			"returns": {
+				"type": "SessionDescription",
+				"description": "Parsed structure."
+			},
+			"example": "  const { parseSdp } = require('@zero-server/webrtc');\r\n  const desc = parseSdp(offer.sdp);\r\n  console.log(desc.media[0].iceUfrag, desc.media[0].fingerprint);",
+			"examples": [
+				{
+					"code": "  const { parseSdp } = require('@zero-server/webrtc');\r\n  const desc = parseSdp(offer.sdp);\r\n  console.log(desc.media[0].iceUfrag, desc.media[0].fingerprint);",
+					"lang": "javascript"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Parser helpers",
+					"methods": [
+						{
+							"method": "stringifySdp",
+							"signature": "stringifySdp(session)",
+							"description": "Serialize a `SessionDescription` back to RFC 8866 text with CRLF line endings.  The serializer is round-trip safe for documents produced by `parseSdp`: it emits the raw attribute list verbatim so any media-level attribute we did not lift into a structured field is still preserved.",
+							"methodParams": [
+								{
+									"param": "session",
+									"type": "SessionDescription",
+									"required": "Yes",
+									"notes": "Parsed session description."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "SDP document terminated with CRLF."
+							},
+							"example": "  const sdp = stringifySdp(parseSdp(offer.sdp));",
+							"examples": [
+								{
+									"code": "  const sdp = stringifySdp(parseSdp(offer.sdp));",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "ICE Candidates",
+			"description": "Zero-dependency ICE candidate parser, serializer, and address classifiers (private / loopback / link-local / mDNS) per RFC 8839, plus a `filterCandidates` helper used by `SignalingHub` to enforce privacy-preserving policies on relayed offers/answers.",
+			"params": [
+				{
+					"param": "line",
+					"type": "string",
+					"required": "Yes",
+					"notes": "Candidate line, e.g.\n`candidate:842163049 1 udp 1677729535 192.168.1.5 50000 typ host`."
+				}
+			],
+			"returns": {
+				"type": "IceCandidate",
+				"description": "Parsed candidate."
+			},
+			"example": "  const c = parseCandidate('candidate:1 1 udp 2122194687 1.2.3.4 50001 typ srflx raddr 192.168.1.5 rport 50000');\r\n  if (c.type === 'relay') { console.log('relay candidate'); }",
+			"examples": [
+				{
+					"code": "  const c = parseCandidate('candidate:1 1 udp 2122194687 1.2.3.4 50001 typ srflx raddr 192.168.1.5 rport 50000');\r\n  if (c.type === 'relay') { console.log('relay candidate'); }",
+					"lang": "javascript"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "ICE & TURN",
+					"methods": [
+						{
+							"method": "stringifyCandidate",
+							"signature": "stringifyCandidate(c)",
+							"description": "Serialize a parsed candidate back to its canonical line format. Round-trips outputs of `parseCandidate` exactly, including the insertion order of `extensions`.",
+							"methodParams": [
+								{
+									"param": "c",
+									"type": "IceCandidate",
+									"required": "Yes",
+									"notes": "Parsed candidate object."
+								}
+							],
+							"methodReturns": {
+								"type": "string",
+								"description": "`candidate:...` line (no `a=` prefix)."
+							},
+							"example": "  const out = stringifyCandidate(parseCandidate(line));",
+							"examples": [
+								{
+									"code": "  const out = stringifyCandidate(parseCandidate(line));",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "isPrivateIp",
+							"signature": "isPrivateIp(addr)",
+							"description": "True for RFC 1918, RFC 6598 (CGNAT), and IPv6 ULA (RFC 4193) addresses.",
+							"methodParams": [
+								{
+									"param": "addr",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Address to classify."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "isLoopbackIp",
+							"signature": "isLoopbackIp(addr)",
+							"description": "True for IPv4 127.0.0.0/8 and IPv6 ::1.",
+							"methodParams": [
+								{
+									"param": "addr",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Address to classify."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "isLinkLocalIp",
+							"signature": "isLinkLocalIp(addr)",
+							"description": "True for IPv4 169.254/16 and IPv6 fe80::/10.",
+							"methodParams": [
+								{
+									"param": "addr",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Address to classify."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "isMdnsHostname",
+							"signature": "isMdnsHostname(host)",
+							"description": "True for mDNS `.local` hostnames used by browsers to avoid leaking local IPs (Chrome's mDNS ICE candidates - RFC 8624 / draft-ietf-mmusic-mdns-ice-candidates).",
+							"methodParams": [
+								{
+									"param": "host",
+									"type": "string",
+									"required": "Yes",
+									"notes": "Hostname to test."
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": ""
+							}
+						},
+						{
+							"method": "filterCandidates",
+							"signature": "filterCandidates(candidates, [policy])",
+							"description": "Filter an array of candidates (lines or parsed objects) against a policy. Returns the same shape it was given: if you pass strings you get strings back; if you pass parsed objects you get parsed objects back.  Unparseable string lines are silently skipped so a single bad candidate never poisons the whole offer.",
+							"methodParams": [
+								{
+									"param": "candidates",
+									"type": "Array<string | IceCandidate>",
+									"required": "Yes",
+									"notes": "Input list."
+								},
+								{
+									"param": "policy",
+									"type": "CandidateFilterPolicy",
+									"required": "No",
+									"notes": "Policy (all defaults are permissive)."
+								}
+							],
+							"methodReturns": {
+								"type": "Array<string | IceCandidate>",
+								"description": "Surviving candidates, same element shape as input."
+							},
+							"example": "  const safe = filterCandidates(offer.candidates, {\r\n      blockPrivate: true,\r\n      blockMdns:    true,\r\n      allowedTypes: ['srflx', 'relay'],\r\n  });",
+							"examples": [
+								{
+									"code": "  const safe = filterCandidates(offer.candidates, {\r\n      blockPrivate: true,\r\n      blockMdns:    true,\r\n      allowedTypes: ['srflx', 'relay'],\r\n  });",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "STUN Client",
+			"description": "Zero-dependency RFC 8489 STUN client. Sends a Binding Request over UDP, parses the Binding Response, and returns the server-reflexive address from XOR-MAPPED-ADDRESS (or legacy MAPPED-ADDRESS). NAT-discovery subset only; TURN allocations live in `lib/webrtc/turn/`.",
+			"params": [
+				{
+					"param": "transactionId",
+					"type": "Buffer",
+					"required": "No",
+					"notes": "12-byte ID; one is generated if omitted."
+				}
+			],
+			"returns": {
+				"type": "{buffer:Buffer, transactionId:Buffer}",
+				"description": ""
+			},
+			"methodGroups": [
+				{
+					"group": "ICE & TURN",
+					"methods": [
+						{
+							"method": "stunBinding",
+							"signature": "stunBinding(opts)",
+							"description": "Discover the public (server-reflexive) address by sending a STUN Binding Request to `opts.host:opts.port`. Retries with the same transaction ID until a matching Binding Success is received or `retries` attempts elapse.  Closes the socket on resolve/reject.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "StunBindingOptions",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "Promise<StunBindingResult>",
+								"description": ""
+							},
+							"example": "  const { address, port } = await stunBinding({ host: 'stun.l.google.com', port: 19302 });",
+							"examples": [
+								{
+									"code": "  const { address, port } = await stunBinding({ host: 'stun.l.google.com', port: 19302 });",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "decodeMessage",
+							"signature": "decodeMessage(buf)",
+							"description": "Parse a STUN message (header + attributes).",
+							"methodParams": [
+								{
+									"param": "buf",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "Raw datagram."
+								}
+							],
+							"methodReturns": {
+								"type": "{method:number, class:number, transactionId:Buffer, attributes:Array<{type:number,value:Buffer}>}",
+								"description": ""
+							}
+						},
+						{
+							"method": "encodeXorMappedAddress",
+							"signature": "encodeXorMappedAddress(address, port, transactionId)",
+							"description": "Encode an XOR-MAPPED-ADDRESS attribute body (no TLV header).",
+							"methodParams": [
+								{
+									"param": "address",
+									"type": "string",
+									"required": "Yes",
+									"notes": "IPv4 or IPv6 string."
+								},
+								{
+									"param": "port",
+									"type": "number",
+									"required": "Yes",
+									"notes": "0-65535."
+								},
+								{
+									"param": "transactionId",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "12-byte transaction ID (needed for IPv6)."
+								}
+							],
+							"methodReturns": {
+								"type": "Buffer",
+								"description": ""
+							}
+						},
+						{
+							"method": "decodeXorMappedAddress",
+							"signature": "decodeXorMappedAddress(buf, transactionId)",
+							"description": "Decode an XOR-MAPPED-ADDRESS attribute body to `{family, address, port}`.",
+							"methodParams": [
+								{
+									"param": "buf",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "Attribute value bytes."
+								},
+								{
+									"param": "transactionId",
+									"type": "Buffer",
+									"required": "Yes",
+									"notes": "12-byte ID from the response header."
+								}
+							],
+							"methodReturns": {
+								"type": "{family:number, address:string, port:number}",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "TURN Credentials",
+			"description": "RFC 7635 ephemeral TURN credentials. Generates short-TTL username/credential pairs accepted by any compliant TURN server (notably `coturn` with `use-auth-secret`). Returns an `RTCIceServer`- shaped object ready to hand to browsers.",
+			"returns": {
+				"type": "TurnCredentials",
+				"description": ""
+			},
+			"example": "  //   coturn.conf:\r\n  //     use-auth-secret\r\n  //     static-auth-secret=<TURN_SHARED_SECRET>\r\n  //     realm=turn.example.com\r\n  app.get('/rtc/turn', (req, res) => {\r\n      const creds = issueTurnCredentials({\r\n          secret:  process.env.TURN_SHARED_SECRET,\r\n          userId:  req.user.id,\r\n          ttl:     '20m',\r\n          servers: ['turn:turn.example.com:3478?transport=udp'],\r\n      });\r\n      res.json(creds); // { urls, username, credential, ttl }\r\n  });",
+			"examples": [
+				{
+					"code": "  //   coturn.conf:\r\n  //     use-auth-secret\r\n  //     static-auth-secret=<TURN_SHARED_SECRET>\r\n  //     realm=turn.example.com\r\n  app.get('/rtc/turn', (req, res) => {\r\n      const creds = issueTurnCredentials({\r\n          secret:  process.env.TURN_SHARED_SECRET,\r\n          userId:  req.user.id,\r\n          ttl:     '20m',\r\n          servers: ['turn:turn.example.com:3478?transport=udp'],\r\n      });\r\n      res.json(creds); // { urls, username, credential, ttl }\r\n  });",
+					"lang": "javascript",
+					"title": "Hand a fresh credential to a browser before it joins a room"
+				},
+				{
+					"code": "  const creds = issueTurnCredentials({\r\n      secret:  process.env.TURN_SHARED_SECRET,\r\n      userId:  'bot-42',\r\n      ttl:     3600,\r\n      servers: [\r\n          'turn:turn.example.com:3478?transport=udp',\r\n          'turn:turn.example.com:3478?transport=tcp',\r\n          'turns:turn.example.com:5349',\r\n          'stun:turn.example.com:3478',\r\n      ],\r\n  });",
+					"lang": "javascript",
+					"title": "Multiple URLs (UDP, TCP, TLS) for failover"
+				},
+				{
+					"code": "  const pc = new RTCPeerConnection({\r\n      iceServers: [creds], // { urls, username, credential } is RTCIceServer-shaped\r\n  });",
+					"lang": "javascript",
+					"title": "Use directly in an RTCPeerConnection (browser side)"
+				}
+			]
+		},
+		{
+			"name": "TURN Server",
+			"description": "Zero-dependency embedded TURN server (RFC 5766). Pairs with `issueTurnCredentials` for long-term-credential auth and implements UDP allocations, permissions, Send/Data indications, channel bindings, lifetimes, and per-user quotas. TCP/TLS listeners are reserved and currently throw `TURN_TRANSPORT_UNSUPPORTED`.",
+			"example": "  const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');\r\n\n  const turn = new TurnServer({\r\n      secret:    process.env.TURN_SECRET,\r\n      realm:     'rtc.example.com',\r\n      relayHost: process.env.PUBLIC_IP || '0.0.0.0',\r\n      listeners: [{ proto: 'udp', port: 3478 }],\r\n      quotas:    { maxAllocationsPerUser: 4, maxBytesPerMinute: 50_000_000 },\r\n  });\r\n  await turn.start();\r\n\n  turn.on('allocate',   ({ user, relay })   => log.info({ user, relay }, 'turn allocate'));\r\n  turn.on('permission', ({ user, peer })    => log.debug({ user, peer }, 'turn permission'));\r\n  turn.on('relay',      ({ user, bytes })   => metrics.turnBytes.inc(bytes));\r\n\n  process.on('SIGTERM', () => turn.close());",
+			"examples": [
+				{
+					"code": "  const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');\r\n\n  const turn = new TurnServer({\r\n      secret:    process.env.TURN_SECRET,\r\n      realm:     'rtc.example.com',\r\n      relayHost: process.env.PUBLIC_IP || '0.0.0.0',\r\n      listeners: [{ proto: 'udp', port: 3478 }],\r\n      quotas:    { maxAllocationsPerUser: 4, maxBytesPerMinute: 50_000_000 },\r\n  });\r\n  await turn.start();\r\n\n  turn.on('allocate',   ({ user, relay })   => log.info({ user, relay }, 'turn allocate'));\r\n  turn.on('permission', ({ user, peer })    => log.debug({ user, peer }, 'turn permission'));\r\n  turn.on('relay',      ({ user, bytes })   => metrics.turnBytes.inc(bytes));\r\n\n  process.on('SIGTERM', () => turn.close());",
+					"lang": "javascript",
+					"title": "Boot an embedded TURN server alongside Zero Server"
+				},
+				{
+					"code": "  const { TurnServer, issueTurnCredentials } = require('@zero-server/webrtc');\r\n  const creds = issueTurnCredentials({\r\n      secret:  process.env.TURN_SECRET,\r\n      userId:  req.user.id,\r\n      servers: ['turn:rtc.example.com:3478'],\r\n      ttl:     '20m',\r\n  });\r\n  res.json({ token, iceServers: [creds] });",
+					"lang": "javascript",
+					"title": "Issue creds + return them with the room join payload"
+				},
+				{
+					"code": "  const turn = new TurnServer({\r\n      secret:    process.env.TURN_SECRET,\r\n      realm:     'rtc.example.com',\r\n      listeners: [{ proto: 'udp', port: 3478, host: '0.0.0.0' }],\r\n      quotas:    {\r\n          maxAllocationsPerUser: 2,\r\n          maxBytesPerMinute:     5_000_000, // 5 MB/min per user\r\n      },\r\n      defaultLifetime: 300,\r\n      maxLifetime:     1800,\r\n  });",
+					"lang": "javascript",
+					"title": "Multi-listener (UDP + future TCP) with tight per-user quotas"
+				}
+			],
+			"options": [
+				{
+					"option": "secret",
+					"type": "string",
+					"default": "-",
+					"notes": "\nShared HMAC secret for ephemeral credentials produced by\n{@link module:webrtc/turn/credentials.issueTurnCredentials}."
+				},
+				{
+					"option": "realm",
+					"type": "string",
+					"default": "'zero-server'",
+					"notes": ""
+				},
+				{
+					"option": "listeners",
+					"type": "Array<{proto:'udp' | 'tcp' | 'tls',port:number,host?:string,tls?:object}>",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "quotas",
+					"type": "object",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "quotas.maxAllocationsPerUser",
+					"type": "number",
+					"default": "Infinity",
+					"notes": ""
+				},
+				{
+					"option": "quotas.maxBytesPerMinute",
+					"type": "number",
+					"default": "Infinity",
+					"notes": ""
+				},
+				{
+					"option": "defaultLifetime",
+					"type": "number",
+					"default": "600",
+					"notes": ""
+				},
+				{
+					"option": "maxLifetime",
+					"type": "number",
+					"default": "3600",
+					"notes": ""
+				},
+				{
+					"option": "relayHost",
+					"type": "string",
+					"default": "'127.0.0.1'",
+					"notes": "\nAddress bound by each per-allocation relay socket.  Production\ndeployments should pass the server's public IP."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "start",
+							"signature": "start()",
+							"description": "Bind all configured listeners.  Resolves once every listener is listening; rejects on the first bind error.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						},
+						{
+							"method": "stop",
+							"signature": "stop()",
+							"description": "Close all listeners and free every allocation's relay socket.",
+							"methodReturns": {
+								"type": "Promise<void>",
+								"description": ""
+							}
+						},
+						{
+							"method": "address",
+							"signature": "address()",
+							"description": "The bound address of the first listener (handy for tests that ask the kernel for an ephemeral port via `port: 0`).",
+							"methodReturns": {
+								"type": "{address:string, port:number} | null",
+								"description": ""
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "SFU Adapter",
+			"description": "Pluggable Selective Forwarding Unit (SFU) adapter interface. The signaling hub stays media-agnostic; the adapter owns routers, transports, producers, and consumers. Ships with `MemorySfuAdapter`, `MediasoupSfuAdapter`, and `LiveKitSfuAdapter`. Subclass `SfuAdapter` for custom backends.",
+			"example": "  const { loadSfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = loadSfuAdapter(process.env.SFU_BACKEND || 'memory', {\r\n      // adapter-specific options forwarded verbatim\r\n      workerSettings: { logLevel: 'warn' },\r\n  });\r\n\n  sfu.onEvent((event, payload) => log.debug({ event, payload }, 'sfu'));",
+			"examples": [
+				{
+					"code": "  const { loadSfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = loadSfuAdapter(process.env.SFU_BACKEND || 'memory', {\r\n      // adapter-specific options forwarded verbatim\r\n      workerSettings: { logLevel: 'warn' },\r\n  });\r\n\n  sfu.onEvent((event, payload) => log.debug({ event, payload }, 'sfu'));",
+					"lang": "javascript",
+					"title": "Select an adapter at boot via env"
+				},
+				{
+					"code": "  const router = await sfu.createRouter({ room: 'lobby' });\r\n\n  hub.on('join', async ({ peer, room }) => {\r\n      if (room.name !== 'lobby') return;\r\n      const transport = await sfu.createTransport(router, peer);\r\n      peer.send('sfu-transport', { iceParameters: transport.iceParameters });\r\n  });",
+					"lang": "javascript",
+					"title": "Wire an SFU into the signaling hub per room"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "createRouter",
+							"signature": "createRouter()",
+							"description": "Override to create a routing context for a single room."
+						},
+						{
+							"method": "createTransport",
+							"signature": "createTransport()",
+							"description": "Override to allocate a WebRTC transport for a peer in a router."
+						},
+						{
+							"method": "produce",
+							"signature": "produce()",
+							"description": "Override to bind a producer ('audio' | 'video') to a transport."
+						},
+						{
+							"method": "consume",
+							"signature": "consume()",
+							"description": "Override to bind a consumer of `producerId` to a transport."
+						},
+						{
+							"method": "pauseProducer",
+							"signature": "pauseProducer()",
+							"description": "Override to pause a producer (mute upstream forwarding)."
+						},
+						{
+							"method": "resumeProducer",
+							"signature": "resumeProducer()",
+							"description": "Override to resume a previously paused producer."
+						},
+						{
+							"method": "closeRouter",
+							"signature": "closeRouter()",
+							"description": "Override to close a router and cascade-close its transports."
+						},
+						{
+							"method": "stats",
+							"signature": "stats()",
+							"description": "Override to return adapter stats; `scope` may be a routerId/transportId."
+						},
+						{
+							"method": "onEvent",
+							"signature": "onEvent()",
+							"description": "Register a handler invoked as `(event, payload)` for adapter-level events ('producer-new', 'producer-pause', 'consumer-new', 'transport-close', 'router-close', etc.). Returns an unsubscribe function."
+						},
+						{
+							"method": "loadSfuAdapter",
+							"signature": "loadSfuAdapter(spec, [opts])",
+							"description": "Lazy-load and instantiate an SFU adapter.",
+							"methodParams": [
+								{
+									"param": "spec",
+									"type": "object | string",
+									"required": "Yes",
+									"notes": "one of:\n- an object exposing the SfuAdapter contract (returned as-is),\n- 'memory' | 'mediasoup' | 'livekit' | adapter package id."
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": "constructor options forwarded to the adapter."
+								}
+							],
+							"methodReturns": {
+								"type": "SfuAdapter",
+								"description": ""
+							},
+							"example": "  const sfu = loadSfuAdapter('mediasoup', {\r\n      numWorkers: 4,\r\n      workerSettings: { rtcMinPort: 40000, rtcMaxPort: 49999 },\r\n  });",
+							"examples": [
+								{
+									"code": "  const sfu = loadSfuAdapter('mediasoup', {\r\n      numWorkers: 4,\r\n      workerSettings: { rtcMinPort: 40000, rtcMaxPort: 49999 },\r\n  });",
+									"lang": "javascript",
+									"title": "Built-in adapter by name"
+								},
+								{
+									"code": "  const fake = new MemorySfuAdapter();\r\n  const sfu  = loadSfuAdapter(fake);\r\n  expect(sfu).toBe(fake);",
+									"lang": "javascript",
+									"title": "Pre-constructed instance (e.g. shared singleton in tests)"
+								},
+								{
+									"code": "  //   npm i @acme/zero-server-sfu-janus\r\n  const sfu = loadSfuAdapter('@acme/zero-server-sfu-janus', { wsUrl: 'ws://janus/ws' });",
+									"lang": "javascript",
+									"title": "Third-party adapter package"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Memory SFU Adapter",
+			"description": "In-process \"memory\" SFU adapter. Bookkeeping-only passthrough that records producers/consumers and emits adapter events without forwarding media packets. Ideal for unit tests, CI, and local dev — use a native adapter for real media plane work.",
+			"example": "  const { MemorySfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = new MemorySfuAdapter();\r\n\n  const events = [];\r\n  sfu.onEvent((event, payload) => events.push({ event, payload }));\r\n\n  const router    = await sfu.createRouter({ room: 'lobby' });\r\n  const transport = await sfu.createTransport(router, { id: 'peer-1' });\r\n  const producer  = await sfu.produce(transport, 'audio', { codec: 'opus' });\r\n  const consumer  = await sfu.consume(transport, producer.id, {});\r\n\n  expect(events).toEqual([\r\n      { event: 'router-new',   payload: { routerId: router.id } },\r\n      { event: 'transport-new', payload: expect.any(Object) },\r\n      { event: 'producer-new',  payload: expect.objectContaining({ kind: 'audio' }) },\r\n      { event: 'consumer-new',  payload: expect.objectContaining({ producerId: producer.id }) },\r\n  ]);",
+			"examples": [
+				{
+					"code": "  const { MemorySfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = new MemorySfuAdapter();\r\n\n  const events = [];\r\n  sfu.onEvent((event, payload) => events.push({ event, payload }));\r\n\n  const router    = await sfu.createRouter({ room: 'lobby' });\r\n  const transport = await sfu.createTransport(router, { id: 'peer-1' });\r\n  const producer  = await sfu.produce(transport, 'audio', { codec: 'opus' });\r\n  const consumer  = await sfu.consume(transport, producer.id, {});\r\n\n  expect(events).toEqual([\r\n      { event: 'router-new',   payload: { routerId: router.id } },\r\n      { event: 'transport-new', payload: expect.any(Object) },\r\n      { event: 'producer-new',  payload: expect.objectContaining({ kind: 'audio' }) },\r\n      { event: 'consumer-new',  payload: expect.objectContaining({ producerId: producer.id }) },\r\n  ]);",
+					"lang": "javascript",
+					"title": "Use the memory adapter inside a vitest suite"
+				},
+				{
+					"code": "  const sfu = loadSfuAdapter('memory');\r\n  const stats = await sfu.stats();\r\n  console.log(stats); // { routers, transports, producers, consumers }",
+					"lang": "javascript",
+					"title": "Drive it through `loadSfuAdapter`"
+				}
+			]
+		},
+		{
+			"name": "Mediasoup SFU Adapter",
+			"description": "mediasoup-backed SFU adapter (peerDependency on `mediasoup`). Wraps a `Worker` plus one `Router` per `createRouter()` call and delegates produce/consume/pause/resume/close/stats to the native objects. Adapter events are uniform via `onEvent`.",
+			"example": "  //   npm install mediasoup\r\n  const { MediasoupSfuAdapter } = require('@zero-server/webrtc');\r\n\n  const sfu = new MediasoupSfuAdapter({\r\n      workerSettings: {\r\n          logLevel:   'warn',\r\n          rtcMinPort: 40000,\r\n          rtcMaxPort: 49999,\r\n      },\r\n      webRtcTransportOptions: {\r\n          listenIps:  [{ ip: '0.0.0.0', announcedIp: process.env.PUBLIC_IP }],\r\n          enableUdp:  true,\r\n          enableTcp:  true,\r\n          preferUdp:  true,\r\n          initialAvailableOutgoingBitrate: 800_000,\r\n      },\r\n  });",
+			"examples": [
+				{
+					"code": "  //   npm install mediasoup\r\n  const { MediasoupSfuAdapter } = require('@zero-server/webrtc');\r\n\n  const sfu = new MediasoupSfuAdapter({\r\n      workerSettings: {\r\n          logLevel:   'warn',\r\n          rtcMinPort: 40000,\r\n          rtcMaxPort: 49999,\r\n      },\r\n      webRtcTransportOptions: {\r\n          listenIps:  [{ ip: '0.0.0.0', announcedIp: process.env.PUBLIC_IP }],\r\n          enableUdp:  true,\r\n          enableTcp:  true,\r\n          preferUdp:  true,\r\n          initialAvailableOutgoingBitrate: 800_000,\r\n      },\r\n  });",
+					"lang": "javascript",
+					"title": "Production setup with custom RTP port range and announced IP"
+				},
+				{
+					"code": "  const routersByRoom = new Map();\r\n\n  async function getRouter(roomName) {\r\n      let r = routersByRoom.get(roomName);\r\n      if (!r) {\r\n          r = await sfu.createRouter({ room: roomName });\r\n          routersByRoom.set(roomName, r);\r\n      }\r\n      return r;\r\n  }\r\n\n  hub.on('join', async ({ peer, room }) => {\r\n      const router    = await getRouter(room.name);\r\n      const transport = await sfu.createTransport(router, peer);\r\n      peer.send('sfu-ready', { transportId: transport.id });\r\n  });",
+					"lang": "javascript",
+					"title": "One router per room, lazy on first join"
+				},
+				{
+					"code": "  const stubMediasoup = {\r\n      createWorker: async () => ({\r\n          createRouter: async () => fakeRouter,\r\n          close: () => {},\r\n      }),\r\n  };\r\n  const sfu = new MediasoupSfuAdapter({ mediasoup: stubMediasoup });",
+					"lang": "javascript",
+					"title": "Inject a stub for unit tests"
+				}
+			],
+			"options": [
+				{
+					"option": "mediasoup",
+					"type": "object",
+					"default": "-",
+					"notes": "Injected mediasoup module (testing); defaults to `require('mediasoup')`."
+				},
+				{
+					"option": "worker",
+					"type": "object",
+					"default": "-",
+					"notes": "Pre-created `mediasoup.Worker`; bypasses the lazy worker bootstrap."
+				},
+				{
+					"option": "workerSettings",
+					"type": "object",
+					"default": "-",
+					"notes": "Forwarded to `mediasoup.createWorker(...)`."
+				},
+				{
+					"option": "mediaCodecs",
+					"type": "Array",
+					"default": "-",
+					"notes": "Default router media codecs."
+				},
+				{
+					"option": "webRtcTransportOptions",
+					"type": "object",
+					"default": "-",
+					"notes": "Default `router.createWebRtcTransport(...)` options."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Best-effort shutdown: closes every router, then the worker if we own it."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "LiveKit SFU Adapter",
+			"description": "LiveKit-backed SFU adapter (peerDependency on `livekit-server-sdk`). Maps the `SfuAdapter` contract onto LiveKit's remote media plane: `createTransport` mints an AccessToken, mute/close delegate to `RoomServiceClient`, and produce/consume are local bookkeeping while LiveKit handles media client-side.",
+			"example": "  //   npm install livekit-server-sdk\r\n  const { LiveKitSfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = new LiveKitSfuAdapter({\r\n      host:      'https://my-project.livekit.cloud',\r\n      apiKey:    process.env.LIVEKIT_API_KEY,\r\n      apiSecret: process.env.LIVEKIT_API_SECRET,\r\n      tokenTtl:  '30m',\r\n  });",
+			"examples": [
+				{
+					"code": "  //   npm install livekit-server-sdk\r\n  const { LiveKitSfuAdapter } = require('@zero-server/webrtc');\r\n  const sfu = new LiveKitSfuAdapter({\r\n      host:      'https://my-project.livekit.cloud',\r\n      apiKey:    process.env.LIVEKIT_API_KEY,\r\n      apiSecret: process.env.LIVEKIT_API_SECRET,\r\n      tokenTtl:  '30m',\r\n  });",
+					"lang": "javascript",
+					"title": "Cloud LiveKit project"
+				},
+				{
+					"code": "  const router    = await sfu.createRouter({ room: 'standup' });\r\n  const transport = await sfu.createTransport(router, {\r\n      id:   peer.id,\r\n      user: { id: peer.user.id, name: peer.user.name },\r\n  });\r\n  peer.send('livekit', { url: transport.url, token: transport.token });",
+					"lang": "javascript",
+					"title": "Self-hosted LiveKit + handing the JWT to a browser"
+				},
+				{
+					"code": "  await sfu.pauseProducer(producer.id);\r\n  // adapter records the producerId; if it was registered with a\r\n  // { room, identity, trackSid } hint it issues\r\n  // RoomServiceClient.mutePublishedTrack() against LiveKit.",
+					"lang": "javascript",
+					"title": "Mute a noisy publisher (REST passthrough)"
+				}
+			],
+			"options": [
+				{
+					"option": "url",
+					"type": "string",
+					"default": "-",
+					"notes": "LiveKit server URL (wss://...)."
+				},
+				{
+					"option": "apiKey",
+					"type": "string",
+					"default": "-",
+					"notes": "LiveKit API key."
+				},
+				{
+					"option": "apiSecret",
+					"type": "string",
+					"default": "-",
+					"notes": "LiveKit API secret."
+				},
+				{
+					"option": "livekit",
+					"type": "object",
+					"default": "-",
+					"notes": "Injected `livekit-server-sdk` module (testing)."
+				},
+				{
+					"option": "client",
+					"type": "object",
+					"default": "-",
+					"notes": "Pre-built `RoomServiceClient` (testing)."
+				},
+				{
+					"option": "defaultRoomOpts",
+					"type": "object",
+					"default": "-",
+					"notes": "Forwarded to `createRoom()` when fields are missing."
+				},
+				{
+					"option": "defaultGrants",
+					"type": "object",
+					"default": "-",
+					"notes": "Default `{canPublish, canSubscribe, ...}` for minted tokens."
+				},
+				{
+					"option": "tokenTtl",
+					"type": "string",
+					"default": "'1h'",
+					"notes": "AccessToken TTL."
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "createRouter",
+							"signature": "createRouter()",
+							"description": "Create a LiveKit room.  `opts.name` overrides the auto-generated name. Returns a router handle whose `id` is the room name."
+						},
+						{
+							"method": "createTransport",
+							"signature": "createTransport()",
+							"description": "Mint an AccessToken for `peer` to join the LiveKit room.  Returns a transport handle containing the JWT and URL the peer hands to the LiveKit client SDK."
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Bot Peer (wrtc)",
+			"description": "Server-side WebRTC peer (\"bot\") built on the `wrtc` peerDependency. `spawnBotPeer({ hub, room, ... })` attaches an in-process peer that joins a room and drives a real `RTCPeerConnection` per remote peer. Bidirectional — use for recording, transcription, AI participants, or SFU verification.",
+			"methodGroups": [
+				{
+					"group": "Methods",
+					"methods": [
+						{
+							"method": "spawnBotPeer",
+							"signature": "spawnBotPeer(opts)",
+							"description": "Spawn a server-side bot peer that joins `room` on the given hub.",
+							"methodParams": [
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "hub",
+									"type": "object",
+									"default": "-",
+									"notes": "The {@link SignalingHub} instance."
+								},
+								{
+									"option": "room",
+									"type": "string",
+									"default": "-",
+									"notes": "Room name to join."
+								},
+								{
+									"option": "user",
+									"type": "*",
+									"default": "-",
+									"notes": "Opaque user object attached to the peer."
+								},
+								{
+									"option": "ip",
+									"type": "string",
+									"default": "'127.0.0.1'",
+									"notes": "IP recorded on the attached peer."
+								},
+								{
+									"option": "joinToken",
+									"type": "string",
+									"default": "-",
+									"notes": "Optional join token forwarded to the hub."
+								},
+								{
+									"option": "iceServers",
+									"type": "Array",
+									"default": "[",
+									"notes": "]    RTCConfiguration.iceServers."
+								},
+								{
+									"option": "rtcConfig",
+									"type": "object",
+									"default": "-",
+									"notes": "Additional RTCConfiguration fields."
+								},
+								{
+									"option": "wrtc",
+									"type": "object",
+									"default": "-",
+									"notes": "Injected `wrtc` module (testing)."
+								},
+								{
+									"option": "onTrack",
+									"type": "Function",
+									"default": "-",
+									"notes": "(track, streams, fromPeerId) => void"
+								},
+								{
+									"option": "onDataChannel",
+									"type": "Function",
+									"default": "-",
+									"notes": "(channel, fromPeerId) => void"
+								},
+								{
+									"option": "onPeerJoin",
+									"type": "Function",
+									"default": "-",
+									"notes": "(remotePeerId) => void"
+								},
+								{
+									"option": "onPeerLeave",
+									"type": "Function",
+									"default": "-",
+									"notes": "(remotePeerId) => void"
+								},
+								{
+									"option": "onError",
+									"type": "Function",
+									"default": "-",
+									"notes": "(err) => void  (non-fatal errors)"
+								}
+							],
+							"example": "  const { spawnBotPeer } = require('@zero-server/webrtc');\r\n  const { RTCAudioSink } = require('@roamhq/wrtc').nonstandard;\r\n  const fs = require('node:fs');\r\n\n  const bot = spawnBotPeer({\r\n      hub,\r\n      room: 'standup',\r\n      user: { id: 'recorder' },\r\n      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],\r\n      onTrack: (track, _streams, fromPeerId) => {\r\n          if (track.kind !== 'audio') return;\r\n          const sink = new RTCAudioSink(track);\r\n          const out  = fs.createWriteStream(`./recordings/${fromPeerId}.pcm`);\r\n          sink.ondata = ({ samples }) => out.write(Buffer.from(samples.buffer));\r\n          track.onended = () => { sink.stop(); out.end(); };\r\n      },\r\n  });\r\n\n  await bot.ready;          // resolves with { peerId } once the hub welcomes us\r\n  process.on('SIGTERM', () => bot.close());",
+							"examples": [
+								{
+									"code": "  const { spawnBotPeer } = require('@zero-server/webrtc');\r\n  const { RTCAudioSink } = require('@roamhq/wrtc').nonstandard;\r\n  const fs = require('node:fs');\r\n\n  const bot = spawnBotPeer({\r\n      hub,\r\n      room: 'standup',\r\n      user: { id: 'recorder' },\r\n      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],\r\n      onTrack: (track, _streams, fromPeerId) => {\r\n          if (track.kind !== 'audio') return;\r\n          const sink = new RTCAudioSink(track);\r\n          const out  = fs.createWriteStream(`./recordings/${fromPeerId}.pcm`);\r\n          sink.ondata = ({ samples }) => out.write(Buffer.from(samples.buffer));\r\n          track.onended = () => { sink.stop(); out.end(); };\r\n      },\r\n  });\r\n\n  await bot.ready;          // resolves with { peerId } once the hub welcomes us\r\n  process.on('SIGTERM', () => bot.close());",
+									"lang": "javascript",
+									"title": "Recording bot: dump every inbound audio track to a file"
+								},
+								{
+									"code": "  const { spawnBotPeer } = require('@zero-server/webrtc');\r\n  const { RTCAudioSource } = require('@roamhq/wrtc').nonstandard;\r\n\n  const source = new RTCAudioSource();\r\n  const track  = source.createTrack();\r\n\n  const bot = spawnBotPeer({\r\n      hub, room: 'lounge', user: { id: 'ai-host' },\r\n      onPeerJoin: (remoteId) => {\r\n          const pc = bot.getPeerConnection(remoteId);\r\n          if (pc) pc.addTrack(track); // perfect-negotiation will renegotiate\r\n      },\r\n  });\r\n\n  // Feed synthesized PCM frames every 10ms.\r\n  setInterval(() => source.onData({\r\n      samples:     ttsNextFrame(),     // Int16Array(160)\r\n      sampleRate:  16000,\r\n      bitsPerSample: 16,\r\n      channelCount:  1,\r\n      numberOfFrames: 160,\r\n  }), 10);",
+									"lang": "javascript",
+									"title": "AI participant: push synthesized audio back to the room"
+								},
+								{
+									"code": "  const bot = spawnBotPeer({ hub, room: 'test', wrtc: fakeWrtc });\r\n  await bot.ready;\r\n  expect(hub.room('test').size).toBe(1);\r\n  bot.close();",
+									"lang": "javascript",
+									"title": "Inject a fake `wrtc` for unit tests"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Join Tokens",
+			"description": "Signed, short-TTL JWT join tokens scoped to `room:<name>`. HS256 by default, RS256 supported. Verification is constant-time and surfaces every failure mode as `WebRTCError({ code: 'INVALID_TOKEN' })`. The hub auto-enforces tokens when constructed with `joinTokenSecret`.",
+			"options": [
+				{
+					"option": "secret",
+					"type": "string | Buffer",
+					"default": "-",
+					"notes": "HMAC secret (HS256) or PEM key (RS256)."
+				},
+				{
+					"option": "user",
+					"type": "string | object",
+					"default": "-",
+					"notes": "User identifier (string) or object containing `id`."
+				},
+				{
+					"option": "room",
+					"type": "string",
+					"default": "-",
+					"notes": "Target room name."
+				},
+				{
+					"option": "ttl",
+					"type": "number",
+					"default": "300",
+					"notes": "Seconds until expiry.  Negative values are accepted\n(used by tests to mint already-expired tokens)."
+				},
+				{
+					"option": "algorithm",
+					"type": "string",
+					"default": "'HS256'",
+					"notes": ""
+				},
+				{
+					"option": "audience",
+					"type": "string | string[]",
+					"default": "-",
+					"notes": "Override the default `room:<name>` audience."
+				},
+				{
+					"option": "claims",
+					"type": "object",
+					"default": "-",
+					"notes": "Additional claims merged into the payload."
+				}
+			],
+			"returns": {
+				"type": "string",
+				"description": "Compact JWT."
+			},
+			"example": "  // server.js\r\n  const { signJoinToken } = require('@zero-server/webrtc');\r\n  app.get('/rtc/token/:room', (req, res) => {\r\n      const token = signJoinToken({\r\n          secret: process.env.WEBRTC_JWT_SECRET,\r\n          user:   req.user,          // { id, name, role }\r\n          room:   req.params.room,\r\n          ttl:    300,               // 5 minute window\r\n          claims: { publish: req.user.isHost === true },\r\n      });\r\n      res.json({ wsUrl: '/rtc', token });\r\n  });\r\n\n  // client.js (pseudo)\r\n  const { wsUrl, token } = await fetch(`/rtc/token/${room}`).then(r => r.json());\r\n  ws = new WebSocket(wsUrl);\r\n  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', room, token }));",
+			"examples": [
+				{
+					"code": "  // server.js\r\n  const { signJoinToken } = require('@zero-server/webrtc');\r\n  app.get('/rtc/token/:room', (req, res) => {\r\n      const token = signJoinToken({\r\n          secret: process.env.WEBRTC_JWT_SECRET,\r\n          user:   req.user,          // { id, name, role }\r\n          room:   req.params.room,\r\n          ttl:    300,               // 5 minute window\r\n          claims: { publish: req.user.isHost === true },\r\n      });\r\n      res.json({ wsUrl: '/rtc', token });\r\n  });\r\n\n  // client.js (pseudo)\r\n  const { wsUrl, token } = await fetch(`/rtc/token/${room}`).then(r => r.json());\r\n  ws = new WebSocket(wsUrl);\r\n  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', room, token }));",
+					"lang": "javascript",
+					"title": "Browser receives a token from a regular HTTP route"
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Signaling",
+					"methods": [
+						{
+							"method": "verifyJoinToken",
+							"signature": "verifyJoinToken(token, opts)",
+							"description": "Verify a join token and return its payload.  Throws a `WebRTCError` with `code: 'INVALID_TOKEN'` on any failure - bad signature, expired, audience mismatch, malformed, etc.",
+							"methodParams": [
+								{
+									"param": "token",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "secret",
+									"type": "string | Buffer",
+									"default": "-",
+									"notes": ""
+								},
+								{
+									"option": "room",
+									"type": "string",
+									"default": "-",
+									"notes": "If supplied, audience must be `room:<room>`."
+								},
+								{
+									"option": "audience",
+									"type": "string | string[]",
+									"default": "-",
+									"notes": "Explicit audience override."
+								},
+								{
+									"option": "algorithms",
+									"type": "string | string[]",
+									"default": "['HS256'",
+									"notes": "]"
+								},
+								{
+									"option": "clockTolerance",
+									"type": "number",
+									"default": "0",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "object",
+								"description": "Verified payload."
+							},
+							"example": "  try {\r\n      const payload = verifyJoinToken(req.body.token, {\r\n          secret: process.env.WEBRTC_JWT_SECRET,\r\n          room:   'boardroom',\r\n      });\r\n      console.log('peer is', payload.user.id, 'publish =', payload.publish);\r\n  } catch (err) {\r\n      // err.code === 'INVALID_TOKEN'\r\n      res.status(401).json({ error: err.message });\r\n  }",
+							"examples": [
+								{
+									"code": "  try {\r\n      const payload = verifyJoinToken(req.body.token, {\r\n          secret: process.env.WEBRTC_JWT_SECRET,\r\n          room:   'boardroom',\r\n      });\r\n      console.log('peer is', payload.user.id, 'publish =', payload.publish);\r\n  } catch (err) {\r\n      // err.code === 'INVALID_TOKEN'\r\n      res.status(401).json({ error: err.message });\r\n  }",
+									"lang": "javascript",
+									"title": "Manually verify a token (most apps never need this — the hub does it)"
+								},
+								{
+									"code": "  const payload = verifyJoinToken(token, {\r\n      secret:         sharedSecret,\r\n      room:           'lobby',\r\n      clockTolerance: 30,\r\n  });",
+									"lang": "javascript",
+									"title": "Allow a 30-second clock skew between issuer and verifier"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Observability",
+			"description": "Optional metrics + tracing wiring for a `SignalingHub`. `bindObservability(hub, { metrics, tracer })` exports the standard `zs_webrtc_*` Prometheus series plus OTel-compatible spans. Both adapters are duck-typed and opt-in.",
+			"options": [
+				{
+					"option": "metrics",
+					"type": "MetricsRegistry",
+					"default": "-",
+					"notes": "Prometheus-compatible registry."
+				},
+				{
+					"option": "tracer",
+					"type": "Tracer",
+					"default": "-",
+					"notes": "Tracer for span emission."
+				}
+			],
+			"params": [
+				{
+					"param": "hub",
+					"type": "SignalingHub",
+					"required": "Yes",
+					"notes": "The hub to instrument."
+				}
+			],
+			"returns": {
+				"type": "SignalingHub",
+				"description": "The same hub, for chaining."
+			},
+			"example": "  const { createApp } = require('@zero-server/sdk');\r\n  const { Tracer } = require('@zero-server/sdk/observe');\r\n  const { SignalingHub, bindObservability } = require('@zero-server/webrtc');\r\n\n  const app = createApp();\r\n  const hub = new SignalingHub({ joinTokenSecret: process.env.JWT });\r\n\n  bindObservability(hub, {\r\n      metrics: app.metrics,        // exposes /metrics for Prometheus scraping\r\n      tracer:  new Tracer(),       // OTel-shaped tracer\r\n  });\r\n\n  app.ws('/rtc', (ws, req) => hub.attach(ws, { user: req.user, ip: req.ip }));",
+			"examples": [
+				{
+					"code": "  const { createApp } = require('@zero-server/sdk');\r\n  const { Tracer } = require('@zero-server/sdk/observe');\r\n  const { SignalingHub, bindObservability } = require('@zero-server/webrtc');\r\n\n  const app = createApp();\r\n  const hub = new SignalingHub({ joinTokenSecret: process.env.JWT });\r\n\n  bindObservability(hub, {\r\n      metrics: app.metrics,        // exposes /metrics for Prometheus scraping\r\n      tracer:  new Tracer(),       // OTel-shaped tracer\r\n  });\r\n\n  app.ws('/rtc', (ws, req) => hub.attach(ws, { user: req.user, ip: req.ip }));",
+					"lang": "javascript",
+					"title": "Wire metrics + tracing from Zero Server's observe scope"
+				},
+				{
+					"code": "  const hub = new SignalingHub();\r\n  bindObservability(hub, { metrics: app.metrics });\r\n  // Scrape /metrics:\r\n  //   zs_webrtc_peers_active{room=\"lobby\"}              3\r\n  //   zs_webrtc_rooms_active                            1\r\n  //   zs_webrtc_signaling_messages_total{type=\"offer\",direction=\"in\",result=\"ok\"} 17\r\n  //   zs_webrtc_offer_duration_ms_bucket{room=\"lobby\",le=\"250\"} 5",
+					"lang": "javascript",
+					"title": "Metrics only (no tracer)"
+				},
+				{
+					"code": "  const client = require('prom-client');\r\n  const reg = new client.Registry();\r\n  const adapter = {\r\n      counter:   ({ name, help, labels }) => new client.Counter({ name, help, labelNames: labels, registers: [reg] }),\r\n      gauge:     ({ name, help, labels }) => new client.Gauge  ({ name, help, labelNames: labels, registers: [reg] }),\r\n      histogram: ({ name, help, labels, buckets }) =>\r\n                 new client.Histogram({ name, help, labelNames: labels, buckets, registers: [reg] }),\r\n  };\r\n  bindObservability(hub, { metrics: adapter });\r\n  app.get('/metrics', async (_req, res) => res.type(reg.contentType).send(await reg.metrics()));",
+					"lang": "javascript",
+					"title": "Custom prom-client registry adapter"
+				}
+			]
+		},
+		{
+			"name": "E2EE Key Relay",
+			"description": "End-to-end-encrypted key relay for WebRTC. Publishers wrap SFrame/Insertable-Streams keys in sealed envelopes (X25519 + HKDF-SHA-256 + AES-256-GCM) and broadcast via `e2ee-key`; the hub stays opaque. `E2eeChannel` accepts any opaque `Buffer`, so libsignal or NaCl-sealed payloads work out of the box.",
+			"params": [
+				{
+					"param": "peer",
+					"type": "Peer",
+					"required": "Yes",
+					"notes": ""
+				},
+				{
+					"param": "hub",
+					"type": "SignalingHub",
+					"required": "Yes",
+					"notes": ""
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Public crypto helpers",
+					"methods": [
+						{
+							"method": "generateE2eeKeyPair",
+							"signature": "generateE2eeKeyPair()",
+							"description": "Generate a fresh X25519 keypair suitable for {@link sealKey} / {@link openSealedKey}.",
+							"methodReturns": {
+								"type": "{publicKey: KeyObject, privateKey: KeyObject}",
+								"description": ""
+							},
+							"example": "  const { publicKey, privateKey } = generateE2eeKeyPair();\r\n  const wireKey = publicKey.export({ format: 'jwk' }).x; // base64url",
+							"examples": [
+								{
+									"code": "  const { publicKey, privateKey } = generateE2eeKeyPair();\r\n  const wireKey = publicKey.export({ format: 'jwk' }).x; // base64url",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "sealKey",
+							"signature": "sealKey(plaintext, recipientPubKey)",
+							"description": "Seal an opaque byte string for a single recipient using the project's default envelope (X25519 ECDH + HKDF-SHA-256 + AES-256-GCM). Envelope layout: `[ver:1] [ephPubRaw:32] [nonce:12] [ciphertext:N] [tag:16]`",
+							"methodParams": [
+								{
+									"param": "plaintext",
+									"type": "Buffer | Uint8Array",
+									"required": "Yes",
+									"notes": "The bytes to encrypt."
+								},
+								{
+									"param": "recipientPubKey",
+									"type": "KeyObject | Buffer",
+									"required": "Yes",
+									"notes": "Recipient's X25519 public\nkey (KeyObject or 32-byte raw)."
+								}
+							],
+							"methodReturns": {
+								"type": "Buffer",
+								"description": "The sealed envelope."
+							},
+							"example": "  const sealed = sealKey(Buffer.from(sframeKey), bob.publicKey);\r\n  peer.e2ee.publish(epoch, sealed);",
+							"examples": [
+								{
+									"code": "  const sealed = sealKey(Buffer.from(sframeKey), bob.publicKey);\r\n  peer.e2ee.publish(epoch, sealed);",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "openSealedKey",
+							"signature": "openSealedKey(sealed, recipientPrivKey)",
+							"description": "Open an envelope produced by {@link sealKey} with the recipient's private key.  Throws if the envelope is malformed, was sealed for a different recipient, or was tampered with in flight.",
+							"methodParams": [
+								{
+									"param": "sealed",
+									"type": "Buffer | Uint8Array",
+									"required": "Yes",
+									"notes": "Sealed envelope."
+								},
+								{
+									"param": "recipientPrivKey",
+									"type": "KeyObject | Buffer",
+									"required": "Yes",
+									"notes": "Recipient's X25519 private key."
+								}
+							],
+							"methodReturns": {
+								"type": "Buffer",
+								"description": "Decrypted plaintext."
+							},
+							"example": "  const sframeKey = openSealedKey(received.key, bob.privateKey);",
+							"examples": [
+								{
+									"code": "  const sframeKey = openSealedKey(received.key, bob.privateKey);",
+									"lang": "javascript"
+								}
+							]
+						}
+					]
+				},
+				{
+					"group": "E2EE",
+					"methods": [
+						{
+							"method": "publish",
+							"signature": "publish(epoch, key)",
+							"description": "Broadcast a sealed key to the rest of the peer's room.",
+							"methodParams": [
+								{
+									"param": "epoch",
+									"type": "number | null",
+									"required": "Yes",
+									"notes": "Explicit epoch, or `null` to auto-increment."
+								},
+								{
+									"param": "key",
+									"type": "Buffer | Uint8Array | string",
+									"required": "Yes",
+									"notes": "Sealed bytes (or wire-ready string)."
+								}
+							],
+							"methodReturns": {
+								"type": "number",
+								"description": "The epoch the key was published under."
+							},
+							"example": "  const sealed = sealKey(sframeKey, bob.publicKey);\r\n  const epoch  = peer.e2ee.publish(null, sealed);",
+							"examples": [
+								{
+									"code": "  const sealed = sealKey(sframeKey, bob.publicKey);\r\n  const epoch  = peer.e2ee.publish(null, sealed);",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "subscribe",
+							"signature": "subscribe(fn)",
+							"description": "Receive sealed keys published by *other* peers in the same room.",
+							"methodParams": [
+								{
+									"param": "fn",
+									"type": "(ev: {from: string, epoch: number, key: Buffer}) => void",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "() => void",
+								"description": "Unsubscribe function."
+							},
+							"example": "  peer.e2ee.subscribe(({ from, epoch, key }) => {\r\n      const sframeKey = openSealedKey(key, myPrivKey);\r\n      sframeContext.setKey(epoch, sframeKey);\r\n  });",
+							"examples": [
+								{
+									"code": "  peer.e2ee.subscribe(({ from, epoch, key }) => {\r\n      const sframeKey = openSealedKey(key, myPrivKey);\r\n      sframeContext.setKey(epoch, sframeKey);\r\n  });",
+									"lang": "javascript"
+								}
+							]
+						},
+						{
+							"method": "attachE2ee",
+							"signature": "attachE2ee(peer, hub)",
+							"description": "Install an {@link E2eeChannel} on a peer as `peer.e2ee`.  Idempotent: a second call returns the existing channel.",
+							"methodParams": [
+								{
+									"param": "peer",
+									"type": "Peer",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "hub",
+									"type": "SignalingHub",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "E2eeChannel",
+								"description": ""
+							},
+							"example": "  hub.on('join', ({ peer }) => attachE2ee(peer, hub));",
+							"examples": [
+								{
+									"code": "  hub.on('join', ({ peer }) => attachE2ee(peer, hub));",
+									"lang": "javascript",
+									"title": "Attach E2EE on every join"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Cluster Adapter",
+			"description": "Cluster adapter for the signaling hub. `useCluster(hub, adapter)` glues a `SignalingHub` to any `{ publish, subscribe }` pub/sub bus so joins, leaves, broadcasts, and direct frames flow across nodes. Ships with `MemoryClusterAdapter`; wire to Redis, NATS, Kafka, or any in-house bus in production.",
+			"options": [
+				{
+					"option": "nodeId",
+					"type": "string",
+					"default": "-",
+					"notes": "Stable id for this node.  Defaults to\na random 8-byte hex string."
+				}
+			],
+			"params": [
+				{
+					"param": "hub",
+					"type": "import('./signaling').SignalingHub",
+					"required": "Yes",
+					"notes": ""
+				},
+				{
+					"param": "adapter",
+					"type": "{publish:Function, subscribe:Function}",
+					"required": "Yes",
+					"notes": ""
+				}
+			],
+			"methodGroups": [
+				{
+					"group": "Cluster",
+					"methods": [
+						{
+							"method": "locate",
+							"signature": "locate(peerId)",
+							"description": "Look up the node that owns a remote peer, if any.",
+							"methodParams": [
+								{
+									"param": "peerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "{nodeId:string, room:string} | null",
+								"description": ""
+							}
+						},
+						{
+							"method": "routeDirect",
+							"signature": "routeDirect(toPeerId, type, payload)",
+							"description": "Forward a direct frame to a peer on another node.  Called by the hub when a routed message (`offer` / `answer` / `ice`) targets a peer id that is not in the local registry.",
+							"methodParams": [
+								{
+									"param": "toPeerId",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "boolean",
+								"description": "`true` if a remote node was addressed."
+							}
+						},
+						{
+							"method": "fanoutRoom",
+							"signature": "fanoutRoom(roomName, type, payload, [excludeId])",
+							"description": "Mirror a `room.broadcast(...)` to peers in the same room on other nodes.  Called automatically from `Room#broadcast`.",
+							"methodParams": [
+								{
+									"param": "roomName",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "type",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "payload",
+									"type": "object",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "excludeId",
+									"type": "string",
+									"required": "No",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "close",
+							"signature": "close()",
+							"description": "Tear down all subscriptions and clear remote state."
+						},
+						{
+							"method": "publish",
+							"signature": "publish(channel, message)",
+							"methodParams": [
+								{
+									"param": "channel",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "message",
+									"type": "*",
+									"required": "Yes",
+									"notes": ""
+								}
+							]
+						},
+						{
+							"method": "subscribe",
+							"signature": "subscribe(channel, fn)",
+							"methodParams": [
+								{
+									"param": "channel",
+									"type": "string",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "fn",
+									"type": "(msg:*) => void",
+									"required": "Yes",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "() => void",
+								"description": "unsubscribe"
+							}
+						}
+					]
+				},
+				{
+					"group": "useCluster",
+					"methods": [
+						{
+							"method": "useCluster",
+							"signature": "useCluster(hub, adapter, [opts])",
+							"description": "Attach a cluster adapter to a `SignalingHub`.",
+							"methodParams": [
+								{
+									"param": "hub",
+									"type": "import('./signaling').SignalingHub",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "adapter",
+									"type": "{publish:Function, subscribe:Function}",
+									"required": "Yes",
+									"notes": ""
+								},
+								{
+									"param": "opts",
+									"type": "object",
+									"required": "No",
+									"notes": ""
+								}
+							],
+							"methodOptions": [
+								{
+									"option": "nodeId",
+									"type": "string",
+									"default": "-",
+									"notes": ""
+								}
+							],
+							"methodReturns": {
+								"type": "ClusterCoordinator",
+								"description": ""
+							},
+							"example": "  const { SignalingHub, useCluster, MemoryClusterAdapter } = require('@zero-server/webrtc');\r\n  const adapter = new MemoryClusterAdapter();\r\n  const a = new SignalingHub(); useCluster(a, adapter, { nodeId: 'a' });\r\n  const b = new SignalingHub(); useCluster(b, adapter, { nodeId: 'b' });",
+							"examples": [
+								{
+									"code": "  const { SignalingHub, useCluster, MemoryClusterAdapter } = require('@zero-server/webrtc');\r\n  const adapter = new MemoryClusterAdapter();\r\n  const a = new SignalingHub(); useCluster(a, adapter, { nodeId: 'a' });\r\n  const b = new SignalingHub(); useCluster(b, adapter, { nodeId: 'b' });",
+									"lang": "javascript",
+									"title": "In-memory cluster (tests / single-process simulation)"
+								},
+								{
+									"code": "  const Redis = require('ioredis');\r\n  const pub = new Redis(), sub = new Redis();\r\n  const adapter = {\r\n      publish:   (ch, msg) => pub.publish(ch, JSON.stringify(msg)),\r\n      subscribe: (ch, cb) => {\r\n          sub.subscribe(ch);\r\n          const on = (c, raw) => { if (c === ch) cb(JSON.parse(raw)); };\r\n          sub.on('message', on);\r\n          return () => { sub.off('message', on); sub.unsubscribe(ch); };\r\n      },\r\n  };\r\n  useCluster(hub, adapter);",
+									"lang": "javascript",
+									"title": "Redis adapter (BYO ioredis)"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "WebRTC CLI",
+			"description": "CLI subcommands for the `zs webrtc:*` namespace. Pure-function entry point `runWebRTCCommand(subcmd, flags, deps)` so the dispatch can be exercised in tests without spawning a child process or hitting the network.  All side effects (stdout / stderr / process.exitCode) are injected through `deps`, defaulting to the real globals when called from `lib/cli.js`.",
+			"options": [
+				{
+					"option": "out",
+					"type": "(line: string) => void",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "err",
+					"type": "(line: string) => void",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "setExit",
+					"type": "(code: number) => void",
+					"default": "-",
+					"notes": ""
+				},
+				{
+					"option": "stunBinding",
+					"type": "typeof defaultStun",
+					"default": "-",
+					"notes": ""
+				}
+			],
+			"params": [
+				{
+					"param": "subcmd",
+					"type": "string",
+					"required": "Yes",
+					"notes": "\nOne of `stun`, `turn-creds`, `join-token`, `verify-token`, `help`."
+				},
+				{
+					"param": "flags",
+					"type": "Map<string,string>",
+					"required": "Yes",
+					"notes": ""
+				},
+				{
+					"param": "deps",
+					"type": "object",
+					"required": "No",
+					"notes": "\nInjection seam for tests."
+				}
+			],
+			"returns": {
+				"type": "Promise<number>",
+				"description": "The exit code that would have been set."
+			},
+			"example": "  // From the shell, via the top-level CLI:\r\n  //   npx zs webrtc:stun --host stun.l.google.com --port 19302\r\n  //   npx zs webrtc:turn-creds --secret $SECRET --user alice \\\r\n  //                           --servers turn:turn.example.com:3478\r\n  //   npx zs webrtc:join-token --secret $JT_SECRET --room lobby --sub u1\r\n  //   npx zs webrtc:verify-token --secret $JT_SECRET --token $TOKEN\r\n\n  // Programmatically:\r\n  const { runWebRTCCommand } = require('@zero-server/webrtc/cli');\r\n  await runWebRTCCommand('join-token', new Map([\r\n      ['secret', 's'], ['room', 'lobby'], ['sub', 'u1'],\r\n  ]));",
+			"examples": [
+				{
+					"code": "  // From the shell, via the top-level CLI:\r\n  //   npx zs webrtc:stun --host stun.l.google.com --port 19302\r\n  //   npx zs webrtc:turn-creds --secret $SECRET --user alice \\\r\n  //                           --servers turn:turn.example.com:3478\r\n  //   npx zs webrtc:join-token --secret $JT_SECRET --room lobby --sub u1\r\n  //   npx zs webrtc:verify-token --secret $JT_SECRET --token $TOKEN\r\n\n  // Programmatically:\r\n  const { runWebRTCCommand } = require('@zero-server/webrtc/cli');\r\n  await runWebRTCCommand('join-token', new Map([\r\n      ['secret', 's'], ['room', 'lobby'], ['sub', 'u1'],\r\n  ]));",
+					"lang": "javascript"
+				}
+			]
+		}
+	]
+}

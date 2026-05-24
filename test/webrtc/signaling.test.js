@@ -476,6 +476,48 @@ describe('Peer', () =>
         expect(relayed.from).toBe(pa.id);
     });
 
+    it('accepts a Firefox-style offer with session-level a=fingerprint (RFC 8839 §5.4)', () =>
+    {
+        const hub = new SignalingHub();
+        hub.room('r').open();
+        const { transport: a, peer: pa } = attachPeer(hub);
+        const { transport: b, peer: pb } = attachPeer(hub);
+        a.inject({ type: 'join', room: 'r' });
+        b.inject({ type: 'join', room: 'r' });
+        a.outbox.length = 0;
+        b.outbox.length = 0;
+
+        // Firefox emits a=fingerprint only at session level; per RFC 8839 §5.4
+        // and RFC 8122 §5 it applies to every media section that omits its own.
+        const ff = [
+            'v=0',
+            'o=mozilla...THIS_IS_SDPARTA-99.0 9217916099293327795 0 IN IP4 0.0.0.0',
+            's=-',
+            't=0 0',
+            'a=sendrecv',
+            'a=fingerprint:sha-256 20:30:A4:45:B5:17:FF:CC:7A:EC:9E:F2:15:A0:C8:78:BC:C8:C8:F6:57:E1:B0:6A:6A:3D:9D:D3:7D:92:C6:93',
+            'a=group:BUNDLE 0',
+            'a=ice-options:trickle',
+            'a=msid-semantic:WMS *',
+            'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+            'c=IN IP4 0.0.0.0',
+            'a=sendrecv',
+            'a=ice-pwd:12d8a8eb721d8f776af17848d3c7cd18',
+            'a=ice-ufrag:27a3a95f',
+            'a=mid:0',
+            'a=setup:actpass',
+            'a=sctp-port:5000',
+            'a=max-message-size:1073741823',
+        ].join('\r\n') + '\r\n';
+
+        a.inject({ type: 'offer', sdp: ff, target: pb.id });
+        const err = a.outbox.map(JSON.parse).find(m => m.type === 'error');
+        expect(err).toBeFalsy();
+        const relayed = b.outbox.map(JSON.parse).find(m => m.type === 'offer');
+        expect(relayed).toBeTruthy();
+        expect(relayed.from).toBe(pa.id);
+    });
+
     it('still rejects an unknown proto (TCP/RTP/AVP)', () =>
     {
         const hub = new SignalingHub();
