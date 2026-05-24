@@ -412,6 +412,59 @@ export declare class MemoryClusterAdapter implements ClusterAdapter {
 }
 
 // ---------------------------------------------------------------------------
+//  Cross-node SFU cascade
+
+export interface UseCascadeOptions {
+    nodeId?: string;
+    sfu?: SfuAdapter;
+    listenInfo?: Record<string, unknown>;
+    enableSrtp?: boolean;
+}
+
+export interface CascadeRemoteProducer {
+    producerId: string;
+    room: string;
+    nodeId: string;
+    routerId: string;
+    kind: string;
+    rtpParameters: Record<string, unknown> | null;
+}
+
+export interface CascadeBridgeStats {
+    room: string;
+    routerId: string;
+    localProducers: number;
+    peers: number;
+    pipes: number;
+}
+
+export interface CascadeStats {
+    nodeId: string;
+    bridges: CascadeBridgeStats[];
+    remoteProducers: number;
+}
+
+export declare class CascadeCoordinator {
+    readonly hub: SignalingHub;
+    readonly sfu: SfuAdapter;
+    readonly nodeId: string;
+    readonly listenInfo: Record<string, unknown>;
+    readonly enableSrtp: boolean;
+    constructor(hub: SignalingHub, opts?: UseCascadeOptions);
+    registerLocalBridge(roomName: string, router: { id?: string; routerId?: string }): unknown;
+    closeLocalBridge(roomName: string): void;
+    announceProducer(roomName: string, producer: { id?: string; producerId?: string; kind?: string; rtpParameters?: unknown }): void;
+    retractProducer(roomName: string, producerId: string): void;
+    locateRemoteProducer(producerId: string): CascadeRemoteProducer | null;
+    stats(): CascadeStats;
+    close(): void;
+}
+
+export declare function useCascade(hub: SignalingHub, opts?: UseCascadeOptions): CascadeCoordinator;
+
+export declare const CH_CASCADE: string;
+
+// ---------------------------------------------------------------------------
 //  CLI
 // ---------------------------------------------------------------------------
 
