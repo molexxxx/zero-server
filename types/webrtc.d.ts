@@ -465,6 +465,60 @@ export declare function useCascade(hub: SignalingHub, opts?: UseCascadeOptions):
 export declare const CH_CASCADE: string;
 
 // ---------------------------------------------------------------------------
+//  MCU (multipoint control unit)
+
+export type McuLayout = 'grid' | 'presenter' | 'presenter-strip' | 'dominant' | 'pip' | 'audio-only' | string;
+
+export interface McuMixOptions {
+    producerIds?: string[];
+    kind?: 'audio' | 'video' | 'av';
+    layout?: McuLayout | { name: string };
+    inputs?: Array<Record<string, unknown>>;
+    outputs?: Array<Record<string, unknown>>;
+    output?: Record<string, unknown>;
+    args?: string[];
+}
+
+export interface McuMixResult {
+    mixedProducerId: string;
+    kind: string;
+    layout: McuLayout;
+    sources: string[];
+    pid?: number;
+}
+
+export interface McuStats {
+    mixes: Array<{
+        id: string;
+        room?: string;
+        sources: string[];
+        layout: McuLayout;
+        kind: string;
+        pid?: number;
+        exited?: boolean;
+    }>;
+}
+
+export declare class McuAdapter {
+    readonly sfu: SfuAdapter | null;
+    readonly name: string;
+    constructor(opts?: { sfu?: SfuAdapter; name?: string });
+    mix(roomId: string, opts?: McuMixOptions): Promise<McuMixResult>;
+    unmix(mixedProducerId: string): Promise<boolean>;
+    setLayout(mixedProducerId: string, layout: McuLayout | { name: string }): Promise<McuLayout>;
+    addSource(mixedProducerId: string, producerId: string): Promise<number>;
+    removeSource(mixedProducerId: string, producerId: string): Promise<number>;
+    stats(): McuStats;
+    close(): Promise<void>;
+}
+
+export declare class MemoryMcuAdapter extends McuAdapter {}
+
+export declare class FfmpegMcuAdapter extends McuAdapter {
+    constructor(opts?: { sfu?: SfuAdapter; ffmpegPath?: string; spawn?: (...args: unknown[]) => unknown });
+}
+
+// ---------------------------------------------------------------------------
 //  CLI
 // ---------------------------------------------------------------------------
 
