@@ -391,6 +391,106 @@ describe('Peer', () =>
         expect(err.code).toBe('INVALID_SDP');
     });
 
+    it('accepts an SCTP data-channel-only offer (m=application UDP/DTLS/SCTP)', () =>
+    {
+        const hub = new SignalingHub();
+        hub.room('r').open();
+        const { transport: a, peer: pa } = attachPeer(hub);
+        const { transport: b, peer: pb } = attachPeer(hub);
+        a.inject({ type: 'join', room: 'r' });
+        b.inject({ type: 'join', room: 'r' });
+        a.outbox.length = 0;
+        b.outbox.length = 0;
+
+        // Real-world Chrome data-channel-only offer: one m=application section
+        // using UDP/DTLS/SCTP. Carries iceUfrag/icePwd/fingerprint just like
+        // RTP sections - the only difference is the proto.
+        const sctp = [
+            'v=0',
+            'o=- 1 2 IN IP4 127.0.0.1',
+            's=-',
+            't=0 0',
+            'a=group:BUNDLE 0',
+            'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+            'c=IN IP4 0.0.0.0',
+            'a=ice-ufrag:abcd',
+            'a=ice-pwd:0123456789abcdef0123456789',
+            'a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
+            'a=setup:actpass',
+            'a=mid:0',
+            'a=sctp-port:5000',
+            'a=max-message-size:262144',
+        ].join('\r\n') + '\r\n';
+
+        a.inject({ type: 'offer', sdp: sctp, target: pb.id });
+        const err = a.outbox.map(JSON.parse).find(m => m.type === 'error');
+        expect(err).toBeFalsy();
+        const relayed = b.outbox.map(JSON.parse).find(m => m.type === 'offer');
+        expect(relayed).toBeTruthy();
+        expect(relayed.from).toBe(pa.id);
+        expect(relayed.sdp).toContain('UDP/DTLS/SCTP');
+    });
+
+    it('accepts a mixed BUNDLE offer (audio + data channel) inheriting ice credentials', () =>
+    {
+        const hub = new SignalingHub();
+        hub.room('r').open();
+        const { transport: a, peer: pa } = attachPeer(hub);
+        const { transport: b, peer: pb } = attachPeer(hub);
+        a.inject({ type: 'join', room: 'r' });
+        b.inject({ type: 'join', room: 'r' });
+        a.outbox.length = 0;
+        b.outbox.length = 0;
+
+        // Real-world Chrome mixed offer under max-bundle: audio carries the
+        // ice credentials and the SCTP section inherits them per RFC 8843.
+        const mixed = [
+            'v=0',
+            'o=- 1 2 IN IP4 127.0.0.1',
+            's=-',
+            't=0 0',
+            'a=group:BUNDLE 0 1',
+            'm=audio 9 UDP/TLS/RTP/SAVPF 111',
+            'c=IN IP4 0.0.0.0',
+            'a=ice-ufrag:abcd',
+            'a=ice-pwd:0123456789abcdef0123456789',
+            'a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
+            'a=setup:actpass',
+            'a=mid:0',
+            'a=sendrecv',
+            'a=rtcp-mux',
+            'a=rtpmap:111 opus/48000/2',
+            'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+            'c=IN IP4 0.0.0.0',
+            'a=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
+            'a=setup:actpass',
+            'a=mid:1',
+            'a=sctp-port:5000',
+        ].join('\r\n') + '\r\n';
+
+        a.inject({ type: 'offer', sdp: mixed, target: pb.id });
+        const err = a.outbox.map(JSON.parse).find(m => m.type === 'error');
+        expect(err).toBeFalsy();
+        const relayed = b.outbox.map(JSON.parse).find(m => m.type === 'offer');
+        expect(relayed).toBeTruthy();
+        expect(relayed.from).toBe(pa.id);
+    });
+
+    it('still rejects an unknown proto (TCP/RTP/AVP)', () =>
+    {
+        const hub = new SignalingHub();
+        hub.room('r').open();
+        const { transport } = attachPeer(hub);
+        transport.inject({ type: 'join', room: 'r' });
+        transport.outbox.length = 0;
+
+        const bad = MIN_SDP.replace('UDP/TLS/RTP/SAVPF', 'TCP/RTP/AVP');
+        transport.inject({ type: 'offer', sdp: bad, target: 'x' });
+        const err = transport.outbox.map(JSON.parse).find(m => m.type === 'error');
+        expect(err).toBeTruthy();
+        expect(err.code).toBe('INVALID_SDP');
+    });
+
     it('rejects an offer with too many candidates', () =>
     {
         const hub = new SignalingHub({ maxCandidatesPerOffer: 2 });
