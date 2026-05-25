@@ -42,9 +42,15 @@ Module._resolveFilename = function patchedResolve(request, parent, ...rest) {
 beforeAll(() => {
     const needsGenerate = scopes.some((s) => {
         const dir = path.join(PACKAGES_DIR, s.name);
-        return !fs.existsSync(path.join(dir, 'index.js'))
+        const pkgPath = path.join(dir, 'package.json');
+        if (!fs.existsSync(path.join(dir, 'index.js'))
             || !fs.existsSync(path.join(dir, 'index.d.ts'))
-            || !fs.existsSync(path.join(dir, 'package.json'));
+            || !fs.existsSync(pkgPath)) return true;
+        try {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            if (pkg.version !== PKG.version) return true;
+        } catch { return true; }
+        return false;
     });
     if (needsGenerate) {
         execFileSync(
