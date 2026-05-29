@@ -6,16 +6,16 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/badge/%40zero--server%2Fsdk-000?style=flat-square&logo=npm&logoColor=white" alt="@zero-server/sdk"></a>
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/npm/v/%40zero-server%2Fsdk?style=flat-square&logo=npm&logoColor=white&label=&color=00d8e0" alt="npm version"></a>
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://img.shields.io/npm/dm/%40zero-server%2Fsdk?style=flat-square&logo=npm&logoColor=white&label=downloads&color=ff6b35" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-npm-zserver.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-dm-zserver.svg" alt="npm downloads"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/github/actions/workflow/status/tonywied17/zero-server/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg" alt="CI"></a>
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://img.shields.io/badge/tests-8016%20passing-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="tests"></a>
   <a href="https://github.com/tonywied17/zero-server"><img src="https://img.shields.io/badge/coverage-95.86%25-brightgreen?style=flat-square&logo=vitest&logoColor=white" alt="coverage"></a>
   <a href="https://z-server.dev"><img src="https://img.shields.io/badge/docs-z--server.dev-00d8e0?style=flat-square&logo=readthedocs&logoColor=white" alt="docs"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-00d8e0?style=flat-square&logo=opensourceinitiative&logoColor=white" alt="MIT"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-license-zserver.svg" alt="license"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square&logo=nodedotjs&logoColor=white" alt="node >=18"></a>
 </p>
 
