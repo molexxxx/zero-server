@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg?v=c270d2bb" alt="CI"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg?v=1634715a" alt="CI"></a>
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-tests-zserver.svg?v=220ee9ed" alt="tests"></a>
   <a href="https://github.com/tonywied17/zero-server"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-coverage-zserver.svg?v=51415611" alt="coverage"></a>
   <a href="https://z-server.dev"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-docs-zserver.svg?v=5ac542e3" alt="docs"></a>
