@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-sdk-name-zserver.svg?v=91eaa0e9" alt="@zero-server/sdk"></a>
   <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-npm-zserver.svg?v=6e054abc" alt="npm version"></a>
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-dm-zserver.svg?v=57baf8e3" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-dm-zserver.svg?v=3d6f2adf" alt="npm downloads"></a>
 </p>
 
 <p align="center">
