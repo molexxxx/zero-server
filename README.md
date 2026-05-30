@@ -14,7 +14,7 @@
   <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg?v=8be87401" alt="CI"></a>
   <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-tests-zserver.svg?v=220ee9ed" alt="tests"></a>
   <a href="https://github.com/tonywied17/zero-server"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-coverage-zserver.svg?v=51415611" alt="coverage"></a>
-  <a href="https://z-server.dev"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-docs-zserver.svg?v=7894225e" alt="docs"></a>
+  <a href="https://z-server.dev"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-docs-zserver.svg?v=caddfc13" alt="docs"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-license-zserver.svg?v=07282979" alt="license"></a>
   <a href="https://nodejs.org"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-node-zserver.svg?v=eb23afa3" alt="node >=18"></a>
 </p>
