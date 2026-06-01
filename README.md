@@ -5,18 +5,18 @@
 <h1 align="center">zero-server</h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-sdk-name-zserver.svg?v=91eaa0e9" alt="@zero-server/sdk"></a>
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-npm-zserver.svg?v=6e054abc" alt="npm version"></a>
-  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-dm-zserver.svg?v=3d6f2adf" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-sdk-name-zserver.svg?v=fcb2eb64" alt="@zero-server/sdk"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-npm-zserver.svg?v=ea097042" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@zero-server/sdk"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-dm-zserver.svg?v=64909f6c" alt="npm downloads"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg?v=8be87401" alt="CI"></a>
-  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-tests-zserver.svg?v=220ee9ed" alt="tests"></a>
-  <a href="https://github.com/tonywied17/zero-server"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-coverage-zserver.svg?v=51415611" alt="coverage"></a>
-  <a href="https://z-server.dev"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-docs-zserver.svg?v=caddfc13" alt="docs"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-license-zserver.svg?v=07282979" alt="license"></a>
-  <a href="https://nodejs.org"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-node-zserver.svg?v=eb23afa3" alt="node >=18"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions/workflows/ci.yml"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-ci-zserver.svg?v=93e3f5b2" alt="CI"></a>
+  <a href="https://github.com/tonywied17/zero-server/actions"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-tests-zserver.svg?v=e6efc992" alt="tests"></a>
+  <a href="https://github.com/tonywied17/zero-server"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-coverage-zserver.svg?v=6d7c77dd" alt="coverage"></a>
+  <a href="https://z-server.dev"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-docs-zserver.svg?v=c1e147ba" alt="docs"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-license-zserver.svg?v=7ba44e70" alt="license"></a>
+  <a href="https://nodejs.org"><img src="https://raw.githubusercontent.com/tonywied17/tonywied17/main/.github/badges/zero-server-node-zserver.svg?v=f01a6d3e" alt="node >=18"></a>
 </p>
 
 > **Zero-dependency backend framework for Node.js - routing, ORM, auth, WebSocket, SSE, observability, and 20+ middleware as one SDK or focused scoped packages.**
