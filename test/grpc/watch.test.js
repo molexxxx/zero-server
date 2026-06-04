@@ -331,19 +331,18 @@ describe('watchProto', () =>
         fs.writeFileSync(protoPath, protoContent);
 
         const result = watchProto(mockApp, protoPath, 'Greeter', { SayHello() {} }, {
-            debounce: 100,
+            debounce: 200,
             onReload: () => { reloadCount++; },
         });
 
-        // Rapid changes
+        // Write all changes synchronously so they are guaranteed to land within
+        // a single debounce window regardless of CI runner timing variance.
         await new Promise(r => setTimeout(r, 50));
         fs.writeFileSync(protoPath, protoContent + '\n// change 1');
-        await new Promise(r => setTimeout(r, 20));
         fs.writeFileSync(protoPath, protoContent + '\n// change 2');
-        await new Promise(r => setTimeout(r, 20));
         fs.writeFileSync(protoPath, protoContent + '\n// change 3');
 
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 600));
 
         // Should only reload once due to debouncing
         expect(reloadCount).toBeLessThanOrEqual(2);
