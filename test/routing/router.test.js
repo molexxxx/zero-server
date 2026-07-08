@@ -201,6 +201,40 @@ describe('Router - nested sub-routers', () => {
 });
 
 // ===========================================================
+//  Child mount + query string on the mount root
+// ===========================================================
+describe('Router - query string on mounted root', () => {
+    let server, base;
+
+    beforeAll(async () => {
+        const app = createApp();
+        const child = Router();
+        child.get('/', (req, res) => res.json({ route: 'root', y: req.query.y }));
+        child.get('/sub', (req, res) => res.json({ route: 'sub', x: req.query.x }));
+        app.use('/api/x', child);
+        server = http.createServer(app.handler);
+        await new Promise(r => server.listen(0, r));
+        base = `http://localhost:${server.address().port}`;
+    });
+
+    afterAll(() => server?.close());
+
+    it('matches the root route when a query string rides the mount prefix', async () => {
+        const r = await doFetch(`${base}/api/x?y=1`);
+        expect(r.status).toBe(200);
+        expect(r.data.route).toBe('root');
+        expect(r.data.y).toBe('1');
+    });
+
+    it('still matches subpaths with a query string', async () => {
+        const r = await doFetch(`${base}/api/x/sub?x=9`);
+        expect(r.status).toBe(200);
+        expect(r.data.route).toBe('sub');
+        expect(r.data.x).toBe('9');
+    });
+});
+
+// ===========================================================
 //  all() method - matches every HTTP verb
 // ===========================================================
 describe('Router - all() catches all methods', () => {
@@ -430,5 +464,120 @@ describe('Router refactored matching', () =>
     {
         const r = await doFetch(`${base}/nonexistent`);
         expect(r.status).toBe(404);
+    });
+});
+
+// ===========================================================
+//  Router-level middleware - use(fn) / use(prefix, fn)
+// ===========================================================
+describe('Router - router-level middleware', () => {
+    let server, base;
+
+    beforeAll(async () => {
+        const app = createApp();
+
+        const api = Router();
+        // global router middleware - runs before every matched route
+        api.use((req, res, next) => { req.locals.hitGlobal = true; next(); });
+        // prefix-scoped middleware - only for /admin/*
+        api.use('/admin', (req, res, next) => {
+            if (req.get('Authorization') !== 'Bearer secret')
+                return res.status(401).json({ error: 'Unauthorized' });
+            req.locals.admin = true;
+            next();
+        });
+        // async middleware
+        api.use('/slow', async (req, res, next) => {
+            await new Promise(r => setTimeout(r, 5));
+            req.locals.slow = true;
+            next();
+        });
+
+        api.get('/public', (req, res) => res.json({ hitGlobal: !!req.locals.hitGlobal, admin: !!req.locals.admin }));
+        api.get('/admin/panel', (req, res) => res.json({ admin: !!req.locals.admin, hitGlobal: !!req.locals.hitGlobal }));
+        api.get('/slow/thing', (req, res) => res.json({ slow: !!req.locals.slow }));
+
+        // nested child under the middleware-bearing router
+        const nested = Router();
+        nested.get('/deep', (req, res) => res.json({ hitGlobal: !!req.locals.hitGlobal, admin: !!req.locals.admin }));
+        api.use('/admin/nested', nested);
+
+        app.use('/api', api);
+        server = http.createServer(app.handler);
+        await new Promise(r => server.listen(0, r));
+        base = `http://localhost:${server.address().port}`;
+    });
+
+    afterAll(() => server?.close());
+
+    it('global middleware runs before matched route handler', async () => {
+        const r = await doFetch(`${base}/api/public`);
+        expect(r.status).toBe(200);
+        expect(r.data.hitGlobal).toBe(true);
+        expect(r.data.admin).toBe(false);
+    });
+
+    it('prefix-scoped middleware guards its subtree (reject)', async () => {
+        const r = await doFetch(`${base}/api/admin/panel`);
+        expect(r.status).toBe(401);
+    });
+
+    it('prefix-scoped middleware guards its subtree (allow)', async () => {
+        const r = await doFetch(`${base}/api/admin/panel`, { headers: { Authorization: 'Bearer secret' } });
+        expect(r.status).toBe(200);
+        expect(r.data.admin).toBe(true);
+        expect(r.data.hitGlobal).toBe(true);
+    });
+
+    it('prefix-scoped middleware does not run outside its prefix', async () => {
+        const r = await doFetch(`${base}/api/public`);
+        expect(r.status).toBe(200); // /admin guard never fired
+    });
+
+    it('async middleware resolves before the handler', async () => {
+        const r = await doFetch(`${base}/api/slow/thing`);
+        expect(r.data.slow).toBe(true);
+    });
+
+    it('middleware propagates to mounted child routers', async () => {
+        const denied = await doFetch(`${base}/api/admin/nested/deep`);
+        expect(denied.status).toBe(401);
+        const ok = await doFetch(`${base}/api/admin/nested/deep`, { headers: { Authorization: 'Bearer secret' } });
+        expect(ok.status).toBe(200);
+        expect(ok.data.hitGlobal).toBe(true);
+        expect(ok.data.admin).toBe(true);
+    });
+});
+
+describe('Router - use() argument validation', () => {
+    it('accepts a single middleware function', () => {
+        const r = Router();
+        expect(() => r.use((req, res, next) => next())).not.toThrow();
+    });
+
+    it('accepts prefix + middleware function(s)', () => {
+        const r = Router();
+        expect(() => r.use('/x', (req, res, next) => next(), (req, res, next) => next())).not.toThrow();
+    });
+
+    it('accepts prefix + child router (mount)', () => {
+        const parent = Router();
+        const child = Router();
+        expect(() => parent.use('/x', child)).not.toThrow();
+    });
+
+    it('throws TypeError on a non-function, non-router second argument', () => {
+        const r = Router();
+        expect(() => r.use('/x', 123)).toThrow(TypeError);
+    });
+
+    it('throws TypeError on an unsupported first argument', () => {
+        const r = Router();
+        expect(() => r.use(123)).toThrow(TypeError);
+    });
+
+    it('throws TypeError when a later middleware argument is not a function', () => {
+        const r = Router();
+        expect(() => r.use((req, res, next) => next(), 'nope')).toThrow(TypeError);
     });
 });

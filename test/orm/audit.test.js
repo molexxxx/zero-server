@@ -1054,3 +1054,89 @@ describe('AuditLog - trail edge cases', () =>
         writeSpy.mockRestore();
     });
 });
+
+// ===================================================================
+// SQLite adapter - AuditLog end-to-end
+// (regression for 1.0.2 where execute() only understood find/count,
+//  so install() { raw } and entry writes { action: 'insert' } failed)
+// ===================================================================
+describe('AuditLog - sqlite adapter', () =>
+{
+    function sqliteDb()
+    {
+        return Database.connect('sqlite', { filename: ':memory:' });
+    }
+
+    it('install() creates the audit table via a raw descriptor', async () =>
+    {
+        const db = sqliteDb();
+        makeModel(db, 'users', { id: { type: 'integer', primaryKey: true, autoIncrement: true }, name: { type: 'string' } }, { timestamps: true });
+        await db.sync();
+        const audit = new AuditLog(db, { table: 'audit_logs' });
+        await audit.install();
+        expect(db.adapter.hasTable('audit_logs')).toBe(true);
+        db.adapter.close();
+    });
+
+    it('logs create entries through the insert descriptor', async () =>
+    {
+        const db = sqliteDb();
+        const User = makeModel(db, 'users', { id: { type: 'integer', primaryKey: true, autoIncrement: true }, name: { type: 'string' } }, { timestamps: true });
+        await db.sync();
+        const audit = new AuditLog(db, { table: 'audit_logs', include: [User] });
+        await audit.install();
+
+        await User.create({ name: 'Alice' });
+        await User.create({ name: 'Bob' });
+
+        const rows = db.adapter.raw('SELECT action, table_name, new_values FROM "audit_logs" ORDER BY id');
+        expect(rows.length).toBe(2);
+        expect(rows[0].action).toBe('create');
+        expect(rows[0].table_name).toBe('users');
+        expect(JSON.parse(rows[0].new_values).name).toBe('Alice');
+        db.adapter.close();
+    });
+
+    it('trail() reads back entries on sqlite (ordered)', async () =>
+    {
+        const db = sqliteDb();
+        const User = makeModel(db, 'users', { id: { type: 'integer', primaryKey: true, autoIncrement: true }, name: { type: 'string' } }, { timestamps: true });
+        await db.sync();
+        const audit = new AuditLog(db, { table: 'audit_logs', include: [User] });
+        await audit.install();
+
+        await audit.withActor('tester', async () =>
+        {
+            await User.create({ name: 'Alice' });
+            await User.create({ name: 'Bob' });
+        });
+
+        const trail = await audit.trail({ table: 'users' });
+        expect(trail.length).toBe(2);
+        expect(trail.every(e => e.actor === 'tester')).toBe(true);
+        expect(trail[0].new_values).toHaveProperty('name');
+
+        const asc = await audit.trail({ table: 'users', order: 'asc' });
+        expect(asc.length).toBe(2);
+
+        expect(await audit.count({ table: 'users' })).toBe(2);
+        db.adapter.close();
+    });
+
+    it('purge() deletes entries through the delete descriptor', async () =>
+    {
+        const db = sqliteDb();
+        const User = makeModel(db, 'users', { id: { type: 'integer', primaryKey: true, autoIncrement: true }, name: { type: 'string' } }, { timestamps: true });
+        await db.sync();
+        const audit = new AuditLog(db, { table: 'audit_logs', include: [User] });
+        await audit.install();
+
+        await User.create({ name: 'Alice' });
+        expect(await audit.count({ table: 'users' })).toBe(1);
+
+        const purged = await audit.purge({ table: 'users' });
+        expect(purged).toBe(1);
+        expect(await audit.count({ table: 'users' })).toBe(0);
+        db.adapter.close();
+    });
+});

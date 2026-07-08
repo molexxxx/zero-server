@@ -234,3 +234,37 @@ describe('fetch - download progress', () => {
 		expect(last.total).toBe(1024);
 	});
 });
+
+describe('Fetch - default User-Agent', () => {
+	let server, base;
+	const pkgVersion = require('../../package.json').version;
+
+	beforeAll(async () => {
+		server = http.createServer((req, res) => {
+			res.writeHead(200, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify({ ua: req.headers['user-agent'] || null }));
+		});
+		await new Promise(r => server.listen(0, r));
+		base = `http://localhost:${server.address().port}`;
+	});
+
+	afterAll(() => server?.close());
+
+	it('sends a default zero-server User-Agent when none is provided', async () => {
+		const r = await fetch(`${base}/`);
+		const body = await r.json();
+		expect(body.ua).toBe(`zero-server/${pkgVersion}`);
+	});
+
+	it('lets a caller override the User-Agent', async () => {
+		const r = await fetch(`${base}/`, { headers: { 'User-Agent': 'my-app/1.2.3' } });
+		const body = await r.json();
+		expect(body.ua).toBe('my-app/1.2.3');
+	});
+
+	it('respects a lowercase user-agent override', async () => {
+		const r = await fetch(`${base}/`, { headers: { 'user-agent': 'lower/9' } });
+		const body = await r.json();
+		expect(body.ua).toBe('lower/9');
+	});
+});

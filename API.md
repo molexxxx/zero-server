@@ -362,7 +362,7 @@ HTTP application with middleware pipeline, method-based routing, HTTP/2, HTTPS, 
 
 | Method | Signature | Description |
 |---|---|---|
-| `use` | `use(pathOrFn, [fn])` | Register middleware or mount a sub-router. - `use(fn)` - global middleware applied to every request. - `use('/prefix', fn)` - path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` - mount a Router sub-app at the given prefix. |
+| `use` | `use(pathOrFn, [fn])` | Register middleware or mount a sub-router. - `use(fn)` - global middleware applied to every request. - `use('/prefix', fn)` - path-scoped middleware (strips the prefix before calling `fn` so downstream sees relative paths). - `use('/prefix', router)` - mount a Router sub-app at the given prefix. Route matching order: the app matches its OWN verb routes (those declared with `app.get()`, `app.post()`, etc.) BEFORE probing any `use()`-mounted child routers. An app-level catch-all like `app.get('/*', ssr)` therefore shadows every mounted router. Give a catch-all its own child router and mount it LAST so real routes win: |
 | `onError` | `onError(fn)` | Register a global error handler. The handler receives `(err, req, res, next)` and is invoked whenever a middleware or route handler throws or passes an error to `next(err)`. |
 | `param` | `param(name, fn)` | Register a parameter pre-processing handler. Runs before route handlers for any route containing a `:name` parameter. |
 
@@ -504,7 +504,7 @@ Full-featured pattern-matching router with named parameters, wildcard catch-alls
 | Method | Signature | Description |
 |---|---|---|
 | `add` | `add(method, path, handlers, [options])` | Register a route. |
-| `use` | `use(prefix, router)` | Mount a child Router under a path prefix. Requests matching the prefix are delegated to the child router with the prefix stripped from `req.url`. |
+| `use` | `use(prefixOrFn, ...rest)` | Register router-level middleware or mount a child Router. Three forms are supported: - `use(fn, ...fns)` - middleware that runs before the handlers of every matching route in this router (and its mounted children). - `use(prefix, fn, ...fns)` - middleware scoped to routes whose path is at or below `prefix`. - `use(prefix, router)` - mount a child Router under a path prefix. Requests matching the prefix are delegated to the child router with the prefix stripped from `req.url`. Middleware runs as part of the matched route's handler chain, so it only executes when a route actually matches (a 404 runs no middleware). This makes it a natural fit for auth/feature guards. Unlike the earlier releases, passing a function is no longer silently ignored - an unsupported argument shape throws a `TypeError`. |
 | `handle` | `handle(req, res)` | Match an incoming request against the route table and execute the first matching handler chain.  Delegates to child routers when mounted. Sends a 404 JSON response when no route matches. |
 
 
@@ -3843,7 +3843,8 @@ Minimal, zero-dependency server-side `fetch()` replacement. Supports HTTP/HTTPS,
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `method` | string | `'GET'` | HTTP method. |
-| `headers` | object | `-` | Request headers. |
+| `headers` | object | `-` | Request headers. A default
+`User-Agent` of `zero-server/<version>` is sent unless one is provided here. |
 | `body` | string \| Buffer \| object \| ReadableStream | `-` | Request body. |
 | `timeout` | number | `-` | Request timeout in ms. |
 | `signal` | AbortSignal | `-` | Abort signal for cancellation. |
