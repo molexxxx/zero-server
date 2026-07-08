@@ -1,5 +1,5 @@
 // Type definitions for zero-server
-// Project: https://github.com/tonywied17/zero-server
+// Project: https://github.com/molexxxx/zero-server
 // Definitions by: zero-server contributors
 
 /// <reference types="node" />

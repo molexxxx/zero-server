@@ -149,11 +149,11 @@ function buildPackageJson(scope) {
         files: ['lib', 'types', 'index.js', 'index.d.ts', 'README.md', 'LICENSE'],
         repository: {
             type:      'git',
-            url:       'git+https://github.com/tonywied17/zero-server.git',
+            url:       'git+https://github.com/molexxxx/zero-server.git',
             directory: `packages/${scope.name}`,
         },
-        bugs:     { url: 'https://github.com/tonywied17/zero-server/issues' },
-        homepage: `https://github.com/tonywied17/zero-server/tree/main/packages/${scope.name}#readme`,
+        bugs:     { url: 'https://github.com/molexxxx/zero-server/issues' },
+        homepage: `https://github.com/molexxxx/zero-server/tree/main/packages/${scope.name}#readme`,
         engines:  { node: '>=18.0.0' },
         publishConfig: {
             registry: 'https://registry.npmjs.org/',

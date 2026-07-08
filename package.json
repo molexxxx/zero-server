@@ -49,10 +49,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonywied17/zero-server.git"
+    "url": "git+https://github.com/molexxxx/zero-server.git"
   },
   "bugs": {
-    "url": "https://github.com/tonywied17/zero-server/issues"
+    "url": "https://github.com/molexxxx/zero-server/issues"
   },
   "homepage": "https://z-server.dev",
   "engines": {
