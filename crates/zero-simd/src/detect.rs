@@ -106,11 +106,17 @@ const LEAF7_EBX_AVX2: u32 = 0x0000_0020;
 fn x86_features() -> (bool, bool) {
     use core::arch::x86_64::{__cpuid, __cpuid_count};
 
-    let max_leaf = __cpuid(0).eax;
+    // `__cpuid` is an unsafe function on the minimum supported toolchain (1.89) and a
+    // safe one on newer releases, so the blocks stay and the lint for them is allowed.
+    // SAFETY: CPUID has no preconditions on x86-64; the leaf is read, nothing is written.
+    #[allow(unused_unsafe)]
+    let max_leaf = unsafe { __cpuid(0).eax };
     if max_leaf < 1 {
         return (false, false);
     }
-    let leaf1 = __cpuid(1).ecx;
+    // SAFETY: as above.
+    #[allow(unused_unsafe)]
+    let leaf1 = unsafe { __cpuid(1).ecx };
     let sse42 = leaf1 & LEAF1_ECX_SSE42 != 0;
     let xsave = leaf1 & LEAF1_ECX_XSAVE != 0;
     let osxsave = leaf1 & LEAF1_ECX_OSXSAVE != 0;
@@ -122,7 +128,10 @@ fn x86_features() -> (bool, bool) {
     // so the XGETBV instruction is enabled.
     let xcr0 = unsafe { extended_control_register() };
     let os_saves_avx_state = xcr0 & XCR0_SSE_AVX == XCR0_SSE_AVX;
-    let avx2 = os_saves_avx_state && __cpuid_count(7, 0).ebx & LEAF7_EBX_AVX2 != 0;
+    // SAFETY: as above; leaf 7 exists because `max_leaf` is at least 7.
+    #[allow(unused_unsafe)]
+    let leaf7 = unsafe { __cpuid_count(7, 0).ebx };
+    let avx2 = os_saves_avx_state && leaf7 & LEAF7_EBX_AVX2 != 0;
     (sse42, avx2)
 }
 

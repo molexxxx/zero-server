@@ -182,6 +182,11 @@ deny = [
 skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn and winnow majors" }]
 
 [[bans.features]]
+crate = "bytes"
+allow = ["default"]
+reason = "enabled by tokio's io-util in the shipped graph; bytes' default feature is `std`"
+
+[[bans.features]]
 crate = "fastrand"
 allow = ["default"]
 reason = "enabled by tempfile inside the cbindgen build-only tree"
@@ -190,6 +195,11 @@ reason = "enabled by tempfile inside the cbindgen build-only tree"
 crate = "indexmap"
 allow = ["default"]
 reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "libc"
+allow = ["default"]
+reason = "enabled by mio, tokio and socket2 in the shipped graph; libc's default feature is `std`, which every hosted target links anyway"
 
 [[bans.features]]
 crate = "proc-macro2"
@@ -230,29 +240,31 @@ reason = "enabled by cbindgen inside its build-only tree"
 crate = "windows-sys"
 allow = [
     "default",
+    "Wdk",
+    "Wdk_Foundation",
+    "Wdk_Storage",
+    "Wdk_Storage_FileSystem",
+    "Wdk_System",
+    "Wdk_System_IO",
     "Win32",
     "Win32_Foundation",
     "Win32_Networking",
     "Win32_Networking_WinSock",
+    "Win32_Security",
     "Win32_Storage",
     "Win32_Storage_FileSystem",
     "Win32_System",
+    "Win32_System_Console",
     "Win32_System_Diagnostics",
     "Win32_System_Diagnostics_Debug",
-    "Win32_Security",
-    "Win32_System_Console",
     "Win32_System_IO",
     "Win32_System_LibraryLoader",
     "Win32_System_Pipes",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_System_WindowsProgramming",
-    "Wdk",
-    "Wdk_Foundation",
-    "Wdk_Storage",
-    "Wdk_Storage_FileSystem",
 ]
-reason = "enabled by tempfile, socket2, compio-driver and polling"
+reason = "the tempfile and io-compio sets, and in the shipped graph tokio (net), mio (os-ext and its Windows driver), socket2 and zero-sys (sockets, affinity); the parents of each leaf feature count as enabled too"
 
 [bans.build]
 allow-build-scripts = [

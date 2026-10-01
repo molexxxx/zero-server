@@ -129,10 +129,10 @@ pub fn unmask(payload: &mut [u8], key: [u8; 4]) {
 macro_rules! position {
     ($bytes:expr, $lanes:expr, $load:ident, |$v:ident| $flag:expr, |$tail:ident| $rest:expr) => {{
         let bytes: &[u8] = $bytes;
-        let mut chunks = bytes.chunks_exact($lanes);
+        let (chunks, rest) = bytes.as_chunks::<{ $lanes }>();
         let mut offset = 0usize;
         let mut found = None;
-        for chunk in &mut chunks {
+        for chunk in chunks {
             let $v = $load(chunk);
             let mask: i32 = $flag;
             if mask != 0 {
@@ -144,7 +144,7 @@ macro_rules! position {
         match found {
             Some(index) => Some(index),
             None => {
-                let $tail: &[u8] = chunks.remainder();
+                let $tail: &[u8] = rest;
                 let rest: Option<usize> = $rest;
                 rest.map(|index| offset.saturating_add(index))
             }
@@ -168,10 +168,9 @@ mod sse2 {
     #[inline]
     #[allow(unsafe_code)]
     #[target_feature(enable = "sse2")]
-    fn load(chunk: &[u8]) -> __m128i {
-        // SAFETY: the caller hands over a chunk of `chunks_exact(16)`, so sixteen
-        // bytes are readable from its pointer, and the unaligned load has no
-        // alignment requirement.
+    fn load(chunk: &[u8; LANES]) -> __m128i {
+        // SAFETY: the array type says sixteen bytes are readable from its pointer,
+        // and the unaligned load has no alignment requirement.
         unsafe { _mm_loadu_si128(chunk.as_ptr().cast::<__m128i>()) }
     }
 
@@ -304,15 +303,14 @@ mod sse2 {
     #[target_feature(enable = "sse2")]
     pub(super) fn unmask(payload: &mut [u8], key: [u8; 4]) {
         let key_vec = _mm_set1_epi32(i32::from_ne_bytes(key));
-        let mut chunks = payload.chunks_exact_mut(LANES);
-        for chunk in &mut chunks {
+        let (chunks, rest) = payload.as_chunks_mut::<LANES>();
+        for chunk in chunks {
             let unmasked = _mm_xor_si128(load(chunk), key_vec);
-            // SAFETY: the chunk comes from `chunks_exact_mut(16)`, so sixteen
-            // bytes are writable at its pointer, and the unaligned store has no
-            // alignment requirement.
+            // SAFETY: the array type says sixteen bytes are writable at its pointer,
+            // and the unaligned store has no alignment requirement.
             unsafe { _mm_storeu_si128(chunk.as_mut_ptr().cast::<__m128i>(), unmasked) };
         }
-        swar::unmask(chunks.into_remainder(), key);
+        swar::unmask(rest, key);
     }
 }
 
@@ -333,10 +331,9 @@ mod avx2 {
     #[inline]
     #[allow(unsafe_code)]
     #[target_feature(enable = "avx2")]
-    fn load(chunk: &[u8]) -> __m256i {
-        // SAFETY: the caller hands over a chunk of `chunks_exact(32)`, so
-        // thirty-two bytes are readable from its pointer, and the unaligned load
-        // has no alignment requirement.
+    fn load(chunk: &[u8; LANES]) -> __m256i {
+        // SAFETY: the array type says thirty-two bytes are readable from its
+        // pointer, and the unaligned load has no alignment requirement.
         unsafe { _mm256_loadu_si256(chunk.as_ptr().cast::<__m256i>()) }
     }
 
@@ -469,15 +466,14 @@ mod avx2 {
     #[target_feature(enable = "avx2")]
     pub(super) fn unmask(payload: &mut [u8], key: [u8; 4]) {
         let key_vec = _mm256_set1_epi32(i32::from_ne_bytes(key));
-        let mut chunks = payload.chunks_exact_mut(LANES);
-        for chunk in &mut chunks {
+        let (chunks, rest) = payload.as_chunks_mut::<LANES>();
+        for chunk in chunks {
             let unmasked = _mm256_xor_si256(load(chunk), key_vec);
-            // SAFETY: the chunk comes from `chunks_exact_mut(32)`, so thirty-two
-            // bytes are writable at its pointer, and the unaligned store has no
-            // alignment requirement.
+            // SAFETY: the array type says thirty-two bytes are writable at its
+            // pointer, and the unaligned store has no alignment requirement.
             unsafe { _mm256_storeu_si256(chunk.as_mut_ptr().cast::<__m256i>(), unmasked) };
         }
-        swar::unmask(chunks.into_remainder(), key);
+        swar::unmask(rest, key);
     }
 }
 

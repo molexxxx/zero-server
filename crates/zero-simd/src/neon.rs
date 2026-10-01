@@ -96,10 +96,9 @@ mod kernels {
     #[inline]
     #[allow(unsafe_code)]
     #[target_feature(enable = "neon")]
-    fn load(chunk: &[u8]) -> uint8x16_t {
-        // SAFETY: the caller hands over a chunk of `chunks_exact(16)`, so sixteen
-        // bytes are readable from its pointer, and the load has no alignment
-        // requirement.
+    fn load(chunk: &[u8; LANES]) -> uint8x16_t {
+        // SAFETY: the array type says sixteen bytes are readable from its pointer,
+        // and the load has no alignment requirement.
         unsafe { vld1q_u8(chunk.as_ptr()) }
     }
 
@@ -164,10 +163,10 @@ mod kernels {
     macro_rules! position {
         ($bytes:expr, |$v:ident| $flag:expr, |$tail:ident| $rest:expr) => {{
             let bytes: &[u8] = $bytes;
-            let mut chunks = bytes.chunks_exact(LANES);
+            let (chunks, rest) = bytes.as_chunks::<LANES>();
             let mut offset = 0usize;
             let mut found = None;
-            for chunk in &mut chunks {
+            for chunk in chunks {
                 let $v = load(chunk);
                 let mask: u64 = bits($flag);
                 if mask != 0 {
@@ -180,7 +179,7 @@ mod kernels {
             match found {
                 Some(index) => Some(index),
                 None => {
-                    let $tail: &[u8] = chunks.remainder();
+                    let $tail: &[u8] = rest;
                     let rest: Option<usize> = $rest;
                     rest.map(|index| offset.saturating_add(index))
                 }
@@ -262,15 +261,14 @@ mod kernels {
             k0, k1, k2, k3, k0, k1, k2, k3, k0, k1, k2, k3, k0, k1, k2, k3,
         ];
         let key_vec = load(&pattern);
-        let mut chunks = payload.chunks_exact_mut(LANES);
-        for chunk in &mut chunks {
+        let (chunks, rest) = payload.as_chunks_mut::<LANES>();
+        for chunk in chunks {
             let unmasked = veorq_u8(load(chunk), key_vec);
-            // SAFETY: the chunk comes from `chunks_exact_mut(16)`, so sixteen
-            // bytes are writable at its pointer, and the store has no alignment
-            // requirement.
+            // SAFETY: the array type says sixteen bytes are writable at its pointer,
+            // and the store has no alignment requirement.
             unsafe { vst1q_u8(chunk.as_mut_ptr(), unmasked) };
         }
-        swar::unmask(chunks.into_remainder(), key);
+        swar::unmask(rest, key);
     }
 }
 

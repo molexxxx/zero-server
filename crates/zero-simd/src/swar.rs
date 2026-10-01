@@ -50,8 +50,8 @@ const fn first_lane(mask: u64) -> Option<usize> {
 
 /// Loads a chunk of exactly eight bytes as a little-endian word.
 #[inline]
-fn load(chunk: &[u8]) -> u64 {
-    u64::from_le_bytes(<[u8; LANES]>::try_from(chunk).unwrap_or_default())
+fn load(chunk: &[u8; LANES]) -> u64 {
+    u64::from_le_bytes(*chunk)
 }
 
 /// Runs `flag` over every eight-byte chunk and returns the index of the
@@ -62,15 +62,15 @@ fn position(
     flag: impl Fn(u64) -> u64,
     tail: impl Fn(&[u8]) -> Option<usize>,
 ) -> Option<usize> {
-    let mut chunks = bytes.chunks_exact(LANES);
+    let (chunks, rest) = bytes.as_chunks::<LANES>();
     let mut offset = 0usize;
-    for chunk in &mut chunks {
+    for chunk in chunks {
         if let Some(lane) = first_lane(flag(load(chunk))) {
             return Some(offset.saturating_add(lane));
         }
         offset = offset.saturating_add(LANES);
     }
-    tail(chunks.remainder()).map(|index| offset.saturating_add(index))
+    tail(rest).map(|index| offset.saturating_add(index))
 }
 
 /// Returns the length of the ASCII prefix of `bytes`: every byte below 0x80.
@@ -155,12 +155,12 @@ pub const fn non_ascii_mask(word: u64) -> u64 {
 pub fn unmask(payload: &mut [u8], key: [u8; 4]) {
     let [k0, k1, k2, k3] = key;
     let key_word = u64::from_ne_bytes([k0, k1, k2, k3, k0, k1, k2, k3]);
-    let mut chunks = payload.chunks_exact_mut(LANES);
-    for chunk in &mut chunks {
-        let word = u64::from_ne_bytes(<[u8; LANES]>::try_from(&*chunk).unwrap_or_default());
-        chunk.copy_from_slice(&(word ^ key_word).to_ne_bytes());
+    let (chunks, rest) = payload.as_chunks_mut::<LANES>();
+    for chunk in chunks {
+        let word = u64::from_ne_bytes(*chunk);
+        *chunk = (word ^ key_word).to_ne_bytes();
     }
-    scalar::unmask(chunks.into_remainder(), key);
+    scalar::unmask(rest, key);
 }
 
 #[cfg(test)]
