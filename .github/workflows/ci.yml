@@ -204,8 +204,19 @@ jobs:
             target
           key: ${{ runner.os }}-seam-cargo-${{ hashFiles('**/Cargo.toml') }}
 
-      - name: Test the seam and the system wrappers
-        run: cargo test -p zero-io -p zero-sys
+      # The job log sits on a storage host some sessions cannot reach, so the failing
+      # tests and panic lines are repeated as annotations, which the API serves.
+      - name: Test the seam, the system wrappers, the workers and the driver
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          cargo test -p zero-io -p zero-sys -p zero-rt -p zero-http --no-fail-fast 2>&1 \
+            | tee seam-test.log || status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -E "FAILED|panicked at|^error" seam-test.log | head -10 | sed 's/^/::error::/'
+          fi
+          exit "$status"
 
   msrv:
     name: minimum supported rust

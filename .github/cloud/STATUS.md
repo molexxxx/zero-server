@@ -442,7 +442,10 @@ implements and work from its text (`RULES.md`, Standards-first).
   what fails before continuing. The job logs sit on a storage host the egress
   policy blocks (`gh run view --log` and the jobs API both fail), so a red
   job is reproduced locally with the job's own command; `gh run view <id>`
-  still names the failed step.
+  still names the failed step, and `gh api
+  repos/molexxxx/zero-server/check-runs/<job id>/annotations` returns the
+  `::error::` lines a step printed, which the `seam` job uses to repeat the
+  failing test names and panic messages of the Windows and macOS runs.
 - CI's `rustup` stable is newer than a long-lived container's (1.98.1
   against 1.97.0 on 2026-10-01) and its clippy carries lints the older one
   lacks, so run `rustup update stable` before the protocol's clippy step;
