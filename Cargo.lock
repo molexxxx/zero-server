@@ -2256,6 +2256,7 @@ dependencies = [
  "aws-lc-rs",
  "zero-core",
  "zero-sys",
+ "zeroize",
 ]
 
 [[package]]

@@ -20,6 +20,9 @@ aws-lc-rs = { version = "1.18.1", default-features = false, features = [
     "aws-lc-sys",
     "prebuilt-nasm",
 ] }
+# zeroize 1.9.0 (released 2026-06-12, checked on crates.io 2026-10-01), already in
+# the graph through aws-lc-rs with the same `alloc` feature.
+zeroize = { version = "1.9.0", default-features = false, features = ["alloc"] }
 
 [lints.rust]
 unsafe_code = "deny"
