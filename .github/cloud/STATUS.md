@@ -526,14 +526,23 @@ Done: `zero-date::parse_http_date` (`crates/zero-date/src/parse.rs`), the
 three HTTP-date formats of RFC 9110 Section 5.6.7 with the two-digit-year rule
 against a clock the caller passes, case-sensitive and exact, a leap second
 counted into the next minute and a date before 1970 read as 0; the RFC's three
-example timestamps are the test. Next in the step, in order: the validators
-and the conditional-request evaluation of `zero-static` as pure functions over
-bytes (entity-tag comparison, the If-* precedence of Section 13.2.2, byte
-ranges of Section 14) with the `static-01` to `static-12` tests; then the file
-resolution with the path policy, the Windows name rules, `O_NOFOLLOW` through
-`zero-sys`, the handler, the per-core small-file cache and `static-13` to
-`static-16`; then the `zero-policy` subset; then `zero-ws`, `zero-sse` and
-`zero-realtime`. The RFC texts for the step sit in a session's scratch
+example timestamps are the test. Done: the pure layer of `zero-static`
+(`crates/zero-static/src/cond.rs`: entity tags with the strong and weak
+comparison functions, the five preconditions evaluated in the order of RFC 9110
+Section 13.2.2, If-Range by exact match with a date counted strong once its
+second has passed; `range.rs`: the `bytes` unit of Section 14 with suffix and
+open-ended ranges, in-order overlapping ranges coalesced, backwards or more
+than 16 ranges refused, `Content-Range` for 206 and 416 and the
+`multipart/byteranges` content; `headers.rs`: the `Cache-Control` policy of a
+route, `Content-Disposition: attachment` with the ASCII fallback and the RFC
+8187 ext-value, the Last-Modified clamp), with the tests of rows `static-01` to
+`static-04`, `static-06` to `static-11` and `static-14` to `static-16` in
+`lib.rs`. Next in the step, in order: the file layer (path policy on every
+segment, the Windows name rules, `O_NOFOLLOW` through `zero-sys`, the handler
+over `zero-http`'s `Call` with ETag from size and modification time, 304 with
+the Section 15.4.5 fields, `Accept-Ranges: bytes`, the per-core small-file
+cache) with rows `static-05`, `static-12` and `static-13`; then the
+`zero-policy` subset; then `zero-ws`, `zero-sse` and `zero-realtime`. The RFC texts for the step sit in a session's scratch
 directory only: RFC 9110 from the HTTP Working Group's repository copy, RFC
 6266, 8187 and 9111 from the tex2e/rfc-translater repository's copies (the
 English column), all read 2026-10-01; a fresh session fetches them again from
