@@ -14,9 +14,14 @@ the same commit.
   green on every job except two checks that run as advisory until the release
   1 tests and documentation pages exist: `cargo xtask standards --check` and
   `cargo xtask docs --check`. Both block in the release preflight.
-- Nothing is implemented yet beyond crate skeletons, `zero-core`'s error
-  model and the `zero_version` export. Every crate is at 0.1.0 and nothing is
-  published to any registry.
+- `zero-core` holds the error model, the `Codec` trait, `OwnedBuf` (the
+  fixed-capacity buffer that crosses the I/O seam by value), the 53-bit
+  `SlotId` with its generation check and `next_generation`, the `Value` model
+  with linear-scan objects, and the `Digest`, `Mac`, `Kdf` and `Rng` traits
+  (`crates/zero-core/src/{buf,codec,slot,value,primitive}.rs`, 25 unit tests,
+  no_std and thumbv7em green). Every other crate is a skeleton with only its
+  `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
+  registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
 - The brand work landed (`BRAND-REPORT.md`, `docs/brand.md`). The mark is the
@@ -96,7 +101,9 @@ the same commit.
 
 ## In progress
 
-Nothing. The next session starts the item below.
+R.3 step 2, the foundation no_std crates, taken one crate per commit in the
+order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
+Done: `zero-core`. Next: `zero-date`.
 
 ## Next, in order
 
@@ -178,6 +185,15 @@ implements and work from its text (`RULES.md`, Standards-first).
   under `bindings/` changes; `bindings/node` is an npm workspace
   (`npm ci`), `bindings/python` uses maturin in a venv, `bindings/dotnet`
   builds with `dotnet build bindings/dotnet/ZeroServer.sln`.
+- Standards fetches from a cloud session: rfc-editor.org, datatracker.ietf.org,
+  www.ietf.org and httpwg.org were unreachable on 2026-10-01 (blocked by the
+  environment's egress policy), while GitHub is reachable. The HTTP Working
+  Group keeps the published text of RFC 9110, 9111 and 9112 in its repository
+  (`https://raw.githubusercontent.com/httpwg/http-core/main/rfc9110.html` and
+  siblings); download the file and extract the section locally rather than
+  fetching through a page summarizer, which truncates a document this size. A
+  standard with no such copy is reported unverified in the commit body, as
+  `RULES.md` requires.
 - Docker is not assumed. The container-only checks (the hardened build, the
   sanitizers, miri, the fuzz smoke) run in CI on push; a session reads the
   CI result of its push with `gh run list` and `gh run view --log-failed`
