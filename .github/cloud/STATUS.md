@@ -51,8 +51,18 @@ the same commit.
   `h1-14` and `html-01` were added and `routing-07`'s field-name row now
   cites `field.rs`. The transport error enum of `DESIGN.md` section 6.1
   (the h2 and h3 error spaces) is deferred to the `zero-h3` codec step,
-  which fetches RFC 9114. Every other crate is a skeleton with only its
-  `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
+  which fetches RFC 9114.
+  `zero-simd` holds the per-byte definitions (`scalar`), the SWAR kernels
+  (`swar`: exact per-lane masks for the request-target, header-value, byte
+  and CR/LF scans, a per-byte token scan, the unmask), the streaming
+  `Utf8Validator` (state machine over the RFC 3629 syntax, resumable across
+  fragments, one-shot verdicts identical to `core::str::from_utf8` in
+  position and length, standards row `utf8-01`), and the cached `Features`
+  token (`std`: the standard library's x86 detection; `no_std`: compile-time
+  target features only). Property tests use an in-crate xorshift generator
+  (no proptest dependency yet, so no lockfile or vet change) and shrink under
+  Miri. The crate-root functions dispatch to SWAR until the SIMD kernels
+  land. Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
   registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -135,8 +145,13 @@ the same commit.
 
 R.3 step 2, the foundation no_std crates, taken one crate per commit in the
 order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
-Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`. Next:
-`zero-simd`.
+Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, and the
+`zero-simd` reference layer (scalar definitions, SWAR kernels, the streaming
+UTF-8 validator, the detection token, property tests, Miri). Next: the
+`zero-simd` x86-64 kernels (SSE2 and AVX2 behind the token) with their
+property tests against the SWAR kernels, then NEON with an aarch64
+cross-compile check, then the in-house `__cpuid` detection for `no_std`
+builds (today a `no_std` build uses only compile-time target features).
 
 ## Next, in order
 

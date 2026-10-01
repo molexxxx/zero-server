@@ -3459,6 +3459,19 @@ release = 1
 note = "RFC 6455 Section 8.1"
 
 [[entry]]
+key = "utf8-01"
+chapter = "realtime"
+designation = "RFC 3629"
+body = "IETF"
+subject = "UTF-8 text is validated against the UTF-8 syntax of RFC 3629 Section 4: no overlong form, no surrogate, nothing above U+10FFFF, and a truncated sequence is incomplete"
+url = "https://www.rfc-editor.org/rfc/rfc3629.html#section-4"
+evidence = "crates/zero-simd/src/utf8.rs"
+at = "fn utf8_text_is_validated_against_the_syntax_of_rfc_3629_section_4"
+anchor = "rule"
+release = 1
+note = "RFC 3629 Section 4; the validator is property-tested against core::str::from_utf8"
+
+[[entry]]
 key = "realtime-18"
 chapter = "realtime"
 designation = "RFC 6455"
