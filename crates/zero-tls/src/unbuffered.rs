@@ -70,6 +70,10 @@ pub struct UnbufferedStream<S> {
     peer_closed: Cell<bool>,
     closed: Cell<bool>,
     ended: Cell<bool>,
+    /// A fatal error ended the session and its alert is queued; rustls's unbuffered
+    /// connection keeps no error state, so the input that failed is never processed
+    /// again.
+    failed: Cell<bool>,
 }
 
 impl<S> std::fmt::Debug for UnbufferedStream<S> {
@@ -96,6 +100,7 @@ impl<S: Stream> UnbufferedStream<S> {
             peer_closed: Cell::new(false),
             closed: Cell::new(false),
             ended: Cell::new(false),
+            failed: Cell::new(false),
         })
     }
 
@@ -133,6 +138,12 @@ impl<S: Stream> UnbufferedStream<S> {
     ///
     /// Where the pass stopped.
     fn drive(&self, action: Action<'_>) -> io::Result<Outcome> {
+        if self.failed.get() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "the TLS session already failed",
+            ));
+        }
         let mut conn = self.conn.borrow_mut();
         let mut incoming = self.incoming.borrow_mut();
         let mut plain = self.plain.borrow_mut();
@@ -215,6 +226,7 @@ impl<S: Stream> UnbufferedStream<S> {
                     return Ok(outcome);
                 }
                 Step::Fail(err) => {
+                    self.failed.set(true);
                     loop {
                         let status = conn.process_tls_records(&mut []);
                         match status.state {
@@ -295,15 +307,18 @@ impl<S: Stream> UnbufferedStream<S> {
         }
     }
 
-    /// Report plaintext whose records are already out, after a write was dropped.
-    async fn resume(&self) -> io::Result<Option<usize>> {
+    /// Report plaintext whose records are already out, after a write was dropped:
+    /// at most `total`, the bytes this write was given, with the rest owed to the
+    /// next.
+    async fn resume(&self, total: usize) -> io::Result<Option<usize>> {
         let reported = self.reported.get();
         if reported == 0 {
             return Ok(None);
         }
         self.outbox.flush(&self.inner).await?;
-        self.reported.set(0);
-        Ok(Some(reported))
+        let count = reported.min(total);
+        self.reported.set(reported - count);
+        Ok(Some(count))
     }
 }
 
@@ -351,7 +366,10 @@ impl<S: Stream> Stream for UnbufferedStream<S> {
     }
 
     async fn writev(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        if let Some(reported) = self.resume().await? {
+        let total = bufs
+            .iter()
+            .fold(0usize, |sum, slice| sum.saturating_add(slice.len()));
+        if let Some(reported) = self.resume(total).await? {
             return Ok(reported);
         }
         self.outbox.flush(&self.inner).await?;
@@ -378,6 +396,9 @@ impl<S: Stream> Stream for UnbufferedStream<S> {
         self.inner.shutdown_write()
     }
 
+    /// Send `close_notify`, or whatever alert an error queued, then close the
+    /// transport. Before the handshake completes the state machine accepts no
+    /// `close_notify`, so only what is already queued goes out.
     async fn close_write(&self) -> io::Result<()> {
         if !self.closed.get() {
             let _ = self.drive(Action::CloseNotify);

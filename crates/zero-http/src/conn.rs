@@ -419,6 +419,7 @@ where
             }
             conn.discard_from(0);
             if conn.aborted {
+                conn.abort().await;
                 return;
             }
             if let Some(record) = conn.taken.take() {
@@ -1100,14 +1101,29 @@ where
         }
     }
 
+    /// Close after a read or write error: give the stream a moment to send what it
+    /// still owes, such as the fatal alert a TLS session queued for the error, which
+    /// RFC 9846 Section 5.2 requires, then drop the connection.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-5.2>
+    async fn abort(&self) {
+        let core = self.shared.worker.core();
+        let _ = core.timeout(LINGER, self.stream.close_write()).await;
+    }
+
     /// Half-close, then read until the peer closes or a second passes, so the last
-    /// response reaches a client that is still sending (RFC 9112 Section 9.6).
+    /// response reaches a client that is still sending (RFC 9112 Section 9.6). The
+    /// half-close itself gets a second too: over TLS it writes `close_notify`, which
+    /// a peer that stopped reading would otherwise hold up forever.
     async fn linger(&self) {
-        if self.stream.close_write().await.is_err() {
+        let core = self.shared.worker.core();
+        if !matches!(
+            core.timeout(LINGER, self.stream.close_write()).await,
+            Ok(Ok(()))
+        ) {
             return;
         }
         let stream = Rc::clone(&self.stream);
-        let core = self.shared.worker.core();
         let pool = Rc::clone(&core.pool);
         let drain = async move {
             while let Ok(Leased::Data(buf)) = stream.read_leased(&pool).await {

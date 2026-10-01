@@ -153,15 +153,18 @@ impl<S: Stream> BufferedStream<S> {
         }
     }
 
-    /// Report plaintext whose records are already out, after a write was dropped.
-    async fn resume(&self) -> io::Result<Option<usize>> {
+    /// Report plaintext whose records are already out, after a write was dropped:
+    /// at most `total`, the bytes this write was given, with the rest owed to the
+    /// next.
+    async fn resume(&self, total: usize) -> io::Result<Option<usize>> {
         let reported = self.reported.get();
         if reported == 0 {
             return Ok(None);
         }
         self.outbox.flush(&self.inner).await?;
-        self.reported.set(0);
-        Ok(Some(reported))
+        let count = reported.min(total);
+        self.reported.set(reported - count);
+        Ok(Some(count))
     }
 }
 
@@ -240,7 +243,10 @@ impl<S: Stream> Stream for BufferedStream<S> {
     }
 
     async fn writev(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        if let Some(reported) = self.resume().await? {
+        let total = bufs
+            .iter()
+            .fold(0usize, |sum, slice| sum.saturating_add(slice.len()));
+        if let Some(reported) = self.resume(total).await? {
             return Ok(reported);
         }
         self.outbox.flush(&self.inner).await?;

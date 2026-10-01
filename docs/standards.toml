@@ -1125,7 +1125,20 @@ evidence = "crates/zero-tls/tests/driver.rs"
 at = "fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeout"
 anchor = "rule"
 release = 1
-note = "Node.js tls.createServer handshakeTimeout; local policy, no TLS RFC sets one"
+note = "Node.js tls.createServer handshakeTimeout; local policy, no TLS RFC sets one. The buffered driver sends close_notify when it times out (RFC 9846 Section 6.1)"
+
+[[entry]]
+key = "tls-18"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "If the decryption fails, the receiver MUST terminate the connection with a bad_record_mac alert"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-5.2"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_record_that_fails_decryption_is_answered_with_a_fatal_bad_record_mac_alert"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Sections 5.2 and 6.1; the queued alert is flushed before an aborted connection closes"
 
 
 # Error responses

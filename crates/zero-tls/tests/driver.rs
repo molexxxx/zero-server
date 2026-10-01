@@ -292,6 +292,67 @@ fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeo
             "{driver:?}"
         );
         assert!(started.elapsed() < Duration::from_secs(5), "{driver:?}");
+
+        // A client that takes the server's whole flight and never answers it. The
+        // buffered driver ends with close_notify (RFC 9846 Section 6.1); rustls's
+        // unbuffered state machine can queue no alert during a handshake, so that
+        // driver only closes the transport.
+        let mut tcp = server.tcp();
+        let mut client = ClientConnection::new(
+            client(&[&TLS13]),
+            ServerName::try_from("localhost").unwrap(),
+        )
+        .unwrap();
+        client.write_tls(&mut tcp).unwrap();
+        let started = Instant::now();
+        let mut received = Vec::new();
+        let _ = tcp.read_to_end(&mut received);
+        assert!(
+            started.elapsed() >= Duration::from_millis(250),
+            "{driver:?}"
+        );
+        assert!(started.elapsed() < Duration::from_secs(5), "{driver:?}");
+        let mut rest = received.as_slice();
+        while !rest.is_empty() && client.read_tls(&mut rest).unwrap() > 0 {}
+        let state = client.process_new_packets();
+        let closed = matches!(&state, Ok(io) if io.peer_has_closed());
+        assert_eq!(closed, driver == Driver::Buffered, "{driver:?}: {state:?}");
+        server.stop().unwrap();
+    }
+}
+
+#[test]
+fn a_record_that_fails_decryption_is_answered_with_a_fatal_bad_record_mac_alert() {
+    for driver in DRIVERS {
+        let server = Server::with(driver);
+        for versions in [&[&TLS13][..], &[&TLS12][..]] {
+            let mut stream = server.tls("localhost", versions);
+            stream
+                .write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                .unwrap();
+            assert_eq!(response(&mut stream).0, 200);
+            let StreamOwned { mut conn, mut sock } = stream;
+            conn.writer()
+                .write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                .unwrap();
+            let mut record = Vec::new();
+            conn.write_tls(&mut record).unwrap();
+            let last = record.len() - 1;
+            record[last] ^= 0x01;
+            sock.write_all(&record).unwrap();
+            let mut received = Vec::new();
+            let _ = sock.read_to_end(&mut received);
+            let mut rest = received.as_slice();
+            while !rest.is_empty() && conn.read_tls(&mut rest).unwrap() > 0 {}
+            let state = conn.process_new_packets();
+            assert!(
+                matches!(
+                    state,
+                    Err(rustls::Error::AlertReceived(AlertDescription::BadRecordMac))
+                ),
+                "{driver:?} {versions:?}: RFC 9846 Section 5.2: {state:?}"
+            );
+        }
         server.stop().unwrap();
     }
 }

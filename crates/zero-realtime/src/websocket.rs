@@ -14,6 +14,7 @@
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.1>
 
 use std::future::{poll_fn, Future};
+use std::io::IoSlice;
 use std::pin::pin;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -337,22 +338,24 @@ impl<S: Stream + 'static> WebSocket<S> {
         self.flush_or_fail().await
     }
 
-    /// Write what the session queued.
+    /// Write what the session queued, dropping each part from its output once the
+    /// connection took it, so a flush whose future is dropped resumes with the same
+    /// bytes and repeats none.
     ///
     /// # Returns
     ///
     /// Whether the write succeeded.
     async fn flush(&mut self) -> bool {
-        let pending = self.session.output();
-        if pending.is_empty() {
-            return true;
+        loop {
+            let pending = self.session.output();
+            if pending.is_empty() {
+                return true;
+            }
+            match self.taken.stream().writev(&[IoSlice::new(pending)]).await {
+                Ok(0) | Err(_) => return false,
+                Ok(written) => self.session.consume_output(written),
+            }
         }
-        let len = pending.len();
-        if self.taken.write_all(pending).await.is_err() {
-            return false;
-        }
-        self.session.consume_output(len);
-        true
     }
 
     async fn flush_or_fail(&mut self) -> Result<()> {

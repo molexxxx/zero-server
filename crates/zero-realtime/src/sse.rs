@@ -12,6 +12,7 @@
 //! @see <https://html.spec.whatwg.org/multipage/server-sent-events.html>
 
 use std::future::{poll_fn, Future};
+use std::io::{self, IoSlice};
 use std::pin::pin;
 use std::rc::Rc;
 use std::task::Poll;
@@ -73,6 +74,9 @@ pub struct EventStream<S> {
     keep_alive: KeepAlive,
     started: Instant,
     buffer: Vec<u8>,
+    /// How much of `buffer` the connection took; a write whose future was dropped
+    /// leaves the rest, which the next write sends first.
+    written: usize,
 }
 
 impl<S> std::fmt::Debug for EventStream<S> {
@@ -97,6 +101,7 @@ impl<S: Stream + 'static> EventStream<S> {
             keep_alive: KeepAlive::new(keep_alive_ms, 0),
             started: Instant::now(),
             buffer: Vec::new(),
+            written: 0,
         }
     }
 
@@ -126,7 +131,8 @@ impl<S: Stream + 'static> EventStream<S> {
     /// [`Error::Protocol`] for a field the encoder refuses; [`Error::Io`] when the
     /// write fails.
     pub async fn send(&mut self, event: &Event<'_>) -> Result<()> {
-        self.buffer.clear();
+        self.write_buffer().await?;
+        self.restart();
         encode(event, &mut self.buffer)?;
         self.write_buffer().await
     }
@@ -141,7 +147,8 @@ impl<S: Stream + 'static> EventStream<S> {
     ///
     /// [`Error::Protocol`] for a line break; [`Error::Io`] when the write fails.
     pub async fn comment(&mut self, text: &str) -> Result<()> {
-        self.buffer.clear();
+        self.write_buffer().await?;
+        self.restart();
         comment(text, &mut self.buffer)?;
         self.write_buffer().await
     }
@@ -166,7 +173,8 @@ impl<S: Stream + 'static> EventStream<S> {
         loop {
             let now = self.now_ms();
             if self.keep_alive.is_due(now) {
-                self.buffer.clear();
+                self.write_buffer().await?;
+                self.restart();
                 self.buffer.extend_from_slice(KEEP_ALIVE_COMMENT);
                 self.write_buffer().await?;
                 continue;
@@ -211,11 +219,36 @@ impl<S: Stream + 'static> EventStream<S> {
         u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX)
     }
 
+    /// Empty the buffer for the next message, which the previous one has left.
+    fn restart(&mut self) {
+        self.buffer.clear();
+        self.written = 0;
+    }
+
+    /// Write what the buffer still holds, counting each part once the connection
+    /// took it, so a write whose future is dropped resumes with the same bytes.
     async fn write_buffer(&mut self) -> Result<()> {
-        self.taken
-            .write_all(&self.buffer)
-            .await
-            .map_err(|err| Error::Io(err.to_string()))?;
+        if self.written >= self.buffer.len() {
+            return Ok(());
+        }
+        while let Some(rest) = self
+            .buffer
+            .get(self.written..)
+            .filter(|rest| !rest.is_empty())
+        {
+            let written = self
+                .taken
+                .stream()
+                .writev(&[IoSlice::new(rest)])
+                .await
+                .map_err(|err| Error::Io(err.to_string()))?;
+            if written == 0 {
+                return Err(Error::Io(
+                    io::Error::from(io::ErrorKind::WriteZero).to_string(),
+                ));
+            }
+            self.written = self.written.saturating_add(written);
+        }
         let now = self.now_ms();
         self.keep_alive.wrote(now);
         Ok(())

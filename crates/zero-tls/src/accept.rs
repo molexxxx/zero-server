@@ -11,12 +11,17 @@
 //!
 //! The handshake runs under the handshake timeout, from the first byte to the last
 //! record of the server's final flight, so a client cannot hold a handshake open
-//! before the HTTP header timeout starts. Each core counts its handshakes in
+//! before the HTTP header timeout starts. A session that runs out of time sends
+//! `close_notify` before its transport closes (RFC 9846 Section 6.1), which the
+//! buffered driver can do at any point of the handshake; rustls's unbuffered state
+//! machine offers no way to queue an alert until the handshake completes, so on that
+//! driver a timed-out handshake only closes the transport. Each core counts its handshakes in
 //! progress; at the limit it stops accepting, the kernel's backlog holds the rest, and
 //! a connection accepted just as the limit was reached waits until a handshake ends.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc9325.html#section-3.7>
 //! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-9.2>
+//! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-6.1>
 //! @see <https://docs.rs/rustls/0.23.45/rustls/server/struct.Acceptor.html>
 
 use std::cell::Cell;
@@ -25,6 +30,7 @@ use std::io::{self, IoSlice};
 use std::net::SocketAddr;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use rustls::server::Acceptor;
 use rustls::ServerConfig;
@@ -45,6 +51,9 @@ use crate::unbuffered::UnbufferedStream;
 /// of the protocol's maximum length and its record headers.
 const MAX_HELLO: usize = (1 << 16) + 1024;
 
+/// How long a handshake that timed out may take to send its `close_notify`.
+const CLOSE_GRACE: Duration = Duration::from_secs(1);
+
 /// The alert description `unrecognized_name` (RFC 9846 Section 6.2).
 pub(crate) const UNRECOGNIZED_NAME: u8 = 112;
 
@@ -64,6 +73,16 @@ pub enum TlsStream<S> {
     Buffered(BufferedStream<S>),
     /// The unbuffered driver.
     Unbuffered(UnbufferedStream<S>),
+}
+
+impl<S: Stream> TlsStream<S> {
+    /// Complete the handshake.
+    async fn handshake(&self, pool: &Pool) -> io::Result<()> {
+        match self {
+            TlsStream::Buffered(stream) => stream.handshake(pool).await,
+            TlsStream::Unbuffered(stream) => stream.handshake(pool).await,
+        }
+    }
 }
 
 impl<S: Stream> Stream for TlsStream<S> {
@@ -262,12 +281,14 @@ impl TlsAccept {
         self.in_progress.get()
     }
 
-    async fn handshake(
+    /// Read the hello, pick the identity and start the session; the handshake itself
+    /// is left to the caller.
+    async fn open(
         &self,
         stream: TcpStream,
-        pool: Rc<Pool>,
-    ) -> io::Result<Prepared<TlsStream<TcpStream>>> {
-        let (name, first) = match read_hello(&stream, &pool).await? {
+        pool: &Pool,
+    ) -> io::Result<(TlsStream<TcpStream>, Arc<[Box<str>]>)> {
+        let (name, first) = match read_hello(&stream, pool).await? {
             Hello::Read(name, first) => (name, first),
             Hello::Refused(record, err) => {
                 return Err(refuse(&stream, &record, tls_error(err)).await)
@@ -288,22 +309,19 @@ impl TlsAccept {
                 return Err(refuse(&stream, &fatal_alert(MISSING_EXTENSION), reason).await);
             }
         };
-        let tls = match self.driver {
-            Driver::Buffered => {
-                let session = BufferedStream::new(stream, Arc::clone(&self.config), first)?;
-                session.handshake(&pool).await?;
-                TlsStream::Buffered(session)
-            }
-            Driver::Unbuffered => {
-                let session = UnbufferedStream::new(stream, Arc::clone(&self.config), first)?;
-                session.handshake(&pool).await?;
-                TlsStream::Unbuffered(session)
-            }
+        let session = match self.driver {
+            Driver::Buffered => TlsStream::Buffered(BufferedStream::new(
+                stream,
+                Arc::clone(&self.config),
+                first,
+            )?),
+            Driver::Unbuffered => TlsStream::Unbuffered(UnbufferedStream::new(
+                stream,
+                Arc::clone(&self.config),
+                first,
+            )?),
         };
-        Ok(Prepared {
-            stream: tls,
-            authorities: Some(Arc::clone(identity.names())),
-        })
+        Ok((session, Arc::clone(identity.names())))
     }
 }
 
@@ -328,16 +346,32 @@ impl Accept for TlsAccept {
             let _slot = slot;
             let core = self.worker.core();
             let pool = Rc::clone(&core.pool);
-            match core
-                .timeout(self.limits.handshake_timeout, self.handshake(stream, pool))
+            let limit = self.limits.handshake_timeout;
+            let started = Instant::now();
+            let (session, authorities) = core
+                .timeout(limit, self.open(stream, &pool))
                 .await
-            {
-                Ok(prepared) => prepared,
-                Err(_) => Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "the TLS handshake did not finish in time",
-                )),
+                .map_err(|_| timed_out())??;
+            let left = limit.saturating_sub(started.elapsed());
+            match core.timeout(left, session.handshake(&pool)).await {
+                Ok(Ok(())) => Ok(Prepared {
+                    stream: session,
+                    authorities: Some(authorities),
+                }),
+                Ok(Err(err)) => Err(err),
+                Err(_) => {
+                    let _ = core.timeout(CLOSE_GRACE, session.close_write()).await;
+                    Err(timed_out())
+                }
             }
         }
     }
+}
+
+/// The error of a handshake that ran out of time.
+fn timed_out() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::TimedOut,
+        "the TLS handshake did not finish in time",
+    )
 }

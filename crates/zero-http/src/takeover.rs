@@ -129,6 +129,12 @@ impl<S: Stream> Taken<S> {
 
     /// Write all of `bytes`.
     ///
+    /// If this future is dropped, an unknown part of `bytes` may already be committed
+    /// to the connection, so nothing else may be written after it: close the
+    /// connection. A caller that races its writes against other events keeps them
+    /// going through [`stream`](Self::stream) with `writev`, passing the same bytes
+    /// again after a dropped call, as the seam's `Stream` requires.
+    ///
     /// # Arguments
     ///
     /// * `bytes` - what to write.

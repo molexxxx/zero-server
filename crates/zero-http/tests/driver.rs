@@ -4,19 +4,20 @@
 
 #![cfg(feature = "io-tokio")]
 
-use std::io::{self, Read, Write};
+use std::io::{self, IoSlice, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use zero_core::Error;
+use zero_core::{Error, OwnedBuf};
 use zero_http::{
     serve, serve_with, Accept, Call, Config, Event, Handler, Prepared, TakeOver, Taken, Workers,
 };
 use zero_http_types::{HeaderName, Method, StatusCode};
-use zero_io::seam::{Leased, Shutdown, Timer};
+use zero_io::pool::Pool;
+use zero_io::seam::{Leased, Shutdown, Stream, Timer};
 use zero_limits::Http1Limits;
 
 /// The test application: routes on the path, logs every start and end.
@@ -908,6 +909,111 @@ fn a_prepared_listener_reports_secure_connections_drops_refused_ones_and_pauses_
         "the connection waited in the backlog"
     );
     assert_eq!(get(&mut conn, "/secure").text(), "secure", "served on");
+    workers.stop().unwrap();
+}
+
+/// A stream whose `close_write` never finishes, as a TLS stream's does when its peer
+/// stopped reading before `close_notify` could be written.
+struct Stuck(zero_io::rt::TcpStream);
+
+impl Stream for Stuck {
+    fn readable(&self) -> impl std::future::Future<Output = io::Result<()>> {
+        self.0.readable()
+    }
+
+    fn read_leased(&self, pool: &Pool) -> impl std::future::Future<Output = io::Result<Leased>> {
+        self.0.read_leased(pool)
+    }
+
+    fn read_into(
+        &self,
+        buf: OwnedBuf,
+    ) -> impl std::future::Future<Output = (io::Result<usize>, OwnedBuf)> {
+        self.0.read_into(buf)
+    }
+
+    fn write(
+        &self,
+        buf: OwnedBuf,
+    ) -> impl std::future::Future<Output = (io::Result<usize>, OwnedBuf)> {
+        self.0.write(buf)
+    }
+
+    fn writev(&self, bufs: &[IoSlice<'_>]) -> impl std::future::Future<Output = io::Result<usize>> {
+        self.0.writev(bufs)
+    }
+
+    fn shutdown_write(&self) -> io::Result<()> {
+        self.0.shutdown_write()
+    }
+
+    fn close_write(&self) -> impl std::future::Future<Output = io::Result<()>> {
+        std::future::pending()
+    }
+
+    fn peer_addr(&self) -> io::Result<SocketAddr> {
+        self.0.peer_addr()
+    }
+}
+
+/// Hands every connection over as a [`Stuck`] stream.
+struct StuckAccept;
+
+impl Accept for StuckAccept {
+    type Stream = Stuck;
+
+    fn accept(
+        self: Rc<Self>,
+        stream: zero_io::rt::TcpStream,
+        _peer: SocketAddr,
+    ) -> impl std::future::Future<Output = io::Result<Prepared<Stuck>>> + 'static {
+        std::future::ready(Ok(Prepared::any_host(Stuck(stream))))
+    }
+}
+
+#[test]
+fn a_close_that_cannot_finish_writing_is_given_up_after_the_linger_and_the_connection_dropped() {
+    let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let config = Config {
+        runtime: zero_rt::Config {
+            io: zero_io::rt::Config {
+                threads: 1,
+                drain: Duration::from_secs(2),
+                ..zero_io::rt::Config::default()
+            },
+        },
+        limits: Http1Limits::DEFAULT,
+        server: None,
+    };
+    let workers = serve_with(
+        "127.0.0.1:0".parse().unwrap(),
+        config,
+        Arc::new(|_| {}),
+        move |_worker| App {
+            log: Arc::clone(&log),
+        },
+        |_worker| StuckAccept,
+    )
+    .unwrap();
+    let mut conn = TcpStream::connect(workers.local_addr()).unwrap();
+    conn.set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    conn.write_all(b"GET /hello HTTP/1.1\r\nHost: t\r\nConnection: close\r\n\r\n")
+        .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().text(), "hello");
+    let started = Instant::now();
+    let mut byte = [0u8; 1];
+    let ended = conn.read(&mut byte);
+    assert!(
+        matches!(&ended, Ok(0))
+            || matches!(&ended, Err(err) if err.kind() == io::ErrorKind::ConnectionReset),
+        "the connection is dropped: {ended:?}"
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "{:?}",
+        started.elapsed()
+    );
     workers.stop().unwrap();
 }
 
