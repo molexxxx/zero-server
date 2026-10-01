@@ -1,6 +1,6 @@
 //! The counting-allocator criterion of R.3 step 5: on a warm core, a tier 4 request
 //! makes no call to the global allocator on the whole path, from the read through
-//! the parse, the handler, the serializer and the write.
+//! the parse, the route, the handler, the serializer and the write.
 //!
 //! The handler reports the core thread's allocation count in a header; the count
 //! grows between the first and the second request while buffers and records reach
@@ -15,21 +15,41 @@ use std::time::Duration;
 
 use zero_core::Error;
 use zero_date::Decimal;
-use zero_http::{serve, Call, Config, Handler};
+use zero_http::{serve, Call, Config, Handler, Router};
+use zero_http_types::Method;
 use zero_sys::alloc::Counting;
 
 #[global_allocator]
 static ALLOCATOR: Counting = Counting::new();
 
-struct Counter;
+/// A routed application: the request goes through the router before the handler.
+struct Counter {
+    router: Router<u8>,
+}
+
+impl Counter {
+    fn new() -> Self {
+        let mut router = Router::new();
+        router.route(Method::Get, "/plaintext", 1).unwrap();
+        router.route(Method::Get, "/json", 2).unwrap();
+        router.route(Method::Get, "/users/:id", 3).unwrap();
+        Counter { router }
+    }
+}
 
 impl Handler for Counter {
     async fn handle(&self, call: &mut Call<'_>) -> Result<(), Error> {
+        let Some(routed) = call.route(&self.router) else {
+            return Ok(());
+        };
         let count = Decimal::new(Counting::allocations());
         let mut response = call.response();
         response.header(b"X-Allocations", count.as_bytes())?;
         response.content_type(b"text/plain")?;
-        response.body(b"Hello, World!");
+        match routed.descriptor {
+            1 => response.body(b"Hello, World!"),
+            _ => response.body(b"other"),
+        };
         Ok(())
     }
 }
@@ -71,7 +91,7 @@ fn a_tier_4_request_on_a_warm_core_makes_no_global_allocation() {
         "127.0.0.1:0".parse().unwrap(),
         config,
         Arc::new(|_| {}),
-        |_| Counter,
+        |_| Counter::new(),
     )
     .unwrap();
     let mut conn = TcpStream::connect(workers.local_addr()).unwrap();

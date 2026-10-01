@@ -23,9 +23,12 @@ zero-http1.workspace = true
 zero-io.workspace = true
 zero-rt.workspace = true
 zero-sys.workspace = true
+zero-router.workspace = true
+zero-uri.workspace = true
 
 [dev-dependencies]
 zero-date.workspace = true
+zero-mime.workspace = true
 
 [lints]
 workspace = true

@@ -31,7 +31,7 @@ use zero_limits::Http1Limits;
 use zero_rt::{contain, Reset, Worker};
 
 use crate::call::Call;
-use crate::error::{Problem, PROBLEM_CONTENT_TYPE};
+use crate::error::Problem;
 use crate::handler::Handler;
 use crate::record::{Record, RESPONSE_HEAD_CAPACITY};
 use crate::ring::{poll_running, record_at, Entry, Framing, Ring, Split, Stage, CAP};
@@ -147,23 +147,13 @@ pub(crate) async fn request_task<H: Handler>(
     };
     match outcome {
         Ok(Ok(())) => {}
-        Ok(Err(error)) => problem_response(&mut record, &Problem::from_error(&error)),
+        Ok(Err(error)) => record.problem(&Problem::from_error(&error)),
         Err(panicked) => {
             shared.worker.note_panic(panicked.message);
-            problem_response(&mut record, &Problem::panicked());
+            record.problem(&Problem::panicked());
         }
     }
     record
-}
-
-/// Replace whatever the handler wrote with a problem details response.
-fn problem_response(record: &mut Record, problem: &Problem) {
-    record.clear_response();
-    record.status = Some(problem.status);
-    record
-        .response_fields
-        .extend_from_slice(PROBLEM_CONTENT_TYPE);
-    problem.write_json(&mut record.response_body);
 }
 
 /// The unconsumed input of a connection: nothing, a leased block, or heap bytes when

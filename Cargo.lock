@@ -1660,8 +1660,11 @@ dependencies = [
  "zero-http1",
  "zero-io",
  "zero-limits",
+ "zero-mime",
+ "zero-router",
  "zero-rt",
  "zero-sys",
+ "zero-uri",
 ]
 
 [[package]]
@@ -1751,6 +1754,7 @@ version = "0.1.0"
 dependencies = [
  "zero-core",
  "zero-http-types",
+ "zero-uri",
 ]
 
 [[package]]

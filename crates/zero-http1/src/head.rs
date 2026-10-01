@@ -746,6 +746,26 @@ mod tests {
 
     const SIMPLE: &[u8] = b"GET /index.html HTTP/1.1\r\nHost: www.example.org\r\n\r\n";
 
+    /// Standards row `routing-08`: RFC 9110 Section 5.5, the OWS around a field
+    /// value is not part of it.
+    #[test]
+    fn leading_and_trailing_whitespace_is_stripped_from_received_field_values_before_evaluation() {
+        let input =
+            b"GET / HTTP/1.1\r\nHost: h\r\nX-Pad: \t  padded value \t \r\nX-Empty:    \r\n\r\n";
+        let mut table = [Field::EMPTY; 8];
+        let status = parse_request(input, &mut table, &Http1Limits::DEFAULT);
+        let Status::Complete(head) = status else {
+            unreachable!("a complete head, got {status:?}");
+        };
+        assert_eq!(head.field_count, 3);
+        let values: Vec<&[u8]> = table
+            .iter()
+            .take(head.field_count)
+            .map(|field| field.value(input))
+            .collect();
+        assert_eq!(values, [&b"h"[..], b"padded value", b""]);
+    }
+
     #[test]
     fn a_minimal_request_parses_into_spans() {
         let head = parse_head(SIMPLE);

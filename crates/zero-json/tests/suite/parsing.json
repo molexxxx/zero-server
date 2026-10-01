@@ -1,0 +1,1585 @@
+{
+"cases": [
+{
+"expect": "i",
+"hex": "5b3132332e343536652d3738395d",
+"name": "i_number_double_huge_neg_exp.json"
+},
+{
+"expect": "i",
+"hex": "5b302e346530303636393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393939393936393939393939393030365d",
+"name": "i_number_huge_exp.json"
+},
+{
+"expect": "i",
+"hex": "5b2d31652b393939395d",
+"name": "i_number_neg_int_huge_exp.json"
+},
+{
+"expect": "i",
+"hex": "5b312e35652b393939395d",
+"name": "i_number_pos_double_huge_exp.json"
+},
+{
+"expect": "i",
+"hex": "5b2d313233313233653130303030305d",
+"name": "i_number_real_neg_overflow.json"
+},
+{
+"expect": "i",
+"hex": "5b313233313233653130303030305d",
+"name": "i_number_real_pos_overflow.json"
+},
+{
+"expect": "i",
+"hex": "5b313233652d31303030303030305d",
+"name": "i_number_real_underflow.json"
+},
+{
+"expect": "i",
+"hex": "5b2d3132333132333132333132333132333132333132333132333132333132335d",
+"name": "i_number_too_big_neg_int.json"
+},
+{
+"expect": "i",
+"hex": "5b3130303030303030303030303030303030303030305d",
+"name": "i_number_too_big_pos_int.json"
+},
+{
+"expect": "i",
+"hex": "5b2d3233373436323337343637333237363839343237393833323734393833323432333437393832333234363332373834365d",
+"name": "i_number_very_big_negative_int.json"
+},
+{
+"expect": "i",
+"hex": "7b225c7544464141223a307d",
+"name": "i_object_key_lone_2nd_surrogate.json"
+},
+{
+"expect": "i",
+"hex": "5b225c7544414441225d",
+"name": "i_string_1st_surrogate_but_2nd_missing.json"
+},
+{
+"expect": "i",
+"hex": "5b225c75443838385c7531323334225d",
+"name": "i_string_1st_valid_surrogate_2nd_invalid.json"
+},
+{
+"expect": "i",
+"hex": "fffe5b002200e90022005d00",
+"name": "i_string_UTF-16LE_with_BOM.json"
+},
+{
+"expect": "i",
+"hex": "5b22e697a5d188fa225d",
+"name": "i_string_UTF-8_invalid_sequence.json"
+},
+{
+"expect": "i",
+"hex": "5b22eda080225d",
+"name": "i_string_UTF8_surrogate_U+D800.json"
+},
+{
+"expect": "i",
+"hex": "5b225c75443830305c6e225d",
+"name": "i_string_incomplete_surrogate_and_escape_valid.json"
+},
+{
+"expect": "i",
+"hex": "5b225c754464316561225d",
+"name": "i_string_incomplete_surrogate_pair.json"
+},
+{
+"expect": "i",
+"hex": "5b225c75443830305c75443830305c6e225d",
+"name": "i_string_incomplete_surrogates_escape_valid.json"
+},
+{
+"expect": "i",
+"hex": "5b225c7564383030225d",
+"name": "i_string_invalid_lonely_surrogate.json"
+},
+{
+"expect": "i",
+"hex": "5b225c7564383030616263225d",
+"name": "i_string_invalid_surrogate.json"
+},
+{
+"expect": "i",
+"hex": "5b22ff225d",
+"name": "i_string_invalid_utf-8.json"
+},
+{
+"expect": "i",
+"hex": "5b225c75446431655c7544383334225d",
+"name": "i_string_inverted_surrogates_U+1D11E.json"
+},
+{
+"expect": "i",
+"hex": "5b22e9225d",
+"name": "i_string_iso_latin_1.json"
+},
+{
+"expect": "i",
+"hex": "5b225c7544464141225d",
+"name": "i_string_lone_second_surrogate.json"
+},
+{
+"expect": "i",
+"hex": "5b2281225d",
+"name": "i_string_lone_utf8_continuation_byte.json"
+},
+{
+"expect": "i",
+"hex": "5b22f4bfbfbf225d",
+"name": "i_string_not_in_unicode_range.json"
+},
+{
+"expect": "i",
+"hex": "5b22c0af225d",
+"name": "i_string_overlong_sequence_2_bytes.json"
+},
+{
+"expect": "i",
+"hex": "5b22fc83bfbfbfbf225d",
+"name": "i_string_overlong_sequence_6_bytes.json"
+},
+{
+"expect": "i",
+"hex": "5b22fc8080808080225d",
+"name": "i_string_overlong_sequence_6_bytes_null.json"
+},
+{
+"expect": "i",
+"hex": "5b22e0ff225d",
+"name": "i_string_truncated-utf-8.json"
+},
+{
+"expect": "i",
+"hex": "005b002200e90022005d",
+"name": "i_string_utf16BE_no_BOM.json"
+},
+{
+"expect": "i",
+"hex": "5b002200e90022005d00",
+"name": "i_string_utf16LE_no_BOM.json"
+},
+{
+"expect": "i",
+"hex": "5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d",
+"name": "i_structure_500_nested_arrays.json"
+},
+{
+"expect": "i",
+"hex": "efbbbf7b7d",
+"name": "i_structure_UTF-8_BOM_empty_object.json"
+},
+{
+"expect": "n",
+"hex": "5b3120747275655d",
+"name": "n_array_1_true_without_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b61e55d",
+"name": "n_array_a_invalid_utf8.json"
+},
+{
+"expect": "n",
+"hex": "5b22223a20315d",
+"name": "n_array_colon_instead_of_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b22225d2c",
+"name": "n_array_comma_after_close.json"
+},
+{
+"expect": "n",
+"hex": "5b2c315d",
+"name": "n_array_comma_and_number.json"
+},
+{
+"expect": "n",
+"hex": "5b312c2c325d",
+"name": "n_array_double_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b2278222c2c5d",
+"name": "n_array_double_extra_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b2278225d5d",
+"name": "n_array_extra_close.json"
+},
+{
+"expect": "n",
+"hex": "5b22222c5d",
+"name": "n_array_extra_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b227822",
+"name": "n_array_incomplete.json"
+},
+{
+"expect": "n",
+"hex": "5b78",
+"name": "n_array_incomplete_invalid_value.json"
+},
+{
+"expect": "n",
+"hex": "5b335b345d5d",
+"name": "n_array_inner_array_no_comma.json"
+},
+{
+"expect": "n",
+"hex": "5bff5d",
+"name": "n_array_invalid_utf8.json"
+},
+{
+"expect": "n",
+"hex": "5b313a325d",
+"name": "n_array_items_separated_by_semicolon.json"
+},
+{
+"expect": "n",
+"hex": "5b2c5d",
+"name": "n_array_just_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b2d5d",
+"name": "n_array_just_minus.json"
+},
+{
+"expect": "n",
+"hex": "5b2020202c2022225d",
+"name": "n_array_missing_value.json"
+},
+{
+"expect": "n",
+"hex": "5b2261222c0a340a2c312c",
+"name": "n_array_newlines_unclosed.json"
+},
+{
+"expect": "n",
+"hex": "5b312c5d",
+"name": "n_array_number_and_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b312c2c5d",
+"name": "n_array_number_and_several_commas.json"
+},
+{
+"expect": "n",
+"hex": "5b220b61225c665d",
+"name": "n_array_spaces_vertical_tab_formfeed.json"
+},
+{
+"expect": "n",
+"hex": "5b2a5d",
+"name": "n_array_star_inside.json"
+},
+{
+"expect": "n",
+"hex": "5b2222",
+"name": "n_array_unclosed.json"
+},
+{
+"expect": "n",
+"hex": "5b312c",
+"name": "n_array_unclosed_trailing_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b312c0a310a2c31",
+"name": "n_array_unclosed_with_new_lines.json"
+},
+{
+"expect": "n",
+"hex": "5b7b7d",
+"name": "n_array_unclosed_with_object_inside.json"
+},
+{
+"expect": "n",
+"hex": "5b66616c735d",
+"name": "n_incomplete_false.json"
+},
+{
+"expect": "n",
+"hex": "5b6e756c5d",
+"name": "n_incomplete_null.json"
+},
+{
+"expect": "n",
+"hex": "5b7472755d",
+"name": "n_incomplete_true.json"
+},
+{
+"expect": "n",
+"hex": "31323300",
+"name": "n_multidigit_number_then_00.json"
+},
+{
+"expect": "n",
+"hex": "5b2b2b313233345d",
+"name": "n_number_++.json"
+},
+{
+"expect": "n",
+"hex": "5b2b315d",
+"name": "n_number_+1.json"
+},
+{
+"expect": "n",
+"hex": "5b2b496e665d",
+"name": "n_number_+Inf.json"
+},
+{
+"expect": "n",
+"hex": "5b2d30315d",
+"name": "n_number_-01.json"
+},
+{
+"expect": "n",
+"hex": "5b2d312e302e5d",
+"name": "n_number_-1.0..json"
+},
+{
+"expect": "n",
+"hex": "5b2d322e5d",
+"name": "n_number_-2..json"
+},
+{
+"expect": "n",
+"hex": "5b2d4e614e5d",
+"name": "n_number_-NaN.json"
+},
+{
+"expect": "n",
+"hex": "5b2e2d315d",
+"name": "n_number_.-1.json"
+},
+{
+"expect": "n",
+"hex": "5b2e32652d335d",
+"name": "n_number_.2e-3.json"
+},
+{
+"expect": "n",
+"hex": "5b302e312e325d",
+"name": "n_number_0.1.2.json"
+},
+{
+"expect": "n",
+"hex": "5b302e33652b5d",
+"name": "n_number_0.3e+.json"
+},
+{
+"expect": "n",
+"hex": "5b302e33655d",
+"name": "n_number_0.3e.json"
+},
+{
+"expect": "n",
+"hex": "5b302e65315d",
+"name": "n_number_0.e1.json"
+},
+{
+"expect": "n",
+"hex": "5b30452b5d",
+"name": "n_number_0_capital_E+.json"
+},
+{
+"expect": "n",
+"hex": "5b30455d",
+"name": "n_number_0_capital_E.json"
+},
+{
+"expect": "n",
+"hex": "5b30652b5d",
+"name": "n_number_0e+.json"
+},
+{
+"expect": "n",
+"hex": "5b30655d",
+"name": "n_number_0e.json"
+},
+{
+"expect": "n",
+"hex": "5b312e30652b5d",
+"name": "n_number_1.0e+.json"
+},
+{
+"expect": "n",
+"hex": "5b312e30652d5d",
+"name": "n_number_1.0e-.json"
+},
+{
+"expect": "n",
+"hex": "5b312e30655d",
+"name": "n_number_1.0e.json"
+},
+{
+"expect": "n",
+"hex": "5b31203030302e305d",
+"name": "n_number_1_000.json"
+},
+{
+"expect": "n",
+"hex": "5b316545325d",
+"name": "n_number_1eE2.json"
+},
+{
+"expect": "n",
+"hex": "5b322e652b335d",
+"name": "n_number_2.e+3.json"
+},
+{
+"expect": "n",
+"hex": "5b322e652d335d",
+"name": "n_number_2.e-3.json"
+},
+{
+"expect": "n",
+"hex": "5b322e65335d",
+"name": "n_number_2.e3.json"
+},
+{
+"expect": "n",
+"hex": "5b392e652b5d",
+"name": "n_number_9.e+.json"
+},
+{
+"expect": "n",
+"hex": "5b496e665d",
+"name": "n_number_Inf.json"
+},
+{
+"expect": "n",
+"hex": "5b4e614e5d",
+"name": "n_number_NaN.json"
+},
+{
+"expect": "n",
+"hex": "5befbc915d",
+"name": "n_number_U+FF11_fullwidth_digit_one.json"
+},
+{
+"expect": "n",
+"hex": "5b312b325d",
+"name": "n_number_expression.json"
+},
+{
+"expect": "n",
+"hex": "5b3078315d",
+"name": "n_number_hex_1_digit.json"
+},
+{
+"expect": "n",
+"hex": "5b307834325d",
+"name": "n_number_hex_2_digits.json"
+},
+{
+"expect": "n",
+"hex": "5b496e66696e6974795d",
+"name": "n_number_infinity.json"
+},
+{
+"expect": "n",
+"hex": "5b30652b2d315d",
+"name": "n_number_invalid+-.json"
+},
+{
+"expect": "n",
+"hex": "5b2d3132332e313233666f6f5d",
+"name": "n_number_invalid-negative-real.json"
+},
+{
+"expect": "n",
+"hex": "5b313233e55d",
+"name": "n_number_invalid-utf-8-in-bigger-int.json"
+},
+{
+"expect": "n",
+"hex": "5b316531e55d",
+"name": "n_number_invalid-utf-8-in-exponent.json"
+},
+{
+"expect": "n",
+"hex": "5b30e55d0a",
+"name": "n_number_invalid-utf-8-in-int.json"
+},
+{
+"expect": "n",
+"hex": "5b2d496e66696e6974795d",
+"name": "n_number_minus_infinity.json"
+},
+{
+"expect": "n",
+"hex": "5b2d666f6f5d",
+"name": "n_number_minus_sign_with_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "5b2d20315d",
+"name": "n_number_minus_space_1.json"
+},
+{
+"expect": "n",
+"hex": "5b2d3031325d",
+"name": "n_number_neg_int_starting_with_zero.json"
+},
+{
+"expect": "n",
+"hex": "5b2d2e3132335d",
+"name": "n_number_neg_real_without_int_part.json"
+},
+{
+"expect": "n",
+"hex": "5b2d31785d",
+"name": "n_number_neg_with_garbage_at_end.json"
+},
+{
+"expect": "n",
+"hex": "5b3165615d",
+"name": "n_number_real_garbage_after_e.json"
+},
+{
+"expect": "n",
+"hex": "5b3165e55d",
+"name": "n_number_real_with_invalid_utf8_after_e.json"
+},
+{
+"expect": "n",
+"hex": "5b312e5d",
+"name": "n_number_real_without_fractional_part.json"
+},
+{
+"expect": "n",
+"hex": "5b2e3132335d",
+"name": "n_number_starting_with_dot.json"
+},
+{
+"expect": "n",
+"hex": "5b312e32612d335d",
+"name": "n_number_with_alpha.json"
+},
+{
+"expect": "n",
+"hex": "5b312e38303131363730303333333736353134482d3330385d",
+"name": "n_number_with_alpha_char.json"
+},
+{
+"expect": "n",
+"hex": "5b3031325d",
+"name": "n_number_with_leading_zero.json"
+},
+{
+"expect": "n",
+"hex": "5b2278222c2074727574685d",
+"name": "n_object_bad_value.json"
+},
+{
+"expect": "n",
+"hex": "7b5b3a202278227d0a",
+"name": "n_object_bracket_key.json"
+},
+{
+"expect": "n",
+"hex": "7b2278222c206e756c6c7d",
+"name": "n_object_comma_instead_of_colon.json"
+},
+{
+"expect": "n",
+"hex": "7b2278223a3a2262227d",
+"name": "n_object_double_colon.json"
+},
+{
+"expect": "n",
+"hex": "7bf09f87a8f09f87ad7d",
+"name": "n_object_emoji.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a226122203132337d",
+"name": "n_object_garbage_at_end.json"
+},
+{
+"expect": "n",
+"hex": "7b6b65793a202776616c7565277d",
+"name": "n_object_key_with_single_quotes.json"
+},
+{
+"expect": "n",
+"hex": "7b22b9223a2230222c7d",
+"name": "n_object_lone_continuation_byte_in_key_and_trailing_comma.json"
+},
+{
+"expect": "n",
+"hex": "7b22612220627d",
+"name": "n_object_missing_colon.json"
+},
+{
+"expect": "n",
+"hex": "7b3a2262227d",
+"name": "n_object_missing_key.json"
+},
+{
+"expect": "n",
+"hex": "7b226122202262227d",
+"name": "n_object_missing_semicolon.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a",
+"name": "n_object_missing_value.json"
+},
+{
+"expect": "n",
+"hex": "7b226122",
+"name": "n_object_no-colon.json"
+},
+{
+"expect": "n",
+"hex": "7b313a317d",
+"name": "n_object_non_string_key.json"
+},
+{
+"expect": "n",
+"hex": "7b3939393945393939393a317d",
+"name": "n_object_non_string_key_but_huge_number_instead.json"
+},
+{
+"expect": "n",
+"hex": "7b6e756c6c3a6e756c6c2c6e756c6c3a6e756c6c7d",
+"name": "n_object_repeated_null_null.json"
+},
+{
+"expect": "n",
+"hex": "7b226964223a302c2c2c2c2c7d",
+"name": "n_object_several_trailing_commas.json"
+},
+{
+"expect": "n",
+"hex": "7b2761273a307d",
+"name": "n_object_single_quote.json"
+},
+{
+"expect": "n",
+"hex": "7b226964223a302c7d",
+"name": "n_object_trailing_comma.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d2f2a2a2f",
+"name": "n_object_trailing_comment.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d2f2a2a2f2f",
+"name": "n_object_trailing_comment_open.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d2f2f",
+"name": "n_object_trailing_comment_slash_open.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d2f",
+"name": "n_object_trailing_comment_slash_open_incomplete.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262222c2c2263223a2264227d",
+"name": "n_object_two_commas_in_a_row.json"
+},
+{
+"expect": "n",
+"hex": "7b613a202262227d",
+"name": "n_object_unquoted_key.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2261",
+"name": "n_object_unterminated-value.json"
+},
+{
+"expect": "n",
+"hex": "7b2022666f6f22203a2022626172222c20226122207d",
+"name": "n_object_with_single_string.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d23",
+"name": "n_object_with_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "20",
+"name": "n_single_space.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443830305c225d",
+"name": "n_string_1_surrogate_then_escape.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443830305c75225d",
+"name": "n_string_1_surrogate_then_escape_u.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443830305c7531225d",
+"name": "n_string_1_surrogate_then_escape_u1.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443830305c753178225d",
+"name": "n_string_1_surrogate_then_escape_u1x.json"
+},
+{
+"expect": "n",
+"hex": "5bc3a95d",
+"name": "n_string_accentuated_char_no_quotes.json"
+},
+{
+"expect": "n",
+"hex": "5b225c00225d",
+"name": "n_string_backslash_00.json"
+},
+{
+"expect": "n",
+"hex": "5b225c783030225d",
+"name": "n_string_escape_x.json"
+},
+{
+"expect": "n",
+"hex": "5b225c5c5c225d",
+"name": "n_string_escaped_backslash_bad.json"
+},
+{
+"expect": "n",
+"hex": "5b225c09225d",
+"name": "n_string_escaped_ctrl_char_tab.json"
+},
+{
+"expect": "n",
+"hex": "5b225cf09f8c80225d",
+"name": "n_string_escaped_emoji.json"
+},
+{
+"expect": "n",
+"hex": "5b225c225d",
+"name": "n_string_incomplete_escape.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75303041225d",
+"name": "n_string_incomplete_escaped_character.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443833345c754464225d",
+"name": "n_string_incomplete_surrogate.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75443830305c75443830305c78225d",
+"name": "n_string_incomplete_surrogate_escape_invalid.json"
+},
+{
+"expect": "n",
+"hex": "5b225c75e5225d",
+"name": "n_string_invalid-utf-8-in-escape.json"
+},
+{
+"expect": "n",
+"hex": "5b225c61225d",
+"name": "n_string_invalid_backslash_esc.json"
+},
+{
+"expect": "n",
+"hex": "5b225c7571717171225d",
+"name": "n_string_invalid_unicode_escape.json"
+},
+{
+"expect": "n",
+"hex": "5b225ce5225d",
+"name": "n_string_invalid_utf8_after_escape.json"
+},
+{
+"expect": "n",
+"hex": "5b5c753030323022617364225d",
+"name": "n_string_leading_uescaped_thinspace.json"
+},
+{
+"expect": "n",
+"hex": "5b5c6e5d",
+"name": "n_string_no_quotes_with_bad_escape.json"
+},
+{
+"expect": "n",
+"hex": "22",
+"name": "n_string_single_doublequote.json"
+},
+{
+"expect": "n",
+"hex": "5b2773696e676c652071756f7465275d",
+"name": "n_string_single_quote.json"
+},
+{
+"expect": "n",
+"hex": "616263",
+"name": "n_string_single_string_no_double_quotes.json"
+},
+{
+"expect": "n",
+"hex": "5b225c",
+"name": "n_string_start_escape_unclosed.json"
+},
+{
+"expect": "n",
+"hex": "5b22610061225d",
+"name": "n_string_unescaped_ctrl_char.json"
+},
+{
+"expect": "n",
+"hex": "5b226e65770a6c696e65225d",
+"name": "n_string_unescaped_newline.json"
+},
+{
+"expect": "n",
+"hex": "5b2209225d",
+"name": "n_string_unescaped_tab.json"
+},
+{
+"expect": "n",
+"hex": "225c554136364422",
+"name": "n_string_unicode_CapitalU.json"
+},
+{
+"expect": "n",
+"hex": "222278",
+"name": "n_string_with_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "5be281a05d",
+"name": "n_structure_U+2060_word_joined.json"
+},
+{
+"expect": "n",
+"hex": "efbbbf",
+"name": "n_structure_UTF8_BOM_no_data.json"
+},
+{
+"expect": "n",
+"hex": "3c2e3e",
+"name": "n_structure_angle_bracket_..json"
+},
+{
+"expect": "n",
+"hex": "5b3c6e756c6c3e5d",
+"name": "n_structure_angle_bracket_null.json"
+},
+{
+"expect": "n",
+"hex": "5b315d78",
+"name": "n_structure_array_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "5b315d5d",
+"name": "n_structure_array_with_extra_array_close.json"
+},
+{
+"expect": "n",
+"hex": "5b226173645d",
+"name": "n_structure_array_with_unclosed_string.json"
+},
+{
+"expect": "n",
+"hex": "61c3a5",
+"name": "n_structure_ascii-unicode-identifier.json"
+},
+{
+"expect": "n",
+"hex": "5b547275655d",
+"name": "n_structure_capitalized_True.json"
+},
+{
+"expect": "n",
+"hex": "315d",
+"name": "n_structure_close_unopened_array.json"
+},
+{
+"expect": "n",
+"hex": "7b2278223a20747275652c",
+"name": "n_structure_comma_instead_of_closing_brace.json"
+},
+{
+"expect": "n",
+"hex": "5b5d5b5d",
+"name": "n_structure_double_array.json"
+},
+{
+"expect": "n",
+"hex": "5d",
+"name": "n_structure_end_array.json"
+},
+{
+"expect": "n",
+"hex": "efbb7b7d",
+"name": "n_structure_incomplete_UTF8_BOM.json"
+},
+{
+"expect": "n",
+"hex": "e5",
+"name": "n_structure_lone-invalid-utf-8.json"
+},
+{
+"expect": "n",
+"hex": "5b",
+"name": "n_structure_lone-open-bracket.json"
+},
+{
+"expect": "n",
+"hex": "",
+"name": "n_structure_no_data.json"
+},
+{
+"expect": "n",
+"hex": "5b005d",
+"name": "n_structure_null-byte-outside-string.json"
+},
+{
+"expect": "n",
+"hex": "3240",
+"name": "n_structure_number_with_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "7b7d7d",
+"name": "n_structure_object_followed_by_closing_object.json"
+},
+{
+"expect": "n",
+"hex": "7b22223a",
+"name": "n_structure_object_unclosed_no_value.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2f2a636f6d6d656e742a2f2262227d",
+"name": "n_structure_object_with_comment.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a20747275657d20227822",
+"name": "n_structure_object_with_trailing_garbage.json"
+},
+{
+"expect": "n",
+"hex": "5b27",
+"name": "n_structure_open_array_apostrophe.json"
+},
+{
+"expect": "n",
+"hex": "5b2c",
+"name": "n_structure_open_array_comma.json"
+},
+{
+"expect": "n",
+"hex": "5b7b",
+"name": "n_structure_open_array_open_object.json"
+},
+{
+"expect": "n",
+"hex": "5b2261",
+"name": "n_structure_open_array_open_string.json"
+},
+{
+"expect": "n",
+"hex": "5b226122",
+"name": "n_structure_open_array_string.json"
+},
+{
+"expect": "n",
+"hex": "7b",
+"name": "n_structure_open_object.json"
+},
+{
+"expect": "n",
+"hex": "7b5d",
+"name": "n_structure_open_object_close_array.json"
+},
+{
+"expect": "n",
+"hex": "7b2c",
+"name": "n_structure_open_object_comma.json"
+},
+{
+"expect": "n",
+"hex": "7b5b",
+"name": "n_structure_open_object_open_array.json"
+},
+{
+"expect": "n",
+"hex": "7b2261",
+"name": "n_structure_open_object_open_string.json"
+},
+{
+"expect": "n",
+"hex": "7b276127",
+"name": "n_structure_open_object_string_with_apostrophes.json"
+},
+{
+"expect": "n",
+"hex": "5b225c7b5b225c7b5b225c7b5b225c7b",
+"name": "n_structure_open_open.json"
+},
+{
+"expect": "n",
+"hex": "e9",
+"name": "n_structure_single_eacute.json"
+},
+{
+"expect": "n",
+"hex": "2a",
+"name": "n_structure_single_star.json"
+},
+{
+"expect": "n",
+"hex": "7b2261223a2262227d237b7d",
+"name": "n_structure_trailing_#.json"
+},
+{
+"expect": "n",
+"hex": "5b5c753030304122225d",
+"name": "n_structure_uescaped_LF_before_string.json"
+},
+{
+"expect": "n",
+"hex": "5b31",
+"name": "n_structure_unclosed_array.json"
+},
+{
+"expect": "n",
+"hex": "5b2066616c73652c206e756c",
+"name": "n_structure_unclosed_array_partial_null.json"
+},
+{
+"expect": "n",
+"hex": "5b20747275652c2066616c73",
+"name": "n_structure_unclosed_array_unfinished_false.json"
+},
+{
+"expect": "n",
+"hex": "5b2066616c73652c20747275",
+"name": "n_structure_unclosed_array_unfinished_true.json"
+},
+{
+"expect": "n",
+"hex": "7b22617364223a2261736422",
+"name": "n_structure_unclosed_object.json"
+},
+{
+"expect": "n",
+"hex": "c3a5",
+"name": "n_structure_unicode-identifier.json"
+},
+{
+"expect": "n",
+"hex": "5be281a05d",
+"name": "n_structure_whitespace_U+2060_word_joiner.json"
+},
+{
+"expect": "n",
+"hex": "5b0c5d",
+"name": "n_structure_whitespace_formfeed.json"
+},
+{
+"expect": "y",
+"hex": "5b5b5d2020205d",
+"name": "y_array_arraysWithSpaces.json"
+},
+{
+"expect": "y",
+"hex": "5b22225d",
+"name": "y_array_empty-string.json"
+},
+{
+"expect": "y",
+"hex": "5b5d",
+"name": "y_array_empty.json"
+},
+{
+"expect": "y",
+"hex": "5b2261225d",
+"name": "y_array_ending_with_newline.json"
+},
+{
+"expect": "y",
+"hex": "5b66616c73655d",
+"name": "y_array_false.json"
+},
+{
+"expect": "y",
+"hex": "5b6e756c6c2c20312c202231222c207b7d5d",
+"name": "y_array_heterogeneous.json"
+},
+{
+"expect": "y",
+"hex": "5b6e756c6c5d",
+"name": "y_array_null.json"
+},
+{
+"expect": "y",
+"hex": "5b310a5d",
+"name": "y_array_with_1_and_newline.json"
+},
+{
+"expect": "y",
+"hex": "205b315d",
+"name": "y_array_with_leading_space.json"
+},
+{
+"expect": "y",
+"hex": "5b312c6e756c6c2c6e756c6c2c6e756c6c2c325d",
+"name": "y_array_with_several_null.json"
+},
+{
+"expect": "y",
+"hex": "5b325d20",
+"name": "y_array_with_trailing_space.json"
+},
+{
+"expect": "y",
+"hex": "5b3132336536355d",
+"name": "y_number.json"
+},
+{
+"expect": "y",
+"hex": "5b30652b315d",
+"name": "y_number_0e+1.json"
+},
+{
+"expect": "y",
+"hex": "5b3065315d",
+"name": "y_number_0e1.json"
+},
+{
+"expect": "y",
+"hex": "5b20345d",
+"name": "y_number_after_space.json"
+},
+{
+"expect": "y",
+"hex": "5b2d302e3030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030315d0a",
+"name": "y_number_double_close_to_zero.json"
+},
+{
+"expect": "y",
+"hex": "5b323065315d",
+"name": "y_number_int_with_exp.json"
+},
+{
+"expect": "y",
+"hex": "5b2d305d",
+"name": "y_number_minus_zero.json"
+},
+{
+"expect": "y",
+"hex": "5b2d3132335d",
+"name": "y_number_negative_int.json"
+},
+{
+"expect": "y",
+"hex": "5b2d315d",
+"name": "y_number_negative_one.json"
+},
+{
+"expect": "y",
+"hex": "5b2d305d",
+"name": "y_number_negative_zero.json"
+},
+{
+"expect": "y",
+"hex": "5b314532325d",
+"name": "y_number_real_capital_e.json"
+},
+{
+"expect": "y",
+"hex": "5b31452d325d",
+"name": "y_number_real_capital_e_neg_exp.json"
+},
+{
+"expect": "y",
+"hex": "5b31452b325d",
+"name": "y_number_real_capital_e_pos_exp.json"
+},
+{
+"expect": "y",
+"hex": "5b3132336534355d",
+"name": "y_number_real_exponent.json"
+},
+{
+"expect": "y",
+"hex": "5b3132332e3435366537385d",
+"name": "y_number_real_fraction_exponent.json"
+},
+{
+"expect": "y",
+"hex": "5b31652d325d",
+"name": "y_number_real_neg_exp.json"
+},
+{
+"expect": "y",
+"hex": "5b31652b325d",
+"name": "y_number_real_pos_exponent.json"
+},
+{
+"expect": "y",
+"hex": "5b3132335d",
+"name": "y_number_simple_int.json"
+},
+{
+"expect": "y",
+"hex": "5b3132332e3435363738395d",
+"name": "y_number_simple_real.json"
+},
+{
+"expect": "y",
+"hex": "7b22617364223a22736466222c2022646667223a22666768227d",
+"name": "y_object.json"
+},
+{
+"expect": "y",
+"hex": "7b22617364223a22736466227d",
+"name": "y_object_basic.json"
+},
+{
+"expect": "y",
+"hex": "7b2261223a2262222c2261223a2263227d",
+"name": "y_object_duplicated_key.json"
+},
+{
+"expect": "y",
+"hex": "7b2261223a2262222c2261223a2262227d",
+"name": "y_object_duplicated_key_and_value.json"
+},
+{
+"expect": "y",
+"hex": "7b7d",
+"name": "y_object_empty.json"
+},
+{
+"expect": "y",
+"hex": "7b22223a307d",
+"name": "y_object_empty_key.json"
+},
+{
+"expect": "y",
+"hex": "7b22666f6f5c7530303030626172223a2034327d",
+"name": "y_object_escaped_null_in_key.json"
+},
+{
+"expect": "y",
+"hex": "7b20226d696e223a202d312e30652b32382c20226d6178223a20312e30652b3238207d",
+"name": "y_object_extreme_numbers.json"
+},
+{
+"expect": "y",
+"hex": "7b2278223a5b7b226964223a202278787878787878787878787878787878787878787878787878787878787878787878787878787878227d5d2c20226964223a202278787878787878787878787878787878787878787878787878787878787878787878787878787878227d",
+"name": "y_object_long_strings.json"
+},
+{
+"expect": "y",
+"hex": "7b2261223a5b5d7d",
+"name": "y_object_simple.json"
+},
+{
+"expect": "y",
+"hex": "7b227469746c65223a225c75303431665c75303433655c75303433625c75303434325c75303433655c75303434305c7530343330205c75303431375c75303433355c75303433635c75303433625c75303433355c75303433615c75303433655c75303433665c753034333022207d",
+"name": "y_object_string_unicode.json"
+},
+{
+"expect": "y",
+"hex": "7b0a2261223a202262220a7d",
+"name": "y_object_with_newlines.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75303036305c75303132615c7531324142225d",
+"name": "y_string_1_2_3_bytes_UTF-8_sequences.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75443830315c7564633337225d",
+"name": "y_string_accepted_surrogate_pair.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75643833645c75646533395c75643833645c7564633864225d",
+"name": "y_string_accepted_surrogate_pairs.json"
+},
+{
+"expect": "y",
+"hex": "5b225c225c5c5c2f5c625c665c6e5c725c74225d",
+"name": "y_string_allowed_escapes.json"
+},
+{
+"expect": "y",
+"hex": "5b225c5c7530303030225d",
+"name": "y_string_backslash_and_u_escaped_zero.json"
+},
+{
+"expect": "y",
+"hex": "5b225c22225d",
+"name": "y_string_backslash_doublequotes.json"
+},
+{
+"expect": "y",
+"hex": "5b22612f2a622a2f632f2a642f2f65225d",
+"name": "y_string_comments.json"
+},
+{
+"expect": "y",
+"hex": "5b225c5c61225d",
+"name": "y_string_double_escape_a.json"
+},
+{
+"expect": "y",
+"hex": "5b225c5c6e225d",
+"name": "y_string_double_escape_n.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530303132225d",
+"name": "y_string_escaped_control_character.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7546464646225d",
+"name": "y_string_escaped_noncharacter.json"
+},
+{
+"expect": "y",
+"hex": "5b22617364225d",
+"name": "y_string_in_array.json"
+},
+{
+"expect": "y",
+"hex": "5b2022617364225d",
+"name": "y_string_in_array_with_leading_space.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75444246465c7544464646225d",
+"name": "y_string_last_surrogates_1_and_2.json"
+},
+{
+"expect": "y",
+"hex": "5b226e65775c75303041306c696e65225d",
+"name": "y_string_nbsp_uescaped.json"
+},
+{
+"expect": "y",
+"hex": "5b22f48fbfbf225d",
+"name": "y_string_nonCharacterInUTF-8_U+10FFFF.json"
+},
+{
+"expect": "y",
+"hex": "5b22efbfbf225d",
+"name": "y_string_nonCharacterInUTF-8_U+FFFF.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530303030225d",
+"name": "y_string_null_escape.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530303263225d",
+"name": "y_string_one-byte-utf-8.json"
+},
+{
+"expect": "y",
+"hex": "5b22cf80225d",
+"name": "y_string_pi.json"
+},
+{
+"expect": "y",
+"hex": "5b22f09bbfbf225d",
+"name": "y_string_reservedCharacterInUTF-8_U+1BFFF.json"
+},
+{
+"expect": "y",
+"hex": "5b2261736420225d",
+"name": "y_string_simple_ascii.json"
+},
+{
+"expect": "y",
+"hex": "222022",
+"name": "y_string_space.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75443833345c7544643165225d",
+"name": "y_string_surrogates_U+1D11E_MUSICAL_SYMBOL_G_CLEF.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530383231225d",
+"name": "y_string_three-byte-utf-8.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530313233225d",
+"name": "y_string_two-byte-utf-8.json"
+},
+{
+"expect": "y",
+"hex": "5b22e280a8225d",
+"name": "y_string_u+2028_line_sep.json"
+},
+{
+"expect": "y",
+"hex": "5b22e280a9225d",
+"name": "y_string_u+2029_par_sep.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75303036315c75333061665c75333045415c7533306239225d",
+"name": "y_string_uEscape.json"
+},
+{
+"expect": "y",
+"hex": "5b226e65775c75303030416c696e65225d",
+"name": "y_string_uescaped_newline.json"
+},
+{
+"expect": "y",
+"hex": "5b227f225d",
+"name": "y_string_unescaped_char_delete.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7541363644225d",
+"name": "y_string_unicode.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530303543225d",
+"name": "y_string_unicodeEscapedBackslash.json"
+},
+{
+"expect": "y",
+"hex": "5b22e28d82e388b4e28d82225d",
+"name": "y_string_unicode_2.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75444246465c7544464645225d",
+"name": "y_string_unicode_U+10FFFE_nonchar.json"
+},
+{
+"expect": "y",
+"hex": "5b225c75443833465c7544464645225d",
+"name": "y_string_unicode_U+1FFFE_nonchar.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7532303042225d",
+"name": "y_string_unicode_U+200B_ZERO_WIDTH_SPACE.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7532303634225d",
+"name": "y_string_unicode_U+2064_invisible_plus.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7546444430225d",
+"name": "y_string_unicode_U+FDD0_nonchar.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7546464645225d",
+"name": "y_string_unicode_U+FFFE_nonchar.json"
+},
+{
+"expect": "y",
+"hex": "5b225c7530303232225d",
+"name": "y_string_unicode_escaped_double_quote.json"
+},
+{
+"expect": "y",
+"hex": "5b22e282acf09d849e225d",
+"name": "y_string_utf8.json"
+},
+{
+"expect": "y",
+"hex": "5b22617f61225d",
+"name": "y_string_with_del_character.json"
+},
+{
+"expect": "y",
+"hex": "66616c7365",
+"name": "y_structure_lonely_false.json"
+},
+{
+"expect": "y",
+"hex": "3432",
+"name": "y_structure_lonely_int.json"
+},
+{
+"expect": "y",
+"hex": "2d302e31",
+"name": "y_structure_lonely_negative_real.json"
+},
+{
+"expect": "y",
+"hex": "6e756c6c",
+"name": "y_structure_lonely_null.json"
+},
+{
+"expect": "y",
+"hex": "2261736422",
+"name": "y_structure_lonely_string.json"
+},
+{
+"expect": "y",
+"hex": "74727565",
+"name": "y_structure_lonely_true.json"
+},
+{
+"expect": "y",
+"hex": "2222",
+"name": "y_structure_string_empty.json"
+},
+{
+"expect": "y",
+"hex": "5b2261225d0a",
+"name": "y_structure_trailing_newline.json"
+},
+{
+"expect": "y",
+"hex": "5b747275655d",
+"name": "y_structure_true_in_array.json"
+},
+{
+"expect": "y",
+"hex": "205b5d20",
+"name": "y_structure_whitespace_array.json"
+}
+],
+"source": "https://github.com/nst/JSONTestSuite test_parsing at commit 1ef36fa01286573e846ac449e8683f8833c5b26a (2024-11-22), MIT, read 2026-10-01; the two files over 2 KiB (n_structure_100000_opening_arrays.json and n_structure_open_array_object.json) are built by the test instead"
+}

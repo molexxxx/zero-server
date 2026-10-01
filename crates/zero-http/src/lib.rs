@@ -23,10 +23,11 @@ mod record;
 mod ring;
 pub mod server;
 
-pub use call::{Call, Request, Response};
+pub use call::{Call, Request, Response, Routed};
 pub use error::{code_for, status_for, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
 pub use handler::Handler;
 pub use server::{serve, Config};
+pub use zero_router::Router;
 pub use zero_rt::{Event, StatusSink, Worker, Workers};
 
 /// The version of this crate, as published to crates.io.

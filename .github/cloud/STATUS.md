@@ -120,7 +120,44 @@ the same commit.
   4 request: zero global allocations per request on a warm connection).
   Records are boxed and pooled per core and move by pointer between the pool,
   the ring and the handler future; the arena's slot ids address them from
-  step 12, when the FFI needs the lease protocol.
+  step 12, when the FFI needs the lease protocol. `Call::route` resolves a
+  request against a `zero-router` table into the record's parameter ranges
+  and answers the misses itself (404, 405 with `Allow`, 501, the automatic
+  OPTIONS with `Allow` and `Content-Length: 0`, `OPTIONS *`, 400 for a target
+  that is not a path), `Request::param` and `param_decoded` read the captured
+  parameters, `Response::redirect` and `redirect_preserving` set the five
+  `Location` statuses; `tests/routing.rs` drives all of it on the wire, and
+  `tests/no_alloc.rs` routes every request, so the zero-allocation claim
+  covers the router.
+  The step 6 codecs: `zero-base64` (RFC 4648 base64 and base64url into a
+  caller buffer or a `Vec`, padding on or off, every byte outside the
+  alphabet, a wrong padding and non-zero pad bits refused, the Section 10
+  vectors), `zero-mime` (the extension table `scripts/mime_table.py` writes
+  from mime-db 1.54.0 with nginx's table breaking ties, 1,246 extensions as a
+  sorted static with binary search; the RFC 9110 Section 8.3.1 media type
+  value parser with quoted parameters; `negotiate` over `Accept` with the
+  Section 12.5.1 precedence and Section 12.4.2 weights, `q=0` never selected),
+  `zero-uri` (RFC 3986 component split, strict percent-decoding,
+  `normalize_path` with unreserved octets decoded, hexadecimal digits
+  uppercased and `remove_dot_segments`, reserved characters kept encoded, the
+  query split at the first `?`), `zero-qs` (the URL Standard's
+  `application/x-www-form-urlencoded` parser: split on `&`, empty sequences
+  skipped, the first `=`, `+` to space, a bare `%` kept, UTF-8 without BOM with
+  U+FFFD), `zero-json` (the buffer-direct `Writer` with one bit per open
+  container and no allocation of its own; the strict parser into
+  `zero_core::Value` with size and depth caps, the top-level and big-integer
+  options, duplicate names resolved last-wins in place, escapes with surrogate
+  pairs, invalid UTF-8 and lone surrogates refused; the 316 small cases of
+  nst/JSONTestSuite under `tests/suite/` with its license, the two large
+  nesting cases built by the test), and `zero-router` (a trie of static,
+  `:param` and final `*` segments over paths normalized by `zero-uri`, 404,
+  405 with `Allow`, 501 for a method token outside the eight, HEAD served by
+  GET with the `head` flag, the automatic OPTIONS, mounts that own their
+  prefix and come before the parent's catch-all, a trailing slash ignored
+  unless `TrailingSlash::Strict`, 16 parameters and 64 segments at most,
+  `resolve_target` with a caller scratch buffer, route introspection). Rows
+  `routing-01` to `routing-06`, `routing-08`, `routing-14` to `routing-22` and
+  `body-01` to `body-11` cite their tests.
   Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
   nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
@@ -343,6 +380,21 @@ batch dispatcher's 503 rule). Unverified: the RFC 9457 text was read from the
 HTTP API working group's repository copy of the document, since the RFC
 Editor is unreachable from this environment.
 
+R.3 step 6 is in progress: the six crates are written and tested (see
+Position) and the routing rows of the registry pass. Still open in the step:
+the `router` section of `conformance/vectors.json`, the fuzz targets for
+`zero-uri`, `zero-qs`, `zero-json` and `zero-router`, the 400-route miss
+measurement against the 10.9 microsecond Node figure (the harness of step 7
+measures it), and the router tests transferred from the Node repository,
+which arrive with the corpus in step 13; until then the router's own tests
+and the regression entries of `DESIGN.md` section 15 (a child mount keeps the
+query string; a mount wins over an application-level `/*`) stand in.
+Unverified: RFC 3986 was read from the uriparser project's copy and RFC 8259
+and RFC 4648 from the rfc-translater project's copies (the English column),
+because the RFC Editor is unreachable; the URL Standard from the WHATWG
+repository's `url.bs`; the IANA media type registry is unreachable too, so
+the extension table rests on mime-db's compilation of it.
+
 ## Next, in order
 
 The work is `ROADMAP.md` section R.3, taken in order with the exit criteria
@@ -367,13 +419,11 @@ stated there. The first release's items:
 3. Site base path: done (see Position). `pages.yml` stays on
    `workflow_dispatch` until the documentation pages and the web tree exist
    and `cargo xtask site --verify` passes on a rendered tree.
-4. `zero-sys` and `zero-io` on tokio (R.3 step 4) and `zero-rt` with
-   `zero-http` (step 5): done except for the parts named under "In
-   progress". Next: the router and the small codecs (step 6: `zero-router`
-   with the salvaged semantics, `zero-json`, `zero-uri`, `zero-qs`,
-   `zero-mime`, `zero-base64`, the `router` vector section), then the
-   benchmark harness and the thesis measurement (step 7), then steps 8 to 14
-   to the release 1 tag.
+4. `zero-sys` and `zero-io` on tokio (R.3 step 4), `zero-rt` with
+   `zero-http` (step 5), and the router with the small codecs (step 6): done
+   except for the parts named under "In progress". Next: the `router` vector
+   section and the step 6 fuzz targets, then the benchmark harness and the
+   thesis measurement (step 7), then steps 8 to 14 to the release 1 tag.
 
 Before writing code for an item: read the roadmap entry, the design sections
 it cites, and the research note for the area; fetch every standard the code

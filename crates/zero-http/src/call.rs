@@ -1,22 +1,28 @@
 //! The request and response views a handler works with.
 //!
 //! [`Call`] wraps the request record for the handler's duration: the request side
-//! reads the parsed head, the fields and the buffered body; the response side takes
-//! the status, validated field lines and the body. The driver owns framing
-//! (`Content-Length`, `Connection`, `Transfer-Encoding`) and the `Date` field, so a
-//! handler cannot set those; every other name must be a `token` and every value a
-//! `field-value` (RFC 9110 Section 5.5), checked once here, which is the
-//! response-splitting boundary of `DESIGN.md` section 6.3.
+//! reads the parsed head, the fields, the buffered body and the route match; the
+//! response side takes the status, validated field lines and the body. The driver
+//! owns framing (`Content-Length`, `Connection`, `Transfer-Encoding`) and the `Date`
+//! field, so a handler cannot set those; every other name must be a `token` and
+//! every value a `field-value` (RFC 9110 Section 5.5), checked once here, which is
+//! the response-splitting boundary of `DESIGN.md` section 6.3. [`Call::route`]
+//! resolves the request against a `zero-router` table and answers the misses itself:
+//! 404, 405 with `Allow`, 501, the automatic OPTIONS, and 400 for a target that is
+//! not a path.
 
 use std::net::SocketAddr;
 
 use zero_core::Error;
-use zero_http1::{Field, Head, Version};
+use zero_http1::{Field, Head, TargetForm, Version};
 use zero_http_types::field::{validate_field_name, validate_field_value};
 use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_io::tokio_rt::Core;
+use zero_router::{Allow, Resolution, Router};
 use zero_rt::Worker;
+use zero_uri::{percent_decode, split_query};
 
+use crate::error::Problem;
 use crate::record::Record;
 
 /// Field names the driver writes itself; a handler setting one is refused.
@@ -32,6 +38,25 @@ const RESERVED: [HeaderName; 4] = [
 pub struct Call<'a> {
     record: &'a mut Record,
     worker: &'a Worker,
+}
+
+/// A route that matched: what to run, and whether the request is HEAD served by
+/// the GET route.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Routed<T> {
+    /// The route's descriptor.
+    pub descriptor: T,
+    /// The request is HEAD: the response carries the headers GET would send and no
+    /// body (RFC 9110 Section 9.3.2), which the driver enforces.
+    pub head: bool,
+}
+
+/// What a resolution leaves to do, computed while the record is borrowed in parts.
+enum Outcome<T> {
+    Run(T, bool),
+    Problem(Problem),
+    Allowed(StatusCode, Allow, bool),
+    Empty(StatusCode),
 }
 
 impl<'a> Call<'a> {
@@ -75,6 +100,9 @@ impl<'a> Call<'a> {
             body,
             trailers,
             peer,
+            route_path,
+            params,
+            param_count,
             status,
             response_fields,
             response_body,
@@ -89,6 +117,8 @@ impl<'a> Call<'a> {
                 body,
                 trailers,
                 peer: *peer,
+                route_path,
+                params: params.get(..*param_count).unwrap_or(&[]),
             },
             Response {
                 status,
@@ -97,9 +127,123 @@ impl<'a> Call<'a> {
             },
         )
     }
+
+    /// Resolve the request against a router.
+    ///
+    /// # Arguments
+    ///
+    /// * `router` - the routing table.
+    ///
+    /// # Returns
+    ///
+    /// The route to run, with its parameters readable through
+    /// [`Request::param`]; or `None` when the call was answered here: 404 for a
+    /// path with no route, 405 with `Allow` for a method the path lacks, 501 for a
+    /// method token the server does not implement, 200 with `Allow` and no content
+    /// for OPTIONS on a path without an OPTIONS route, 200 with no content for
+    /// `OPTIONS *`, and 400 for a target whose path is not a path.
+    pub fn route<T: Copy>(&mut self, router: &Router<T>) -> Option<Routed<T>> {
+        let outcome = {
+            let Record {
+                head,
+                parsed,
+                scratch,
+                route_path,
+                params,
+                param_count,
+                ..
+            } = &mut *self.record;
+            let Some(parsed) = parsed else {
+                return None;
+            };
+            let token = parsed.method_token.of(head);
+            let target = parsed.path.of(head);
+            if parsed.form == TargetForm::Asterisk {
+                // RFC 9110 Section 9.3.7: "OPTIONS *" asks about the server as a
+                // whole; no other method has a meaning for it.
+                Some(match parsed.method {
+                    Some(Method::Options) => Outcome::Empty(StatusCode::OK),
+                    _ => Outcome::Problem(Problem::new(StatusCode::BAD_REQUEST, "target")),
+                })
+            } else {
+                match router.resolve_target(token, target, scratch) {
+                    Ok(resolved) => match resolved.resolution {
+                        Resolution::Matched {
+                            descriptor,
+                            params: found,
+                            head: is_head,
+                        } => {
+                            route_path.clear();
+                            route_path.extend_from_slice(resolved.path);
+                            *param_count = 0;
+                            for (slot, (_, range)) in params.iter_mut().zip(found.iter()) {
+                                *slot = (
+                                    u32::try_from(range.start).unwrap_or(u32::MAX),
+                                    u32::try_from(range.end).unwrap_or(u32::MAX),
+                                );
+                                *param_count = param_count.saturating_add(1);
+                            }
+                            Some(Outcome::Run(descriptor, is_head))
+                        }
+                        Resolution::NotFound => Some(Outcome::Problem(Problem::new(
+                            StatusCode::NOT_FOUND,
+                            "not_found",
+                        ))),
+                        Resolution::MethodNotAllowed { allow } => Some(Outcome::Allowed(
+                            StatusCode::METHOD_NOT_ALLOWED,
+                            allow,
+                            true,
+                        )),
+                        Resolution::Options { allow } => {
+                            Some(Outcome::Allowed(StatusCode::OK, allow, false))
+                        }
+                        Resolution::NotImplemented => Some(Outcome::Problem(Problem::new(
+                            StatusCode::NOT_IMPLEMENTED,
+                            "not_implemented",
+                        ))),
+                    },
+                    Err(error) => Some(Outcome::Problem(Problem {
+                        status: StatusCode::BAD_REQUEST,
+                        code: "uri",
+                        detail: Some(error.to_string()),
+                    })),
+                }
+            }
+        };
+        match outcome? {
+            Outcome::Run(descriptor, head) => Some(Routed { descriptor, head }),
+            Outcome::Problem(problem) => {
+                self.record.problem(&problem);
+                None
+            }
+            Outcome::Allowed(status, allow, problem) => {
+                if problem {
+                    let code = if status == StatusCode::METHOD_NOT_ALLOWED {
+                        "method_not_allowed"
+                    } else {
+                        "allowed"
+                    };
+                    self.record.problem(&Problem::new(status, code));
+                } else {
+                    self.record.clear_response();
+                    self.record.status = Some(status);
+                }
+                self.record.response_fields.extend_from_slice(b"Allow: ");
+                allow.write(&mut self.record.response_fields);
+                self.record.response_fields.extend_from_slice(b"\r\n");
+                None
+            }
+            Outcome::Empty(status) => {
+                self.record.clear_response();
+                self.record.status = Some(status);
+                None
+            }
+        }
+    }
 }
 
-/// The request as received: method, target, fields and the buffered body.
+/// The request as received: method, target, fields, the buffered body and the
+/// route match.
 #[derive(Debug)]
 pub struct Request<'a> {
     head: &'a [u8],
@@ -108,6 +252,8 @@ pub struct Request<'a> {
     body: &'a [u8],
     trailers: &'a [u8],
     peer: Option<SocketAddr>,
+    route_path: &'a [u8],
+    params: &'a [(u32, u32)],
 }
 
 impl<'a> Request<'a> {
@@ -119,6 +265,8 @@ impl<'a> Request<'a> {
             body: &record.body,
             trailers: &record.trailers,
             peer: record.peer,
+            route_path: &record.route_path,
+            params: record.live_params(),
         }
     }
 
@@ -146,6 +294,53 @@ impl<'a> Request<'a> {
     #[must_use]
     pub fn path(&self) -> &'a [u8] {
         self.parsed.map_or(&[][..], |head| head.path.of(self.head))
+    }
+
+    /// The query, without its `?`, when the target has one (RFC 3986 Section 3.4).
+    #[must_use]
+    pub fn query(&self) -> Option<&'a [u8]> {
+        split_query(self.path()).1
+    }
+
+    /// The normalized path the route matched; empty before [`Call::route`].
+    #[must_use]
+    pub fn route_path(&self) -> &'a [u8] {
+        self.route_path
+    }
+
+    /// The `index`th route parameter in pattern order, as the normalized path
+    /// holds it: reserved characters stay percent-encoded.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - the parameter's position in the pattern.
+    #[must_use]
+    pub fn param(&self, index: usize) -> Option<&'a [u8]> {
+        let (start, end) = *self.params.get(index)?;
+        self.route_path.get(start as usize..end as usize)
+    }
+
+    /// The `index`th route parameter, percent-decoded into `out`.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - the parameter's position in the pattern.
+    /// * `out` - where the decoded bytes are appended.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Codec`] when the route has no such parameter; a bad
+    /// percent-encoding cannot reach here, since normalization refused it.
+    pub fn param_decoded(&self, index: usize, out: &mut Vec<u8>) -> Result<(), Error> {
+        let raw = self
+            .param(index)
+            .ok_or_else(|| Error::Codec(format!("the route has no parameter {index}")))?;
+        percent_decode(raw, out).map_err(Error::from)
+    }
+
+    /// Every route parameter in pattern order.
+    pub fn params(&self) -> impl Iterator<Item = &'a [u8]> + '_ {
+        (0..self.params.len()).filter_map(|index| self.param(index))
     }
 
     /// The authority: the `Host` value or the absolute-form target's host and port.
@@ -311,6 +506,52 @@ impl<'a> Response<'a> {
         self.header_id(HeaderName::ContentType, value)
     }
 
+    /// Redirect: set one of the redirection statuses that take a `Location`
+    /// (RFC 9110 Section 10.2.2) and the `Location` field.
+    ///
+    /// # Arguments
+    ///
+    /// * `status` - 301, 302, 303, 307 or 308.
+    /// * `location` - the URI reference to redirect to.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Codec`] for another status or a value that is not a field value;
+    /// nothing is set then.
+    pub fn redirect(&mut self, status: StatusCode, location: &[u8]) -> Result<&mut Self, Error> {
+        if !matches!(status.as_u16(), 301 | 302 | 303 | 307 | 308) {
+            return Err(Error::Codec(format!("{status} is not a redirect status")));
+        }
+        validate_field_value(location)
+            .map_err(|_| Error::Codec("invalid Location value".to_owned()))?;
+        self.status(status);
+        self.header_id(HeaderName::Location, location)
+    }
+
+    /// Redirect while keeping the request method and content: 308 when permanent
+    /// (RFC 9110 Section 15.4.9), 307 otherwise (Section 15.4.8).
+    ///
+    /// # Arguments
+    ///
+    /// * `permanent` - whether the resource moved for good.
+    /// * `location` - the URI reference to redirect to.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Codec`] for a value that is not a field value.
+    pub fn redirect_preserving(
+        &mut self,
+        permanent: bool,
+        location: &[u8],
+    ) -> Result<&mut Self, Error> {
+        let status = if permanent {
+            StatusCode::PERMANENT_REDIRECT
+        } else {
+            StatusCode::TEMPORARY_REDIRECT
+        };
+        self.redirect(status, location)
+    }
+
     /// Append to the body.
     ///
     /// # Arguments
@@ -354,5 +595,30 @@ mod tests {
             b"X-Trace: abc\r\nContent-Type: text/plain\r\n"
         );
         assert_eq!(record.response_body, b"hi");
+    }
+
+    #[test]
+    fn redirects_take_the_five_location_statuses_only() {
+        let mut record = Record::new(4);
+        let mut response = Response::of(&mut record);
+        assert!(response.redirect(StatusCode::OK, b"/x").is_err());
+        assert!(response.redirect(StatusCode::NOT_FOUND, b"/x").is_err());
+        assert!(response
+            .redirect(StatusCode::MOVED_PERMANENTLY, b"/x\r\n")
+            .is_err());
+        assert_eq!(record.status, None, "a refused redirect sets nothing");
+        let mut response = Response::of(&mut record);
+        response.redirect(StatusCode::SEE_OTHER, b"/next").unwrap();
+        assert_eq!(record.status, Some(StatusCode::SEE_OTHER));
+        assert_eq!(record.response_fields, b"Location: /next\r\n");
+        let mut other = Record::new(4);
+        Response::of(&mut other)
+            .redirect_preserving(true, b"/p")
+            .unwrap();
+        assert_eq!(other.status, Some(StatusCode::PERMANENT_REDIRECT));
+        Response::of(&mut other)
+            .redirect_preserving(false, b"/t")
+            .unwrap();
+        assert_eq!(other.status, Some(StatusCode::TEMPORARY_REDIRECT));
     }
 }

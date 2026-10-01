@@ -1,5 +1,5 @@
 //! The per-request record: the head as received, its field table, the buffered
-//! body, and the response as the handler builds it.
+//! body, the route match, and the response as the handler builds it.
 //!
 //! A record is reused across requests on its core: [`Reset`] clears it and keeps the
 //! capacity it grew to, so a request on a warm core allocates nothing. The connection
@@ -10,7 +10,10 @@ use std::net::SocketAddr;
 
 use zero_http1::{Field, Head, Version};
 use zero_http_types::{Method, StatusCode};
+use zero_router::MAX_PARAMS;
 use zero_rt::Reset;
+
+use crate::error::{Problem, PROBLEM_CONTENT_TYPE};
 
 /// The response head capacity a record starts with; grown when a head needs more.
 pub(crate) const RESPONSE_HEAD_CAPACITY: usize = 4_096;
@@ -34,6 +37,14 @@ pub struct Record {
     pub(crate) trailers: Vec<u8>,
     /// The peer's address.
     pub(crate) peer: Option<SocketAddr>,
+    /// Working space for path normalization.
+    pub(crate) scratch: Vec<u8>,
+    /// The normalized path the route matched, which the parameter ranges index.
+    pub(crate) route_path: Vec<u8>,
+    /// The parameter ranges into `route_path`, in pattern order.
+    pub(crate) params: [(u32, u32); MAX_PARAMS],
+    /// How many parameters the route captured.
+    pub(crate) param_count: usize,
     /// The status the handler set; `200` when it set none.
     pub(crate) status: Option<StatusCode>,
     /// The handler's field lines, each validated and ending in CRLF.
@@ -87,12 +98,25 @@ impl Record {
         self.fields.get(..count).unwrap_or(&[])
     }
 
+    /// The captured parameter ranges.
+    pub(crate) fn live_params(&self) -> &[(u32, u32)] {
+        self.params.get(..self.param_count).unwrap_or(&[])
+    }
+
     /// Discard everything the handler wrote, for a response the driver writes instead.
     pub(crate) fn clear_response(&mut self) {
         self.status = None;
         self.response_fields.clear();
         self.response_body.clear();
         self.response_head.clear();
+    }
+
+    /// Replace whatever the handler wrote with a problem details response.
+    pub(crate) fn problem(&mut self, problem: &Problem) {
+        self.clear_response();
+        self.status = Some(problem.status);
+        self.response_fields.extend_from_slice(PROBLEM_CONTENT_TYPE);
+        problem.write_json(&mut self.response_body);
     }
 }
 
@@ -104,6 +128,9 @@ impl Reset for Record {
         self.body.shrink_to(BODY_KEEP);
         self.trailers.clear();
         self.peer = None;
+        self.scratch.clear();
+        self.route_path.clear();
+        self.param_count = 0;
         self.clear_response();
         self.response_body.shrink_to(BODY_KEEP);
         self.close = false;
@@ -121,11 +148,14 @@ mod tests {
         record.head.extend_from_slice(b"GET / HTTP/1.1\r\n\r\n");
         record.body.resize(BODY_KEEP * 4, 0);
         record.response_fields.extend_from_slice(b"X: y\r\n");
+        record.route_path.extend_from_slice(b"/x");
+        record.param_count = 1;
         record.close = true;
         let head_capacity = record.head.capacity();
         record.reset();
         assert!(record.head.is_empty() && record.body.is_empty());
         assert!(record.response_fields.is_empty() && !record.close);
+        assert!(record.route_path.is_empty() && record.param_count == 0);
         assert_eq!(record.head.capacity(), head_capacity);
         assert!(record.body.capacity() <= BODY_KEEP);
         assert_eq!(record.fields.len(), 4);
