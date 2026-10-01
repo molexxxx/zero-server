@@ -512,11 +512,14 @@ and are the next thing to look at: the receive still takes two operations (a
 readiness poll, then the receive into the leased block) where io_uring's
 provided buffer ring (`RecvManaged` with compio's `BufferPool`) would take one
 and keep the lazy lease, and the driver's record per operation is the one
-allocation per request this backend has. Also open: the Windows and macOS runs
-of the backend wait for CI's `seam` job (compile-checked for both targets from
-here; the first macOS run failed on the cancelled-key reaping described above,
-the second is the cancel-only protocol), and the section 5.7 CPU-per-request
-figure needs cgroup accounting.
+allocation per request this backend has. Also open: on CI's Windows runner the
+backend passes every test but one: a datagram longer than its buffer comes back
+from the completion port's receive with no bytes, where the readiness backend
+gets the first part and `WSAEMSGSIZE`; the test asserts nothing for that one
+case on Windows under `io-compio` until a Windows machine shows what the
+completion carries (`crates/zero-io/tests/datagram.rs`). macOS passes with the
+cancel-only protocol. The section 5.7 CPU-per-request figure needs cgroup
+accounting.
 Unverified: compio-driver's API was read from the crate sources downloaded from
 the registry (0.12.5) and from the repository's clone (last commit
 2026-09-30, so not archived), since docs.rs is unreachable here.

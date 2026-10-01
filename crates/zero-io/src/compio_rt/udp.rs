@@ -194,6 +194,10 @@ mod windows {
     /// truncated buffer whose peer is not reported.
     const WSAEMSGSIZE: i32 = 10040;
 
+    /// The same condition as the completion port reports it, `ERROR_MORE_DATA`,
+    /// the Win32 reading of `STATUS_BUFFER_OVERFLOW`.
+    const ERROR_MORE_DATA: i32 = 234;
+
     pub(super) async fn receive_one(
         handle: &Rc<Handle>,
         fd: &SharedFd<socket2::Socket>,
@@ -219,7 +223,7 @@ mod windows {
                 };
                 Ok(1)
             }
-            Err(err) if err.raw_os_error() == Some(WSAEMSGSIZE) => {
+            Err(err) if matches!(err.raw_os_error(), Some(WSAEMSGSIZE | ERROR_MORE_DATA)) => {
                 *first = OwnedBuf::from_parts(storage, capacity);
                 *entry = DatagramMeta {
                     peer: None,
