@@ -566,13 +566,20 @@ element with a repeated parameter dropped; `TrustProxy` with address prefixes,
 whose `client` and `proto` read `Forwarded` then `X-Forwarded-For` and
 `X-Forwarded-Proto` only when the immediate peer is trusted and take the first
 `for` as the originating client), rows `routing-23` to `routing-27` in
-`lib.rs`. Next in the step: the rest of the `zero-policy` subset in this
-order, one commit each: CORS (`policy-08`, `policy-10` to `policy-16`, from
-the Fetch Standard's `fetch.bs` and RFC 6454), the security headers
+`lib.rs`. Done: CORS (`crates/zero-policy/src/cors.rs`: `Cors` with
+`AllowOrigin::Any` or an exact list of serialized origins, credentials, the
+allowed methods and headers with `*` honored only without credentials, the
+exposed headers and `max-age`; `decide` tells a non-CORS request, a refused
+one, a preflight to answer 204 without the route, or an allowed request with
+its fields; `Access-Control-Allow-Origin` is one origin or `*`, the origin is
+reflected with `Access-Control-Allow-Credentials: true` under credentials,
+`Vary: Origin` whenever the value varies, `null` matches nothing), rows
+`policy-08` and `policy-10` to `policy-16`. Next in the step, one commit
+each: the security headers
 (`policy-17` to `policy-29`: RFC 6797, CSP3 `index.bs`, Referrer Policy,
-Fetch, the OWASP cheat sheet), fetch metadata (`policy-06`, `policy-07`; the
-W3C source was not found at `w3c/webappsec-fetch-metadata/main/index.src.html`,
-another path or copy is to be tried), the request id and the body limits;
+Fetch, the OWASP cheat sheet), fetch metadata (`policy-06`, `policy-07`, from
+`w3c/webappsec-fetch-metadata/main/index.bs`), the request id and the body
+limits;
 then `zero-ws`, `zero-sse` and `zero-realtime`. The sources fetched for the
 policy rows sit in the session's scratch directory (`fetch.bs`, `csp3.bs`,
 `referrer-policy.html`, the tex2e copies of RFC 6454, 6797, 7034 and 7239,

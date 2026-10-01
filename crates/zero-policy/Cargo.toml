@@ -14,6 +14,7 @@ authors.workspace = true
 zero-core.workspace = true
 zero-limits.workspace = true
 zero-http-types.workspace = true
+zero-date.workspace = true
 zero-http.workspace = true
 
 [lints]

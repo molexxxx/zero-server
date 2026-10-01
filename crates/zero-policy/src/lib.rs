@@ -5,10 +5,13 @@
 //! data evaluated in Rust, never code crossing the language boundary.
 //!
 //! [`forwarded`] holds the trust-proxy rule over `Forwarded` (RFC 7239) and the
-//! `X-Forwarded-*` fields.
+//! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS
+//! protocol.
 
+pub mod cors;
 pub mod forwarded;
 
+pub use cors::{AllowOrigin, Cors, Decision};
 pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
 
 /// The version of this crate, as published to crates.io.
@@ -18,7 +21,24 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
+    use zero_http_types::Method;
+
+    use super::cors::{AllowOrigin, Cors, Decision};
     use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
+
+    fn field<'a>(fields: &'a [(&'static [u8], Vec<u8>)], name: &[u8]) -> Option<&'a [u8]> {
+        fields
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_slice())
+    }
+
+    fn listed() -> Cors {
+        Cors {
+            allow_origin: AllowOrigin::List(vec![b"https://foo.invalid".to_vec()]),
+            ..Cors::default()
+        }
+    }
 
     fn v4(a: u8, b: u8, c: u8, d: u8) -> IpAddr {
         IpAddr::V4(Ipv4Addr::new(a, b, c, d))
@@ -205,5 +225,304 @@ mod tests {
         // A mapped IPv4 peer matches an IPv4 prefix.
         let mapped = IpAddr::V6(Ipv4Addr::new(10, 9, 9, 9).to_ipv6_mapped());
         assert!(trust.trusts(mapped));
+    }
+
+    #[test]
+    fn the_origin_header_is_compared_as_an_exact_scheme_host_and_port_triple_and_the_literal_null_origin_is_treated_as_matching_nothing(
+    ) {
+        // RFC 6454 Sections 5 and 6.2.
+        let rule = Cors {
+            allow_origin: AllowOrigin::List(vec![
+                b"https://foo.invalid".to_vec(),
+                b"http://foo.invalid:8080".to_vec(),
+            ]),
+            ..Cors::default()
+        };
+        assert!(rule.allows(b"https://foo.invalid"));
+        assert!(rule.allows(b"http://foo.invalid:8080"));
+        assert!(!rule.allows(b"http://foo.invalid"));
+        assert!(!rule.allows(b"https://foo.invalid:8443"));
+        assert!(!rule.allows(b"https://FOO.invalid"));
+        assert!(!rule.allows(b"https://foo.invalid/"));
+        assert!(!rule.allows(b"https://foo.invalid.evil.example"));
+        assert!(!rule.allows(b"null"));
+        assert!(!Cors::default().allows(b"null"));
+        assert!(!Cors::default().allows(b"foo.invalid"));
+        assert_eq!(
+            Cors::default().decide(Some(Method::Get), Some(b"null"), None, None),
+            Decision::Refused { preflight: false }
+        );
+    }
+
+    #[test]
+    fn access_control_allow_origin_carries_exactly_one_serialized_origin_or_never_a_list() {
+        // Fetch, HTTP responses: the literal Origin value or `*`.
+        let any =
+            Cors::default().decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None);
+        let Decision::Allowed(fields) = any else {
+            panic!("allowed");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Origin"),
+            Some(&b"*"[..])
+        );
+        assert_eq!(field(&fields, b"Vary"), None);
+        let rule = Cors {
+            allow_origin: AllowOrigin::List(vec![
+                b"https://foo.invalid".to_vec(),
+                b"https://bar.invalid".to_vec(),
+            ]),
+            ..Cors::default()
+        };
+        let Decision::Allowed(fields) =
+            rule.decide(Some(Method::Get), Some(b"https://bar.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Origin"),
+            Some(&b"https://bar.invalid"[..])
+        );
+        assert_eq!(
+            rule.decide(Some(Method::Get), Some(b"https://baz.invalid"), None, None),
+            Decision::Refused { preflight: false }
+        );
+        assert_eq!(
+            rule.decide(Some(Method::Get), None, None, None),
+            Decision::NotCors
+        );
+    }
+
+    #[test]
+    fn with_credentials_enabled_the_middleware_reflects_the_allowed_origin_instead_of_and_sends_access_control_allow_credentials_true(
+    ) {
+        // Fetch, CORS protocol and credentials: `*` cannot be used with credentials
+        // and `true` is byte case-sensitive.
+        let rule = Cors {
+            credentials: true,
+            ..Cors::default()
+        };
+        let Decision::Allowed(fields) =
+            rule.decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Origin"),
+            Some(&b"https://foo.invalid"[..])
+        );
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Credentials"),
+            Some(&b"true"[..])
+        );
+        assert_eq!(field(&fields, b"Vary"), Some(&b"Origin"[..]));
+    }
+
+    #[test]
+    fn a_preflight_is_recognized_only_as_options_with_origin_and_access_control_request_method_and_it_is_answered_without_running_the_route(
+    ) {
+        let rule = Cors {
+            allow_methods: vec![b"GET".to_vec(), b"PUT".to_vec()],
+            allow_headers: vec![b"Content-Type".to_vec()],
+            ..Cors::default()
+        };
+        let preflight = rule.decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"PUT"),
+            Some(b"content-type"),
+        );
+        let Decision::Preflight(fields) = preflight else {
+            panic!("a preflight: {preflight:?}");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Methods"),
+            Some(&b"GET, PUT"[..])
+        );
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Headers"),
+            Some(&b"Content-Type"[..])
+        );
+        // OPTIONS without Access-Control-Request-Method is an ordinary CORS request.
+        assert!(matches!(
+            rule.decide(
+                Some(Method::Options),
+                Some(b"https://foo.invalid"),
+                None,
+                None
+            ),
+            Decision::Allowed(_)
+        ));
+        // A method or header the rule does not allow fails the preflight.
+        assert_eq!(
+            rule.decide(
+                Some(Method::Options),
+                Some(b"https://foo.invalid"),
+                Some(b"DELETE"),
+                None
+            ),
+            Decision::Refused { preflight: true }
+        );
+        assert_eq!(
+            rule.decide(
+                Some(Method::Options),
+                Some(b"https://foo.invalid"),
+                Some(b"PUT"),
+                Some(b"X-Token")
+            ),
+            Decision::Refused { preflight: true }
+        );
+    }
+
+    #[test]
+    fn access_control_allow_methods_and_access_control_allow_headers_wildcards_are_not_relied_on_for_credentialed_requests(
+    ) {
+        let open = Cors {
+            allow_methods: vec![b"*".to_vec()],
+            allow_headers: vec![b"*".to_vec()],
+            ..Cors::default()
+        };
+        let Decision::Preflight(fields) = open.decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"DELETE"),
+            Some(b"X-Token"),
+        ) else {
+            panic!("a preflight");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Methods"),
+            Some(&b"*"[..])
+        );
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Headers"),
+            Some(&b"*"[..])
+        );
+        // With credentials the wildcard counts for nothing: the method must be listed.
+        let credentialed = Cors {
+            credentials: true,
+            ..open
+        };
+        assert_eq!(
+            credentialed.decide(
+                Some(Method::Options),
+                Some(b"https://foo.invalid"),
+                Some(b"DELETE"),
+                Some(b"X-Token")
+            ),
+            Decision::Refused { preflight: true }
+        );
+        let explicit = Cors {
+            credentials: true,
+            allow_methods: vec![b"DELETE".to_vec()],
+            allow_headers: vec![b"X-Token".to_vec()],
+            ..Cors::default()
+        };
+        let Decision::Preflight(fields) = explicit.decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"DELETE"),
+            Some(b"x-token"),
+        ) else {
+            panic!("a preflight");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Methods"),
+            Some(&b"DELETE"[..])
+        );
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Headers"),
+            Some(&b"X-Token"[..])
+        );
+    }
+
+    #[test]
+    fn access_control_max_age_is_emitted_as_delta_seconds() {
+        let rule = Cors {
+            max_age: Some(600),
+            ..Cors::default()
+        };
+        let Decision::Preflight(fields) = rule.decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"GET"),
+            None,
+        ) else {
+            panic!("a preflight");
+        };
+        assert_eq!(field(&fields, b"Access-Control-Max-Age"), Some(&b"600"[..]));
+        let Decision::Preflight(fields) = Cors::default().decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"GET"),
+            None,
+        ) else {
+            panic!("a preflight");
+        };
+        assert_eq!(field(&fields, b"Access-Control-Max-Age"), None);
+    }
+
+    #[test]
+    fn non_safelisted_response_headers_the_client_must_read_are_listed_in_access_control_expose_headers(
+    ) {
+        let rule = Cors {
+            expose_headers: vec![
+                b"Content-Security-Policy".to_vec(),
+                b"X-Request-Id".to_vec(),
+            ],
+            ..Cors::default()
+        };
+        let Decision::Allowed(fields) =
+            rule.decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(
+            field(&fields, b"Access-Control-Expose-Headers"),
+            Some(&b"Content-Security-Policy, X-Request-Id"[..])
+        );
+        // A preflight response carries no expose list; `*` is kept only without
+        // credentials.
+        let Decision::Preflight(fields) = rule.decide(
+            Some(Method::Options),
+            Some(b"https://foo.invalid"),
+            Some(b"GET"),
+            None,
+        ) else {
+            panic!("a preflight");
+        };
+        assert_eq!(field(&fields, b"Access-Control-Expose-Headers"), None);
+        let starred = Cors {
+            credentials: true,
+            expose_headers: vec![b"*".to_vec()],
+            ..Cors::default()
+        };
+        let Decision::Allowed(fields) =
+            starred.decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(field(&fields, b"Access-Control-Expose-Headers"), None);
+    }
+
+    #[test]
+    fn when_the_allowed_origin_varies_per_request_the_response_carries_vary_origin() {
+        // RFC 9110 Section 12.5.5: the selected response depends on Origin.
+        let Decision::Allowed(fields) =
+            listed().decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(field(&fields, b"Vary"), Some(&b"Origin"[..]));
+        assert_eq!(
+            field(&fields, b"Access-Control-Allow-Origin"),
+            Some(&b"https://foo.invalid"[..])
+        );
+        let Decision::Allowed(fields) =
+            Cors::default().decide(Some(Method::Get), Some(b"https://foo.invalid"), None, None)
+        else {
+            panic!("allowed");
+        };
+        assert_eq!(field(&fields, b"Vary"), None);
     }
 }
