@@ -32,6 +32,7 @@ extern crate alloc;
 pub mod civil;
 pub mod decimal;
 pub mod imf;
+pub mod parse;
 
 pub use civil::{
     civil_from_days, days_from_civil, days_in_month, is_leap_year, weekday_from_days, CivilDate,
@@ -39,6 +40,7 @@ pub use civil::{
 };
 pub use decimal::{Decimal, MAX_DECIMAL_LEN};
 pub use imf::{imf_fixdate, ImfFixdate, IMF_FIXDATE_LEN, MAX_UNIX_SECONDS};
+pub use parse::parse_http_date;
 
 /// The version of this crate, as published to crates.io.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

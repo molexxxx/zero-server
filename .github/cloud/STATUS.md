@@ -521,6 +521,24 @@ Unverified: compio-driver's API was read from the crate sources downloaded from
 the registry (0.12.5) and from the repository's clone (last commit
 2026-09-30, so not archived), since docs.rs is unreachable here.
 
+R.3 step 9 has begun, in small commits so a session can stop anywhere.
+Done: `zero-date::parse_http_date` (`crates/zero-date/src/parse.rs`), the
+three HTTP-date formats of RFC 9110 Section 5.6.7 with the two-digit-year rule
+against a clock the caller passes, case-sensitive and exact, a leap second
+counted into the next minute and a date before 1970 read as 0; the RFC's three
+example timestamps are the test. Next in the step, in order: the validators
+and the conditional-request evaluation of `zero-static` as pure functions over
+bytes (entity-tag comparison, the If-* precedence of Section 13.2.2, byte
+ranges of Section 14) with the `static-01` to `static-12` tests; then the file
+resolution with the path policy, the Windows name rules, `O_NOFOLLOW` through
+`zero-sys`, the handler, the per-core small-file cache and `static-13` to
+`static-16`; then the `zero-policy` subset; then `zero-ws`, `zero-sse` and
+`zero-realtime`. The RFC texts for the step sit in a session's scratch
+directory only: RFC 9110 from the HTTP Working Group's repository copy, RFC
+6266, 8187 and 9111 from the tex2e/rfc-translater repository's copies (the
+English column), all read 2026-10-01; a fresh session fetches them again from
+the same places.
+
 ## Next, in order
 
 The work is `ROADMAP.md` section R.3, taken in order with the exit criteria
