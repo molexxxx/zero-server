@@ -2695,6 +2695,19 @@ anchor = "rule"
 release = 2
 note = "RFC 8725 Section 3.7"
 
+[[entry]]
+key = "jwt-24"
+chapter = "auth"
+designation = "RFC 7518"
+body = "IETF"
+subject = "A computed HMAC is compared with the received tag in constant time, and an empty or differently sized tag never matches"
+url = "https://www.rfc-editor.org/rfc/rfc7518.html#section-3.2"
+evidence = "crates/zero-server-crypto/src/lib.rs"
+at = "fn rfc7518_3_2_the_computed_hmac_is_compared_with_the_received_tag_in_constant_time"
+anchor = "rule"
+release = 1
+note = "RFC 7518 Section 3.2; RFC 7515 Section 10.9"
+
 
 # OAuth 2.0, PKCE, OpenID Connect, and bearer tokens
 
