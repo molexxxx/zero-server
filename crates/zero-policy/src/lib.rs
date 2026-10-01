@@ -7,16 +7,19 @@
 //! [`forwarded`] holds the trust-proxy rule over `Forwarded` (RFC 7239) and the
 //! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS
 //! protocol; [`security`] the security response headers; [`fetch_metadata`] the
-//! refusal of cross-site requests that would change state.
+//! refusal of cross-site requests that would change state; [`request_id`] the
+//! identifier each request is logged under.
 
 pub mod cors;
 pub mod fetch_metadata;
 pub mod forwarded;
+pub mod request_id;
 pub mod security;
 
 pub use cors::{AllowOrigin, Cors, Decision};
 pub use fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
 pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
+pub use request_id::RequestId;
 pub use security::{
     Csp, Directive, EmbedderPolicy, EmbedderValue, FrameOptions, Hsts, Isolation, OpenerPolicy,
     OpenerValue, ReferrerPolicy, Rendered, ResourcePolicy, SecurityHeaders, Source,
@@ -35,6 +38,7 @@ mod tests {
     use super::cors::{AllowOrigin, Cors, Decision};
     use super::fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
     use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
+    use super::request_id::{self, RequestId, Version};
     use super::security::{
         Csp, Directive, EmbedderValue, Hsts, Isolation, OpenerValue, ReferrerPolicy, Rendered,
         ResourcePolicy, SecurityHeaders, Source,
@@ -960,6 +964,101 @@ mod tests {
             };
             assert_eq!(field(&fields, b"Vary"), Some(&b"Sec-Fetch-Site"[..]));
         }
+    }
+
+    /// Whether `id` is a UUID string of the given version: 8-4-4-4-12 lowercase hex
+    /// digits, the version nibble at the start of the third group, the variant bits
+    /// `10` at the start of the fourth (RFC 9562 Sections 4, 4.1 and 4.2).
+    fn is_uuid(id: &[u8], version: u8) -> bool {
+        let hyphens = [8usize, 13, 18, 23];
+        let shape = id.len() == 36
+            && id.iter().enumerate().all(|(i, &b)| {
+                if hyphens.contains(&i) {
+                    b == b'-'
+                } else {
+                    b.is_ascii_digit() || (b'a'..=b'f').contains(&b)
+                }
+            });
+        let version_digit = id.get(14).copied();
+        let variant_digit = id.get(19).copied();
+        shape
+            && version_digit == Some(b'0'.saturating_add(version))
+            && matches!(variant_digit, Some(b'8' | b'9' | b'a' | b'b'))
+    }
+
+    #[test]
+    fn generated_request_ids_are_uuidv4_or_uuidv7_with_correct_version_and_variant_bits_emitted_in_lowercase_hex(
+    ) {
+        // RFC 9562 Sections 4, 4.1, 4.2, 5.4 and 5.7.
+        let v7 = RequestId::default();
+        let now = 1_759_312_800_123u64;
+        let (name, id) = v7.assign(None, &SystemRng, now).expect("an id");
+        assert_eq!(name, b"X-Request-Id");
+        assert!(is_uuid(&id, 7), "{}", String::from_utf8_lossy(&id));
+        // The first 48 bits are the millisecond timestamp, big-endian.
+        let ms = u64::from_str_radix(
+            &String::from_utf8_lossy(&[&id[..8], &id[9..13]].concat()),
+            16,
+        )
+        .expect("hex");
+        assert_eq!(ms, now);
+        // Later milliseconds sort later.
+        let (_, later) = v7.assign(None, &SystemRng, now + 1).expect("an id");
+        assert!(later > id);
+        let v4 = RequestId {
+            version: Version::V4,
+            ..RequestId::default()
+        };
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..1_000 {
+            let (_, id) = v4.assign(None, &SystemRng, now).expect("an id");
+            assert!(is_uuid(&id, 4), "{}", String::from_utf8_lossy(&id));
+            assert!(seen.insert(id));
+        }
+        // The fixed layout of the two versions, on known octets.
+        let octets = [0xffu8; 16];
+        assert_eq!(
+            &request_id::format(&octets),
+            b"ffffffff-ffff-ffff-ffff-ffffffffffff"
+        );
+    }
+
+    #[test]
+    fn an_incoming_request_id_is_length_and_charset_validated_before_being_echoed_or_logged_and_no_code_path_treats_it_as_an_access_capability(
+    ) {
+        // RFC 9562 Section 8: an id is an identifier, never a capability, so the rule
+        // only checks its form; nothing reads it to grant anything.
+        let trusting = RequestId {
+            trust_incoming: true,
+            ..RequestId::default()
+        };
+        let now = 1_759_312_800_000u64;
+        let kept = trusting
+            .assign(Some(b"edge-7f3a.42:9"), &SystemRng, now)
+            .expect("an id");
+        assert_eq!(kept.1, b"edge-7f3a.42:9");
+        let too_long = vec![b'a'; request_id::MAX_INCOMING + 1];
+        let longest = vec![b'a'; request_id::MAX_INCOMING];
+        assert!(request_id::is_acceptable(&longest));
+        for hostile in [
+            &b"abc\r\nSet-Cookie: x=1"[..],
+            b"abc def",
+            b"abc\"def",
+            b"",
+            b"\xe2\x80\x8b",
+            too_long.as_slice(),
+        ] {
+            assert!(!request_id::is_acceptable(hostile));
+            let (_, id) = trusting
+                .assign(Some(hostile), &SystemRng, now)
+                .expect("an id");
+            assert!(is_uuid(&id, 7), "replaced by a generated id");
+        }
+        // Without trust, even a well-formed incoming id is replaced.
+        let (_, id) = RequestId::default()
+            .assign(Some(b"client-chosen"), &SystemRng, now)
+            .expect("an id");
+        assert!(is_uuid(&id, 7));
     }
 
     #[test]

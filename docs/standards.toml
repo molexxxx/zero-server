@@ -4550,10 +4550,10 @@ designation = "RFC 9562"
 body = "IETF"
 subject = "Generated request IDs are UUIDv4 or UUIDv7 with correct version and variant bits, emitted in lowercase hex"
 url = "https://www.rfc-editor.org/rfc/rfc9562.html#section-4"
-evidence = "crates/zero-observe/src/lib.rs"
+evidence = "crates/zero-policy/src/lib.rs"
 at = "fn generated_request_ids_are_uuidv4_or_uuidv7_with_correct_version_and_variant"
 anchor = "rule"
-release = 3
+release = 1
 note = "RFC 9562 Sections 4, 4.1, 4.2, 5.4, and 5.7"
 
 [[entry]]
@@ -4563,10 +4563,10 @@ designation = "RFC 9562"
 body = "IETF"
 subject = "An incoming request ID is length and charset validated before being echoed or logged, and no code path treats it as an access capability"
 url = "https://www.rfc-editor.org/rfc/rfc9562.html#section-8"
-evidence = "crates/zero-observe/src/lib.rs"
+evidence = "crates/zero-policy/src/lib.rs"
 at = "fn an_incoming_request_id_is_length_and_charset_validated_before_being_echoed"
 anchor = "rule"
-release = 3
+release = 1
 note = "RFC 9562 Section 8"
 
 
