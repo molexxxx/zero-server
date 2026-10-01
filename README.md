@@ -1,52 +1,58 @@
 # zero-core
 
-The zero-server engine: one memory-safe Rust core for HTTP, exposed to Rust,
-TypeScript, Python and C# through idiomatic bindings over a single C ABI. Every
-parser in it is held to the specification it implements, every crate is
-`no_std` where its inputs are bytes, and nothing installs a compiler on a
-user's machine.
+A memory-safe HTTP server core written in Rust: HTTP/1.1, HTTP/2 and HTTP/3,
+WebSocket and server-sent events, TLS, a router, static files, declarative
+policy, database drivers and the services an application needs, built as one
+Cargo workspace with one crate per capability. Every parser is held to the
+specification it implements, every crate is `no_std` where its inputs are
+bytes, and the hot path never leaves Rust.
+
+The same core is exposed to TypeScript, Python and C# through bindings over a
+single C ABI, so an application in any of those languages runs on this engine
+without compiling anything at install time.
 
 Release 1 is in development. Every crate, package and binding in this tree is
 at version 0.1.0, the first version the release workflows will publish; nothing
 has been published to a registry from this repository yet.
 
-## The product and this repository
+## Using the core from Rust
 
-zero-server is the product. Today it ships as `@zero-server/sdk` on npm, a
-zero-dependency Node.js framework written in JavaScript, and that package keeps
-its name and its surface. This repository holds the core that package moves
-onto:
+`zero-server` is the bundle crate: it re-exports every capability behind a
+feature of the same name, all on by default, so one dependency gives an
+application the whole server. Each capability is also its own crate, named
+`zero-<capability>`, for applications that want only the HTTP/1.1 codec, the
+router or the QPACK tables, including on targets without an operating system.
 
-- `@zero-server/sdk` 1.1.x is the Node implementation. It takes security
-  patches and one correctness release, and then no further features.
-- `@zero-server/sdk` 2.0 becomes the TypeScript facade over
-  `@zero-server/native` (this core, prebuilt) and `@zero-server/core`, with one
-  scoped package per capability. `createApp`, the error classes, the Model
-  classes, `clusterize` as a shim and the `env` loader keep their shapes; the
-  SDK's own test suite is the acceptance suite; anything dropped is a
-  documented breaking change in that release's changelog.
-- The Python package `zero-server` and the NuGet package `ZeroServer` are the
-  same core with a facade in their own language, and every registry name
-  follows the crate: `zero-<capability>`, `@zero-server/<capability>`,
-  `zero-server-<capability>`, `ZeroServer.<Capability>`.
+| Crate | Responsibility |
+| --- | --- |
+| `zero-server` | the bundle: every capability behind a feature |
+| `zero-http1`, `zero-h2`, `zero-h3`, `zero-qpack`, `zero-hpack` | the wire codecs, `no_std` |
+| `zero-router`, `zero-uri`, `zero-qs`, `zero-json`, `zero-ws`, `zero-sse` | routing and the parsers around a request, `no_std` |
+| `zero-io`, `zero-rt`, `zero-http` | the runtime seam, the per-core workers and the connection driver |
+| `zero-tls`, `zero-static`, `zero-policy`, `zero-realtime` | TLS, files, the declarative rule engine, rooms and streams |
+| `zero-ffi` | the C ABI the bindings are built on, with its generated header |
 
-`conformance/api-surface.json` is the contract between the two: every export of
-the Node SDK with a canonical id, generated from its documentation, that each
-binding's declarations are diffed against.
+Every third-party crate the workspace links is named in `deny.toml`; a crate
+not on that list does not build.
 
-## The bindings
+## Bindings
 
-| Language | Package | Over |
+| Language | Packages | Over |
 | --- | --- | --- |
-| Rust | `zero-server` on crates.io, or one crate per capability | the crates directly |
-| TypeScript and Node | `@zero-server/sdk`, `@zero-server/native`, `@zero-server/core` | napi-rs, with a per-core isolate pool |
-| Python | `zero-server`, `zero-server-native`, `zero-server-core` | PyO3 with the stable ABI, a handler thread pool |
-| C# and .NET | `ZeroServer`, `ZeroServer.Native`, `ZeroServer.Core` | `[LibraryImport]` declarations mirroring `include/zero.h` |
+| TypeScript and Node | `@zero-server/native`, `@zero-server/core`, `@zero-server/sdk` | napi-rs, with a per-core isolate pool |
+| Python | `zero-server-native`, `zero-server-core`, `zero-server` | PyO3 on the stable ABI, with a handler thread pool |
+| C# and .NET | `ZeroServer.Native`, `ZeroServer.Core`, `ZeroServer` | `[LibraryImport]` declarations mirroring `include/zero.h` |
 | C | `crates/zero-ffi/include/zero.h` | the cdylib itself |
 
 Installing a binding never compiles anything: the release workflows build the
 native library for seven targets (Linux gnu and musl on x64 and arm64, macOS
-x64 and arm64, Windows x64) and publish it prebuilt.
+x64 and arm64, Windows x64) and publish it prebuilt. `@zero-server/sdk` 2.0 is
+the Node facade over this core; the 1.x line of that package is the earlier
+JavaScript implementation and is retired once the facade reaches parity.
+
+`conformance/vectors.json` is generated from the core and asserted by every
+binding; `conformance/api-surface.json` is the export contract each binding's
+declarations are diffed against.
 
 ## What release 1 covers
 
