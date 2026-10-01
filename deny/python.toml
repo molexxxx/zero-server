@@ -206,6 +206,11 @@ allow = ["default", "fallback"]
 reason = "enabled by pyo3 and once_cell on Linux"
 
 [[bans.features]]
+crate = "rustls-pki-types"
+allow = ["default", "alloc", "std"]
+reason = "enabled by rustls in the shipped graph; rustls-pki-types' default feature is `alloc`, and rustls's `std` turns on its `std`; every hosted target links both anyway"
+
+[[bans.features]]
 crate = "shlex"
 allow = ["default", "std"]
 reason = "enabled by cc, a build dependency of aws-lc-sys; shlex's default feature is `std`, and it runs only in build scripts"

@@ -13,6 +13,16 @@ authors.workspace = true
 [dependencies]
 zero-core.workspace = true
 zero-io.workspace = true
+# rustls 0.23.45 (released 2026-09-14, checked on crates.io 2026-10-01), without
+# its default `logging`: `std` for the buffered connection API, `aws_lc_rs` for the
+# provider zero-server-crypto already carries, `tls12`, and `prefer-post-quantum`,
+# which only puts X25519MLKEM768 first among the aws-lc-rs key exchange groups.
+rustls = { version = "0.23.45", default-features = false, features = [
+    "std",
+    "aws_lc_rs",
+    "tls12",
+    "prefer-post-quantum",
+] }
 
 [lints]
 workspace = true
