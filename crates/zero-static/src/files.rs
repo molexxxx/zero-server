@@ -5,7 +5,8 @@
 //! decoded), the remaining percent-escapes are decoded strictly, and a segment
 //! that is empty, `.` or `..`, or that holds a separator, a NUL or a control
 //! character, or on Windows a colon (an alternate data stream) or a tilde followed
-//! by a digit (an 8.3 short name), ends the request with 404. The file is then
+//! by a digit (an 8.3 short name), ends the request with 404, as does a segment
+//! that begins with a dot unless [`Options::dotfiles`] allows it. The file is then
 //! opened without following a symbolic link in its final component (`O_NOFOLLOW`
 //! on Unix), its resolved path is compared against the resolved root, and on Unix
 //! the opened file's identity is compared with the resolved path's, so a link
@@ -55,6 +56,13 @@ pub struct Options {
     pub small_file_limit: usize,
     /// How many bytes of files the per-core cache holds at most.
     pub cache_budget: usize,
+    /// Whether a path segment that begins with `.`, such as `.env` or `.git`, may be
+    /// served. Off by default, which answers such a path with 404; a root that
+    /// serves `/.well-known/` (RFC 8615) turns it on.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3>
+    /// @see <https://www.rfc-editor.org/rfc/rfc8615.html#section-3>
+    pub dotfiles: bool,
 }
 
 impl Default for Options {
@@ -66,6 +74,7 @@ impl Default for Options {
             attachment: false,
             small_file_limit: 256 * 1024,
             cache_budget: 8 * 1024 * 1024,
+            dotfiles: false,
         }
     }
 }
@@ -240,7 +249,9 @@ impl Files {
                 continue;
             }
             directory = false;
-            if !segment_allowed(&decoded) {
+            if !segment_allowed(&decoded)
+                || (!self.options.dotfiles && decoded.first() == Some(&b'.'))
+            {
                 return Err(Refusal::Policy);
             }
             let text = std::str::from_utf8(&decoded).map_err(|_| Refusal::Policy)?;

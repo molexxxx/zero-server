@@ -1747,6 +1747,18 @@ anchor = "rule"
 release = 1
 note = "RFC 6266 Section 4.3 and Appendix D; RFC 8187 Section 3.2.1"
 
+[[entry]]
+key = "static-17"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A path segment that begins with a dot, such as `.env` or `.git`, is not served unless the root allows dotfiles, so configuration files are not disclosed"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3"
+evidence = "crates/zero-static/src/lib.rs"
+at = "fn a_path_segment_that_begins_with_a_dot_is_not_served_unless"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 17.3; RFC 8615 Section 3 for `/.well-known/`"
 
 # Cookies and sessions
 

@@ -2,8 +2,7 @@
 //!
 //! Files and directories with a path policy on every segment, resolution that keeps a
 //! symlink inside the root, ETag and Last-Modified validators, 304, byte ranges,
-//! Cache-Control per route, precomputed header blocks per asset, a bounded per-core
-//! small-file cache, and the platform file-send path when the backend offers one.
+//! Cache-Control per route and a bounded per-core small-file cache.
 //!
 //! [`cond`] holds the validators and the conditional-request evaluation of RFC 9110
 //! Sections 8.8 and 13, [`range`] the byte ranges of Section 14, and [`headers`]
@@ -700,6 +699,52 @@ mod tests {
                 "{target}: {status}"
             );
         }
+        workers.stop().expect("stop");
+    }
+
+    /// RFC 9110 Section 17.3: an origin server avoids names whose disclosure would
+    /// hand out "configuration and source files that are not meant to be served".
+    #[test]
+    fn a_path_segment_that_begins_with_a_dot_is_not_served_unless_the_root_allows_dotfiles() {
+        let root = root("dotfiles");
+        std::fs::write(root.join(".env"), b"SECRET=1").expect("write");
+        std::fs::create_dir_all(root.join(".well-known")).expect("a directory");
+        std::fs::write(root.join(".well-known/security.txt"), b"Contact: x").expect("write");
+        let files = Files::new(root.clone(), Options::default()).expect("the root");
+        for target in [
+            &b"/.env"[..],
+            b"/%2eenv",
+            b"/docs/../.env",
+            b"/.well-known/security.txt",
+            b"/.git/config",
+        ] {
+            assert_eq!(
+                files.locate(target),
+                Err(Refusal::Policy),
+                "{}",
+                String::from_utf8_lossy(target)
+            );
+        }
+        let (workers, addr) = start(root.clone(), Options::default());
+        for target in ["/.env", "/%2eenv", "/.well-known/security.txt"] {
+            let (status, _, body) =
+                fetch(addr, &format!("GET {target} HTTP/1.1\r\nHost: t\r\n\r\n"));
+            assert_eq!(status, 404, "{target}");
+            assert_ne!(body.as_slice(), b"SECRET=1", "{target}");
+        }
+        workers.stop().expect("stop");
+        let (workers, addr) = start(
+            root,
+            Options {
+                dotfiles: true,
+                ..Options::default()
+            },
+        );
+        let (status, _, body) = fetch(
+            addr,
+            "GET /.well-known/security.txt HTTP/1.1\r\nHost: t\r\n\r\n",
+        );
+        assert_eq!((status, body.as_slice()), (200, &b"Contact: x"[..]));
         workers.stop().expect("stop");
     }
 
