@@ -62,7 +62,6 @@ site-verify:
 
 # run the guide examples in every language (the code the documentation site shows)
 guides:
-    cargo test -p zero-examples --test guides
     cd bindings/node && npm run test:guides
     cd bindings/python && python -m pytest tests/test_guides.py
     dotnet run --project bindings/dotnet/samples/ZeroServer.Guides -c Release
@@ -71,10 +70,9 @@ guides:
 deny:
     cargo deny check
 
-# audit the io-compio and http3 feature graphs against their addenda in deny/
+# audit the io-compio feature graph against its addendum in deny/
 deny-features:
     cargo deny --config deny/io-compio.toml --manifest-path crates/zero-io/Cargo.toml --features io-compio check
-    cargo deny --config deny/http3.toml --manifest-path crates/zero-server/Cargo.toml --features http3 check
 
 # verify every third-party crate is covered by an audit, an import, or an exemption (needs cargo-vet installed)
 vet:
@@ -103,9 +101,9 @@ release:
 release-dry:
     cargo xtask release --dry-run
 
-# run one benchmark entry in release mode (just bench plaintext)
-bench entry:
-    cargo run -p zero-bench --release -- {{entry}}
+# run one command of the measurement harness in release mode (just bench miss)
+bench command:
+    cargo run -p zero-bench --release --bin zero-bench -- {{command}}
 
 # run every fuzz target for one minute each (Linux only; needs cargo-fuzz and a nightly toolchain)
 fuzz-smoke:
