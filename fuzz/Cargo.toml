@@ -1,0 +1,50 @@
+# The libFuzzer targets: one per parser entry point, each with a checked-in seed
+# set under seeds/<target>/ and a dictionary under dictionaries/<target>.dict.
+# `cargo fuzz run <target> fuzz/corpus/<target> fuzz/seeds/<target>` grows the
+# ignored corpus from the seeds; a crash artifact that is fixed is copied into
+# the seeds as a regression input. This package is excluded from the workspace:
+# it builds on nightly with sanitizers and is never published.
+
+[package]
+name = "zero-server-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+# crates.io max_stable_version 0.4.13, updated 2026-06-04, read 2026-10-01.
+libfuzzer-sys = "0.4.13"
+zero-simd = { path = "../crates/zero-simd" }
+zero-http1 = { path = "../crates/zero-http1" }
+zero-limits = { path = "../crates/zero-limits" }
+
+[[bin]]
+name = "utf8_validate"
+path = "fuzz_targets/utf8_validate.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "simd_kernels"
+path = "fuzz_targets/simd_kernels.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "http1_head"
+path = "fuzz_targets/http1_head.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "http1_chunked"
+path = "fuzz_targets/http1_chunked.rs"
+test = false
+doc = false
+bench = false

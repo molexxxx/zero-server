@@ -1,0 +1,12 @@
+# Chunk framing tokens (libFuzzer dictionaries accept only \\, \" and \xHH escapes).
+crlf="\x0D\x0A"
+lf="\x0A"
+cr="\x0D"
+zero="0"
+hex="ffffffffffffffff"
+ext=";name=value"
+quoted="\""
+field="X-Trailer: v"
+cl="Content-Length: "
+sp=" "
+tab="\x09"

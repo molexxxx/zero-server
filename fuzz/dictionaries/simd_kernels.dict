@@ -1,0 +1,13 @@
+# The bytes at the edges of the request-line, token and field-value classes
+# (libFuzzer dictionaries accept only \\, \" and \xHH escapes).
+crlf="\x0D\x0A"
+cr="\x0D"
+lf="\x0A"
+sp=" "
+tab="\x09"
+del="\x7F"
+high="\x80"
+colon=":"
+quote="\""
+brace="{"
+tilde="~"

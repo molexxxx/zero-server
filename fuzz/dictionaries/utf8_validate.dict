@@ -1,0 +1,13 @@
+# UTF-8 lead and tail bytes at the edges of the RFC 3629 ranges (libFuzzer
+# dictionaries accept only \\, \" and \xHH escapes).
+lead2_min="\xC2"
+lead2_max="\xDF"
+lead3_e0="\xE0\xA0"
+lead3_ed="\xED\x9F"
+surrogate="\xED\xA0"
+lead4_f0="\xF0\x90"
+lead4_f4="\xF4\x8F"
+above_max="\xF4\x90"
+tail_min="\x80"
+tail_max="\xBF"
+not_tail="\xC0"

@@ -54,16 +54,25 @@ the same commit.
   which fetches RFC 9114.
   `zero-simd` holds the per-byte definitions (`scalar`), the SWAR kernels
   (`swar`: exact per-lane masks for the request-target, header-value, byte
-  and CR/LF scans, a per-byte token scan, the unmask), the streaming
-  `Utf8Validator` (state machine over the RFC 3629 syntax, resumable across
-  fragments, one-shot verdicts identical to `core::str::from_utf8` in
-  position and length, standards row `utf8-01`), and the cached `Features`
-  token (`std`: the standard library's x86 detection; `no_std`: compile-time
-  target features only). Property tests use an in-crate xorshift generator
-  (no proptest dependency yet, so no lockfile or vet change) and shrink under
-  Miri. The crate-root functions dispatch to SWAR until the SIMD kernels
-  land. Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
-  registry.
+  and CR/LF scans, a per-byte token scan, the unmask), the x86-64 kernels
+  (`x86`: SSE2 and AVX2 behind the detection token), the AArch64 kernels
+  (`neon`), the streaming `Utf8Validator` (state machine over the RFC 3629
+  syntax, resumable across fragments, one-shot verdicts identical to
+  `core::str::from_utf8` in position and length, standards row `utf8-01`),
+  and the cached `Features` token read from `cpuid` and `xgetbv` on every
+  build (compile-time features under Miri). The crate-root functions
+  dispatch through the token to the widest kernel the CPU offers and
+  otherwise to SWAR. Every kernel is checked against SWAR for every byte at
+  every lane position and on random inputs from the in-crate xorshift
+  generator (no proptest dependency), under Miri with a stride, and by the
+  libFuzzer targets under `fuzz/`. `zero-http1` holds the request head
+  parser (`head.rs`), the chunked decoder and encoder with the trailer
+  parser (`chunked.rs`), the validating `ResponseWriter` (`response.rs`),
+  the list and whitespace helpers (`list.rs`) and `Reject` (`error.rs`), 34
+  unit tests, no_std and thumbv7em green; `conformance/vectors.json` carries
+  its `http1Parser` and `responseSplitting` sections. Every other crate is a
+  skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
+  nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
 - The brand work landed (`BRAND-REPORT.md`, `docs/brand.md`). The mark is the
@@ -150,10 +159,51 @@ Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, the
 UTF-8 validator, the detection token, property tests, Miri), and the
 `zero-simd` x86-64 kernels (SSE2 and AVX2 behind the token, every kernel
 checked against SWAR for every byte at every lane position and on random
-inputs, on a host with AVX2). Next: NEON with an aarch64 cross-compile
-check and a CI job on an arm64 runner, then the in-house `__cpuid`
-detection for `no_std` builds (today a `no_std` build uses only
-compile-time target features).
+inputs, on a host with AVX2), the NEON kernels (clippy-clean for
+`aarch64-unknown-linux-gnu` and compiled for it without std; their tests
+against SWAR run only on an AArch64 host, so `ci.yml` gained an `arm` job on
+`ubuntu-24.04-arm`; no AArch64 machine ran them yet), and the in-house
+`cpuid` and `xgetbv` detection that every build uses (tested against the
+standard library's answer on this host), and the libFuzzer targets under
+`fuzz/` (`utf8_validate` against `core::str::from_utf8`, one-shot and
+fragmented; `simd_kernels`, every dispatched and SWAR kernel against the
+per-byte definitions; seeds under `fuzz/seeds/<target>`, dictionaries under
+`fuzz/dictionaries`, the ignored corpus grown from the seeds; 20-second
+smoke runs under address sanitizer found nothing). R.3 step 2 is complete
+except for its AArch64 run, which only CI's `arm` job can provide.
+
+R.3 step 3, `zero-http1`, has begun: `head.rs` holds the request head
+parser (spans into the caller's buffer, a caller-owned `Field` table,
+`Partial` or `Reject { status, close: true }`, the framing decision, the
+`Host`, `Connection`, `Expect` and `Upgrade` reads) with the rule set of
+`DESIGN.md` section 6.2 and tests named after rows `h1-01` to `h1-06`,
+`h1-08`, `h1-09` and `h1-12`, which now cite `head.rs`. `chunked.rs` holds
+the streaming `ChunkedDecoder` (checked chunk sizes with the digit cap,
+bounded and ignored extensions, the trailer section reported as a span and
+parsed by `parse_trailers` into a separate caller-owned table with the RFC
+9110 section 6.5.1 drop list), `chunk_header` and `encode_chunk`; rows
+`h1-10` and `h1-11` cite it. `response.rs` holds `ResponseWriter`, the
+serializer into a caller buffer that validates every outbound field name
+as a token and every value as a field-value, writes `Content-Length` from
+`zero-date`'s `Decimal`, chunked framing, `Connection: close`, and
+suppresses the body of a response to `HEAD` and of 1xx, 204 and 304 and
+`Content-Length` on 1xx and 204; rows `h1-07`, the CR/LF/NUL rejection
+row, the 1xx/204 `Content-Length` row and the 204/304 content row cite
+it. `crates/zero-examples/examples/conformance_vectors.rs` generates
+`conformance/vectors.json` with the `http1Parser` (30 cases) and
+`responseSplitting` (10 cases) sections, asserting the crates agree with
+every vector before writing; CI runs it from `crates/zero-examples/examples`
+and diffs the file. The fuzz crate gained `http1_head` (never panics, every
+proper prefix of a complete head is partial, spans stay inside the input)
+and `http1_chunked` (whole and byte-wise feedings agree). Still open in the
+step: the httparse oracle, which the dependency rule blocks today: crates.io
+reports httparse 1.10.1 as the newest stable release, published 2025-03-03,
+more than twelve months ago, and the crate does not declare itself finished
+(checked 2026-10-01); the parser's conformance vectors, property tests and
+fuzz targets stand in for it until the owner decides on an exception or a
+newer release appears. Also open: the 24 CPU-hour fuzz runs (only a schedule
+can provide them), and `h1-13` (pipelining order), which belongs to the
+connection driver of `zero-http` in step 5.
 
 ## Next, in order
 

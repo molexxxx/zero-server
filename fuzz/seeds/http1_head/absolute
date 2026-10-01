@@ -1,0 +1,3 @@
+GET http://user@example.org:8080/pub/?q=1 HTTP/1.1
+Host: ignored
+

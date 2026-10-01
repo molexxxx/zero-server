@@ -43,6 +43,9 @@ exclude = [
     "bench/probes/node/napi-probe",
     "bench/probes/python/pyo3-probe",
     "bench/probes/dotnet/ffi-probe",
+    # The libFuzzer targets build on nightly with sanitizers through cargo-fuzz
+    # and are never published.
+    "fuzz",
 ]
 
 [workspace.package]
