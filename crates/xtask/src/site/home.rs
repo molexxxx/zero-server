@@ -522,10 +522,10 @@ impl Home {
              <li>{packaged} capabilities, each a crate in Rust and a package in TypeScript, Python, and C#</li>\n\
              <li>{} crates over one core; the {bare} that are <code>no_std</code> are cross-compiled for a Cortex-M4F in CI</li>\n\
              <li>{guides} guides, each showing the same example in four languages, spliced from the tests that run it</li>\n\
-             <li>Offline first: store and forward, compact codecs, LoRa, LoRaWAN, and mesh as first-class links</li>\n\
-             <li>Device identity, a secured session, signed updates with rollback, and a tamper-evident log</li>\n\
-             <li>Builds and tests with nothing plugged in: a loopback link and simulated hardware stand in</li>\n\
-             <li>Apache-2.0 licensed, published in lockstep on crates.io, npm, PyPI, and NuGet</li>\n\
+             <li>HTTP/1.1, TLS, WebSocket, and server-sent events on one event loop per core</li>\n\
+             <li>Every parser written from the current RFC text, each statement it relies on pinned to a test</li>\n\
+             <li>Two runtime backends behind one seam: tokio, and compio over io_uring, IOCP, and kqueue</li>\n\
+             <li>Apache-2.0 licensed, published in lockstep on crates.io, PyPI, and NuGet, and on npm from 2.0</li>\n\
              </ul>\n\
              </section>\n\
              <section class=\"sec\" aria-labelledby=\"specs-title\">\n\
@@ -538,7 +538,7 @@ impl Home {
              <tr><th scope=\"row\">Guides</th><td>{guides}, each in four languages</td></tr>\n\
              <tr><th scope=\"row\">Smallest target</th><td>Cortex-M4F, <code>no_std</code></td></tr>\n\
              <tr><th scope=\"row\">Third-party code</th><td>{external} of the {compiled} crates a one-capability Rust build compiles</td></tr>\n\
-             <tr><th scope=\"row\">Registries</th><td>crates.io, npm, PyPI, NuGet</td></tr>\n\
+             <tr><th scope=\"row\">Registries</th><td>crates.io, PyPI, NuGet; npm from 2.0</td></tr>\n\
              <tr><th scope=\"row\">License</th><td>Apache-2.0</td></tr>\n\
              </tbody>\n\
              </table>\n\

@@ -48,6 +48,12 @@ other four publish to crates.io, npm, PyPI, and NuGet. Each runs the preflight
 first, so a tag that should not have been pushed costs a red job rather than a
 version.
 
+`release-node` publishes only from 2.0.0. Until then `@zero-server/sdk` and
+`@zero-server/core` on npm are the 1.x line of
+[zero-server-node](https://github.com/molexxxx/zero-server-node), and a 0.x or
+1.x release of this core must not replace their `latest` tag, so for those
+versions the workflow runs the preflight and its gate and publishes nothing.
+
 ## When one stalls
 
 Every release workflow also takes a version by hand, so a run that failed

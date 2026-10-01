@@ -20,10 +20,34 @@ jobs:
     with:
       version: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
 
+  # @zero-server/sdk and @zero-server/core 1.x on npm belong to zero-server-node,
+  # which stays maintained until this core does everything it does. npm releases
+  # start at 2.0.0, so a 0.x or 1.x release never replaces their latest dist-tag.
+  gate:
+    name: npm release gate
+    runs-on: ubuntu-latest
+    needs: preflight
+    outputs:
+      publish: ${{ steps.gate.outputs.publish }}
+    steps:
+      - id: gate
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+        run: |
+          major="${VERSION#v}"
+          major="${major%%.*}"
+          if [ "$major" -ge 2 ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::npm releases start at 2.0.0; ${VERSION} is not published to npm"
+          fi
+
   build:
     name: build ${{ matrix.target }}
     runs-on: ${{ matrix.host }}
-    needs: preflight
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
     strategy:
       fail-fast: false
       matrix:

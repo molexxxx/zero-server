@@ -241,14 +241,15 @@ crosses the C ABI yet.
 - gRPC, observability, WebRTC signaling
 
 The JavaScript framework that came before this core, `@zero-server/sdk` 1.x, now
-lives in [molexxxx/zero-server-node](https://github.com/molexxxx/zero-server-node).
-The Node package here takes over that name at 2.0, once it does everything 1.x
-does.
+lives in [molexxxx/zero-server-node](https://github.com/molexxxx/zero-server-node)
+and stays maintained on npm. Releases of this core publish to crates.io, PyPI
+and NuGet; the Node package here takes over the npm name at 2.0, once it does
+everything 1.x does.
 
 ## Packages
 
 - **Rust:** the `zero-server` crate, or one `zero-<capability>` crate per need
-- **TypeScript and Node:** `@zero-server/sdk`, over napi-rs
+- **TypeScript and Node:** `@zero-server/sdk` from 2.0, over napi-rs
 - **Python:** `zero-server`, over PyO3
 - **C# and .NET:** `ZeroServer`, over `[LibraryImport]`
 - **C:** the header `crates/zero-ffi/include/zero.h`

@@ -8,8 +8,9 @@ seriously and handled promptly.
 ## Supported versions
 
 zero-server is pre-1.0 and all crates share one workspace version. Security fixes
-land on `main` and ship in the next patch release across every registry
-(crates.io, npm, PyPI, NuGet). Only the latest published release is supported;
+land on `main` and ship in the next patch release across every registry it
+publishes to (crates.io, PyPI and NuGet; npm from 2.0, while npm carries the
+1.x line of zero-server-node). Only the latest published release is supported;
 if you are on an older version, the fix is to upgrade.
 
 ## Reporting a vulnerability
