@@ -196,6 +196,7 @@ mod tests {
         assert_eq!(limits.http1.header_read_timeout, Duration::from_secs(30));
         assert_eq!(limits.http1.idle_keep_alive, Duration::from_secs(60));
         assert_eq!(limits.http1.body_read_idle, Duration::from_secs(60));
+        assert_eq!(limits.http1.send_idle, Duration::from_secs(60));
         assert_eq!(limits.http1.request_total, Duration::from_secs(300));
         assert_eq!(limits.memory.lease_timeout, limits.http1.request_total);
         assert_eq!(limits.memory.request_memory_per_core, 256 * 1_024 * 1_024);

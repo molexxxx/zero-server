@@ -37,6 +37,9 @@ pub const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
 pub const IDLE_KEEP_ALIVE: Duration = Duration::from_secs(60);
 /// The time allowed between two reads of a body.
 pub const BODY_READ_IDLE: Duration = Duration::from_secs(60);
+/// The time a response write may take no bytes before the connection is dropped,
+/// so a client that stops reading cannot hold it open.
+pub const SEND_IDLE: Duration = Duration::from_secs(60);
 /// The time allowed for one request from first byte to final write.
 pub const REQUEST_TOTAL: Duration = Duration::from_secs(300);
 
@@ -73,6 +76,8 @@ pub struct Http1Limits {
     pub idle_keep_alive: Duration,
     /// See [`BODY_READ_IDLE`].
     pub body_read_idle: Duration,
+    /// See [`SEND_IDLE`].
+    pub send_idle: Duration,
     /// See [`REQUEST_TOTAL`].
     pub request_total: Duration,
 }
@@ -95,6 +100,7 @@ impl Http1Limits {
         header_read_timeout: HEADER_READ_TIMEOUT,
         idle_keep_alive: IDLE_KEEP_ALIVE,
         body_read_idle: BODY_READ_IDLE,
+        send_idle: SEND_IDLE,
         request_total: REQUEST_TOTAL,
     };
 }

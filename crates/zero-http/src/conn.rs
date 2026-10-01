@@ -311,6 +311,8 @@ pub(crate) struct Conn<S, H, Req> {
     idle_since: Instant,
     ring: Ring<Req>,
     writing: Option<Writing>,
+    /// When the write in progress started or last took bytes.
+    sent_at: Instant,
     completed: Vec<(usize, Box<Record>)>,
     requests: u32,
     /// No further request is read; the connection closes once the ring is written.
@@ -353,6 +355,7 @@ where
             idle_since: Instant::now(),
             ring: Ring::new(),
             writing: None,
+            sent_at: Instant::now(),
             completed: Vec::with_capacity(CAP),
             requests: 0,
             close: false,
@@ -608,6 +611,7 @@ where
         let Some(mut writing) = self.writing else {
             return;
         };
+        self.sent_at = now;
         writing.written = writing.written.saturating_add(count);
         if writing.written < writing.total {
             self.writing = Some(writing);
@@ -673,6 +677,12 @@ where
             self.retry_read_at = None;
         }
         let limits = *self.limits();
+        if self.writing.is_some() && now >= self.sent_at + limits.send_idle {
+            // The client took no bytes for the whole send timeout: it stopped
+            // reading, so nothing more can reach it and the connection is dropped.
+            self.aborted = true;
+            return;
+        }
         if self.idle() && !self.close && now >= self.idle_since + limits.idle_keep_alive {
             // RFC 9112 Section 9.5: a server that wishes to time out issues a graceful
             // close; no response is owed.
@@ -731,6 +741,9 @@ where
         };
         if self.idle() && !self.close {
             note(self.idle_since + limits.idle_keep_alive);
+        }
+        if self.writing.is_some() {
+            note(self.sent_at + limits.send_idle);
         }
         if let Some(since) = self.head_since {
             note(since + limits.header_read_timeout);
@@ -1100,6 +1113,7 @@ where
                 written: 0,
                 total,
             });
+            self.sent_at = Instant::now();
             return;
         }
         let owes = self.ring.first().is_some_and(|entry| {
@@ -1118,6 +1132,7 @@ where
                 written: 0,
                 total: CONTINUE.len(),
             });
+            self.sent_at = Instant::now();
         }
     }
 

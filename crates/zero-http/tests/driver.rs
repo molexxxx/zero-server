@@ -945,9 +945,18 @@ fn a_request_for_an_https_resource_received_over_a_connection_that_is_not_secure
     server.stop().unwrap();
 }
 
-/// A stream whose `close_write` never finishes, as a TLS stream's does when its peer
-/// stopped reading before `close_notify` could be written.
-struct Stuck(zero_io::rt::TcpStream);
+/// Which operation of a [`Stuck`] stream never finishes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Stall {
+    /// `close_write`, as a TLS stream's does when its peer stopped reading before
+    /// `close_notify` could be written.
+    Close,
+    /// Every write, as when the peer stopped reading and the send buffer is full.
+    Writes,
+}
+
+/// A stream with one operation that never finishes.
+struct Stuck(zero_io::rt::TcpStream, Stall);
 
 impl Stream for Stuck {
     fn readable(&self) -> impl std::future::Future<Output = io::Result<()>> {
@@ -972,16 +981,22 @@ impl Stream for Stuck {
         self.0.write(buf)
     }
 
-    fn writev(&self, bufs: &[IoSlice<'_>]) -> impl std::future::Future<Output = io::Result<usize>> {
-        self.0.writev(bufs)
+    async fn writev(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+        if self.1 == Stall::Writes {
+            return std::future::pending().await;
+        }
+        self.0.writev(bufs).await
     }
 
     fn shutdown_write(&self) -> io::Result<()> {
         self.0.shutdown_write()
     }
 
-    fn close_write(&self) -> impl std::future::Future<Output = io::Result<()>> {
-        std::future::pending()
+    async fn close_write(&self) -> io::Result<()> {
+        if self.1 == Stall::Close {
+            return std::future::pending().await;
+        }
+        self.0.close_write().await
     }
 
     fn peer_addr(&self) -> io::Result<SocketAddr> {
@@ -990,7 +1005,7 @@ impl Stream for Stuck {
 }
 
 /// Hands every connection over as a [`Stuck`] stream.
-struct StuckAccept;
+struct StuckAccept(Stall);
 
 impl Accept for StuckAccept {
     type Stream = Stuck;
@@ -1000,12 +1015,12 @@ impl Accept for StuckAccept {
         stream: zero_io::rt::TcpStream,
         _peer: SocketAddr,
     ) -> impl std::future::Future<Output = io::Result<Prepared<Stuck>>> + 'static {
-        std::future::ready(Ok(Prepared::any_host(Stuck(stream))))
+        std::future::ready(Ok(Prepared::any_host(Stuck(stream, self.0))))
     }
 }
 
-#[test]
-fn a_close_that_cannot_finish_writing_is_given_up_after_the_linger_and_the_connection_dropped() {
+/// A one-core server over [`Stuck`] streams.
+fn stuck_server(stall: Stall, limits: Http1Limits) -> Workers {
     let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let config = Config {
         runtime: zero_rt::Config {
@@ -1015,19 +1030,59 @@ fn a_close_that_cannot_finish_writing_is_given_up_after_the_linger_and_the_conne
                 ..zero_io::rt::Config::default()
             },
         },
-        limits: Http1Limits::DEFAULT,
+        limits,
         server: None,
     };
-    let workers = serve_with(
+    serve_with(
         "127.0.0.1:0".parse().unwrap(),
         config,
         Arc::new(|_| {}),
         move |_worker| App {
             log: Arc::clone(&log),
         },
-        |_worker| StuckAccept,
+        move |_worker| StuckAccept(stall),
     )
-    .unwrap();
+    .unwrap()
+}
+
+#[test]
+fn a_response_the_client_takes_no_bytes_of_for_the_send_timeout_drops_the_connection() {
+    let workers = stuck_server(
+        Stall::Writes,
+        Http1Limits {
+            send_idle: Duration::from_millis(300),
+            ..Http1Limits::DEFAULT
+        },
+    );
+    let mut conn = TcpStream::connect(workers.local_addr()).unwrap();
+    conn.set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    let started = Instant::now();
+    conn.write_all(b"GET /hello HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    let mut byte = [0u8; 1];
+    let ended = conn.read(&mut byte);
+    assert!(
+        matches!(&ended, Ok(0))
+            || matches!(&ended, Err(err) if err.kind() == io::ErrorKind::ConnectionReset),
+        "the connection is dropped: {ended:?}"
+    );
+    assert!(
+        started.elapsed() >= Duration::from_millis(250),
+        "{:?}",
+        started.elapsed()
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "{:?}",
+        started.elapsed()
+    );
+    workers.stop().unwrap();
+}
+
+#[test]
+fn a_close_that_cannot_finish_writing_is_given_up_after_the_linger_and_the_connection_dropped() {
+    let workers = stuck_server(Stall::Close, Http1Limits::DEFAULT);
     let mut conn = TcpStream::connect(workers.local_addr()).unwrap();
     conn.set_read_timeout(Some(Duration::from_secs(10)))
         .unwrap();
