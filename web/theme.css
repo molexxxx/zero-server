@@ -1,0 +1,110 @@
+/* The site palette as custom properties, light and dark. The palette, the role of each
+   token and the contrast of every text role are in docs/brand.md; change them there first. */
+:root {
+  color-scheme: light dark;
+  --brand-ink: #16140F;
+  --brand-surface: #F4EEE1;
+  --brand-gray-1: #57534A;
+  --brand-gray-2: #A39E93;
+  --brand-hero: #CFAE45;
+  --brand-hero-deep: #5F470F;
+  --brand-accent: #D9F542;
+  --brand-accent-deep: #688D00;
+  --paper: #F4EEE1;
+  --paper-tint: #EAE2D0;
+  --ink: #16140F;
+  --ink-soft: #57534A;
+  --rule: #D3C9B5;
+  --rule-soft: rgba(22, 20, 15, 0.08);
+  --frame: #16140F;
+  --band: #16140F;
+  --band-deep: #0B0A07;
+  --band-tint: rgba(95, 71, 15, 0.08);
+  --on-band: #F4EEE1;
+  --on-accent: #F4EEE1;
+  --accent: #5F470F;
+  --accent-deep: #463407;
+  --ring: #5F470F;
+  --pulse: #688D00;
+  --caution: #7A4A00;
+  --caution-tint: #F4E1B4;
+  --alarm: #A3301C;
+  --code-string: #4A6B00;
+  --code-literal: #9A2A4A;
+  --sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #16140F;
+    --paper-tint: #201D17;
+    --ink: #F4EEE1;
+    --ink-soft: #A39E93;
+    --rule: #38342C;
+    --rule-soft: rgba(244, 238, 225, 0.08);
+    --frame: #8C877C;
+    --band: #0C0B08;
+    --band-deep: #070605;
+    --band-tint: rgba(207, 174, 69, 0.1);
+    --on-band: #F4EEE1;
+    --on-accent: #16140F;
+    --accent: #CFAE45;
+    --accent-deep: #E0C670;
+    --ring: #CFAE45;
+    --pulse: #D9F542;
+    --caution: #F0A54B;
+    --caution-tint: #2E2314;
+    --alarm: #F08A6C;
+    --code-string: #C8DE6E;
+    --code-literal: #F0889F;
+  }
+}
+:root[data-theme="dark"], :root[data-theme="ayu"] {
+  color-scheme: dark;
+  --paper: #16140F;
+  --paper-tint: #201D17;
+  --ink: #F4EEE1;
+  --ink-soft: #A39E93;
+  --rule: #38342C;
+  --rule-soft: rgba(244, 238, 225, 0.08);
+  --frame: #8C877C;
+  --band: #0C0B08;
+  --band-deep: #070605;
+  --band-tint: rgba(207, 174, 69, 0.1);
+  --on-band: #F4EEE1;
+  --on-accent: #16140F;
+  --accent: #CFAE45;
+  --accent-deep: #E0C670;
+  --ring: #CFAE45;
+  --pulse: #D9F542;
+  --caution: #F0A54B;
+  --caution-tint: #2E2314;
+  --alarm: #F08A6C;
+  --code-string: #C8DE6E;
+  --code-literal: #F0889F;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --paper: #F4EEE1;
+  --paper-tint: #EAE2D0;
+  --ink: #16140F;
+  --ink-soft: #57534A;
+  --rule: #D3C9B5;
+  --rule-soft: rgba(22, 20, 15, 0.08);
+  --frame: #16140F;
+  --band: #16140F;
+  --band-deep: #0B0A07;
+  --band-tint: rgba(95, 71, 15, 0.08);
+  --on-band: #F4EEE1;
+  --on-accent: #F4EEE1;
+  --accent: #5F470F;
+  --accent-deep: #463407;
+  --ring: #5F470F;
+  --pulse: #688D00;
+  --caution: #7A4A00;
+  --caution-tint: #F4E1B4;
+  --alarm: #A3301C;
+  --code-string: #4A6B00;
+  --code-literal: #9A2A4A;
+}

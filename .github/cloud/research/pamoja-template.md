@@ -6,10 +6,10 @@ Source of every claim below: files read from C:\Users\tonyw\Desktop\projects\zer
 
 Top-level entries of zero-edge:
 
-- Dirs: .cargo, .devcontainer, .docs (gitignored planning), .github, .impeccable, assets, bindings, chirpstack, conformance, crates, docs, examples, profiles, schema, sitl, target, web
+- Dirs: .cargo, .devcontainer, .docs (gitignored planning), .github, assets, bindings, chirpstack, conformance, crates, docs, examples, profiles, schema, sitl, target, web
 - Files: .gitattributes, .gitignore, Cargo.lock, Cargo.toml, CHANGELOG.md, the local rules file, CODE_OF_CONDUCT.md, CONTRIBUTING.md, deny.toml, DESIGN.md, justfile, LICENSE-MIT, PRODUCT.md (gitignored), README.md, rust-toolchain.toml, SECURITY.md
 
-Domain-specific dirs that do not transfer: chirpstack, sitl, profiles, schema, examples/boards, .impeccable, .devcontainer (ROS 2 image), assets (the convention of a repo icon transfers, not the files).
+Domain-specific dirs that do not transfer: chirpstack, sitl, profiles, schema, examples/boards, .devcontainer (ROS 2 image), assets (the convention of a repo icon transfers, not the files).
 
 ### .cargo/config.toml (40 bytes, copy verbatim)
 
