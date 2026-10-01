@@ -246,7 +246,8 @@ newer release appears. Also open: the 24 CPU-hour fuzz runs (only a schedule
 can provide them), and `h1-13` (pipelining order), which belongs to the
 connection driver of `zero-http` in step 5.
 
-R.3 step 4 is under way. `zero-sys` holds the socket options the design lists
+R.3 step 4 is complete on this machine; its Windows and macOS runs wait
+for CI's `seam` job. `zero-sys` holds the socket options the design lists
 for release 1 (section 4.2 row and 5.4), `sendmsg` and `recvmsg` with the
 control-message codec (`cmsg_decode` fuzz target, Miri), and thread affinity.
 The Linux tests set and read every option on real sockets and pass a packet
@@ -277,6 +278,25 @@ service; Windows carries the peer alone until `WSARecvMsg` arrives with the
 completion backend). `tests/datagram.rs` passes batches over loopback and,
 on Linux, ECN codepoints and an 1,800-byte buffer segmented at 600. Not yet
 in `zero-io`: the `io-compio` backend (step 8).
+
+R.3 step 5 has begun with the first half of `zero-rt`: `arena.rs` (the
+chunked per-worker arena over `zero-core`'s `SlotId`, chunks added and never
+moved, a free list that hands indices back with the next generation, `&mut`
+access through the worker's exclusive borrow and no `unsafe`), `slot.rs` (the
+per-slot atomic state word of `DESIGN.md` section 7.3: `Free`, `Parsing`,
+`WorkerOwned`, `Leased`, `Completing`, `Closed`, a 16-bit reader count, the
+cancel flag and the 30-bit generation in one `AtomicU64`; `borrow` is one
+compare-and-swap that checks the generation and the lease, `recycle` refuses
+while a reader is counted in and bumps the generation; the epoch-based
+index reuse, the loom model and the TSan race belong to step 12), `tier.rs`
+(the five tiers), `cancel.rs` (the per-request cancel flag with a waker),
+`contain.rs` (every poll under `catch_unwind`, a panic becomes `Panicked`
+and the future is dropped), and `worker.rs` (`start` over `zero-io`'s
+`serve`: every spawned task is contained, a task panic counts on the core
+and reaches the status callback as `TaskPanic` while the core serves on, and
+a panic in the core's own loop stops that core and is reported as
+`WorkerPanic`; the tests drive both through real connections). Next:
+`zero-http`, the HTTP/1.1 connection driver over the seam.
 
 ## Next, in order
 
@@ -325,7 +345,15 @@ implements and work from its text (`RULES.md`, Standards-first).
   touched, `cargo run -p xtask -- lints --check`,
   `cargo run -p xtask -- version --check`; and when a dependency changed,
   `cargo deny check` (cargo-deny 0.20.2) and `cargo vet --locked`
-  (cargo-vet 0.10.2, installed with `cargo install --locked --version`).
+  (cargo-vet 0.10.2, installed with `cargo install --locked --version`),
+  plus the three audits CI runs beside the root one: `cargo deny
+  --manifest-path bindings/node/Cargo.toml --config deny/node.toml check`,
+  the same for `bindings/python/packages/native/Cargo.toml` with
+  `deny/python.toml`, and `cargo deny --manifest-path crates/zero-io/Cargo.toml
+  --features io-compio --config deny/io-compio.toml check`. Every change to
+  `deny.toml` is mirrored into `deny/node.toml`, `deny/python.toml`,
+  `deny/io-compio.toml` and `deny/http3.toml`, and the two binding lockfiles
+  the audits update are committed with it.
 - Commit subject: short, imperative, what changed; body: why, the standard
   sections fetched with their URLs, anything unverified. No planning
   vocabulary, no attribution of any tool. Then `git push origin main`. If the
@@ -362,8 +390,19 @@ implements and work from its text (`RULES.md`, Standards-first).
   `RULES.md` requires.
 - Docker is not assumed. The container-only checks (the hardened build, the
   sanitizers, miri, the fuzz smoke) run in CI on push; a session reads the
-  CI result of its push with `gh run list` and `gh run view --log-failed`
-  and fixes what fails before continuing.
+  CI result of its push with `gh run list` and `gh run view <id>` and fixes
+  what fails before continuing. The job logs sit on a storage host the egress
+  policy blocks (`gh run view --log` and the jobs API both fail), so a red
+  job is reproduced locally with the job's own command; `gh run view <id>`
+  still names the failed step.
+- CI's `rustup` stable is newer than a long-lived container's (1.98.1
+  against 1.97.0 on 2026-10-01) and its clippy carries lints the older one
+  lacks, so run `rustup update stable` before the protocol's clippy step;
+  the minimum-toolchain job is `rustup toolchain install 1.89 --profile
+  minimal` and `cargo +1.89 check --workspace --exclude xtask --exclude
+  zero-examples --exclude zero-bench --exclude zero-serve`, and the AArch64
+  job is `cargo clippy -p zero-simd --all-targets --target
+  aarch64-unknown-linux-gnu -- -D warnings` from this machine.
 
 ## Out of scope for a session
 
