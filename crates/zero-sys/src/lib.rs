@@ -17,6 +17,7 @@ pub mod affinity;
 pub mod alloc;
 #[cfg(unix)]
 pub mod cmsg;
+pub mod error;
 #[cfg(unix)]
 pub mod msg;
 pub mod sockopt;

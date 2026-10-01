@@ -180,6 +180,33 @@ jobs:
       - name: Test the kernels against the SWAR reference
         run: cargo test -p zero-simd
 
+  seam:
+    name: runtime seam (${{ matrix.os }})
+    # The listener strategy differs per operating system (SO_REUSEPORT per core on
+    # Linux, one listener with accept handoff on Windows and macOS) and the socket
+    # option wrappers have code paths that only run there, so the echo test and the
+    # zero-sys tests run on all three. The labels are from the actions/runner-images
+    # README (ubuntu-latest, macos-latest, windows-latest), read 2026-10-01.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-seam-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Test the seam and the system wrappers
+        run: cargo test -p zero-io -p zero-sys
+
   msrv:
     name: minimum supported rust
     runs-on: ubuntu-latest

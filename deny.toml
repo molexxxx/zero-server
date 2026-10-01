@@ -10,6 +10,18 @@
 [graph]
 exclude-dev = true
 exclude = ["xtask"]
+# The seven prebuilt targets of the release workflows (the binding packages ship one
+# per target). A dependency another target would pull, such as the wasi crate mio
+# names for WebAssembly, is outside the shipped graph.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
 
 [advisories]
 version = 2
@@ -83,9 +95,11 @@ allow = [
     "zero-uri",
     "zero-ws",
     # Runtime seam, io-tokio. Checked against crates.io on 2026-10-01: none yanked,
-    # each released within the year (socket2 0.6.5 on 2026-07-13, libc 0.2.189 on
-    # 2026-08-03, windows-sys 0.61.2 on 2025-10-06, windows-link 0.2.1 as its
-    # dependency); libc and windows-sys stay on the 0.x lines tokio itself pins.
+    # each released within the year (tokio 1.53.1 on 2026-07-20, mio 1.2.3 on
+    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.189 on 2026-08-03, bytes
+    # 1.12.1 on 2026-07-08, pin-project-lite 0.2.17 on 2026-02-27, windows-sys
+    # 0.61.2 on 2025-10-06, windows-link 0.2.1 as its dependency); libc,
+    # pin-project-lite and windows-sys stay on the 0.x lines tokio itself pins.
     "tokio",
     "mio",
     "socket2",
@@ -170,6 +184,11 @@ skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn an
 # defaults of their own dependencies; nothing shipped is affected. Every
 # workspace edge to an external crate stays at `default-features = false`.
 [[bans.features]]
+crate = "bytes"
+allow = ["default"]
+reason = "enabled by tokio's io-util in the shipped graph; bytes' default feature is `std`, which every hosted target links anyway"
+
+[[bans.features]]
 crate = "fastrand"
 allow = ["default"]
 reason = "enabled by tempfile inside the cbindgen build-only tree"
@@ -220,20 +239,29 @@ reason = "enabled by cbindgen inside its build-only tree"
 crate = "windows-sys"
 allow = [
     "default",
+    "Wdk",
+    "Wdk_Foundation",
+    "Wdk_Storage",
+    "Wdk_Storage_FileSystem",
+    "Wdk_System",
+    "Wdk_System_IO",
     "Win32",
     "Win32_Foundation",
     "Win32_Networking",
     "Win32_Networking_WinSock",
+    "Win32_Security",
     "Win32_Storage",
     "Win32_Storage_FileSystem",
     "Win32_System",
     "Win32_System_Diagnostics",
     "Win32_System_Diagnostics_Debug",
     "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_System_WindowsProgramming",
 ]
-reason = "enabled by tempfile inside the cbindgen build-only tree, and by socket2 and zero-sys (sockets, affinity) in the shipped graph"
+reason = "enabled by tempfile inside the cbindgen build-only tree, and in the shipped graph by tokio (net), mio (os-ext and its Windows driver), socket2 and zero-sys (sockets, affinity); the parents of each leaf feature count as enabled too"
 
 [bans.build]
 # Every crate allowed to run a build script, workspace members included. The

@@ -13,13 +13,29 @@ authors.workspace = true
 [features]
 default = ["io-tokio"]
 # The readiness backend: one tokio current-thread runtime per core.
-io-tokio = []
+io-tokio = ["dep:tokio"]
 # The completion backend, built and tested beside io-tokio and never on by default.
 io-compio = []
 
 [dependencies]
 zero-core.workspace = true
 zero-sys.workspace = true
+zero-date.workspace = true
+zero-limits.workspace = true
+
+# The only third-party runtime the workspace names, with the feature set DESIGN.md
+# section 5.3 fixes: no macros, no multi-thread scheduler, no file system. crates.io
+# max_stable_version 1.53.1, updated 2026-07-20, read 2026-10-01. socket2 (0.6.5,
+# updated 2026-07-13, read the same day) creates the listening sockets, as section
+# 5.4 says; every option on them is set through zero-sys.
+tokio = { version = "1.53.1", default-features = false, features = [
+  "rt",
+  "net",
+  "time",
+  "sync",
+  "io-util",
+], optional = true }
+socket2 = { version = "0.6.5", default-features = false }
 
 [lints]
 workspace = true

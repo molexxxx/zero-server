@@ -246,18 +246,30 @@ newer release appears. Also open: the 24 CPU-hour fuzz runs (only a schedule
 can provide them), and `h1-13` (pipelining order), which belongs to the
 connection driver of `zero-http` in step 5.
 
-R.3 step 4 has begun with `zero-sys`: the socket options the design lists
+R.3 step 4 is under way. `zero-sys` holds the socket options the design lists
 for release 1 (section 4.2 row and 5.4), `sendmsg` and `recvmsg` with the
 control-message codec (`cmsg_decode` fuzz target, Miri), and thread affinity.
 The Linux tests set and read every option on real sockets and pass a packet
-information message both ways over loopback; the Windows and macOS code is
-compile-checked by clippy for those targets and has run on no such machine
-yet. Not yet in the crate: kTLS (release 2), `memfd_create` and `bpf(2)`
-(release 3). Next in the step is `zero-io` on `io-tokio`: a dependency commit
-that adds tokio with the feature set `DESIGN.md` section 5.3 fixes (`rt`,
-`net`, `time`, `sync`, `io-util`), the seam traits of section 5.2, per-core
-runtimes, the per-operating-system listener strategy of section 5.4, the
-lazy buffer lease of section 5.6, timers, `DateService` and shutdown.
+information message both ways over loopback. Not yet in the crate: kTLS
+(release 2), `memfd_create` and `bpf(2)` (release 3). `zero-io` holds the
+seam traits of section 5.2 (`seam.rs`: `Runtime`, `Listener`, `Stream` with
+`read_leased`, `read_into`, `write` and `writev` over `OwnedBuf`, `Datagram`
+with `DatagramMeta` and `Ecn`, `Timer`, `DateService`, `Shutdown`), the
+per-core `Pool` with its lease counter, the `Date` block, and the `io-tokio`
+backend (`tokio_rt`: `serve` with one current-thread runtime and `LocalSet`
+per core, pinned on Linux, `SO_REUSEPORT` listeners per core on Linux and
+the accept handoff from one listener on Windows and macOS, `TcpStream`
+performing reads on readiness into a block leased at that moment and
+returned on a spurious wake, the shutdown signal with `until`, the clock,
+and a drain deadline). `tests/echo.rs` holds the step's echo test: one worker
+per CPU, every connection echoed, and an idle connection holding no buffer
+by the pool's own count. The Windows and macOS paths of both crates are
+compile-checked by clippy for those targets and have run on no such machine
+yet; CI's new `seam` job runs the two crates' tests on the three runners. Not
+yet in `zero-io`: the `Datagram` implementation over `recvmsg` and `sendmsg`
+with packet information, ECN and segment size (the trait is fixed; the
+readiness implementation is the next commit), and the `io-compio` backend
+(step 8).
 
 ## Next, in order
 
