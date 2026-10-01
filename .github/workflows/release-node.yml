@@ -106,8 +106,16 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
+
+      # Publishing authenticates with the job's OIDC token through npm trusted
+      # publishing (no long-lived token in the repository), which needs npm 11.5.1
+      # or later and Node 22.14 or later (docs.npmjs.com/trusted-publishers, read
+      # 2026-09-30). Each package names this workflow file as its trusted publisher
+      # on npmjs.com; provenance is attached automatically.
+      - name: npm supports trusted publishing
+        run: node -e "const [a, b, c] = process.versions.npm.split('.').map(Number); if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) { console.error('npm ' + process.versions.npm + ' is older than 11.5.1'); process.exit(1); }"
 
       - name: Install dependencies
         run: npm install
@@ -137,6 +145,3 @@ jobs:
         run: |
           npx napi pre-publish -t npm --package-json-path packages/native/package.json --npm-dir packages/native/npm
           npm publish --workspaces --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

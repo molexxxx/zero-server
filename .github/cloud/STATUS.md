@@ -45,6 +45,13 @@ the same commit.
   after release 3 (`ROADMAP.md` R.8); nothing is done for it before then.
 - Dependabot pull requests are left to the owner; a session never merges
   version bumps in bulk (`RULES.md`, Currency).
+- npm publishing uses trusted publishing over OIDC, never a stored token:
+  npm retired the 2FA-bypass granular tokens' sensitive operations in August
+  2026 and retires their publishing in January 2027 (github.blog changelog of
+  2026-07-08, read 2026-09-30). `release-node.yml` publishes with the job's
+  OIDC token and asserts npm 11.5.1 or later; each package names that
+  workflow as its trusted publisher on npmjs.com. The owner configures the
+  publishers; a session never creates or stores registry tokens.
 
 ## In progress
 
