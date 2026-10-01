@@ -7,11 +7,14 @@
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use zero_core::Error;
-use zero_http::{serve, Call, Config, Event, Handler, TakeOver, Taken, Workers};
+use zero_http::{
+    serve, serve_with, Accept, Call, Config, Event, Handler, TakeOver, Taken, Workers,
+};
 use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_io::seam::{Leased, Shutdown, Timer};
 use zero_limits::Http1Limits;
@@ -63,6 +66,11 @@ impl App {
                     response.header(b"X-Trailers", &trailers)?;
                 }
                 response.body(request.body());
+            }
+            "/secure" => {
+                let secure = call.request().is_secure();
+                call.response()
+                    .body(if secure { b"secure" } else { b"plain" });
             }
             "/headers" => {
                 let (request, mut response) = call.parts();
@@ -760,6 +768,119 @@ fn a_streamed_body_has_no_content_length_and_ends_when_the_connection_closes() {
     let log = server.log();
     server.stop().unwrap();
     assert!(log.contains(&"taken Stream 9".to_owned()), "{log:?}");
+}
+
+/// An [`Accept`] for the tests: it reports its connections secure, refuses them
+/// while `refuse` is set, and pauses accepting while `paused` is set.
+struct Gate {
+    paused: Arc<AtomicBool>,
+    refuse: Arc<AtomicBool>,
+}
+
+impl Accept for Gate {
+    type Stream = zero_io::rt::TcpStream;
+
+    fn secure(&self) -> bool {
+        true
+    }
+
+    fn saturated(&self) -> bool {
+        self.paused.load(Ordering::SeqCst)
+    }
+
+    async fn accept(
+        &self,
+        stream: zero_io::rt::TcpStream,
+        _peer: SocketAddr,
+    ) -> io::Result<zero_io::rt::TcpStream> {
+        if self.refuse.load(Ordering::SeqCst) {
+            return Err(io::Error::from(io::ErrorKind::PermissionDenied));
+        }
+        Ok(stream)
+    }
+}
+
+#[test]
+fn a_prepared_listener_reports_secure_connections_drops_refused_ones_and_pauses_while_saturated() {
+    let paused = Arc::new(AtomicBool::new(false));
+    let refuse = Arc::new(AtomicBool::new(false));
+    let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let config = Config {
+        runtime: zero_rt::Config {
+            io: zero_io::rt::Config {
+                threads: 1,
+                drain: Duration::from_secs(2),
+                ..zero_io::rt::Config::default()
+            },
+        },
+        limits: Http1Limits::DEFAULT,
+        server: None,
+    };
+    let (gate_paused, gate_refuse) = (Arc::clone(&paused), Arc::clone(&refuse));
+    let workers = serve_with(
+        "127.0.0.1:0".parse().unwrap(),
+        config,
+        Arc::new(|_| {}),
+        move |_worker| App {
+            log: Arc::clone(&log),
+        },
+        move |_worker| Gate {
+            paused: Arc::clone(&gate_paused),
+            refuse: Arc::clone(&gate_refuse),
+        },
+    )
+    .unwrap();
+    let addr = workers.local_addr();
+    let connect = || {
+        let conn = TcpStream::connect(addr).unwrap();
+        conn.set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        conn
+    };
+
+    let mut conn = connect();
+    assert_eq!(get(&mut conn, "/secure").text(), "secure");
+
+    refuse.store(true, Ordering::SeqCst);
+    let mut refused = connect();
+    refused
+        .write_all(b"GET /secure HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    let mut byte = [0u8; 1];
+    let ended = refused.read(&mut byte);
+    assert!(
+        matches!(&ended, Ok(0))
+            || matches!(&ended, Err(err) if err.kind() == io::ErrorKind::ConnectionReset),
+        "a refused connection is closed without a response: {ended:?}"
+    );
+    refuse.store(false, Ordering::SeqCst);
+
+    paused.store(true, Ordering::SeqCst);
+    let mut waiting = connect();
+    waiting
+        .write_all(b"GET /secure HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    waiting
+        .set_read_timeout(Some(Duration::from_millis(200)))
+        .unwrap();
+    let mut byte = [0u8; 1];
+    let early = waiting.read(&mut byte);
+    assert!(
+        matches!(&early, Err(err) if matches!(err.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut)),
+        "nothing is accepted while saturated: {early:?}"
+    );
+    waiting
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    paused.store(false, Ordering::SeqCst);
+    let response = read_response(&mut waiting).unwrap();
+    assert_eq!(
+        (response.status, response.text()),
+        (200, "secure".to_owned()),
+        "the connection waited in the backlog"
+    );
+    assert_eq!(get(&mut conn, "/secure").text(), "secure", "served on");
+    workers.stop().unwrap();
 }
 
 #[test]

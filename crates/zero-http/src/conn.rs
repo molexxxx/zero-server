@@ -73,6 +73,8 @@ pub(crate) struct Shared<H> {
     records: RefCell<Vec<Box<Record>>>,
     bodies: Cell<u64>,
     budget: u64,
+    /// The connections of this core are secure, such as TLS sessions.
+    secure: bool,
 }
 
 impl<H> Shared<H> {
@@ -83,6 +85,7 @@ impl<H> Shared<H> {
         limits: Http1Limits,
         server: Vec<u8>,
         budget: u64,
+        secure: bool,
     ) -> Self {
         Shared {
             worker,
@@ -92,6 +95,7 @@ impl<H> Shared<H> {
             records: RefCell::new(Vec::new()),
             bodies: Cell::new(0),
             budget,
+            secure,
         }
     }
 
@@ -915,6 +919,7 @@ where
         record.head.extend_from_slice(head_bytes);
         record.parsed = Some(head);
         record.peer = Some(self.peer);
+        record.secure = self.shared.secure;
         self.input.consume(head.len);
         let last = self.requests >= limits.max_requests_per_connection;
         if !head.keep_alive || last {
@@ -1056,7 +1061,7 @@ where
     /// Half-close, then read until the peer closes or a second passes, so the last
     /// response reaches a client that is still sending (RFC 9112 Section 9.6).
     async fn linger(&self) {
-        if self.stream.shutdown_write().is_err() {
+        if self.stream.close_write().await.is_err() {
             return;
         }
         let stream = Rc::clone(&self.stream);

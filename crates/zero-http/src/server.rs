@@ -7,19 +7,60 @@
 //! and whatever is still open when the drain deadline passes is dropped with the
 //! runtime.
 
+use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::rc::Rc;
 use std::time::Duration;
 
 use zero_http_types::field::validate_field_value;
-use zero_io::rt::Acceptor;
-use zero_io::seam::{Listener, Shutdown, Timer};
+use zero_io::rt::{Acceptor, TcpStream};
+use zero_io::seam::{Listener, Shutdown, Stream, Timer};
 use zero_limits::{Http1Limits, Limits};
 use zero_rt::{StatusSink, Worker, Workers};
 
 use crate::conn::{request_task, Conn, Shared};
 use crate::handler::Handler;
+
+/// Prepares each accepted connection before the driver serves it, such as with a
+/// TLS handshake. One instance runs on each core, built by the `make_accept`
+/// function given to [`serve_with`].
+pub trait Accept: 'static {
+    /// The stream the driver serves once the connection is prepared.
+    type Stream: Stream + 'static;
+
+    /// Whether the connections this core serves are secure, which
+    /// [`Request::is_secure`](crate::Request::is_secure) reports.
+    fn secure(&self) -> bool {
+        false
+    }
+
+    /// Whether the core should pause accepting, such as when its in-progress
+    /// handshakes reached their cap; the kernel's backlog holds the rest.
+    fn saturated(&self) -> bool {
+        false
+    }
+
+    /// Prepare one connection.
+    ///
+    /// # Arguments
+    ///
+    /// * `stream` - the accepted connection.
+    /// * `peer` - its peer's address.
+    ///
+    /// # Returns
+    ///
+    /// The stream to serve.
+    ///
+    /// # Errors
+    ///
+    /// Any error ends the connection without a response.
+    fn accept(
+        &self,
+        stream: TcpStream,
+        peer: SocketAddr,
+    ) -> impl Future<Output = io::Result<Self::Stream>>;
+}
 
 /// How long a core waits after running out of descriptors before accepting again.
 const RESOURCE_PAUSE: Duration = Duration::from_millis(10);
@@ -75,6 +116,96 @@ where
     H: Handler,
     M: Fn(&Worker) -> H + Send + Sync + 'static,
 {
+    let (limits, server, budget) = prepare(&config)?;
+    zero_rt::start(addr, config.runtime, status, move |worker, acceptor| {
+        let shared = Rc::new(Shared::new(
+            worker.clone(),
+            make(&worker),
+            limits,
+            server.clone(),
+            budget,
+            false,
+        ));
+        let spawner = worker.clone();
+        run_core(
+            worker,
+            acceptor,
+            Rc::clone(&shared),
+            || false,
+            move |stream, peer| {
+                let conn = Conn::new(Rc::clone(&shared), Rc::new(stream), peer, request_task::<H>);
+                spawner.spawn(conn.run());
+            },
+        )
+    })
+}
+
+/// Start the server with each accepted connection prepared by an [`Accept`] before
+/// the driver serves it, such as a TLS listener.
+///
+/// # Arguments
+///
+/// * `addr` - where to listen; port 0 picks one.
+/// * `config` - the settings.
+/// * `status` - the status callback for started, stopped and panicking cores.
+/// * `make` - builds the core's handler; called on each worker's thread.
+/// * `make_accept` - builds the core's [`Accept`]; called on each worker's thread.
+///
+/// # Returns
+///
+/// The workers, already listening.
+///
+/// # Errors
+///
+/// As [`serve`].
+pub fn serve_with<H, M, A, N>(
+    addr: SocketAddr,
+    config: Config,
+    status: StatusSink,
+    make: M,
+    make_accept: N,
+) -> io::Result<Workers>
+where
+    H: Handler,
+    M: Fn(&Worker) -> H + Send + Sync + 'static,
+    A: Accept,
+    N: Fn(&Worker) -> A + Send + Sync + 'static,
+{
+    let (limits, server, budget) = prepare(&config)?;
+    zero_rt::start(addr, config.runtime, status, move |worker, acceptor| {
+        let accept = Rc::new(make_accept(&worker));
+        let shared = Rc::new(Shared::new(
+            worker.clone(),
+            make(&worker),
+            limits,
+            server.clone(),
+            budget,
+            accept.secure(),
+        ));
+        let spawner = worker.clone();
+        let gate = Rc::clone(&accept);
+        run_core(
+            worker,
+            acceptor,
+            Rc::clone(&shared),
+            move || gate.saturated(),
+            move |stream, peer| {
+                let shared = Rc::clone(&shared);
+                let accept = Rc::clone(&accept);
+                spawner.spawn(async move {
+                    if let Ok(prepared) = accept.accept(stream, peer).await {
+                        Conn::new(shared, Rc::new(prepared), peer, request_task::<H>)
+                            .run()
+                            .await;
+                    }
+                });
+            },
+        )
+    })
+}
+
+/// Check the configuration and build the `Server` field line.
+fn prepare(config: &Config) -> io::Result<(Http1Limits, Vec<u8>, u64)> {
     let all = Limits {
         http1: config.limits,
         ..Limits::DEFAULT
@@ -101,29 +232,22 @@ where
         }
         None => Vec::new(),
     };
-    let limits = config.limits;
-    let budget = config.runtime.io.memory_budget;
-    zero_rt::start(addr, config.runtime, status, move |worker, acceptor| {
-        let shared = Rc::new(Shared::new(
-            worker.clone(),
-            make(&worker),
-            limits,
-            server.clone(),
-            budget,
-        ));
-        run_core(worker, acceptor, shared)
-    })
+    Ok((config.limits, server, config.runtime.io.memory_budget))
 }
 
-/// One core's accept loop.
+/// One core's accept loop: it pauses while the core is over its request-memory
+/// budget or `saturated` holds, and hands every accepted connection to `spawn`
+/// once `saturated` no longer holds.
 async fn run_core<H: Handler>(
     worker: Worker,
     acceptor: Acceptor,
     shared: Rc<Shared<H>>,
+    saturated: impl Fn() -> bool,
+    spawn: impl Fn(TcpStream, SocketAddr),
 ) -> io::Result<()> {
     let core = worker.core();
     loop {
-        if shared.over_budget() {
+        if shared.over_budget() || saturated() {
             if worker
                 .shutdown()
                 .until(core.sleep(BUDGET_PAUSE))
@@ -139,8 +263,19 @@ async fn run_core<H: Handler>(
         };
         match accepted {
             Ok((stream, peer)) => {
-                let conn = Conn::new(Rc::clone(&shared), Rc::new(stream), peer, request_task::<H>);
-                worker.spawn(conn.run());
+                // An accept that was already waiting when the core saturated holds its
+                // connection here, so the cap is never passed by one.
+                while saturated() {
+                    if worker
+                        .shutdown()
+                        .until(core.sleep(BUDGET_PAUSE))
+                        .await
+                        .is_none()
+                    {
+                        return Ok(());
+                    }
+                }
+                spawn(stream, peer);
             }
             Err(err) if zero_sys::error::out_of_resources(&err) => {
                 if worker

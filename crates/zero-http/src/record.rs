@@ -38,6 +38,8 @@ pub struct Record {
     pub(crate) trailers: Vec<u8>,
     /// The peer's address.
     pub(crate) peer: Option<SocketAddr>,
+    /// The request arrived over a secure connection, such as TLS.
+    pub(crate) secure: bool,
     /// Working space for path normalization.
     pub(crate) scratch: Vec<u8>,
     /// The normalized path the route matched, which the parameter ranges index.
@@ -137,6 +139,7 @@ impl Reset for Record {
         self.body.shrink_to(BODY_KEEP);
         self.trailers.clear();
         self.peer = None;
+        self.secure = false;
         self.scratch.clear();
         self.route_path.clear();
         self.param_count = 0;

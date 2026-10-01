@@ -143,6 +143,17 @@ pub trait Stream {
     /// The operating system's error.
     fn shutdown_write(&self) -> io::Result<()>;
 
+    /// Write whatever the stream still owes the peer before the end of the stream,
+    /// such as a TLS `close_notify` alert, then close the write side. The default
+    /// owes nothing and is [`shutdown_write`](Self::shutdown_write).
+    ///
+    /// # Errors
+    ///
+    /// The operating system's error.
+    fn close_write(&self) -> impl Future<Output = io::Result<()>> {
+        std::future::ready(self.shutdown_write())
+    }
+
     /// The peer's address.
     ///
     /// # Errors

@@ -186,6 +186,7 @@ impl<'a> Call<'a> {
             body,
             trailers,
             peer,
+            secure,
             route_path,
             params,
             param_count,
@@ -203,6 +204,7 @@ impl<'a> Call<'a> {
                 body,
                 trailers,
                 peer: *peer,
+                secure: *secure,
                 route_path,
                 params: params.get(..*param_count).unwrap_or(&[]),
             },
@@ -338,6 +340,7 @@ pub struct Request<'a> {
     body: &'a [u8],
     trailers: &'a [u8],
     peer: Option<SocketAddr>,
+    secure: bool,
     route_path: &'a [u8],
     params: &'a [(u32, u32)],
 }
@@ -351,6 +354,7 @@ impl<'a> Request<'a> {
             body: &record.body,
             trailers: &record.trailers,
             peer: record.peer,
+            secure: record.secure,
             route_path: &record.route_path,
             params: record.live_params(),
         }
@@ -493,6 +497,13 @@ impl<'a> Request<'a> {
     #[must_use]
     pub fn peer(&self) -> Option<SocketAddr> {
         self.peer
+    }
+
+    /// Whether the request arrived over a secure connection, such as TLS, which
+    /// decides for example whether `Strict-Transport-Security` may be sent.
+    #[must_use]
+    pub const fn is_secure(&self) -> bool {
+        self.secure
     }
 }
 
