@@ -7,3 +7,6 @@
 *.ico binary
 *.node binary
 *.wasm binary
+
+# Fuzz seeds are byte-exact inputs (several carry CRLF on purpose).
+fuzz/seeds/** -text
