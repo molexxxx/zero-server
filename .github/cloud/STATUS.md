@@ -32,8 +32,27 @@ the same commit.
   every default. Where the design gave no number, these defaults were chosen
   and are recorded in the commit body: `MAX_CONNECTIONS` 2^20,
   `WS_MAX_FRAGMENTS` 1,024, `WS_MAX_CONTROL_FRAMES_PER_SECOND` 64, and the
-  HTTP/3 reset window equal to the HTTP/2 one (200 per 10 s). Every other
-  crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
+  HTTP/3 reset window equal to the HTTP/2 one (200 per 10 s).
+  `zero-http-types` holds `Method` (the eight RFC 9110 methods as ids 0 to
+  7; `parse` is case-sensitive and anything else, PATCH included, is
+  unrecognized until its RFC is fetched and given an id), `StatusCode` (the
+  44 codes of RFC 9110 section 15 with prebuilt `HTTP/1.1` status lines,
+  classes, the x00 fallback, and `write_status_line` for any code in 100 to
+  599 with the RFC 9112 section 4 bare-reason form; 429 and 431 from RFC
+  6585 and 425 from RFC 8470 get table entries when those RFCs are fetched,
+  which `zero-http1` and `zero-policy` need), `HeaderName` (49 interned
+  names: the RFC 9110, 9111 and 9112 registrations in alphabetical order,
+  ids 0 to 48, append-only; the WebSocket, CORS, cookie and security-header
+  names join in the steps that fetch their documents), `Fields` (bounded,
+  linear scan, case-insensitive names, values validated against RFC 9110
+  section 5.5 on insert, `FieldError` mapped onto `zero_core::Error`),
+  `RequestHead`, `ResponseHead`, `Trailers`, `BodyChunk`, `Scheme`, `Early`,
+  and `escape_html` (the five OWASP entities). Standards rows `routing-28`,
+  `h1-14` and `html-01` were added and `routing-07`'s field-name row now
+  cites `field.rs`. The transport error enum of `DESIGN.md` section 6.1
+  (the h2 and h3 error spaces) is deferred to the `zero-h3` codec step,
+  which fetches RFC 9114. Every other crate is a skeleton with only its
+  `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
   registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -116,7 +135,8 @@ the same commit.
 
 R.3 step 2, the foundation no_std crates, taken one crate per commit in the
 order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
-Done: `zero-core`, `zero-date`, `zero-limits`. Next: `zero-http-types`.
+Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`. Next:
+`zero-simd`.
 
 ## Next, in order
 

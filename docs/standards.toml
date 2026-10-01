@@ -163,8 +163,8 @@ designation = "RFC 9110"
 body = "IETF"
 subject = "Field names are compared case-insensitively on both request lookup and response set"
 url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.1"
-evidence = "crates/zero-router/src/lib.rs"
-at = "fn field_names_are_compared_case_insensitively_on_both_request_lookup_and_response"
+evidence = "crates/zero-http-types/src/field.rs"
+at = "fn field_names_are_compared_case_insensitively_on_lookup_and_set"
 anchor = "rule"
 release = 1
 note = "RFC 9110 Section 5.1"
@@ -429,6 +429,32 @@ anchor = "rule"
 release = 1
 note = "RFC 7239 Section 8.1"
 
+[[entry]]
+key = "routing-28"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "An unrecognized status code is treated as the x00 code of its class, and a code outside 100 to 599 is invalid"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-15"
+evidence = "crates/zero-http-types/src/status.rs"
+at = "fn an_unrecognized_status_code_is_treated_as_the_x00_code_of_its_class"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 15"
+
+[[entry]]
+key = "html-01"
+chapter = "http"
+designation = "HTML Standard"
+body = "WHATWG"
+subject = "Text rendered into HTML has `&`, `<`, `>`, `\"` and `'` replaced by their entities"
+url = "https://html.spec.whatwg.org/multipage/parsing.html#escapingString"
+evidence = "crates/zero-http-types/src/escape.rs"
+at = "fn the_five_characters_become_their_entities"
+anchor = "rule"
+release = 1
+note = "HTML Standard, escaping a string; OWASP Cross Site Scripting Prevention Cheat Sheet, HTML entity encoding"
+
 
 # HTTP/1.1 message framing
 
@@ -600,6 +626,19 @@ at = "fn responses_to_pipelined_requests_are_written_in_the_order_the_requests_w
 anchor = "rule"
 release = 1
 note = "RFC 9112 Section 9.3.2"
+
+[[entry]]
+key = "h1-14"
+chapter = "http"
+designation = "RFC 9112"
+body = "IETF"
+subject = "The status line sends the space after the status code even when the reason phrase is absent"
+url = "https://www.rfc-editor.org/rfc/rfc9112.html#section-4"
+evidence = "crates/zero-http-types/src/status.rs"
+at = "fn the_status_line_sends_the_space_after_the_code_even_without_a_reason_phrase"
+anchor = "rule"
+release = 1
+note = "RFC 9112 Section 4"
 
 
 # HTTP/2 and TLS transport
