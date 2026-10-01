@@ -224,6 +224,14 @@ jobs:
           fi
           exit "$status"
 
+      # The accept handoff is what Windows and macOS run; on Linux it is a switch, so
+      # the fast runner covers it as well.
+      - name: Test the seam, the workers and the driver over the accept handoff
+        if: runner.os == 'Linux'
+        env:
+          ZERO_TEST_HANDOFF: "1"
+        run: cargo test -p zero-io -p zero-http --test echo --test driver --test routing --test no_alloc
+
   msrv:
     name: minimum supported rust
     runs-on: ubuntu-latest

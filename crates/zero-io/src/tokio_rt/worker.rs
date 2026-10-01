@@ -274,7 +274,7 @@ where
     let per_core = Arc::new(per_core);
 
     let mut seeds = Vec::with_capacity(count);
-    if listen::per_core_listeners() {
+    if listen::per_core_listeners(&config.listen) {
         seeds.push(Seed::Own(first));
         for index in 1..count {
             seeds.push(Seed::Own(listen::bind(bound, &config.listen, index)?));

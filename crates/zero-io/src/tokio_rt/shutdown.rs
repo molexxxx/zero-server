@@ -60,6 +60,12 @@ impl Shutdown for ShutdownHandle {
         let mut future = pin!(future);
         let mut stop = pin!(self.requested());
         poll_fn(|cx| {
+            // The signal is read before the future, so that what the signal set in
+            // motion (a listener closing its handoff channel, a task ending) is never
+            // reported as the future's own outcome.
+            if self.is_requested() {
+                return Poll::Ready(None);
+            }
             if let Poll::Ready(output) = future.as_mut().poll(cx) {
                 return Poll::Ready(Some(output));
             }

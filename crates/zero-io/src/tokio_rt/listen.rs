@@ -36,6 +36,10 @@ pub struct ListenConfig {
     pub incoming_cpu: bool,
     /// `TCP_NODELAY` on every accepted socket.
     pub nodelay: bool,
+    /// One listener on core 0 handing sockets to the cores in turn, the strategy
+    /// Windows and macOS always use; on Linux it replaces the per-core
+    /// `SO_REUSEPORT` listeners, which lets the handoff path run on every platform.
+    pub handoff: bool,
 }
 
 impl Default for ListenConfig {
@@ -46,13 +50,15 @@ impl Default for ListenConfig {
             fastopen: None,
             incoming_cpu: false,
             nodelay: true,
+            handoff: false,
         }
     }
 }
 
-/// Whether this platform gives every core a listener of its own.
-pub(crate) const fn per_core_listeners() -> bool {
-    cfg!(target_os = "linux")
+/// Whether every core gets a listener of its own: Linux, unless the handoff
+/// strategy was chosen.
+pub(crate) const fn per_core_listeners(config: &ListenConfig) -> bool {
+    cfg!(target_os = "linux") && !config.handoff
 }
 
 /// A listening socket at `addr`, non-blocking, ready for the runtime.

@@ -153,6 +153,10 @@ impl Server {
                 io: zero_io::tokio_rt::Config {
                     threads: 2,
                     drain: Duration::from_secs(2),
+                    listen: zero_io::tokio_rt::ListenConfig {
+                        handoff: std::env::var_os("ZERO_TEST_HANDOFF").is_some(),
+                        ..zero_io::tokio_rt::ListenConfig::default()
+                    },
                     ..zero_io::tokio_rt::Config::default()
                 },
             },

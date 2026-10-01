@@ -67,6 +67,10 @@ async fn per_core(core: Core, acceptor: Acceptor) -> io::Result<()> {
 fn config() -> Config {
     Config {
         drain: Duration::from_secs(2),
+        listen: zero_io::tokio_rt::ListenConfig {
+            handoff: std::env::var_os("ZERO_TEST_HANDOFF").is_some(),
+            ..zero_io::tokio_rt::ListenConfig::default()
+        },
         ..Config::default()
     }
 }

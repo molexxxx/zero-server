@@ -141,11 +141,20 @@ impl UdpSocket {
         }
         #[cfg(not(unix))]
         {
-            let (count, peer) = self.inner.try_recv_from(buf.unfilled_mut())?;
+            // Windows fills the buffer with the first part of a datagram that is
+            // longer than it and then fails the call with WSAEMSGSIZE (10040), so
+            // that error is a full, truncated buffer whose peer is not reported.
+            const WSAEMSGSIZE: i32 = 10040;
+            let (count, peer) = match self.inner.try_recv_from(buf.unfilled_mut()) {
+                Ok((count, peer)) => (count, Some(peer)),
+                Err(err) if err.raw_os_error() == Some(WSAEMSGSIZE) => (buf.remaining(), None),
+                Err(err) => return Err(err),
+            };
             buf.advance(count)
                 .map_err(|err| io::Error::other(err.to_string()))?;
             *meta = DatagramMeta {
-                peer: Some(peer),
+                peer,
+                truncated: peer.is_none(),
                 ..DatagramMeta::default()
             };
             Ok(())
