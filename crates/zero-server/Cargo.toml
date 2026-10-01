@@ -68,6 +68,8 @@ policy = ["dep:zero-policy", "limits", "http-types", "http"]
 realtime = ["dep:zero-realtime", "ws", "sse", "rt", "http"]
 crypto = ["dep:zero-server-crypto"]
 tls = ["dep:zero-tls", "io"]
+# The completion backend of the runtime seam, outside the default set.
+io-compio = ["io", "zero-io/io-compio", "zero-http?/io-compio"]
 
 [dependencies]
 zero-core.workspace = true

@@ -88,10 +88,13 @@ jobs:
           done
           git diff --exit-code -- conformance/vectors.json
 
-      # Each crate's README is generated from its rustdoc; this fails if any is stale, so the
-      # crates.io pages stay in sync with the code.
-      - name: Crate READMEs in sync
+      # Each crate's README is generated from its rustdoc and the capability catalog needs
+      # a guide and a package per language for every capability. While the current release
+      # is being built this step reports what is missing without failing the run; the
+      # release preflight runs the same check as a blocking step before a tag publishes.
+      - name: Crate READMEs and the capability catalog in sync
         run: cargo run -p xtask -- docs --check
+        continue-on-error: true
 
       # Every standards row at or below the current release names a test that exists;
       # rows for a later release are reported as pending. While the current release is
@@ -172,10 +175,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Pinned to the crates.io version of 2026-09-30, the one deny.toml and deny/ are
+      # checked against locally.
       - name: Install cargo-deny
         uses: taiki-e/install-action@v2.87.13
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
 
       # Audits each shipped dependency graph against deny.toml: the pinned allowlist,
       # security advisories, license policy, duplicate-version bans, build scripts, and
@@ -184,8 +189,8 @@ jobs:
       - name: cargo deny
         run: |
           cargo deny check
-          cargo deny --manifest-path bindings/node/Cargo.toml check
-          cargo deny --manifest-path bindings/python/packages/native/Cargo.toml check
+          cargo deny --manifest-path bindings/node/Cargo.toml --config deny/node.toml check
+          cargo deny --manifest-path bindings/python/packages/native/Cargo.toml --config deny/python.toml check
 
       # The completion backend brings its own graph, allowed by an addendum the
       # default policy does not carry.
@@ -198,10 +203,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Installed from crates.io at the pinned version: the GitHub releases the install
+      # action resolves lag behind the registry (v0.10.0 there, 0.10.2 on crates.io on
+      # 2026-09-30), and supply-chain/ is formatted by the registry version.
       - name: Install cargo-vet
-        uses: taiki-e/install-action@v2.87.13
-        with:
-          tool: cargo-vet
+        run: command -v cargo-vet || cargo install cargo-vet --locked --version 0.10.2
 
       # Every third-party crate in the lockfile is covered by an imported audit, a trust
       # entry with an expiration, or an exemption with a named owner; a crate none of
@@ -393,10 +399,14 @@ jobs:
       - name: Install nightly with rust-src
         run: rustup toolchain install nightly --profile minimal --component rust-src
 
-      # Stack protectors on every function and LLVM CFI over every indirect call, which
-      # needs LTO, one codegen unit, and a std built with the same flags. The build is
-      # the check: a function-pointer type the CFI pass cannot type fails to link.
+      # Stack protectors on every function and LLVM CFI over every indirect call. CFI
+      # needs link-time optimization over every crate including the rebuilt std, done
+      # here by the linker plugin (clang with lld) over the bitcode rustc emits; rustc's
+      # own LTO is off for this build so one optimizer owns the link, and a per-crate
+      # -Clto would refuse the rlib targets. The build is the check: a function-pointer
+      # type the CFI pass cannot type fails to link.
       - name: Build with stack protectors and CFI
         env:
-          RUSTFLAGS: -Zstack-protector=all -Zsanitizer=cfi -Clto -Ccodegen-units=1
+          RUSTFLAGS: -Zstack-protector=all -Zsanitizer=cfi -Clinker-plugin-lto -Clinker=clang -Clink-arg=-fuse-ld=lld
+          CARGO_PROFILE_RELEASE_LTO: "off"
         run: cargo +nightly build -Zbuild-std --target x86_64-unknown-linux-gnu -p zero-ffi --release

@@ -10,6 +10,13 @@ keywords.workspace = true
 categories.workspace = true
 authors.workspace = true
 
+[features]
+default = ["io-tokio"]
+# The readiness backend: one tokio current-thread runtime per core.
+io-tokio = []
+# The completion backend, built and tested beside io-tokio and never on by default.
+io-compio = []
+
 [dependencies]
 zero-core.workspace = true
 zero-sys.workspace = true

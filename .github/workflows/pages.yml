@@ -3,10 +3,9 @@ name: Deploy the site to Pages
 # Publishes the site the docs workflow renders (the front page at the root, the pages
 # under /docs, the four generated references beside them) to GitHub Pages. Set the
 # Pages source to "GitHub Actions" once (Settings -> Pages -> Build and deployment ->
-# Source).
+# Source). Runs on demand until the documentation pages and the web tree exist; the
+# push trigger returns with the first release.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

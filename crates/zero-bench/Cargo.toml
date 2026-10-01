@@ -9,6 +9,9 @@ repository.workspace = true
 authors.workspace = true
 publish = false
 
+[features]
+io-compio = ["zero-server/io-compio"]
+
 [dependencies]
 zero-server.workspace = true
 

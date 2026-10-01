@@ -34,7 +34,7 @@ stubs = ["dep:pyo3-stub-gen"]
 # EncodingWarning type, which a lower abi3 floor would hide.
 pyo3 = { version = "0.29", features = ["abi3-py310"] }
 pyo3-stub-gen = { version = "0.23", optional = true }
-zero-ffi = { path = "../../../../crates/zero-ffi" }
+zero-ffi = { path = "../../../../crates/zero-ffi", version = "0.1.0" }
 
 # The audited lint table (docs/lints/audited.toml): unsafe code is allowed per item
 # with a SAFETY comment, and cargo xtask lints --check diffs this copy against it.

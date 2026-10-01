@@ -47,6 +47,11 @@ jobs:
       - name: Standards rows have their tests
         run: cargo run -p xtask -- standards --check
 
+      # Every crate README, capability table and spliced example matches the code; the
+      # same check is advisory in ci.yml and docs.yml while the release is built.
+      - name: Generated docs in sync with the code
+        run: cargo run -p xtask -- docs --check
+
       # A tag on a branch, or on a commit that was force-pushed away, would publish code
       # that never landed. Releases come from main or they do not happen.
       - name: The commit is on main

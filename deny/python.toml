@@ -1,0 +1,271 @@
+# Dependency policy for the Python binding graph (bindings/python/packages/native,
+# a standalone crate outside the workspace). cargo-deny takes one configuration
+# per run, so this file repeats the root deny.toml and adds the PyO3 graph the
+# binding brings; a change to the root policy is mirrored here and in
+# deny/node.toml. The `stubs` feature (pyo3-stub-gen) is a development tool
+# that never enters a wheel and is not part of this audit. Run with:
+#   cargo deny --manifest-path bindings/python/packages/native/Cargo.toml --config deny/python.toml check
+
+[graph]
+exclude-dev = true
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+exceptions = [{ allow = ["MPL-2.0"], crate = "cbindgen" }]
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+external-default-features = "deny"
+
+allow = [
+    # The binding crate and the core crates it links.
+    "zero-server-python",
+    "zero-core",
+    "zero-ffi",
+    "zero-http",
+    "zero-http-types",
+    "zero-http1",
+    "zero-io",
+    "zero-limits",
+    "zero-router",
+    "zero-rt",
+    "zero-simd",
+    "zero-sys",
+    # Runtime seam, io-tokio.
+    "tokio",
+    "mio",
+    "socket2",
+    "libc",
+    "bytes",
+    "pin-project-lite",
+    "windows-sys",
+    "windows-link",
+    # PyO3 0.29 with the abi3-py310 stable ABI: the macros, the raw FFI table,
+    # the build configuration and the host triple parser (measured with cargo
+    # tree on 2026-09-30 against pyo3 0.29.3).
+    "pyo3",
+    "pyo3-build-config",
+    "pyo3-ffi",
+    "pyo3-macros",
+    "pyo3-macros-backend",
+    "target-lexicon",
+    "portable-atomic",
+    "once_cell",
+    "cfg-if",
+    "getrandom",
+    # Header generator, build-only in zero-ffi, and its transitive graph.
+    "cbindgen",
+    "bitflags",
+    "equivalent",
+    "errno",
+    "fastrand",
+    "hashbrown",
+    "heck",
+    "indexmap",
+    "itoa",
+    "linux-raw-sys",
+    "log",
+    "memchr",
+    "proc-macro2",
+    "quote",
+    "r-efi",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_derive",
+    "serde_json",
+    "serde_spanned",
+    "syn",
+    "tempfile",
+    "toml",
+    "toml_datetime",
+    "toml_parser",
+    "toml_writer",
+    "unicode-ident",
+    "winnow",
+    "zmij",
+]
+
+deny = [
+    { crate = "bindgen", reason = "no bindgen build: targets without pregenerated aws-lc-sys bindings use the ring provider" },
+    { crate = "libclang-sys", reason = "no libclang in the build: see bindgen" },
+    { crate = "clang-sys", reason = "no libclang in the build: see bindgen" },
+]
+
+skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn and winnow majors" }]
+
+# The core crates are external to the binding's graph, so their `std` default
+# is listed; the binding runs on std by definition.
+[[bans.features]]
+crate = "zero-core"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-http-types"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-http1"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-limits"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-router"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-io"
+allow = ["default", "io-tokio"]
+reason = "the binding links the core on its default readiness backend"
+
+# Defaults the PyO3 graph enables on its own dependencies.
+[[bans.features]]
+crate = "pyo3"
+allow = ["default", "macros", "abi3", "abi3-py310"]
+reason = "the binding's own edge"
+
+[[bans.features]]
+crate = "pyo3-ffi"
+allow = ["default", "abi3", "abi3-py310"]
+reason = "enabled by pyo3"
+
+[[bans.features]]
+crate = "pyo3-build-config"
+allow = ["default", "resolve-config"]
+reason = "enabled by pyo3"
+
+[[bans.features]]
+crate = "once_cell"
+allow = ["default", "std"]
+reason = "enabled by pyo3"
+
+[[bans.features]]
+crate = "target-lexicon"
+allow = ["default"]
+reason = "enabled by pyo3-build-config"
+
+[[bans.features]]
+crate = "portable-atomic"
+allow = ["default", "fallback"]
+reason = "enabled by pyo3 and once_cell on Linux"
+
+[[bans.features]]
+crate = "libc"
+allow = ["default", "std"]
+reason = "enabled by pyo3"
+
+[[bans.features]]
+crate = "memchr"
+allow = ["default", "std"]
+reason = "enabled by pyo3 and inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "syn"
+allow = ["default", "full", "fold", "extra-traits", "visit", "visit-mut", "derive", "parsing", "printing", "clone-impls", "proc-macro"]
+reason = "enabled by pyo3-macros-backend and inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "fastrand"
+allow = ["default"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "indexmap"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "proc-macro2"
+allow = ["default"]
+reason = "enabled by cbindgen and the proc-macro graph"
+
+[[bans.features]]
+crate = "quote"
+allow = ["default"]
+reason = "enabled by cbindgen and the proc-macro graph"
+
+[[bans.features]]
+crate = "rustix"
+allow = ["default", "fs"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_derive"
+allow = ["default"]
+reason = "enabled by serde inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_json"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "tempfile"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "windows-sys"
+allow = [
+    "default",
+    "Win32",
+    "Win32_Foundation",
+    "Win32_Networking",
+    "Win32_Networking_WinSock",
+    "Win32_Storage",
+    "Win32_Storage_FileSystem",
+    "Win32_System",
+    "Win32_System_Diagnostics",
+    "Win32_System_Diagnostics_Debug",
+]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[bans.build]
+allow-build-scripts = [
+    "zero-ffi",
+    "pyo3",
+    "pyo3-ffi",
+    "pyo3-build-config",
+    "target-lexicon",
+    "portable-atomic",
+    "cbindgen",
+    "libc",
+    "getrandom",
+    "proc-macro2",
+    "quote",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_json",
+    "zmij",
+]
+executables = "deny"
+include-workspace = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

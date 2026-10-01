@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Guides</RootNamespace>
+
+    <!-- The native cdylib from a release build of zero-ffi, copied next to the
+         executable so P/Invoke resolves it for the host runtime. -->
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../../'))</RepoRoot>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('Windows'))">zero_ffi.dll</ZeroNativeName>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('Linux'))">libzero_ffi.so</ZeroNativeName>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('OSX'))">libzero_ffi.dylib</ZeroNativeName>
+    <ZeroNativePath>$(RepoRoot)target/release/$(ZeroNativeName)</ZeroNativePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/ZeroServer/ZeroServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(ZeroNativePath)" Condition="Exists('$(ZeroNativePath)')">
+      <Link>$(ZeroNativeName)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

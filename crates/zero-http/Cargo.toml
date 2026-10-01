@@ -10,6 +10,9 @@ keywords.workspace = true
 categories.workspace = true
 authors.workspace = true
 
+[features]
+io-compio = ["zero-io/io-compio"]
+
 [dependencies]
 zero-core.workspace = true
 zero-limits.workspace = true

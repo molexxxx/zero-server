@@ -33,13 +33,15 @@ jobs:
           maturin develop -m packages/native/Cargo.toml
           pip install $(find packages -mindepth 1 -maxdepth 1 -type d ! -name native)
 
+      # The generator is a development tool behind the `stubs` feature, so the
+      # published wheel never carries pyo3-stub-gen.
       - name: Regenerate the type stub
-        run: cargo run --bin stub_gen --manifest-path packages/native/Cargo.toml
+        run: cargo run --bin stub_gen --features stubs --manifest-path packages/native/Cargo.toml
 
       - name: Check the generated stub is in sync with the Rust source
         run: |
           if ! git diff --exit-code -- packages/native/python/zero_server/_native/__init__.pyi; then
-            echo "::error::Generated stub is stale. Run 'cargo run --bin stub_gen' in bindings/python/packages/native and commit python/zero_server/_native/__init__.pyi."
+            echo "::error::Generated stub is stale. Run 'cargo run --bin stub_gen --features stubs' in bindings/python/packages/native and commit python/zero_server/_native/__init__.pyi."
             exit 1
           fi
 
