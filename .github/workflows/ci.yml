@@ -399,14 +399,14 @@ jobs:
       - name: Install nightly with rust-src
         run: rustup toolchain install nightly --profile minimal --component rust-src
 
-      # Stack protectors on every function and LLVM CFI over every indirect call. CFI
-      # needs link-time optimization over every crate including the rebuilt std, done
-      # here by the linker plugin (clang with lld) over the bitcode rustc emits; rustc's
-      # own LTO is off for this build so one optimizer owns the link, and a per-crate
-      # -Clto would refuse the rlib targets. The build is the check: a function-pointer
-      # type the CFI pass cannot type fails to link.
+      # Stack protectors on every function and LLVM CFI over every indirect call. rustc
+      # requires -Clto with one codegen unit on every crate it compiles with CFI, the
+      # rebuilt std included, and refuses -Clto only for an invocation that emits an
+      # rlib beside a cdylib, so zero-ffi is built as the cdylib alone. The system
+      # linker plugin is not an option: the runner's lld is built from an older LLVM
+      # than the nightly compiler. The build is the check: a function-pointer type the
+      # CFI pass cannot type fails to link.
       - name: Build with stack protectors and CFI
         env:
-          RUSTFLAGS: -Zstack-protector=all -Zsanitizer=cfi -Clinker-plugin-lto -Clinker=clang -Clink-arg=-fuse-ld=lld
-          CARGO_PROFILE_RELEASE_LTO: "off"
-        run: cargo +nightly build -Zbuild-std --target x86_64-unknown-linux-gnu -p zero-ffi --release
+          RUSTFLAGS: -Zstack-protector=all -Zsanitizer=cfi -Clto -Ccodegen-units=1
+        run: cargo +nightly rustc -Zbuild-std --target x86_64-unknown-linux-gnu -p zero-ffi --release --crate-type cdylib
