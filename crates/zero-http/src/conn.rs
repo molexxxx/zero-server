@@ -341,22 +341,30 @@ where
     }
 
     /// Serve the connection until it closes.
-    pub(crate) async fn run(mut self) {
-        loop {
-            self.tick();
-            if self.aborted || (self.close && self.ring.is_empty() && self.writing.is_none()) {
-                break;
+    ///
+    /// This is an async block over a captured binding rather than an `async fn`
+    /// taking `self`: an `async fn` keeps every argument twice, as the value moved
+    /// in and as the local it is moved into, which would store the ring in the
+    /// task twice over.
+    pub(crate) fn run(self) -> impl Future<Output = ()> {
+        let mut conn = self;
+        async move {
+            loop {
+                conn.tick();
+                if conn.aborted || (conn.close && conn.ring.is_empty() && conn.writing.is_none()) {
+                    break;
+                }
+                let event = conn.wait().await;
+                conn.apply(event);
             }
-            let event = self.wait().await;
-            self.apply(event);
-        }
-        self.input.clear(self.shared.pool());
-        if let Some(record) = self.next.take() {
-            self.shared.give_record(record);
-        }
-        self.discard_from(0);
-        if !self.aborted {
-            self.linger().await;
+            conn.input.clear(conn.shared.pool());
+            if let Some(record) = conn.next.take() {
+                conn.shared.give_record(record);
+            }
+            conn.discard_from(0);
+            if !conn.aborted {
+                conn.linger().await;
+            }
         }
     }
 
@@ -1126,4 +1134,51 @@ fn write_head(
         writer.field_id(HeaderName::Connection, b"keep-alive")?;
     }
     writer.end_head()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::future::Future;
+    use std::rc::Rc;
+
+    use zero_core::Error;
+    use zero_io::tokio_rt::TcpStream;
+
+    use super::{request_task, Conn, Shared};
+    use crate::call::Call;
+    use crate::handler::Handler;
+    use crate::record::Record;
+
+    struct Nothing;
+
+    impl Handler for Nothing {
+        async fn handle(&self, _: &mut Call<'_>) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    /// The driver's size and its task's size, for a handler and a request future.
+    fn sizes<S, H, Req, F>(
+        _: fn(Rc<Shared<H>>, Box<Record>) -> Req,
+        _: fn(Conn<S, H, Req>) -> F,
+    ) -> (usize, usize)
+    where
+        F: Future,
+    {
+        (
+            std::mem::size_of::<Conn<S, H, Req>>(),
+            std::mem::size_of::<F>(),
+        )
+    }
+
+    /// An idle connection holds its driver and one turn's futures, nothing else,
+    /// so the task stays within the driver plus a turn.
+    #[test]
+    fn an_idle_connection_task_holds_the_driver_once_plus_one_turn() {
+        let (driver, task) = sizes::<TcpStream, Nothing, _, _>(request_task::<Nothing>, Conn::run);
+        assert!(
+            task < driver.saturating_mul(2),
+            "the task is {task} bytes for a {driver}-byte driver"
+        );
+    }
 }

@@ -108,6 +108,10 @@ impl Worker {
     ///   task ends there.
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
         let worker = self.clone();
+        // Each async wrapper the future passes through, containment, this block and
+        // the runtime's own, keeps its own copy of what it was handed; boxing first
+        // hands them a pointer, so the task holds the future once.
+        let future = Box::pin(future);
         self.core.spawn_local(async move {
             if let Err(panicked) = contain(future).await {
                 worker.note_panic(panicked.message);
