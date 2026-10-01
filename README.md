@@ -16,16 +16,12 @@ Python and C# applications run on through one C ABI.
 Every language today brings its own web framework, and each one rebuilds the same
 parsers, the same router and the same connection handling, with its own bugs and
 its own ceiling. zero-server is built on the opposite bet: write the server once,
-in Rust, and let every language use that one core. Five claims follow from it,
-and each is a design rule of this tree, not yet a measured result:
+in Rust, and let every language use that one core. Four design rules follow from
+it; none of them is a measured result yet:
 
 - **One core for every language.** TypeScript, Python and C# get idiomatic
   packages over the same Rust engine, so a fix or a speedup lands in every
   language at once.
-- **Faster than the C++ leader, on its own benchmark.** The Rust entry is built
-  to beat Drogon, the C++ leader on the TechEmpower workloads, and the claim is
-  judged only on a self-run whose method and raw results are published (see
-  [Benchmarks](#benchmarks)). No figure is claimed before that run exists.
 - **Every parser held to its specification.** Each wire format is implemented
   from the current RFC or specification text, and every statement the code
   relies on is a row in a registry with a test pinned to it.
