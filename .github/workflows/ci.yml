@@ -214,7 +214,13 @@ jobs:
           cargo test -p zero-io -p zero-sys -p zero-rt -p zero-http --no-fail-fast 2>&1 \
             | tee seam-test.log || status=$?
           if [ "$status" -ne 0 ]; then
-            grep -E "FAILED|panicked at|^error" seam-test.log | head -10 | sed 's/^/::error::/'
+            # Ten annotations per level per step is GitHub's limit: the panic
+            # lines with their messages first, as errors, then the failed test
+            # names as warnings, then compiler errors as notices.
+            grep -A2 -E "panicked at" seam-test.log | grep -v -E "^--$|^stack backtrace|^note: run with" \
+              | head -10 | sed 's/^/::error::/'
+            grep -E "^test .*FAILED$|^test result: FAILED" seam-test.log | head -10 | sed 's/^/::warning::/'
+            grep -E "^error" seam-test.log | head -10 | sed 's/^/::notice::/'
           fi
           exit "$status"
 
