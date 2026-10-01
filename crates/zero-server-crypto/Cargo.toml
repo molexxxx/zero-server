@@ -12,6 +12,7 @@ authors.workspace = true
 
 [dependencies]
 zero-core.workspace = true
+zero-sys.workspace = true
 
 [lints.rust]
 unsafe_code = "deny"
