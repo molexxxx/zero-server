@@ -145,13 +145,15 @@ the same commit.
 
 R.3 step 2, the foundation no_std crates, taken one crate per commit in the
 order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
-Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, and the
+Done: `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, the
 `zero-simd` reference layer (scalar definitions, SWAR kernels, the streaming
-UTF-8 validator, the detection token, property tests, Miri). Next: the
-`zero-simd` x86-64 kernels (SSE2 and AVX2 behind the token) with their
-property tests against the SWAR kernels, then NEON with an aarch64
-cross-compile check, then the in-house `__cpuid` detection for `no_std`
-builds (today a `no_std` build uses only compile-time target features).
+UTF-8 validator, the detection token, property tests, Miri), and the
+`zero-simd` x86-64 kernels (SSE2 and AVX2 behind the token, every kernel
+checked against SWAR for every byte at every lane position and on random
+inputs, on a host with AVX2). Next: NEON with an aarch64 cross-compile
+check and a CI job on an arm64 runner, then the in-house `__cpuid`
+detection for `no_std` builds (today a `no_std` build uses only
+compile-time target features).
 
 ## Next, in order
 

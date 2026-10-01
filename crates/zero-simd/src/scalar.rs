@@ -68,6 +68,12 @@ pub fn scan(bytes: &[u8], allowed: fn(u8) -> bool) -> usize {
         .unwrap_or(bytes.len())
 }
 
+/// Returns the length of the ASCII prefix of `bytes`.
+#[must_use]
+pub fn scan_ascii(bytes: &[u8]) -> usize {
+    scan(bytes, |byte| byte < 0x80)
+}
+
 /// Returns the length of the request-target prefix of `bytes`.
 #[must_use]
 pub fn scan_target(bytes: &[u8]) -> usize {

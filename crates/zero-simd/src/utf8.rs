@@ -22,8 +22,6 @@
 
 use core::fmt;
 
-use crate::swar;
-
 /// Why a byte sequence is not UTF-8.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Utf8Error {
@@ -123,12 +121,10 @@ impl Utf8Validator {
         let mut index = 0usize;
         while let Some(byte) = bytes.get(index).copied() {
             if matches!(self.state, State::Start) {
-                if let Some(chunk) = index.checked_add(8).and_then(|end| bytes.get(index..end)) {
-                    let word = u64::from_le_bytes(<[u8; 8]>::try_from(chunk).unwrap_or_default());
-                    if swar::non_ascii_mask(word) == 0 {
-                        index = index.saturating_add(8);
-                        continue;
-                    }
+                let ascii = bytes.get(index..).map_or(0, crate::scan_ascii);
+                if ascii > 0 {
+                    index = index.saturating_add(ascii);
+                    continue;
                 }
             }
             if !self.step(byte) {

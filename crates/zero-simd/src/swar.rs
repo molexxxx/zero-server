@@ -73,6 +73,15 @@ fn position(
     tail(chunks.remainder()).map(|index| offset.saturating_add(index))
 }
 
+/// Returns the length of the ASCII prefix of `bytes`: every byte below 0x80.
+#[must_use]
+pub fn scan_ascii(bytes: &[u8]) -> usize {
+    position(bytes, non_ascii_mask, |tail| {
+        tail.iter().position(|byte| *byte >= 0x80)
+    })
+    .unwrap_or(bytes.len())
+}
+
 /// Returns the length of the request-target prefix of `bytes`: every byte
 /// 0x21 to 0x7E.
 #[must_use]
@@ -157,8 +166,8 @@ pub fn unmask(payload: &mut [u8], key: [u8; 4]) {
 #[cfg(test)]
 mod tests {
     use super::{
-        eq_mask, find_byte, find_cr_or_lf, first_lane, lt_mask, non_ascii_mask, scan_header_name,
-        scan_header_value, scan_target, unmask, HI,
+        eq_mask, find_byte, find_cr_or_lf, first_lane, lt_mask, non_ascii_mask, scan_ascii,
+        scan_header_name, scan_header_value, scan_target, unmask, HI,
     };
     use crate::scalar;
     use crate::test_support::{iterations, Rng};
@@ -231,6 +240,11 @@ mod tests {
                     *slot = byte;
                 }
                 assert_eq!(
+                    scan_ascii(&buffer),
+                    scalar::scan_ascii(&buffer),
+                    "{byte:#04x}@{position}"
+                );
+                assert_eq!(
                     scan_target(&buffer),
                     scalar::scan_target(&buffer),
                     "{byte:#04x}@{position}"
@@ -269,6 +283,7 @@ mod tests {
         let mut rng = Rng::new(0x5EED_0001);
         for _ in 0..iterations(20_000) {
             let bytes = rng.bytes(0..=80);
+            assert_eq!(scan_ascii(&bytes), scalar::scan_ascii(&bytes), "{bytes:?}");
             assert_eq!(
                 scan_target(&bytes),
                 scalar::scan_target(&bytes),
