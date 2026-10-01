@@ -16,6 +16,10 @@ zero-limits.workspace = true
 zero-http-types.workspace = true
 zero-date.workspace = true
 zero-http.workspace = true
+zero-base64.workspace = true
+
+[dev-dependencies]
+zero-server-crypto.workspace = true
 
 [lints]
 workspace = true

@@ -2084,11 +2084,13 @@ version = "0.1.0"
 name = "zero-policy"
 version = "0.1.0"
 dependencies = [
+ "zero-base64",
  "zero-core",
  "zero-date",
  "zero-http",
  "zero-http-types",
  "zero-limits",
+ "zero-server-crypto",
 ]
 
 [[package]]

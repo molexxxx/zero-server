@@ -6,13 +6,18 @@
 //!
 //! [`forwarded`] holds the trust-proxy rule over `Forwarded` (RFC 7239) and the
 //! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS
-//! protocol.
+//! protocol; [`security`] the security response headers.
 
 pub mod cors;
 pub mod forwarded;
+pub mod security;
 
 pub use cors::{AllowOrigin, Cors, Decision};
 pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
+pub use security::{
+    Csp, Directive, EmbedderPolicy, EmbedderValue, FrameOptions, Hsts, Isolation, OpenerPolicy,
+    OpenerValue, ReferrerPolicy, Rendered, ResourcePolicy, SecurityHeaders, Source,
+};
 
 /// The version of this crate, as published to crates.io.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,9 +27,14 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
     use zero_http_types::Method;
+    use zero_server_crypto::SystemRng;
 
     use super::cors::{AllowOrigin, Cors, Decision};
     use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
+    use super::security::{
+        Csp, Directive, EmbedderValue, Hsts, Isolation, OpenerValue, ReferrerPolicy, Rendered,
+        ResourcePolicy, SecurityHeaders, Source,
+    };
 
     fn field<'a>(fields: &'a [(&'static [u8], Vec<u8>)], name: &[u8]) -> Option<&'a [u8]> {
         fields
@@ -503,6 +513,378 @@ mod tests {
             panic!("allowed");
         };
         assert_eq!(field(&fields, b"Access-Control-Expose-Headers"), None);
+    }
+
+    fn rendered(rule: &SecurityHeaders, secure: bool) -> Rendered {
+        rule.render(secure, &SystemRng).expect("rendered")
+    }
+
+    fn csp(directives: Vec<Directive>) -> Csp {
+        Csp {
+            directives,
+            report_only: false,
+        }
+    }
+
+    fn only_csp(policy: Csp) -> SecurityHeaders {
+        SecurityHeaders {
+            csp: Some(policy),
+            ..SecurityHeaders::default()
+        }
+    }
+
+    fn literal(value: &str) -> Source {
+        Source::Literal(value.as_bytes().to_vec())
+    }
+
+    /// The directive names of a serialized policy, as CSP3 Section 2.2.1 parses it:
+    /// split on `;`, strip ASCII whitespace, skip empty tokens, the name up to the
+    /// first whitespace, lowercased.
+    fn parsed_names(serialized: &[u8]) -> Vec<Vec<u8>> {
+        serialized
+            .split(|&b| b == b';')
+            .map(<[u8]>::trim_ascii)
+            .filter(|token| !token.is_empty())
+            .map(|token| {
+                token
+                    .split(u8::is_ascii_whitespace)
+                    .next()
+                    .unwrap_or_default()
+                    .to_ascii_lowercase()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn strict_transport_security_always_includes_max_age_and_includesubdomains_is_emitted_valueless(
+    ) {
+        // RFC 6797 Sections 6.1.1 and 6.1.2.
+        let fields = rendered(&SecurityHeaders::default(), true).fields;
+        assert_eq!(
+            field(&fields, b"Strict-Transport-Security"),
+            Some(&b"max-age=63072000; includeSubDomains"[..])
+        );
+        let bare = SecurityHeaders {
+            hsts: Some(Hsts {
+                max_age: 31_536_000,
+                include_subdomains: false,
+            }),
+            ..SecurityHeaders::default()
+        };
+        assert_eq!(
+            field(&rendered(&bare, true).fields, b"Strict-Transport-Security"),
+            Some(&b"max-age=31536000"[..])
+        );
+    }
+
+    #[test]
+    fn strict_transport_security_is_not_sent_on_responses_over_plain_http() {
+        // RFC 6797 Section 7.2.
+        let fields = rendered(&SecurityHeaders::default(), false).fields;
+        assert_eq!(field(&fields, b"Strict-Transport-Security"), None);
+        assert_eq!(
+            field(&fields, b"X-Content-Type-Options"),
+            Some(&b"nosniff"[..])
+        );
+    }
+
+    #[test]
+    fn only_one_strict_transport_security_field_is_emitted_per_response_since_user_agents_process_only_the_first(
+    ) {
+        // RFC 6797 Section 8.1: the rule's field replaces any the handler set.
+        let rule = SecurityHeaders::default();
+        let mut own: Vec<(Vec<u8>, Vec<u8>)> = vec![
+            (b"strict-transport-security".to_vec(), b"max-age=1".to_vec()),
+            (b"Content-Type".to_vec(), b"text/html".to_vec()),
+        ];
+        rule.scrub(&mut own);
+        assert_eq!(own, vec![(b"Content-Type".to_vec(), b"text/html".to_vec())]);
+        let fields = rendered(&rule, true).fields;
+        let count = fields
+            .iter()
+            .filter(|(name, _)| name.eq_ignore_ascii_case(b"Strict-Transport-Security"))
+            .count();
+        assert_eq!(count, 1);
+        // Every field the rule renders appears once.
+        for (name, _) in &fields {
+            assert_eq!(fields.iter().filter(|(other, _)| other == name).count(), 1);
+        }
+    }
+
+    #[test]
+    fn max_age_0_is_accepted_as_the_way_to_withdraw_hsts() {
+        // RFC 6797 Section 6.1.1: max-age=0 tells the user agent to stop.
+        let withdraw = SecurityHeaders {
+            hsts: Some(Hsts {
+                max_age: 0,
+                include_subdomains: false,
+            }),
+            ..SecurityHeaders::default()
+        };
+        assert_eq!(
+            field(
+                &rendered(&withdraw, true).fields,
+                b"Strict-Transport-Security"
+            ),
+            Some(&b"max-age=0"[..])
+        );
+    }
+
+    #[test]
+    fn csp_directives_are_serialized_semicolon_separated_with_directive_names_that_round_trip_through_the_csp_parser(
+    ) {
+        // CSP3 Sections 2.2 and 2.2.1.
+        let policy = csp(vec![
+            Directive::new("default-src", vec![literal("'self'")]).expect("valid"),
+            Directive::new(
+                "img-src",
+                vec![literal("'self'"), literal("https://cdn.invalid")],
+            )
+            .expect("valid"),
+            Directive::new("upgrade-insecure-requests", Vec::new()).expect("valid"),
+        ]);
+        let value = policy.header_value(None).expect("serialized");
+        assert_eq!(
+            value,
+            b"default-src 'self'; img-src 'self' https://cdn.invalid; upgrade-insecure-requests"
+        );
+        assert_eq!(
+            parsed_names(&value),
+            vec![
+                b"default-src".to_vec(),
+                b"img-src".to_vec(),
+                b"upgrade-insecure-requests".to_vec()
+            ]
+        );
+        // A name outside 1*( ALPHA / DIGIT / "-" ) or a value that would split the
+        // policy is refused rather than serialized.
+        assert!(Directive::new("script_src", Vec::new()).is_err());
+        assert!(Directive::new("Script-Src", Vec::new()).is_err());
+        assert!(Directive::new("", Vec::new()).is_err());
+        assert!(Directive::new("script-src", vec![literal("'self'; object-src *")]).is_err());
+        assert!(Directive::new("script-src", vec![literal("a,b")]).is_err());
+        assert!(Directive::new("script-src", vec![literal("")]).is_err());
+    }
+
+    #[test]
+    fn script_and_style_nonces_are_fresh_and_unguessable_on_every_response_and_never_reused_across_responses(
+    ) {
+        // CSP3 Section 7.1: a unique value each time, at least 128 bits, from a
+        // cryptographically secure generator.
+        let rule = only_csp(csp(vec![
+            Directive::new(
+                "script-src",
+                vec![Source::Nonce, literal("'strict-dynamic'")],
+            )
+            .expect("valid"),
+            Directive::new("style-src", vec![Source::Nonce]).expect("valid"),
+        ]));
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..1_000 {
+            let response = rendered(&rule, true);
+            let nonce = response.nonce.expect("a nonce");
+            let raw = zero_base64::decode(nonce.as_bytes(), zero_base64::Alphabet::Standard, true)
+                .expect("base64");
+            assert_eq!(raw.len(), 16);
+            assert!(seen.insert(nonce.clone()), "nonce reused");
+            let value = field(&response.fields, b"Content-Security-Policy").expect("policy");
+            let expected =
+                format!("script-src 'nonce-{nonce}' 'strict-dynamic'; style-src 'nonce-{nonce}'");
+            assert_eq!(value, expected.as_bytes());
+        }
+        // A policy without a nonce source draws none.
+        let plain = only_csp(csp(vec![Directive::new(
+            "default-src",
+            vec![literal("'self'")],
+        )
+        .expect("valid")]));
+        assert_eq!(rendered(&plain, true).nonce, None);
+    }
+
+    #[test]
+    fn frame_ancestors_is_delivered_only_via_the_http_header_never_a_meta_element() {
+        // CSP3 Section 3.3: a <meta> policy supports neither frame-ancestors nor
+        // report-uri nor sandbox.
+        let policy = csp(vec![
+            Directive::new("default-src", vec![literal("'self'")]).expect("valid"),
+            Directive::new("frame-ancestors", vec![literal("'none'")]).expect("valid"),
+            Directive::new("sandbox", Vec::new()).expect("valid"),
+            Directive::new("report-uri", vec![literal("/csp")]).expect("valid"),
+        ]);
+        let header = policy.header_value(None).expect("header");
+        assert_eq!(
+            parsed_names(&header),
+            vec![
+                b"default-src".to_vec(),
+                b"frame-ancestors".to_vec(),
+                b"sandbox".to_vec(),
+                b"report-uri".to_vec()
+            ]
+        );
+        let meta = policy.meta_content(None).expect("meta");
+        assert_eq!(meta, b"default-src 'self'");
+    }
+
+    #[test]
+    fn a_report_only_mode_emits_content_security_policy_report_only_instead_of_the_enforcing_header(
+    ) {
+        // CSP3 Section 3.2.
+        let mut policy = csp(vec![
+            Directive::new("default-src", vec![literal("'self'")]).expect("valid")
+        ]);
+        policy.report_only = true;
+        let fields = rendered(&only_csp(policy), true).fields;
+        assert_eq!(
+            field(&fields, b"Content-Security-Policy-Report-Only"),
+            Some(&b"default-src 'self'"[..])
+        );
+        assert_eq!(field(&fields, b"Content-Security-Policy"), None);
+    }
+
+    #[test]
+    fn x_content_type_options_is_exactly_nosniff() {
+        // Fetch Section 3.6: X-Content-Type-Options = "nosniff".
+        let fields = rendered(&SecurityHeaders::default(), true).fields;
+        assert_eq!(
+            field(&fields, b"X-Content-Type-Options"),
+            Some(&b"nosniff"[..])
+        );
+        let off = SecurityHeaders {
+            nosniff: false,
+            ..SecurityHeaders::default()
+        };
+        assert_eq!(
+            field(&rendered(&off, true).fields, b"X-Content-Type-Options"),
+            None
+        );
+    }
+
+    #[test]
+    fn cross_origin_resource_policy_is_one_of_same_site_same_origin_or_cross_origin() {
+        // Fetch Section 3.7: %s"same-origin" / %s"same-site" / %s"cross-origin",
+        // case-sensitive.
+        for policy in [
+            ResourcePolicy::SameOrigin,
+            ResourcePolicy::SameSite,
+            ResourcePolicy::CrossOrigin,
+        ] {
+            assert_eq!(ResourcePolicy::parse(policy.value()), Some(policy));
+            let rule = SecurityHeaders {
+                resource_policy: Some(policy),
+                ..SecurityHeaders::default()
+            };
+            assert_eq!(
+                field(
+                    &rendered(&rule, true).fields,
+                    b"Cross-Origin-Resource-Policy"
+                ),
+                Some(policy.value())
+            );
+        }
+        assert_eq!(ResourcePolicy::parse(b"Same-Site"), None);
+        assert_eq!(ResourcePolicy::parse(b"same-site "), None);
+        assert_eq!(ResourcePolicy::parse(b"none"), None);
+    }
+
+    #[test]
+    fn cross_origin_opener_policy_and_cross_origin_embedder_policy_values_are_structured_header_tokens_from_the_defined_set(
+    ) {
+        // HTML Sections 7.1.3.1 and 7.1.4.1: a token, an optional report-to string
+        // parameter, and the -Report-Only variants.
+        let rule = SecurityHeaders {
+            opener_policy: Some(Isolation {
+                value: OpenerValue::SameOriginAllowPopups,
+                report_to: Some("coop".to_owned()),
+                report_only: false,
+            }),
+            embedder_policy: Some(Isolation {
+                value: EmbedderValue::RequireCorp,
+                report_to: None,
+                report_only: true,
+            }),
+            ..SecurityHeaders::default()
+        };
+        let fields = rendered(&rule, true).fields;
+        assert_eq!(
+            field(&fields, b"Cross-Origin-Opener-Policy"),
+            Some(&b"same-origin-allow-popups;report-to=\"coop\""[..])
+        );
+        assert_eq!(
+            field(&fields, b"Cross-Origin-Embedder-Policy-Report-Only"),
+            Some(&b"require-corp"[..])
+        );
+        assert_eq!(field(&fields, b"Cross-Origin-Embedder-Policy"), None);
+        // A quote or a backslash in the endpoint is escaped as an sf-string requires,
+        // and a byte outside visible ASCII is refused.
+        let quoted = SecurityHeaders {
+            opener_policy: Some(Isolation {
+                value: OpenerValue::SameOrigin,
+                report_to: Some("a\"b\\c".to_owned()),
+                report_only: false,
+            }),
+            ..SecurityHeaders::default()
+        };
+        assert_eq!(
+            field(
+                &rendered(&quoted, true).fields,
+                b"Cross-Origin-Opener-Policy"
+            ),
+            Some(&b"same-origin;report-to=\"a\\\"b\\\\c\""[..])
+        );
+        let bad = SecurityHeaders {
+            opener_policy: Some(Isolation {
+                value: OpenerValue::SameOrigin,
+                report_to: Some("tab\there".to_owned()),
+                report_only: false,
+            }),
+            ..SecurityHeaders::default()
+        };
+        assert!(bad.render(true, &SystemRng).is_err());
+    }
+
+    #[test]
+    fn referrer_policy_accepts_a_comma_separated_fallback_list_and_the_last_recognized_token_wins()
+    {
+        // Referrer Policy Sections 4.1 and 8.1.
+        let rule = SecurityHeaders {
+            referrer_policy: vec![
+                ReferrerPolicy::NoReferrer,
+                ReferrerPolicy::StrictOriginWhenCrossOrigin,
+            ],
+            ..SecurityHeaders::default()
+        };
+        let value = field(&rendered(&rule, true).fields, b"Referrer-Policy")
+            .expect("a policy")
+            .to_vec();
+        assert_eq!(value, b"no-referrer, strict-origin-when-cross-origin");
+        assert_eq!(
+            ReferrerPolicy::parse_header(&value),
+            Some(ReferrerPolicy::StrictOriginWhenCrossOrigin)
+        );
+        assert_eq!(
+            ReferrerPolicy::parse_header(b"no-referrer, some-future-policy"),
+            Some(ReferrerPolicy::NoReferrer)
+        );
+        assert_eq!(
+            ReferrerPolicy::parse_header(b"origin,  unsafe-url"),
+            Some(ReferrerPolicy::UnsafeUrl)
+        );
+        assert_eq!(ReferrerPolicy::parse_header(b"unknown"), None);
+    }
+
+    #[test]
+    fn x_xss_protection_is_sent_as_0_and_x_powered_by_is_removed() {
+        // OWASP HTTP Security Response Headers Cheat Sheet.
+        let rule = SecurityHeaders::default();
+        let fields = rendered(&rule, true).fields;
+        assert_eq!(field(&fields, b"X-XSS-Protection"), Some(&b"0"[..]));
+        let mut own: Vec<(&[u8], &[u8])> = vec![
+            (b"x-powered-by", b"zero-server"),
+            (b"X-XSS-Protection", b"1; mode=block"),
+            (b"Content-Type", b"text/plain"),
+        ];
+        rule.scrub(&mut own);
+        assert_eq!(own, vec![(&b"Content-Type"[..], &b"text/plain"[..])]);
     }
 
     #[test]
