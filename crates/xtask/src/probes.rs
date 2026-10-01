@@ -25,8 +25,8 @@ const PIDS: &str = "400";
 
 /// The named volumes that keep the toolchain and the registry between runs.
 const VOLUMES: [(&str, &str); 2] = [
-    ("zero-core-probe-cargo", "/root/.cargo"),
-    ("zero-core-probe-rustup", "/root/.rustup"),
+    ("zero-server-probe-cargo", "/root/.cargo"),
+    ("zero-server-probe-rustup", "/root/.rustup"),
 ];
 
 /// The part of every script that provides a Rust toolchain and a C linker. It
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn missing_sources_are_named_by_path() {
-        let root = std::env::temp_dir().join(format!("zero-core-probes-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zero-server-probes-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("bench/probes/python")).unwrap();
         fs::write(root.join("bench/probes/python/bench_probe.py"), "").unwrap();

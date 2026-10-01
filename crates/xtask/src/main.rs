@@ -1,4 +1,4 @@
-//! Workspace task runner for zero-core.
+//! Workspace task runner for zero-server.
 //!
 //! Run with `cargo xtask <task>`. The tasks cover the release (the crates.io
 //! publish order and the lockstep version bump), the generated documentation
@@ -139,7 +139,7 @@ fn run(command: &mut Command) -> bool {
 }
 
 fn help() {
-    println!("zero-core xtask");
+    println!("zero-server xtask");
     println!("usage: cargo xtask <task>\n");
     println!("tasks:");
     for (name, description) in TASKS {

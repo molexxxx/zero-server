@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for taking the time to report this. If you think you have found a
         security vulnerability, please do not file it here: use the private channel
-        described in [SECURITY.md](https://github.com/molexxxx/zero-core/blob/main/SECURITY.md).
+        described in [SECURITY.md](https://github.com/molexxxx/zero-server/blob/main/SECURITY.md).
 
   - type: textarea
     id: what-happened

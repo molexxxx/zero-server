@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/molexxxx/zero-core"
+Repository = "https://github.com/molexxxx/zero-server"
 
 [tool.maturin]
 # Mixed Rust/Python layout: the hand-written facade lives under python/, and the

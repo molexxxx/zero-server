@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to zero-core, the native core of zero-server, newest first. The
+Notable changes to zero-server, the Rust server core and its bindings, newest first. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Every
 crate, the npm, PyPI and NuGet packages, and the language bindings share one
 version and are released together, so one entry covers all of them.

@@ -433,8 +433,8 @@ fn figure(lang: &str, code: &str) -> String {
 // caption on the figure that follows rather than a paragraph of its own.
 fn mark_sources(html: &str) -> String {
     html.replace(
-        "<p>From <a href=\"https://github.com/molexxxx/zero-core/blob/main/",
-        "<p class=\"source\">From <a href=\"https://github.com/molexxxx/zero-core/blob/main/",
+        "<p>From <a href=\"https://github.com/molexxxx/zero-server/blob/main/",
+        "<p class=\"source\">From <a href=\"https://github.com/molexxxx/zero-server/blob/main/",
     )
 }
 
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn a_snippet_source_line_is_marked() {
         let page = render(
-            "From [`x.rs`](https://github.com/molexxxx/zero-core/blob/main/x.rs):\n\n```rust\nlet a = 1;\n```\n",
+            "From [`x.rs`](https://github.com/molexxxx/zero-server/blob/main/x.rs):\n\n```rust\nlet a = 1;\n```\n",
         );
         assert!(page.html.starts_with("<p class=\"source\">From <a href="));
     }

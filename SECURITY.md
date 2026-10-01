@@ -1,13 +1,13 @@
 # Security Policy
 
-zero-core is the native core of zero-server: the parsers, the TLS termination
+zero-server is a memory-safe HTTP server core in Rust: the parsers, the TLS termination
 and the C ABI that every request to a zero-server application passes through.
 A defect here is reachable from the network, so vulnerability reports are taken
 seriously and handled promptly.
 
 ## Supported versions
 
-zero-core is pre-1.0 and all crates share one workspace version. Security fixes
+zero-server is pre-1.0 and all crates share one workspace version. Security fixes
 land on `main` and ship in the next patch release across every registry
 (crates.io, npm, PyPI, NuGet). Only the latest published release is supported;
 if you are on an older version, the fix is to upgrade.
@@ -19,7 +19,7 @@ pull request or discussion.
 
 - Preferred: open a private report through GitHub's "Report a vulnerability"
   button under the repository's Security tab
-  (https://github.com/molexxxx/zero-core/security/advisories/new). This keeps
+  (https://github.com/molexxxx/zero-server/security/advisories/new). This keeps
   the report confidential until a fix is available and gives us a private
   channel to coordinate.
 

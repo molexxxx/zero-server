@@ -4,7 +4,7 @@ contact_links:
     url: https://z-server.dev/docs/
     about: The guides, the standards register, and the generated reference for all four languages.
   - name: Report a security vulnerability
-    url: https://github.com/molexxxx/zero-core/security/advisories/new
+    url: https://github.com/molexxxx/zero-server/security/advisories/new
     about: Please report vulnerabilities privately here rather than in a public issue.
   - name: Building and contributing
     url: https://z-server.dev/docs/about/building.html

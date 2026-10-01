@@ -12,8 +12,8 @@
     <Authors>molexxxx</Authors>
     <Product>zero-server</Product>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/molexxxx/zero-core</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/molexxxx/zero-core</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/molexxxx/zero-server</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/molexxxx/zero-server</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <ZeroServerIcon>$(MSBuildThisFileDirectory)../../assets/zero-server-icon.png</ZeroServerIcon>
   </PropertyGroup>

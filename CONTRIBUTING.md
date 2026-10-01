@@ -1,6 +1,6 @@
-# Contributing to zero-core
+# Contributing to zero-server
 
-Thanks for your interest in zero-core, the native core of zero-server. The
+Thanks for your interest in zero-server, the memory-safe HTTP server core in Rust. The
 project is a single Rust core with thin language bindings, and every parser in
 it sits on a network boundary, so contributions are held to a bar that keeps it
 small, correct and faithful to the specification it implements. This guide
@@ -8,7 +8,7 @@ covers how to build, test and submit changes.
 
 ## Getting started
 
-zero-core is a Cargo workspace. The engine and capability crates live under
+zero-server is a Cargo workspace. The engine and capability crates live under
 `crates/`, the language bindings under `bindings/`, and the runnable examples
 and the conformance vector generator in `crates/zero-examples`.
 
@@ -61,16 +61,16 @@ the image does not ship the components, so build a small one that does, once,
 and again after pulling `rust:latest`:
 
 ```sh
-docker build -t zero-core-lint -f .docker/lint.Dockerfile .docker
+docker build -t zero-server-lint -f .docker/lint.Dockerfile .docker
 docker run --rm --memory=3g --pids-limit=400 -e CARGO_TARGET_DIR=/tmp/t \
-  -v "$PWD:/work" -w /work zero-core-lint cargo fmt --all
+  -v "$PWD:/work" -w /work zero-server-lint cargo fmt --all
 docker run --rm --memory=3g --pids-limit=400 -e CARGO_TARGET_DIR=/tmp/t \
-  -v "$PWD:/work" -w /work zero-core-lint bash -c \
+  -v "$PWD:/work" -w /work zero-server-lint bash -c \
   "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
 ```
 
 From Git Bash on Windows, prefix each `docker run` with `MSYS_NO_PATHCONV=1`
-and give the mount as `C:/path/to/zero-core:/work`. `CARGO_TARGET_DIR=/tmp/t`
+and give the mount as `C:/path/to/zero-server:/work`. `CARGO_TARGET_DIR=/tmp/t`
 keeps the container's Linux artifacts out of the host `target/`. Do not
 hand-guess rustfmt's output: it rewraps at its call width, not only at the
 maximum line width.

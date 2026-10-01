@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/molexxxx/zero-core.git",
+    "url": "git+https://github.com/molexxxx/zero-server.git",
     "directory": "bindings/node/packages/sdk"
   },
   "homepage": "https://z-server.dev",

@@ -1,4 +1,4 @@
-# zero-core
+# zero-server
 
 A memory-safe HTTP server core written in Rust: HTTP/1.1, HTTP/2 and HTTP/3,
 WebSocket and server-sent events, TLS, a router, static files, declarative

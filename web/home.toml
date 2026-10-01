@@ -1,7 +1,7 @@
 [hero]
 eyebrow = "the native core of zero-server"
 title = ["One Rust core.", "Three languages.", "Every byte", "held to its RFC."]
-lead = "zero-core is the memory-safe engine under zero-server: HTTP/1.1, routing, static files, WebSocket, server-sent events and TLS in Rust, reached from TypeScript, Python and C# through one C ABI, with every parser pinned to the specification it implements."
+lead = "zero-server is a memory-safe HTTP server core in Rust: HTTP/1.1, routing, static files, WebSocket, server-sent events and TLS in Rust, reached from TypeScript, Python and C# through one C ABI, with every parser pinned to the specification it implements."
 
 # What it runs: three services and the host that drives them, each played by a
 # console in web/js/consoles.js under the same key. Every crate named here
@@ -178,7 +178,7 @@ tags = [
 # hardware a benchmark needs to be honest.
 
 [backing]
-lead = "zero-core is free and Apache-2.0 licensed. What costs money is the benchmark: a rented Linux host, or two bare-metal instances on the same switch, on which the numbers are taken. Until such a run exists, no throughput or latency figure is published for this core, and every figure that is published carries the ratio against the pinned reference entry measured beside it in the same session."
+lead = "zero-server is free and Apache-2.0 licensed. What costs money is the benchmark: a rented Linux host, or two bare-metal instances on the same switch, on which the numbers are taken. Until such a run exists, no throughput or latency figure is published for this core, and every figure that is published carries the ratio against the pinned reference entry measured beside it in the same session."
 note_title = "How a number gets published"
 note = "Every published figure is a median of five interleaved runs against the unmodified reference entry on the same hardware, with a win required in every run, error counters at zero at every level, and the ratio printed beside the absolute number. A run on a link that caps every entry at the same figure reports a ratio against the link ceiling only."
 offers = [

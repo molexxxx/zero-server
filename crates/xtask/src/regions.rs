@@ -103,7 +103,7 @@ pub fn snippet(root: &Path, spec: &str) -> Result<String, String> {
         None => "",
     };
     Ok(format!(
-        "From [`{path}`](https://github.com/molexxxx/zero-core/blob/main/{path}):\n\n```{language}\n{code}\n```"
+        "From [`{path}`](https://github.com/molexxxx/zero-server/blob/main/{path}):\n\n```{language}\n{code}\n```"
     ))
 }
 

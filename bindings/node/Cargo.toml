@@ -6,7 +6,7 @@ edition = "2021"
 # build with an older toolchain than zero-ffi requires.
 rust-version = "1.89"
 license = "Apache-2.0"
-repository = "https://github.com/molexxxx/zero-core"
+repository = "https://github.com/molexxxx/zero-server"
 authors = ["molexxxx"]
 publish = false
 

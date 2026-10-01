@@ -20,7 +20,7 @@ use toml_edit::{DocumentMut, Item};
 use crate::catalog::{escape, optional, string, tables, Catalog};
 
 /// The repository, for the link to the test a row cites.
-const REPO: &str = "https://github.com/molexxxx/zero-core";
+const REPO: &str = "https://github.com/molexxxx/zero-server";
 
 /// The releases a row may name.
 const RELEASES: std::ops::RangeInclusive<u32> = 1..=3;
@@ -554,7 +554,7 @@ release = 2
         );
         assert!(
             rendered.contains(
-                "href=\"https://github.com/molexxxx/zero-core/blob/main/crates/zero-lorawan/src/crypto.rs#L4\""
+                "href=\"https://github.com/molexxxx/zero-server/blob/main/crates/zero-lorawan/src/crypto.rs#L4\""
             ),
             "{rendered}"
         );
@@ -626,7 +626,7 @@ release = 2
         let rendered = standards.table(&catalog());
         assert!(
             rendered.contains(
-                "href=\"https://github.com/molexxxx/zero-core/blob/main/docs/radio.md?plain=1#L3\""
+                "href=\"https://github.com/molexxxx/zero-server/blob/main/docs/radio.md?plain=1#L3\""
             ),
             "{rendered}"
         );

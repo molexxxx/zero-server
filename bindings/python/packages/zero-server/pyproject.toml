@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/molexxxx/zero-core"
+Repository = "https://github.com/molexxxx/zero-server"
 
 [tool.hatch.build.targets.wheel]
 bypass-selection = true

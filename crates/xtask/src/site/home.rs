@@ -738,7 +738,7 @@ fn quickstart(root: &Path) -> Result<String, String> {
         ));
         panels.push_str(&format!(
             "<section class=\"lang-panel capped\" id=\"quick-{id}\" role=\"tabpanel\" aria-labelledby=\"quick-tab-{id}\" data-lang=\"{id}\" tabindex=\"0\">\n\
-             <p class=\"source\">Listing 3-1, {label}. From <a href=\"https://github.com/molexxxx/zero-core/blob/main/{path}\"><code>{path}</code></a>, which runs in CI.</p>\n\
+             <p class=\"source\">Listing 3-1, {label}. From <a href=\"https://github.com/molexxxx/zero-server/blob/main/{path}\"><code>{path}</code></a>, which runs in CI.</p>\n\
              <figure class=\"code\" data-lang=\"{lang}\"><figcaption><span class=\"code-lang\">{label}</span><button class=\"reveal\" type=\"button\" aria-expanded=\"false\" aria-controls=\"quick-{id}\">Whole listing</button><button class=\"copy\" type=\"button\" aria-label=\"Copy this code\">copy</button></figcaption><pre><code>{}</code></pre></figure>\n\
              </section>\n",
             highlight::highlight(&code, lang)

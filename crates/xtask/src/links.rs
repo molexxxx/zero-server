@@ -15,7 +15,7 @@ use std::process::{Command, ExitCode};
 
 // Standards-body sites routinely refuse a request with no user agent.
 const AGENT: &str =
-    "Mozilla/5.0 (compatible; zero-server-link-check/1.0; +https://github.com/molexxxx/zero-core)";
+    "Mozilla/5.0 (compatible; zero-server-link-check/1.0; +https://github.com/molexxxx/zero-server)";
 
 /// Check every cited document resolves.
 ///

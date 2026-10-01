@@ -1,4 +1,4 @@
-# zero-core workflows. Run `just` to list available recipes.
+# zero-server workflows. Run `just` to list available recipes.
 
 # show all recipes
 default:
@@ -117,11 +117,11 @@ probes:
 
 # start a local PostgreSQL server for the driver tests, on the port they expect
 db:
-    docker rm -f zero-core-db 2>/dev/null || true
-    docker run -d --name zero-core-db -p 5432:5432 \
+    docker rm -f zero-server-db 2>/dev/null || true
+    docker run -d --name zero-server-db -p 5432:5432 \
         -e POSTGRES_USER=zero -e POSTGRES_PASSWORD=zero -e POSTGRES_DB=zero \
         postgres:18
 
 # stop the local PostgreSQL server
 db-stop:
-    docker rm -f zero-core-db
+    docker rm -f zero-server-db

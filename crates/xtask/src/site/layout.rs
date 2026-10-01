@@ -19,7 +19,7 @@ use super::nav::Nav;
 use super::{Kind, Page};
 
 /// The repository, for the edit links.
-const REPO: &str = "https://github.com/molexxxx/zero-core";
+const REPO: &str = "https://github.com/molexxxx/zero-server";
 
 /// Where the site is served from: its own origin, so every link in the shell starts here.
 const ROOT: &str = "/";

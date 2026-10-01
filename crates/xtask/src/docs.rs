@@ -156,7 +156,7 @@ fn crate_readme(krate: &str, catalog: &Catalog, overview: &str, items: &str) -> 
         out.push_str("\n\n");
     }
     out.push_str(items);
-    out.push_str("## License\n\nMIT - part of the [zero-server](https://github.com/molexxxx/zero-core) workspace: one memory-safe Rust core with bindings for every language.\n");
+    out.push_str("## License\n\nApache-2.0 - part of the [zero-server](https://github.com/molexxxx/zero-server) workspace: one memory-safe Rust core with bindings for every language.\n");
     out
 }
 

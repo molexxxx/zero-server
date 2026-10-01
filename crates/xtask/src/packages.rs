@@ -17,7 +17,7 @@ use crate::catalog::{
 use crate::regions;
 
 /// The repository URL every manifest points at.
-const REPOSITORY: &str = "git+https://github.com/molexxxx/zero-core.git";
+const REPOSITORY: &str = "git+https://github.com/molexxxx/zero-server.git";
 
 /// Run `cargo xtask packages [--check]`: render every binding package's manifest and
 /// README from the capability map, or verify the committed ones are current.
@@ -521,7 +521,7 @@ fn capability_readme(
 ) -> Result<String, String> {
     let reference = node_reference_url(&capability.node);
     let mut out = format!(
-        "# @zero-server/{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-core), \
+        "# @zero-server/{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\nnpm install @zero-server/{key}\n```\n\n\
          This pulls in `@zero-server/native`, the compiled engine{}. \
@@ -822,7 +822,7 @@ fn pyproject(
          ]\n\
          dependencies = [\n{}\n]\n\n\
          [project.urls]\n\
-         Repository = \"https://github.com/molexxxx/zero-core\"\n\
+         Repository = \"https://github.com/molexxxx/zero-server\"\n\
          Documentation = \"{homepage}\"\n\n\
          {build}",
         keywords.join(", "),
@@ -896,7 +896,7 @@ fn python_capability_readme(
 ) -> Result<String, String> {
     let reference = python_reference_url(&capability.python);
     let mut out = format!(
-        "# zero-server-{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-core), \
+        "# zero-server-{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\npip install zero-server-{key}\n```\n\n```python\nfrom zero_server import {key}\n```\n\n\
          This pulls in `zero-server-native`, the compiled engine{}. \
@@ -1195,7 +1195,7 @@ fn dotnet_capability_readme(
     let package = capability.dotnet_package();
     let reference = dotnet_reference_url(&package);
     let mut out = format!(
-        "# ZeroServer.{name}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-core), \
+        "# ZeroServer.{name}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\ndotnet add package ZeroServer.{name}\n```\n\n```csharp\nusing ZeroServer.{name};\n```\n\n\
          This pulls in `ZeroServer.Native`, the compiled engine{}. \
