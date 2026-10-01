@@ -1,0 +1,36 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The LibraryImport source generator emits unsafe marshalling stubs. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Version>0.1.0</Version>
+    <Authors>molexxxx</Authors>
+    <Product>zero-server</Product>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/molexxxx/zero-core</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/molexxxx/zero-core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <ZeroServerIcon>$(MSBuildThisFileDirectory)../../assets/zero-server-icon.png</ZeroServerIcon>
+  </PropertyGroup>
+
+  <!-- NuGet renders a package with no icon as a blank placeholder. It takes a raster
+       image, so this is the repository icon rasterized rather than an SVG. The icon is
+       packed once the assets directory carries it. -->
+  <PropertyGroup Condition="Exists('$(ZeroServerIcon)')">
+    <PackageIcon>zero-server-icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(ZeroServerIcon)')">
+    <None Include="$(ZeroServerIcon)" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- Apache-2.0 asks that the license text travel with the copies, so the text is packed beside the
+       expression that names it. `cargo xtask docs` writes one copy per package. -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/LICENSE')">
+    <None Include="LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

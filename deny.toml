@@ -1,0 +1,263 @@
+# Dependency policy for the shipped workspace graph. The feature graphs that
+# `io-compio` and `http3` add are audited by the addenda in deny/, each passed
+# with `--config` by the job that enables the feature.
+
+# Dev-dependencies (oracles, interoperability peers, benches) never reach a
+# shipped artifact, so only the graph a user actually installs is audited.
+# xtask is the unpublished task runner (site generator, docs, release); its
+# tooling graph never links into a shipped artifact and is excluded with
+# everything reachable only through it. cargo vet still covers that graph.
+[graph]
+exclude-dev = true
+exclude = ["xtask"]
+
+[advisories]
+version = 2
+yanked = "deny"
+# Every entry carries a reason and a review date in the form
+# { id = "RUSTSEC-YYYY-NNNN", reason = "<why> (review YYYY-MM-DD)" }.
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+# cbindgen generates include/zero.h at build time; it is a build tool and none
+# of its MPL-2.0 code is linked into any shipped artifact.
+#
+# When the `upstream-tls` feature arrives, webpki-roots joins this list with a
+# CDLA-Permissive-2.0 exception: the crate is Mozilla's root store data, not
+# code, and CDLA-Permissive-2.0 is the license of that data set.
+exceptions = [{ allow = ["MPL-2.0"], crate = "cbindgen" }]
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+external-default-features = "deny"
+
+# Any crate not listed here is denied, workspace members included. Names only:
+# Cargo.lock pins the version, and a version bump that stays inside this list
+# is a lockfile change, not a policy change. Crates that a later feature or
+# binding brings (ring, libsqlite3-sys, mimalloc, rustls-native-certs,
+# webpki-roots, napi, pyo3) are added when that feature lands, together with
+# their measured transitive set.
+allow = [
+    # Workspace members.
+    "zero-base64",
+    "zero-bench",
+    "zero-core",
+    "zero-date",
+    "zero-examples",
+    "zero-ffi",
+    "zero-h3",
+    "zero-http",
+    "zero-http-types",
+    "zero-http1",
+    "zero-io",
+    "zero-json",
+    "zero-limits",
+    "zero-mime",
+    "zero-policy",
+    "zero-qpack",
+    "zero-qs",
+    "zero-realtime",
+    "zero-router",
+    "zero-rt",
+    "zero-serve",
+    "zero-server",
+    "zero-server-crypto",
+    "zero-simd",
+    "zero-sse",
+    "zero-static",
+    "zero-sys",
+    "zero-tls",
+    "zero-uri",
+    "zero-ws",
+    # Runtime seam, io-tokio.
+    "tokio",
+    "mio",
+    "socket2",
+    "libc",
+    "bytes",
+    "pin-project-lite",
+    "windows-sys",
+    "windows-link",
+    # TLS engine.
+    "rustls",
+    "rustls-webpki",
+    "rustls-pki-types",
+    "untrusted",
+    "subtle",
+    "zeroize",
+    "once_cell",
+    # Crypto provider and its transitives.
+    "aws-lc-rs",
+    "aws-lc-sys",
+    "getrandom",
+    "cfg-if",
+    # Build helpers of the C library builds.
+    "cc",
+    "shlex",
+    "find-msvc-tools",
+    "cmake",
+    "dunce",
+    "fs_extra",
+    "jobserver",
+    # Header generator, build-only in zero-ffi.
+    "cbindgen",
+    # The transitive graph of cbindgen 0.29 (measured with cargo tree over every
+    # target). None of it is linked into a shipped artifact; it compiles only
+    # inside the zero-ffi build script.
+    "bitflags",
+    "equivalent",
+    "errno",
+    "fastrand",
+    "hashbrown",
+    "heck",
+    "indexmap",
+    "itoa",
+    "linux-raw-sys",
+    "log",
+    "memchr",
+    "proc-macro2",
+    "quote",
+    "r-efi",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_derive",
+    "serde_json",
+    "serde_spanned",
+    "syn",
+    "tempfile",
+    "toml",
+    "toml_datetime",
+    "toml_parser",
+    "toml_writer",
+    "unicode-ident",
+    "winnow",
+    "zmij",
+]
+
+# aws-lc-sys ships pregenerated bindings for eleven targets and needs bindgen
+# and libclang elsewhere. A target outside that matrix fails here rather than
+# silently pulling a C++ toolchain into the build; such targets are source
+# builds on the ring provider.
+deny = [
+    { crate = "bindgen", reason = "no bindgen build: targets without pregenerated aws-lc-sys bindings use the ring provider" },
+    { crate = "libclang-sys", reason = "no libclang in the build: see bindgen" },
+    { crate = "clang-sys", reason = "no libclang in the build: see bindgen" },
+]
+
+# cbindgen's tree carries its own syn and winnow majors beside the ones the
+# proc-macro graph uses. It is build-only, so its duplicates are not shipped.
+skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn and winnow majors" }]
+
+# The default-feature lint applies to every edge of the graph. The edges below
+# sit inside cbindgen's build-only tree, where cbindgen and tempfile enable the
+# defaults of their own dependencies; nothing shipped is affected. Every
+# workspace edge to an external crate stays at `default-features = false`.
+[[bans.features]]
+crate = "fastrand"
+allow = ["default"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "indexmap"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "proc-macro2"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "quote"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+# An override lists every feature the crate may have on, so these two entries
+# grow when zero-sys or zero-io enables more of rustix or windows-sys.
+[[bans.features]]
+crate = "rustix"
+allow = ["default", "fs"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_derive"
+allow = ["default"]
+reason = "enabled by serde inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_json"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "tempfile"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "windows-sys"
+allow = [
+    "default",
+    "Win32",
+    "Win32_Foundation",
+    "Win32_Networking",
+    "Win32_Networking_WinSock",
+    "Win32_Storage",
+    "Win32_Storage_FileSystem",
+    "Win32_System",
+    "Win32_System_Diagnostics",
+    "Win32_System_Diagnostics_Debug",
+]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[bans.build]
+# Every crate allowed to run a build script, workspace members included. The
+# C library builds (aws-lc-sys, ring, libsqlite3-sys, libmimalloc-sys), the
+# binding glue generators (napi-build, pyo3-build-config), zero-ffi (cbindgen)
+# and the Rust crates of the current graph whose manifests declare a build
+# script (measured with cargo metadata; the C library rows are the only ones
+# that compile C).
+# `prebuilt-nasm` is not enabled on aws-lc-sys: it would ship prebuilt object
+# files inside the crate, so the Windows release runner installs NASM by pinned
+# version instead.
+allow-build-scripts = [
+    "aws-lc-sys",
+    "aws-lc-rs",
+    "ring",
+    "rustls",
+    "libsqlite3-sys",
+    "libmimalloc-sys",
+    "napi-build",
+    "pyo3-build-config",
+    "zero-ffi",
+    "cbindgen",
+    "libc",
+    "getrandom",
+    "proc-macro2",
+    "quote",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_json",
+    "zmij",
+]
+executables = "deny"
+include-workspace = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,25 @@
+{
+  "name": "zero-server-node-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Node binding workspace: the napi-rs crate at this directory, @zero-server/native with the compiled core under packages/native, @zero-server/core over it, and the @zero-server/sdk facade.",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build:native && npm run build:facade",
+    "build:native": "napi build --platform --release --package-json-path packages/native/package.json --output-dir packages/native",
+    "build:debug": "napi build --platform --package-json-path packages/native/package.json --output-dir packages/native && npm run build:facade",
+    "build:facade": "tsc -b",
+    "check:packaging": "node scripts/check-packaging.mjs",
+    "test": "node test.js && npm run test:guides",
+    "guides": "tsc -p guides/tsconfig.json && node guides/run.js",
+    "test:guides": "npm run guides"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.10.0",
+    "@types/node": "^26.6.1",
+    "typescript": "^7.0.2"
+  }
+}

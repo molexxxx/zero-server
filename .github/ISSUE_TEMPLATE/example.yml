@@ -1,0 +1,64 @@
+name: Share an example
+description: A complete program that shows zero-server doing something, to run in CI beside the others.
+labels: ["example"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every program on the [examples page](https://z-server.dev/docs/examples.html)
+        runs in CI on every change with no other service present. The
+        [building page](https://z-server.dev/docs/about/building.html)
+        says where a shared program goes and how it is registered; a pull request is the
+        direct route, and this form is for a program you would rather hand over as text
+        or a link.
+
+  - type: textarea
+    id: shows
+    attributes:
+      label: What it shows
+      description: One paragraph, the way the examples page would describe it.
+      placeholder: |
+        A static file server with one WebSocket room, driven by an in-process client
+        over a loopback port, printing every frame the room fans out.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Rust
+        - TypeScript or JavaScript (Node)
+        - Python
+        - C# (.NET)
+    validations:
+      required: true
+
+  - type: textarea
+    id: program
+    attributes:
+      label: The program, or a link to it
+      description: >
+        Paste it here, or link a repository or gist. It has to run to completion with
+        no other service present, so a loopback listener and an in-process client stand
+        in for the network, and print what it found.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: The platform it was written against, if it matters
+      placeholder: Ubuntu 24.04 x86_64, Node 24, io-tokio
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: I wrote this program and share it under the project's Apache-2.0 license.
+          required: true

@@ -1,0 +1,69 @@
+name: Capability request
+description: Something zero-server should be able to serve, parse, or do, and cannot yet.
+labels: ["capability"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The catalog of what zero-server covers today is on the
+        [reference hub](https://z-server.dev/docs/reference/), and the standards it
+        implements are on the [standards page](https://z-server.dev/docs/about/standards.html).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you want to do
+      description: The task, not the API. What is the protocol, the client, or the job?
+      placeholder: |
+        Serve a WebSocket room behind a reverse proxy that terminates TLS and
+        forwards the client address in a Forwarded header.
+    validations:
+      required: true
+
+  - type: input
+    id: standard
+    attributes:
+      label: The protocol or standard
+      description: >
+        The document and its section, as a link where you have one. This project
+        implements from the authoritative text, not from an example found elsewhere,
+        so a request that names the RFC or the specification starts further along.
+      placeholder: RFC 7239 Forwarded, or RFC 7692 permessage-deflate, or RFC 9114 HTTP/3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: languages
+    attributes:
+      label: Which languages you need it in
+      multiple: true
+      options:
+        - Rust
+        - TypeScript or JavaScript (Node)
+        - Python
+        - C# (.NET)
+        - The C ABI directly
+        - The standalone binary
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do today instead
+      description: >
+        Whether you have another server or library in front, hand-rolled it, or the
+        work is simply blocked. This says a lot about how urgent it is.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints it has to meet
+      description: Pick any that apply. These change where the code lives and how it is written.
+      options:
+        - label: Must parse without std, so it can be a no_std codec crate
+        - label: Must hold up against untrusted input off the wire
+        - label: Must not add a third-party crate to the dependency allowlist
+        - label: Must reach every binding with a conformance vector

@@ -1,0 +1,160 @@
+name: release-nuget
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to release, with or without a leading v.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    uses: ./.github/workflows/release-preflight.yml
+    with:
+      version: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+
+  native:
+    name: native ${{ matrix.rid }}
+    runs-on: ${{ matrix.host }}
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        # The seven prebuilt targets: the ones aws-lc-sys ships pregenerated bindings
+        # for, so no build here needs bindgen or libclang. Any other runtime identifier
+        # is a source build for the consumer, never a bindgen build.
+        include:
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            rid: win-x64
+            lib: zero_ffi.dll
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            rid: linux-x64
+            lib: libzero_ffi.so
+          # Native ARM64 runner: the aws-lc-sys cmake build does not cross-compile
+          # under the GNU toolchain, so this one is built natively.
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            rid: linux-arm64
+            lib: libzero_ffi.so
+          # The musl targets link through zig's bundled musl, on the runner of their
+          # own architecture so only the C library is foreign.
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            rid: linux-musl-x64
+            lib: libzero_ffi.so
+            cross: true
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            rid: linux-musl-arm64
+            lib: libzero_ffi.so
+            cross: true
+          # Cross-compiled on Apple Silicon: scarce macos-13 Intel runners stall
+          # the release.
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            rid: osx-x64
+            lib: libzero_ffi.dylib
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            rid: osx-arm64
+            lib: libzero_ffi.dylib
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup zig for cross compilation
+        if: matrix.cross
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        if: matrix.cross
+        run: pip install cargo-zigbuild
+
+      # aws-lc-sys assembles with NASM on Windows x86-64; the crate's prebuilt objects
+      # are declined, so the assembler is installed at a pinned version instead.
+      - name: Install NASM
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.16.01"
+
+      - name: Build the native library
+        run: cargo ${{ matrix.cross && 'zigbuild' || 'build' }} -p zero-ffi --release --target ${{ matrix.target }}
+
+      - name: Stage the native library under its runtime identifier
+        shell: bash
+        run: |
+          mkdir -p staging/${{ matrix.rid }}/native
+          cp target/${{ matrix.target }}/release/${{ matrix.lib }} staging/${{ matrix.rid }}/native/
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.rid }}
+          path: staging/${{ matrix.rid }}/native/${{ matrix.lib }}
+          if-no-files-found: error
+
+  publish:
+    name: pack and publish to NuGet
+    needs: native
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to mint a short-lived NuGet key via OIDC trusted publishing.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          path: natives
+
+      - name: Assemble runtimes for packing
+        shell: bash
+        run: |
+          dest=bindings/dotnet/src/ZeroServer.Native/runtimes
+          for rid in win-x64 linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 osx-x64 osx-arm64; do
+            mkdir -p "$dest/$rid/native"
+            cp natives/native-$rid/* "$dest/$rid/native/"
+          done
+          find "$dest" -type f
+
+      - name: Pack
+        run: dotnet pack bindings/dotnet/ZeroServer.sln -c Release -o dist
+
+      - name: Authenticate to NuGet via OIDC trusted publishing
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # The policy creator's account, which owns the ZeroServer.* package ids.
+          user: molexxxx
+
+      - name: Publish to NuGet
+        run: >
+          dotnet nuget push "dist/*.nupkg"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

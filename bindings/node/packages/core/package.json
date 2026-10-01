@@ -1,0 +1,39 @@
+{
+  "name": "@zero-server/core",
+  "version": "0.1.0",
+  "description": "The zero-server core's surface for Node: the runtime version of the compiled core, the counterpart of the zero-core crate.",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/molexxxx/zero-core.git",
+    "directory": "bindings/node/packages/core"
+  },
+  "homepage": "https://z-server.dev",
+  "keywords": [
+    "zero-server",
+    "http",
+    "server",
+    "core"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">= 16"
+  },
+  "dependencies": {
+    "@zero-server/native": "0.1.0"
+  }
+}

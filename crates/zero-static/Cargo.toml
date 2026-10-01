@@ -1,0 +1,22 @@
+[package]
+name = "zero-static"
+description = "Static files and directories with path policy, validators, byte ranges, per-route Cache-Control, and a bounded per-core file cache for zero-server."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[dependencies]
+zero-core.workspace = true
+zero-http-types.workspace = true
+zero-date.workspace = true
+zero-mime.workspace = true
+zero-io.workspace = true
+zero-http.workspace = true
+
+[lints]
+workspace = true

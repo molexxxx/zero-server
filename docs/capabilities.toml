@@ -1,0 +1,395 @@
+# The capability map: every crate, binding module and .NET type, grouped into the
+# chapters the guides follow. `cargo xtask docs` renders the tables in the READMEs
+# and the site from this file and fails if it disagrees with the code: every
+# library crate must be claimed exactly once, the node keys must match the
+# packages under bindings/node/packages (or be "core" for a surface the engine
+# carries itself), the python keys must match the package exports and modules,
+# and every dotnet name must be a declared type.
+#
+# Every crate in the workspace also has a [[crate]] row naming the lint table its
+# manifest copies (docs/lints/<lint>.toml, diffed by `cargo xtask lints --check`),
+# whether it builds without std, and the release that first ships it.
+
+[[chapter]]
+key = "http"
+title = "HTTP"
+intent = "Parsing a request off the wire, routing it, answering it from a file or a handler, and the rules applied before any handler runs."
+
+[[chapter]]
+key = "realtime"
+title = "Real time"
+intent = "A connection that stays open: WebSocket frames and rooms, and the event stream a browser reads."
+
+[[chapter]]
+key = "tls"
+title = "TLS"
+intent = "Terminating TLS on both runtime drivers, and the primitives the handshake and the WebSocket accept value need."
+
+[[chapter]]
+key = "http3"
+title = "HTTP/3"
+intent = "The QPACK and HTTP/3 codecs, tested against the published vectors before the transport arrives."
+
+[[chapter]]
+key = "auth"
+title = "Authentication"
+intent = "Cookies, sessions, tokens and second factors."
+
+[[chapter]]
+key = "data"
+title = "Databases"
+intent = "The wire protocols the drivers speak and the SQL they render."
+
+[[chapter]]
+key = "grpc"
+title = "gRPC"
+intent = "Protocol Buffers and the gRPC framing over HTTP/2."
+
+[[chapter]]
+key = "observe"
+title = "Observability"
+intent = "Metrics, trace context, logs and health."
+
+[[chapter]]
+key = "runtime"
+title = "Runtime"
+intent = "Shutdown, timeouts and configuration."
+
+[[chapter]]
+key = "webrtc"
+title = "WebRTC"
+intent = "Signaling, session descriptions, ICE, STUN and TURN."
+
+[[capability]]
+key = "http1"
+chapter = "http"
+title = "HTTP/1.1"
+summary = "The request head parser, the chunked codec, the response serializer, the header and status tables, IMF-fixdate, and the connection driver with its pipelining ring"
+crates = ["zero-http-types", "zero-date", "zero-http1", "zero-http"]
+node = "core"
+python = "core"
+dotnet = ["App", "Request", "Response"]
+next = ["router", "policy", "static"]
+
+[[capability]]
+key = "router"
+chapter = "http"
+title = "Routing"
+summary = "Method dispatch, static segments, parameters and wildcards, 404, 405 with Allow, 501, automatic HEAD and OPTIONS, dot-segment removal and percent-decoding that fails instead of panicking"
+crates = ["zero-router", "zero-uri", "zero-qs"]
+node = "core"
+python = "core"
+dotnet = ["Router"]
+next = ["http1", "codecs", "policy"]
+
+[[capability]]
+key = "codecs"
+chapter = "http"
+title = "Codecs"
+summary = "A buffer-direct JSON writer and a strict parser with depth and size caps, base64, and the media type table"
+crates = ["zero-json", "zero-base64", "zero-mime"]
+node = "core"
+python = "core"
+dotnet = ["Json"]
+next = ["router", "static"]
+
+[[capability]]
+key = "static"
+chapter = "http"
+title = "Static files"
+summary = "Files and directories with a path policy on every segment, validators, 304, byte ranges, Cache-Control per route and a bounded per-core small-file cache"
+crates = ["zero-static"]
+node = "middleware"
+python = "middleware"
+dotnet = ["StaticFiles"]
+next = ["policy", "http1"]
+
+[[capability]]
+key = "policy"
+chapter = "http"
+title = "Request policy"
+summary = "The declarative rules that run before any handler: CORS, security headers, request ids, trust proxy and body limits, evaluated in Rust from data rather than code"
+crates = ["zero-policy"]
+node = "middleware"
+python = "middleware"
+dotnet = ["Cors", "SecurityHeaders", "RequestId", "TrustProxy"]
+next = ["router", "static"]
+
+[[capability]]
+key = "websocket"
+chapter = "realtime"
+title = "WebSocket"
+summary = "The handshake, a frame codec over the caller's buffer, in-place unmasking and streaming UTF-8 validation across fragments, the close code rules, and rooms with cross-core fan-out"
+crates = ["zero-ws", "zero-realtime"]
+node = "realtime"
+python = "realtime"
+dotnet = ["WebSocketConnection", "WebSocketPool"]
+next = ["sse", "http1"]
+
+[[capability]]
+key = "sse"
+chapter = "realtime"
+title = "Server-sent events"
+summary = "The event stream encoder with keep-alive comments and Last-Event-ID, and the client-side decoder"
+crates = ["zero-sse"]
+node = "realtime"
+python = "realtime"
+dotnet = ["SseStream"]
+next = ["websocket"]
+
+[[capability]]
+key = "tls"
+chapter = "tls"
+title = "TLS"
+summary = "A rustls server configuration with the documented defaults, SNI with atomic reload, ticket rotation, a session cache, a handshake timeout, and a driver for each runtime backend; the crypto primitives behind the Digest, Mac, Kdf and Rng traits"
+crates = ["zero-tls", "zero-server-crypto"]
+node = "core"
+python = "core"
+dotnet = ["TlsOptions"]
+next = ["http1", "websocket"]
+
+[[capability]]
+key = "qpack"
+chapter = "http3"
+title = "QPACK"
+summary = "The RFC 9204 static table, the field section prefix, a static-only encoder and decoder, and the integer and Huffman coding"
+crates = ["zero-qpack"]
+node = "core"
+python = "core"
+dotnet = []
+next = ["h3"]
+
+[[capability]]
+key = "h3"
+chapter = "http3"
+title = "HTTP/3 frames"
+summary = "QUIC varints, the HTTP/3 frame codec, settings, unidirectional stream types, GOAWAY, and capsule and datagram frames"
+crates = ["zero-h3"]
+node = "core"
+python = "core"
+dotnet = []
+next = ["qpack"]
+
+# The crates that are not a capability of their own: the error and buffer types
+# every crate shares, the limit table, the SIMD kernels, the raw system calls,
+# the runtime seam, the workers and their arenas, and the C ABI every binding
+# rides on. `abi` names which is which, so the site draws the core as the engine
+# and the C ABI under the bindings.
+[engine]
+crates = ["zero-core", "zero-limits", "zero-simd", "zero-sys", "zero-io", "zero-rt", "zero-ffi"]
+abi = "zero-ffi"
+
+# The crate that bundles every capability behind a feature each, all on by
+# default, so `cargo add zero-server` is the whole framework. Its manifest is
+# checked against the capabilities above: one feature per capability crate, in
+# the default set.
+[bundle]
+crate = "zero-server"
+
+# The unpublished crates: the standalone binary, the benchmark entries, the
+# examples with the conformance vector generator, and the task runner.
+[tooling]
+crates = ["zero-serve", "zero-bench", "zero-examples", "xtask"]
+
+# The no_std crates that take a digest, a MAC, a KDF or random bytes through
+# the zero-core traits instead of depending on zero-server-crypto. A crate
+# named here must not depend on zero-server-crypto and must carry a no_std test
+# with a pure-Rust implementation of the traits it takes; a crate that is not
+# yet in the workspace is listed for when it is created.
+[injects]
+traits = ["Digest", "Mac", "Kdf", "Rng"]
+crates = ["zero-cookie", "zero-jwt", "zero-pg-proto", "zero-totp", "zero-trace", "zero-ws"]
+
+# One row per workspace member: the lint table its manifest copies, whether it
+# builds with `--no-default-features` and for thumbv7em-none-eabihf, and the
+# release that first ships it.
+
+[[crate]]
+name = "zero-core"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-limits"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-simd"
+lint = "audited"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-http-types"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-date"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-http1"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-router"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-uri"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-qs"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-mime"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-base64"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-json"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-ws"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-sse"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-qpack"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-h3"
+lint = "nostd"
+no_std = true
+release = 1
+
+[[crate]]
+name = "zero-sys"
+lint = "audited"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-io"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-rt"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-http"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-static"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-policy"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-realtime"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-server-crypto"
+lint = "audited"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-tls"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-ffi"
+lint = "audited"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-serve"
+lint = "workspace"
+no_std = false
+release = 1
+publish = false
+
+[[crate]]
+name = "zero-server"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-bench"
+lint = "workspace"
+no_std = false
+release = 1
+publish = false
+
+[[crate]]
+name = "zero-examples"
+lint = "workspace"
+no_std = false
+release = 1
+publish = false
+
+[[crate]]
+name = "xtask"
+lint = "workspace"
+no_std = false
+release = 1
+publish = false

@@ -1,0 +1,18 @@
+[package]
+name = "zero-io"
+description = "The runtime seam of zero-server: listener, stream, and datagram traits over owned buffers, timers, the date service, and per-core runtimes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[dependencies]
+zero-core.workspace = true
+zero-sys.workspace = true
+
+[lints]
+workspace = true

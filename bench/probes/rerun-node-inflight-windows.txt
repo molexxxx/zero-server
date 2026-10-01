@@ -1,0 +1,21 @@
+tsfn batched x1 items per crossing, 1 batches in flight: 19273 ns/item, 51,885 items/s
+tsfn batched x1 items per crossing, 2 batches in flight: 8043 ns/item, 124,330 items/s
+tsfn batched x1 items per crossing, 4 batches in flight: 2287 ns/item, 437,224 items/s
+tsfn batched x1 items per crossing, 8 batches in flight: 1174 ns/item, 851,705 items/s
+tsfn batched x4 items per crossing, 1 batches in flight: 4801 ns/item, 208,286 items/s
+tsfn batched x4 items per crossing, 2 batches in flight: 1744 ns/item, 573,372 items/s
+tsfn batched x4 items per crossing, 4 batches in flight: 611 ns/item, 1,637,413 items/s
+tsfn batched x4 items per crossing, 8 batches in flight: 342 ns/item, 2,926,537 items/s
+tsfn batched x8 items per crossing, 1 batches in flight: 2218 ns/item, 450,864 items/s
+tsfn batched x8 items per crossing, 2 batches in flight: 593 ns/item, 1,686,065 items/s
+tsfn batched x8 items per crossing, 4 batches in flight: 232 ns/item, 4,317,584 items/s
+tsfn batched x8 items per crossing, 8 batches in flight: 187 ns/item, 5,338,173 items/s
+tsfn batched x16 items per crossing, 1 batches in flight: 1170 ns/item, 854,705 items/s
+tsfn batched x16 items per crossing, 2 batches in flight: 124 ns/item, 8,062,631 items/s
+tsfn batched x16 items per crossing, 4 batches in flight: 120 ns/item, 8,360,173 items/s
+tsfn batched x16 items per crossing, 8 batches in flight: 114 ns/item, 8,799,331 items/s
+tsfn batched x64 items per crossing, 1 batches in flight: 326 ns/item, 3,072,128 items/s
+tsfn batched x64 items per crossing, 2 batches in flight: 123 ns/item, 8,160,767 items/s
+tsfn batched x64 items per crossing, 4 batches in flight: 69 ns/item, 14,410,581 items/s
+tsfn batched x64 items per crossing, 8 batches in flight: 63 ns/item, 15,767,450 items/s
+node v24.13.0 x64 win32

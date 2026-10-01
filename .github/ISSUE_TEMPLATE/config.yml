@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://z-server.dev/docs/
+    about: The guides, the standards register, and the generated reference for all four languages.
+  - name: Report a security vulnerability
+    url: https://github.com/molexxxx/zero-core/security/advisories/new
+    about: Please report vulnerabilities privately here rather than in a public issue.
+  - name: Building and contributing
+    url: https://z-server.dev/docs/about/building.html
+    about: How to build the workspace, run the four test suites, and re-splice the documentation examples.

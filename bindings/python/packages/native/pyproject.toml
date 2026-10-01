@@ -1,0 +1,31 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "zero-server-native"
+version = "0.1.0"
+description = "The compiled zero-server core for Python and the generated contract every zero-server package builds on. Installed as a dependency, not directly."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "molexxxx" }]
+keywords = ["zero-server", "http", "server", "web", "asgi"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+
+[project.urls]
+Repository = "https://github.com/molexxxx/zero-core"
+
+[tool.maturin]
+# Mixed Rust/Python layout: the hand-written facade lives under python/, and the
+# native contract is built into it as zero_server._native.
+python-source = "python"
+module-name = "zero_server._native"
+features = ["pyo3/extension-module"]

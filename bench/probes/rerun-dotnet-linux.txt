@@ -1,0 +1,12 @@
+version: 0.1.0
+managed static method returning nint: 1.6 ns/call (sink 204000010000000)
+LibraryImport zero_version() -> IntPtr: 4.8 ns/call (sink -965719692109468160)
+LibraryImport zero_version() -> IntPtr, SuppressGCTransition: 2.1 ns/call (sink -965719692109468160)
+managed -> UnmanagedCallersOnly through delegate* unmanaged (reverse transition, no native hop): 3.9 ns/call (sink 200000010000000)
+native -> managed reverse P/Invoke, calling thread: 3.9 ns/call
+native -> managed reverse P/Invoke, fresh native thread (first attach amortized over 20M): 3.9 ns/call
+native -> managed reverse P/Invoke, fresh native thread, single call (thread attach cost): 40529 ns
+request view fill (struct by pointer, ReadOnlySpan over Rust memory): 1.2 ns/call (sink 480000000)
+request view fill, SuppressGCTransition, span construct: 1.0 ns/call (sink 480000000)
+request view fill + UTF8 decode of the path to string: 22.0 ns/call (sink 48000000)
+.NET 10.0.12 X64 Ubuntu 24.04.5 LTS

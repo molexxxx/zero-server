@@ -1,0 +1,53 @@
+name: dotnet
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: dotnet (build, smoke, guides)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ffi-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Build the native FFI library and regenerate the C header
+        run: cargo build -p zero-ffi --release
+
+      - name: Check the generated header is in sync with the Rust source
+        run: |
+          if ! git diff --exit-code -- crates/zero-ffi/include/zero.h; then
+            echo "::error::Generated header is stale. Run 'cargo build -p zero-ffi' and commit crates/zero-ffi/include/zero.h."
+            exit 1
+          fi
+
+      - name: Build the .NET binding
+        run: dotnet build bindings/dotnet/ZeroServer.sln -c Release
+
+      - name: Smoke test
+        run: dotnet run --project bindings/dotnet/tests/ZeroServer.Smoke -c Release
+
+      # The C# examples the documentation site shows are spliced from this project.
+      - name: Guide examples
+        run: dotnet run --project bindings/dotnet/samples/ZeroServer.Guides -c Release

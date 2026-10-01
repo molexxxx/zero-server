@@ -1,0 +1,22 @@
+noop() sync: 12.1 ns/call (sink 5000000)
+sumSlice(Buffer 256) borrowed view: 46.1 ns/call (sink 1280000000)
+sumOwned(Buffer 256) owned ref: 86.5 ns/call (sink 1280000000)
+takeString('/api/users/12345/profile'): 56.5 ns/call (sink 120000000)
+reqMethod(External) opaque handle read: 37.9 ns/call (sink 5000000)
+reqPath(External) -> String: 57.6 ns/call (sink 25000000)
+reqHeader(External, 'user-agent') -> String: 92.7 ns/call (sink 15000000)
+makeReq() External alloc: 967.3 ns/call (sink 1000000)
+makeBody(1024) external Buffer: 1902.9 ns/call (sink 1024000000)
+noopAsync() sequential: 86173 ns/call
+noopAsync() concurrent x64: 2936 ns/call, 340,567 calls/s
+noopAsync() concurrent x256: 2659 ns/call, 376,117 calls/s
+tsfn round trip, tokio worker -> JS -> return value, sequential: 84336 ns/call, 11,857 calls/s
+tsfn round trip, concurrent x16: 4012 ns/call, 249,277 calls/s
+tsfn round trip, concurrent x64: 1184 ns/call, 844,324 calls/s
+tsfn round trip, concurrent x256: 700 ns/call, 1,428,290 calls/s
+tsfn round trip, concurrent x1024: 679 ns/call, 1,471,947 calls/s
+tsfn batched x16 items per crossing: 5506 ns/item, 181,635 items/s
+tsfn batched x64 items per crossing: 1508 ns/item, 663,267 items/s
+tsfn batched x256 items per crossing: 441 ns/item, 2,266,992 items/s
+tsfn fire-and-forget NonBlocking, no return: 330 ns/call, 3,033,660 calls/s
+node v24.21.0 x64 linux

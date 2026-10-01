@@ -1,0 +1,96 @@
+name: Bug report
+description: Something in zero-server behaves differently from what its documentation or the standard it cites says.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. If you think you have found a
+        security vulnerability, please do not file it here: use the private channel
+        described in [SECURITY.md](https://github.com/molexxxx/zero-core/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: |
+        A chunked request body with a trailer section is rejected with 400 ...
+        RFC 9112 section 7.1.2 and the guide both say ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Which language
+      description: Where you hit it. Pick every one you have reproduced it in.
+      multiple: true
+      options:
+        - Rust
+        - TypeScript or JavaScript (Node)
+        - Python
+        - C# (.NET)
+        - The C ABI directly
+        - The standalone binary
+    validations:
+      required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: Crate or package
+      description: The one you called, as you depend on it.
+      placeholder: zero-http1, @zero-server/core, zero-server-core, ZeroServer.Core
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version you installed. All packages share one version.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Operating system and architecture, the runtime backend if you changed it, and the target if you cross-compiled.
+      placeholder: Ubuntu 24.04 x86_64 on io-tokio, or x86_64-unknown-linux-musl in a container
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: >
+        The smallest program that shows it. A listener on a loopback port driven by an
+        in-process client is enough wherever possible, so it runs without any other
+        service.
+      render: rust
+    validations:
+      required: true
+
+  - type: textarea
+    id: bytes
+    attributes:
+      label: The bytes, for a parser or protocol issue
+      description: >
+        The exact request, frame, or message as hex, and where it came from. A byte
+        sequence that panics, hangs, or misparses is the most useful thing you can
+        send, and it becomes a conformance vector.
+      placeholder: "47 45 54 20 2f 20 48 54 54 50 2f 31 2e 31 0d 0a ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: Logs, a backtrace, the specification section, a capture of the connection.
+    validations:
+      required: false

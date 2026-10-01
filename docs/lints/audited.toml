@@ -1,0 +1,14 @@
+# The audited lint table: the workspace table with only `unsafe_code` lowered to
+# `deny`, so an audited crate allows it per item with a `// SAFETY:` comment on
+# every block. Every audited crate copies it verbatim into its manifest.
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

@@ -1,0 +1,42 @@
+{
+  "name": "@zero-server/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The zero-server framework over the Rust core: the TypeScript facade every application imports, re-exporting @zero-server/core.",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/molexxxx/zero-core.git",
+    "directory": "bindings/node/packages/sdk"
+  },
+  "homepage": "https://z-server.dev",
+  "keywords": [
+    "zero-server",
+    "http",
+    "server",
+    "framework",
+    "web"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">= 16"
+  },
+  "dependencies": {
+    "@zero-server/core": "0.1.0",
+    "@zero-server/native": "0.1.0"
+  }
+}

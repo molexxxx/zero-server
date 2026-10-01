@@ -1,0 +1,37 @@
+[package]
+name = "zero-server-node"
+version = "0.1.0"
+edition = "2021"
+# The core workspace sets the minimum supported Rust version; the binding cannot
+# build with an older toolchain than zero-ffi requires.
+rust-version = "1.89"
+license = "Apache-2.0"
+repository = "https://github.com/molexxxx/zero-core"
+authors = ["molexxxx"]
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Node-API 6 is the floor every Node release the packages support provides. The
+# core owns its threads, so the tokio runtime feature stays off.
+napi = { version = "3", default-features = false, features = ["napi6"] }
+napi-derive = "3"
+zero-ffi = { path = "../../crates/zero-ffi" }
+
+[build-dependencies]
+napi-build = "2"
+
+# The audited lint table (docs/lints/audited.toml): unsafe code is allowed per item
+# with a SAFETY comment, and cargo xtask lints --check diffs this copy against it.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

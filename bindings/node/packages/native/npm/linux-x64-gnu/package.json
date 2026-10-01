@@ -1,0 +1,37 @@
+{
+  "name": "@zero-server/native-linux-x64-gnu",
+  "version": "0.1.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "zero-server-native.linux-x64-gnu.node",
+  "files": [
+    "zero-server-native.linux-x64-gnu.node"
+  ],
+  "description": "The compiled zero-server core for Node and the generated napi-rs contract every @zero-server package builds on. Installed as a dependency, not directly.",
+  "keywords": [
+    "zero-server",
+    "http",
+    "server",
+    "napi-rs"
+  ],
+  "homepage": "https://z-server.dev",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/molexxxx/zero-core.git",
+    "directory": "bindings/node/packages/native"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "glibc"
+  ]
+}

@@ -1,0 +1,13 @@
+# The workspace lint table, mirrored from `[workspace.lints]` in the root
+# manifest. A std crate inherits it with `[lints] workspace = true`.
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

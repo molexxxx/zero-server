@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>ZeroServer.Smoke</RootNamespace>
+
+    <!-- The native cdylib from a release build of zero-ffi, copied next to the
+         smoke executable so P/Invoke resolves it for the host runtime. -->
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../../'))</RepoRoot>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('Windows'))">zero_ffi.dll</ZeroNativeName>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('Linux'))">libzero_ffi.so</ZeroNativeName>
+    <ZeroNativeName Condition="$([MSBuild]::IsOSPlatform('OSX'))">libzero_ffi.dylib</ZeroNativeName>
+    <ZeroNativePath>$(RepoRoot)target/release/$(ZeroNativeName)</ZeroNativePath>
+    <ZeroVectorsPath>$(RepoRoot)conformance/vectors.json</ZeroVectorsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/ZeroServer/ZeroServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The cross-language conformance vectors, copied next to the executable so
+         this runner reads the same committed file as the other bindings. -->
+    <None Include="$(ZeroVectorsPath)" Condition="Exists('$(ZeroVectorsPath)')">
+      <Link>vectors.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(ZeroNativePath)" Condition="Exists('$(ZeroNativePath)')">
+      <Link>$(ZeroNativeName)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

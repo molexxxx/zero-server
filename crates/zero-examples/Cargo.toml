@@ -1,0 +1,16 @@
+[package]
+name = "zero-examples"
+description = "Runnable examples, guides, and the conformance vector generator for zero-server."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+zero-server.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,122 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/zero-core",
+    "crates/zero-limits",
+    "crates/zero-simd",
+    "crates/zero-http-types",
+    "crates/zero-date",
+    "crates/zero-http1",
+    "crates/zero-router",
+    "crates/zero-uri",
+    "crates/zero-qs",
+    "crates/zero-mime",
+    "crates/zero-base64",
+    "crates/zero-json",
+    "crates/zero-ws",
+    "crates/zero-sse",
+    "crates/zero-qpack",
+    "crates/zero-h3",
+    "crates/zero-sys",
+    "crates/zero-io",
+    "crates/zero-rt",
+    "crates/zero-http",
+    "crates/zero-static",
+    "crates/zero-policy",
+    "crates/zero-realtime",
+    "crates/zero-server-crypto",
+    "crates/zero-tls",
+    "crates/zero-ffi",
+    "crates/zero-serve",
+    "crates/zero-server",
+    "crates/zero-bench",
+    "crates/zero-examples",
+    "crates/xtask",
+]
+# Language bindings are standalone crates with their own toolchains and lint
+# policy; they are built by their own pipelines, not the core workspace.
+exclude = [
+    "bindings/node",
+    "bindings/python",
+    # Boundary-cost probes are built inside Linux containers by `cargo xtask probes`
+    # against their own toolchains; they are measurement fixtures, not members.
+    "bench/probes/node/napi-probe",
+    "bench/probes/python/pyo3-probe",
+    "bench/probes/dotnet/ffi-probe",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "Apache-2.0"
+repository = "https://github.com/molexxxx/zero-core"
+authors = ["molexxxx"]
+keywords = ["http", "server", "no-std", "async", "web"]
+categories = [
+  "web-programming::http-server",
+  "network-programming",
+  "asynchronous",
+  "no-std",
+]
+
+# Internal crate dependencies. The version is required so each crate can be
+# published to crates.io, and is kept in lockstep with workspace.package.version.
+# Every crate is listed so `cargo xtask version` rewrites one place.
+[workspace.dependencies]
+zero-core = { path = "crates/zero-core", version = "0.1.0" }
+zero-limits = { path = "crates/zero-limits", version = "0.1.0" }
+zero-simd = { path = "crates/zero-simd", version = "0.1.0" }
+zero-http-types = { path = "crates/zero-http-types", version = "0.1.0" }
+zero-date = { path = "crates/zero-date", version = "0.1.0" }
+zero-http1 = { path = "crates/zero-http1", version = "0.1.0" }
+zero-router = { path = "crates/zero-router", version = "0.1.0" }
+zero-uri = { path = "crates/zero-uri", version = "0.1.0" }
+zero-qs = { path = "crates/zero-qs", version = "0.1.0" }
+zero-mime = { path = "crates/zero-mime", version = "0.1.0" }
+zero-base64 = { path = "crates/zero-base64", version = "0.1.0" }
+zero-json = { path = "crates/zero-json", version = "0.1.0" }
+zero-ws = { path = "crates/zero-ws", version = "0.1.0" }
+zero-sse = { path = "crates/zero-sse", version = "0.1.0" }
+zero-qpack = { path = "crates/zero-qpack", version = "0.1.0" }
+zero-h3 = { path = "crates/zero-h3", version = "0.1.0" }
+zero-sys = { path = "crates/zero-sys", version = "0.1.0" }
+zero-io = { path = "crates/zero-io", version = "0.1.0" }
+zero-rt = { path = "crates/zero-rt", version = "0.1.0" }
+zero-http = { path = "crates/zero-http", version = "0.1.0" }
+zero-static = { path = "crates/zero-static", version = "0.1.0" }
+zero-policy = { path = "crates/zero-policy", version = "0.1.0" }
+zero-realtime = { path = "crates/zero-realtime", version = "0.1.0" }
+zero-server-crypto = { path = "crates/zero-server-crypto", version = "0.1.0" }
+zero-tls = { path = "crates/zero-tls", version = "0.1.0" }
+zero-ffi = { path = "crates/zero-ffi", version = "0.1.0" }
+zero-server = { path = "crates/zero-server", version = "0.1.0" }
+
+# The workspace lint table. Cargo replaces rather than merges a package `[lints]`
+# table, so the no_std and audited crates carry a copy of this table with their
+# additions; the three tables live in docs/lints and `cargo xtask lints --check`
+# diffs every member manifest against the one it names.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# A missed checked operation panics rather than wraps; every cdylib unwinds so
+# the FFI boundary can catch it instead of taking the host process down.
+overflow-checks = true
+panic = "unwind"
+strip = "symbols"
+
+# Reserved for relaxing overflow checks on the SIMD kernels if the release
+# measurement gate shows a cost on the parser hot path; empty until then.
+[profile.release.package.zero-simd]

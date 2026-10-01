@@ -1,0 +1,20 @@
+[package]
+name = "zero-policy"
+description = "The declarative tier 0 rule engine of zero-server: CORS, security headers, request ids, trust proxy, body limits, bearer extraction, rate limiting, and timeouts."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[dependencies]
+zero-core.workspace = true
+zero-limits.workspace = true
+zero-http-types.workspace = true
+zero-http.workspace = true
+
+[lints]
+workspace = true

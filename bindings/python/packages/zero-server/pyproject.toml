@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zero-server"
+version = "0.1.0"
+description = "The zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic Python facade."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "molexxxx" }]
+keywords = ["zero-server", "http", "server", "web", "framework"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+dependencies = [
+    "zero-server-core==0.1.0",
+    "zero-server-native==0.1.0",
+]
+
+[project.urls]
+Repository = "https://github.com/molexxxx/zero-core"
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true

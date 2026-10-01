@@ -1,0 +1,18 @@
+[package]
+name = "zero-tls"
+description = "rustls ServerConfig builder, SNI resolver, ticket rotation, session cache, and the TLS drivers over the zero-server runtime seam."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[dependencies]
+zero-core.workspace = true
+zero-io.workspace = true
+
+[lints]
+workspace = true

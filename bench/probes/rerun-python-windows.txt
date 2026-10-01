@@ -1,0 +1,15 @@
+noop() sync: 22.7 ns/call (sink 3000000)
+sum_bytes(bytes 256) borrowed &[u8]: 53.0 ns/call (sink 768000000)
+take_str('/api/users/12345/profile'): 43.9 ns/call (sink 72000000)
+req.method getter: 33.3 ns/call (sink 3000000)
+req.path getter -> str: 47.8 ns/call (sink 15000000)
+req.header('user-agent') -> str: 55.0 ns/call (sink 9000000)
+make_req() pyclass alloc: 196.4 ns/call (sink 1000000)
+make_body(1024) bytes: 112.5 ns/call (sink 1024000000)
+Rust -> Python callback, attached on calling thread: 36 ns/call, 28,029,695 calls/s
+Rust -> Python callback from a foreign thread, attach once: 36 ns/call, 27,478,944 calls/s
+Rust -> Python callback from a foreign thread, attach per call: 2219 ns/call, 450,711 calls/s
+Rust -> Python batched x16 items per call: 20 ns/item, 49,884,393 items/s
+Rust -> Python batched x64 items per call: 18 ns/item, 56,414,307 items/s
+Rust -> Python batched x256 items per call: 16 ns/item, 61,010,583 items/s
+3.13.1 (tags/v3.13.1:0671451, Dec  3 2024, 19:06:28) [MSC v.1942 64 bit (AMD64)] gil enabled: True

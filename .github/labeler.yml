@@ -1,0 +1,44 @@
+# Which label a pull request gets from the files it touches. These feed the categories in
+# .github/release.yml, so the release notes group themselves.
+capability:
+  - changed-files:
+      - any-glob-to-any-file:
+          - crates/**
+
+bindings:
+  - changed-files:
+      - any-glob-to-any-file:
+          - bindings/**
+
+conformance:
+  - changed-files:
+      - any-glob-to-any-file:
+          - conformance/**
+          - docs/standards.toml
+          - fuzz/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - web/**
+          - README.md
+          - "**/README.md"
+          - CHANGELOG.md
+          - CONTRIBUTING.md
+          - CODE_OF_CONDUCT.md
+          - SECURITY.md
+
+example:
+  - changed-files:
+      - any-glob-to-any-file:
+          - examples/**
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - justfile
+          - deny.toml
+          - deny/**
+          - supply-chain/**

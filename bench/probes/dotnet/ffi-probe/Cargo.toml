@@ -1,0 +1,13 @@
+[package]
+name = "ffi-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "ffi_probe"
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

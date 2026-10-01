@@ -1,0 +1,47 @@
+name: python
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: python (build, smoke, guides)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # zero-server-native is the PyO3 crate under packages/native; every other package
+      # is pure Python, installed from its directory so the namespace portions merge.
+      - name: Set up venv, build the engine, and install every package
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install maturin pytest
+          maturin develop -m packages/native/Cargo.toml
+          pip install $(find packages -mindepth 1 -maxdepth 1 -type d ! -name native)
+
+      - name: Regenerate the type stub
+        run: cargo run --bin stub_gen --manifest-path packages/native/Cargo.toml
+
+      - name: Check the generated stub is in sync with the Rust source
+        run: |
+          if ! git diff --exit-code -- packages/native/python/zero_server/_native/__init__.pyi; then
+            echo "::error::Generated stub is stale. Run 'cargo run --bin stub_gen' in bindings/python/packages/native and commit python/zero_server/_native/__init__.pyi."
+            exit 1
+          fi
+
+      - name: Smoke, conformance, guide, and doctest suites
+        run: .venv/bin/python -m pytest

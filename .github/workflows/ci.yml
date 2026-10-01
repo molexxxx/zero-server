@@ -1,0 +1,402 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: rust (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install components
+        run: rustup component add rustfmt clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # The Node and Python binding crates are excluded from the root workspace, so
+      # neither check above reaches them; lint them through their own manifests.
+      - name: Format and clippy the out-of-workspace bindings
+        run: |
+          for manifest in bindings/node/Cargo.toml bindings/python/packages/native/Cargo.toml; do
+            cargo fmt --manifest-path "$manifest" -- --check
+            cargo clippy --manifest-path "$manifest" --all-targets -- -D warnings
+          done
+
+      # Cargo replaces rather than merges a package [lints] table, so every member
+      # manifest is diffed against the table its capability row names, and no crate
+      # outside the audited set can gain an unsafe_code allow.
+      - name: Lint tables match their capability rows
+        run: cargo run -p xtask -- lints --check
+
+      # Build the no_std crates with their default features off, so each stays
+      # `no_std` (only `core` and `alloc`) and never silently regains a `std`
+      # dependency that would break the microcontroller target.
+      - name: no_std build
+        run: >
+          cargo build --no-default-features
+          -p zero-core -p zero-limits -p zero-simd -p zero-http-types -p zero-date
+          -p zero-http1 -p zero-router -p zero-uri -p zero-qs -p zero-mime
+          -p zero-base64 -p zero-json -p zero-ws -p zero-sse -p zero-qpack -p zero-h3
+
+      # The C ABI crate builds with every capability off, so a host that links only
+      # the core surface never pulls a capability it did not ask for.
+      - name: C ABI with no default features
+        run: cargo check -p zero-ffi --no-default-features
+
+      - name: Test
+        run: cargo test --workspace
+
+      # The completion backend is a feature of the runtime seam, off in every published
+      # default, so the crates that sit on the seam are tested a second time with it on.
+      - name: Test on the io-compio backend
+        run: |
+          cargo test -p zero-io --features io-compio
+          cargo test -p zero-http --features io-compio
+          cargo test -p zero-bench --features io-compio
+
+      # Every example runs to completion with no other service present. The generator
+      # regenerates the cross-language conformance vectors, and the diff fails if the
+      # committed file no longer matches.
+      - name: Examples run and the conformance vectors are current
+        run: |
+          for example in $(ls examples/*.rs examples/guides/*.rs 2>/dev/null | xargs -n1 basename | sed 's/\.rs$//'); do
+            cargo run -p zero-examples --example "$example" > /dev/null
+          done
+          git diff --exit-code -- conformance/vectors.json
+
+      # Each crate's README is generated from its rustdoc; this fails if any is stale, so the
+      # crates.io pages stay in sync with the code.
+      - name: Crate READMEs in sync
+        run: cargo run -p xtask -- docs --check
+
+      # Every standards row at or below the current release names a test that exists;
+      # rows for a later release are reported as pending. While the current release is
+      # being built this step reports the missing tests without failing the run; the
+      # release preflight runs the same check as a blocking step before a tag publishes.
+      - name: Standards rows have their tests
+        run: cargo run -p xtask -- standards --check
+        continue-on-error: true
+
+      # Every manifest, lockfile, and generated loader must carry the workspace version, and
+      # CHANGELOG.md must have that version's entry; this fails on the first one that drifts.
+      - name: Versions in lockstep
+        run: cargo run -p xtask -- version --check
+
+      # The crates.io publish order is derived from cargo metadata; this fails if a crate
+      # depends on an unpublishable member or the dependencies form a cycle.
+      - name: Publish order resolves
+        run: cargo run -p xtask -- release --plan
+
+  embedded:
+    name: bare-metal cross-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # A Cortex-M4F target with no operating system: the honest test of the `no_std`
+      # claim, since the host `no_std build` step still links against the host `std`.
+      # Every crate that declares `no_std` must compile for a real microcontroller.
+      - name: Add the bare-metal target
+        run: rustup target add thumbv7em-none-eabihf
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-embedded-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Cross-compile the no_std crates for bare metal
+        run: >
+          cargo build --target thumbv7em-none-eabihf --no-default-features
+          -p zero-core -p zero-limits -p zero-simd -p zero-http-types -p zero-date
+          -p zero-http1 -p zero-router -p zero-uri -p zero-qs -p zero-mime
+          -p zero-base64 -p zero-json -p zero-ws -p zero-sse -p zero-qpack -p zero-h3
+
+  msrv:
+    name: minimum supported rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Every published crate inherits `rust-version` from the workspace, and a consumer
+      # on that toolchain is entitled to a build. Nothing else in this workflow pins a
+      # version, so without this the number is a claim rather than a fact. The
+      # excluded crates are the task runner, the examples, the benchmark entries, and
+      # the standalone binary, none of which is published.
+      - name: Read the declared minimum
+        id: msrv
+        run: |
+          VERSION=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["rust_version"])')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "the workspace declares Rust $VERSION"
+
+      - name: Install it
+        run: rustup toolchain install ${{ steps.msrv.outputs.version }} --profile minimal
+
+      - name: Check every published crate against it
+        run: |
+          cargo +${{ steps.msrv.outputs.version }} check --workspace \
+            --exclude xtask --exclude zero-examples --exclude zero-bench --exclude zero-serve
+
+  deny:
+    name: license + advisory audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2.87.13
+        with:
+          tool: cargo-deny
+
+      # Audits each shipped dependency graph against deny.toml: the pinned allowlist,
+      # security advisories, license policy, duplicate-version bans, build scripts, and
+      # unknown sources. The two binding crates are outside the workspace, so each is
+      # audited through its own manifest.
+      - name: cargo deny
+        run: |
+          cargo deny check
+          cargo deny --manifest-path bindings/node/Cargo.toml check
+          cargo deny --manifest-path bindings/python/packages/native/Cargo.toml check
+
+      # The completion backend brings its own graph, allowed by an addendum the
+      # default policy does not carry.
+      - name: cargo deny with the io-compio backend
+        run: cargo deny --manifest-path crates/zero-io/Cargo.toml --features io-compio --config deny/io-compio.toml check
+
+  vet:
+    name: dependency audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install cargo-vet
+        uses: taiki-e/install-action@v2.87.13
+        with:
+          tool: cargo-vet
+
+      # Every third-party crate in the lockfile is covered by an imported audit, a trust
+      # entry with an expiration, or an exemption with a named owner; a crate none of
+      # them covers fails here rather than shipping unreviewed.
+      - name: cargo vet
+        run: cargo vet --locked
+
+  miri:
+    name: miri (audited and codec crates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install nightly with miri
+        run: rustup toolchain install nightly --profile minimal --component miri --component rust-src
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-miri-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      # Strict provenance rejects integer-to-pointer casts, and many seeds vary the
+      # scheduling and allocation addresses so a data race or an uninitialized read
+      # that one run misses is caught by another. The crypto crate wraps C code Miri
+      # cannot execute, and the tests in zero-sys that make a system call carry
+      # `#[cfg_attr(miri, ignore)]`, so the audited set here is the pure-Rust part.
+      - name: Miri
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-many-seeds
+        run: >
+          cargo +nightly miri test
+          -p zero-simd -p zero-sys -p zero-ffi
+          -p zero-http-types -p zero-date -p zero-http1 -p zero-router -p zero-uri
+          -p zero-qs -p zero-mime -p zero-base64 -p zero-json -p zero-ws -p zero-sse
+          -p zero-qpack -p zero-h3
+
+  sanitizers:
+    name: sanitizers (${{ matrix.sanitizer }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, thread]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install nightly with rust-src
+        run: rustup toolchain install nightly --profile minimal --component rust-src
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.sanitizer }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      # The sanitizer runtime instruments std as well, so std is rebuilt for the target.
+      # The runtime crate owns the arena and the slot protocol and the C ABI crate is
+      # the single unsafe boundary, so these two carry the memory and race checks.
+      - name: Test the runtime and the C ABI under the sanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+          RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+        run: >
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
+          -p zero-rt -p zero-ffi
+
+      # A late accessor races slot recycle while traffic runs on the same core; the
+      # test is ignored by default because it runs long enough to exercise the race.
+      - name: Race a late accessor against slot recycle
+        env:
+          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+          RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+        run: >
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
+          -p zero-rt -- --include-ignored slot_recycle
+
+  fuzz-smoke:
+    name: fuzz smoke (60 s per target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install nightly
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-fuzz
+            fuzz/target
+          key: ${{ runner.os }}-fuzz-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Install cargo-fuzz
+        run: command -v cargo-fuzz || cargo install cargo-fuzz --locked
+
+      # Every parser entry point has a libFuzzer target with a checked-in seed corpus.
+      # Each runs for a minute here, optimized with debug assertions on and under
+      # address sanitizer, so a checked operation that panics on arbitrary bytes fails
+      # the job rather than shipping; the long runs are a separate schedule.
+      - name: Run every target for a minute
+        run: |
+          for target in $(cargo +nightly fuzz list); do
+            cargo +nightly fuzz run "$target" -O -a -s address -- -max_total_time=60
+          done
+
+  reproducible:
+    name: reproducible build
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: rust:1.89-bookworm@sha256:948f9b08a66e7fe01b03a98ef1c7568292e07ec2e4fe90d88c07bb14563c84ff
+    steps:
+      - uses: actions/checkout@v7
+
+      # The release C ABI library is built twice, each in a fresh container from the
+      # same image, with the source and cargo paths remapped, the commit time as the
+      # build time, and the target directory outside the checkout. A build that embeds
+      # anything else shows up as a differing hash.
+      - name: Build the C ABI library twice in separate containers
+        run: |
+          epoch=$(git log -1 --pretty=%ct)
+          for n in 1 2; do
+            mkdir -p "out-$n"
+            docker run --rm \
+              -v "$PWD:/work" -v "$PWD/out-$n:/out" -w /work \
+              -e SOURCE_DATE_EPOCH="$epoch" \
+              -e CARGO_TARGET_DIR=/tmp/target \
+              -e RUSTFLAGS="--remap-path-prefix=/work=/src --remap-path-prefix=/usr/local/cargo=/cargo" \
+              -e CFLAGS="-ffile-prefix-map=/work=/src -ffile-prefix-map=/usr/local/cargo=/cargo" \
+              "$IMAGE" \
+              bash -c 'cargo build -p zero-ffi --release --locked && cp /tmp/target/release/libzero_ffi.so /out/'
+          done
+
+      - name: The two builds are identical
+        run: |
+          sha256sum out-1/libzero_ffi.so out-2/libzero_ffi.so
+          cmp out-1/libzero_ffi.so out-2/libzero_ffi.so
+
+  hardened:
+    name: hardened build checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-hardened-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Build the release library and the standalone binary
+        id: build
+        run: |
+          cargo build -p zero-ffi --release
+          binary=$(cargo build -p zero-serve --release --message-format=json \
+            | jq -r 'select(.reason == "compiler-artifact" and .executable != null) | .executable' | tail -1)
+          echo "binary=$binary" >> "$GITHUB_OUTPUT"
+
+      # The Linux defaults the release profile relies on, read from the artifacts
+      # rather than assumed: position independence, a non-executable stack, and full
+      # RELRO (a RELRO segment plus BIND_NOW).
+      - name: readelf
+        run: |
+          check() {
+            readelf -hW "$1" | grep -q 'Type:.*DYN' || { echo "::error::$1 is not position independent"; exit 1; }
+            readelf -lW "$1" | grep -q 'GNU_RELRO' || { echo "::error::$1 has no GNU_RELRO segment"; exit 1; }
+            readelf -dW "$1" | grep -qE 'BIND_NOW|FLAGS.*NOW' || { echo "::error::$1 is not BIND_NOW"; exit 1; }
+            if readelf -lW "$1" | grep 'GNU_STACK' | grep -q 'RWE'; then
+              echo "::error::$1 has an executable stack"
+              exit 1
+            fi
+            echo "$1: PIE, NX stack, full RELRO"
+          }
+          check target/release/libzero_ffi.so
+          check "${{ steps.build.outputs.binary }}"
+
+      - name: Install nightly with rust-src
+        run: rustup toolchain install nightly --profile minimal --component rust-src
+
+      # Stack protectors on every function and LLVM CFI over every indirect call, which
+      # needs LTO, one codegen unit, and a std built with the same flags. The build is
+      # the check: a function-pointer type the CFI pass cannot type fails to link.
+      - name: Build with stack protectors and CFI
+        env:
+          RUSTFLAGS: -Zstack-protector=all -Zsanitizer=cfi -Clto -Ccodegen-units=1
+        run: cargo +nightly build -Zbuild-std --target x86_64-unknown-linux-gnu -p zero-ffi --release

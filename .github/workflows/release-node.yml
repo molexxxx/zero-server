@@ -1,0 +1,142 @@
+name: release-node
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to release, with or without a leading v.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    uses: ./.github/workflows/release-preflight.yml
+    with:
+      version: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.host }}
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        # The seven prebuilt targets: the ones aws-lc-sys ships pregenerated bindings
+        # for, so no build here needs bindgen or libclang. Any other target is a source
+        # build for the consumer, never a bindgen build.
+        include:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: true
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            cross: true
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            cross: true
+          # Cross-compiled on Apple Silicon: scarce macos-13 Intel runners sit
+          # unallocated for minutes and stall the whole release.
+          - host: macos-latest
+            target: x86_64-apple-darwin
+          - host: macos-latest
+            target: aarch64-apple-darwin
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+    defaults:
+      run:
+        working-directory: bindings/node
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      # napi build --cross-compile drives cargo-zigbuild for non-Windows targets.
+      - name: Setup zig for cross compilation
+        if: matrix.cross
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      # aws-lc-sys assembles with NASM on Windows x86-64; the crate's prebuilt objects
+      # are declined, so the assembler is installed at a pinned version instead.
+      - name: Install NASM
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.16.01"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build native addon
+        run: npm run build:native -- --target ${{ matrix.target }} ${{ matrix.cross && '--cross-compile' || '' }}
+
+      - name: Upload addon artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.target }}
+          path: bindings/node/packages/native/*.node
+          if-no-files-found: error
+
+  publish:
+    name: publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: bindings/node
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download addon artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: bindings/node/artifacts
+
+      - name: Move addons into the platform packages
+        run: npx napi artifacts --output-dir artifacts --package-json-path packages/native/package.json --npm-dir packages/native/npm
+
+      # The facades are TypeScript and dist/ is not in the repository, so without this the
+      # tarballs carry package.json, a README and a license and no code at all.
+      - name: Build the facades
+        run: npm run build:facade
+
+      # npm drops a `files` entry that is not on disk rather than failing, so an unbuilt
+      # facade publishes as a three-file package that installs and then cannot be required.
+      - name: Every package carries the entry point it declares
+        run: npm run check:packaging
+
+      # pre-publish publishes the @zero-server/native platform packages and pins them in
+      # its manifest; the workspace publish then covers @zero-server/native,
+      # @zero-server/core, every capability package, and the @zero-server/sdk bundle.
+      - name: Publish the platform packages, then every workspace package
+        run: |
+          npx napi pre-publish -t npm --package-json-path packages/native/package.json --npm-dir packages/native/npm
+          npm publish --workspaces --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

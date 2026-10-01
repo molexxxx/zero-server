@@ -1,0 +1,261 @@
+# Dependency policy for the `http3` feature graph: the base policy of deny.toml
+# plus the crates quinn-proto 0.11 brings. Passed with `--config` by the job
+# that enables the feature:
+#
+#   cargo deny --config deny/http3.toml --manifest-path crates/zero-server/Cargo.toml --features http3 check
+#
+# cargo-deny reads one config file, so the base sections are repeated here and
+# must stay in step with deny.toml; the additions are marked "http3". The
+# extra set was measured with cargo tree on quinn-proto 0.11.19 with
+# `default-features = false, features = ["rustls-aws-lc-rs"]` for
+# x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc and aarch64-apple-darwin.
+# quinn-proto makes tracing 0.1 mandatory on this path, and its chacha20
+# dependency brings cpufeatures, which the in-house SIMD dispatch does not use.
+
+[graph]
+exclude-dev = true
+exclude = ["xtask"]
+# The graph is judged on the targets with pregenerated aws-lc-sys bindings,
+# which also drops quinn-proto's wasm branch (ring, web-time, js-sys and a
+# second getrandom and windows-sys) that no release target builds.
+targets = [
+    "aarch64-apple-darwin",
+    "aarch64-pc-windows-msvc",
+    "aarch64-unknown-linux-gnu",
+    "aarch64-unknown-linux-musl",
+    "i686-pc-windows-msvc",
+    "i686-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-gnu",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+exceptions = [{ allow = ["MPL-2.0"], crate = "cbindgen" }]
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+external-default-features = "deny"
+allow = [
+    # Workspace members.
+    "zero-base64",
+    "zero-bench",
+    "zero-core",
+    "zero-date",
+    "zero-examples",
+    "zero-ffi",
+    "zero-h3",
+    "zero-http",
+    "zero-http-types",
+    "zero-http1",
+    "zero-io",
+    "zero-json",
+    "zero-limits",
+    "zero-mime",
+    "zero-policy",
+    "zero-qpack",
+    "zero-qs",
+    "zero-realtime",
+    "zero-router",
+    "zero-rt",
+    "zero-serve",
+    "zero-server",
+    "zero-server-crypto",
+    "zero-simd",
+    "zero-sse",
+    "zero-static",
+    "zero-sys",
+    "zero-tls",
+    "zero-uri",
+    "zero-ws",
+    # Runtime seam, io-tokio.
+    "tokio",
+    "mio",
+    "socket2",
+    "libc",
+    "bytes",
+    "pin-project-lite",
+    "windows-sys",
+    "windows-link",
+    # TLS engine.
+    "rustls",
+    "rustls-webpki",
+    "rustls-pki-types",
+    "untrusted",
+    "subtle",
+    "zeroize",
+    "once_cell",
+    # Crypto provider and its transitives.
+    "aws-lc-rs",
+    "aws-lc-sys",
+    "getrandom",
+    "cfg-if",
+    # Build helpers of the C library builds.
+    "cc",
+    "shlex",
+    "find-msvc-tools",
+    "cmake",
+    "dunce",
+    "fs_extra",
+    "jobserver",
+    # Header generator, build-only in zero-ffi, and its transitive graph.
+    "cbindgen",
+    "bitflags",
+    "equivalent",
+    "errno",
+    "fastrand",
+    "hashbrown",
+    "heck",
+    "indexmap",
+    "itoa",
+    "linux-raw-sys",
+    "log",
+    "memchr",
+    "proc-macro2",
+    "quote",
+    "r-efi",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_derive",
+    "serde_json",
+    "serde_spanned",
+    "syn",
+    "tempfile",
+    "toml",
+    "toml_datetime",
+    "toml_parser",
+    "toml_writer",
+    "unicode-ident",
+    "winnow",
+    "zmij",
+    # http3: quinn-proto and its mandatory graph.
+    "quinn-proto",
+    "quinn-udp",
+    "chacha20",
+    "cpufeatures",
+    "lru-slab",
+    "pkg-config",
+    "rand",
+    "rand_core",
+    "rand_pcg",
+    "rustc-hash",
+    "slab",
+    "thiserror",
+    "thiserror-impl",
+    "tinyvec",
+    "tracing",
+    "tracing-core",
+]
+deny = [
+    { crate = "bindgen", reason = "no bindgen build: targets without pregenerated aws-lc-sys bindings use the ring provider" },
+    { crate = "libclang-sys", reason = "no libclang in the build: see bindgen" },
+    { crate = "clang-sys", reason = "no libclang in the build: see bindgen" },
+]
+skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn and winnow majors" }]
+
+[[bans.features]]
+crate = "fastrand"
+allow = ["default"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "indexmap"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "proc-macro2"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "quote"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "rustix"
+allow = ["default", "fs"]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_derive"
+allow = ["default"]
+reason = "enabled by serde inside the cbindgen build-only tree"
+
+[[bans.features]]
+crate = "serde_json"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "tempfile"
+allow = ["default"]
+reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "windows-sys"
+allow = [
+    "default",
+    "Win32",
+    "Win32_Foundation",
+    "Win32_Networking",
+    "Win32_Networking_WinSock",
+    "Win32_Storage",
+    "Win32_Storage_FileSystem",
+    "Win32_System",
+    "Win32_System_Diagnostics",
+    "Win32_System_Diagnostics_Debug",
+]
+reason = "enabled by tempfile inside the cbindgen build-only tree"
+
+[bans.build]
+allow-build-scripts = [
+    "aws-lc-sys",
+    "aws-lc-rs",
+    "ring",
+    "rustls",
+    "libsqlite3-sys",
+    "libmimalloc-sys",
+    "napi-build",
+    "pyo3-build-config",
+    "zero-ffi",
+    "cbindgen",
+    "libc",
+    "getrandom",
+    "proc-macro2",
+    "quote",
+    "rustix",
+    "serde",
+    "serde_core",
+    "serde_json",
+    "zmij",
+    # http3: a compiler version probe only.
+    "thiserror",
+]
+executables = "deny"
+include-workspace = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

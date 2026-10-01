@@ -1,0 +1,34 @@
+[package]
+name = "xtask"
+description = "Build, codegen, and release orchestration for the zero-core workspace."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+# The release task reads `cargo metadata`; the version task reads the npm manifests.
+serde_json = "1"
+# The docs task parses a crate's source to generate scoped Markdown API docs from its
+# rustdoc comments.
+syn = { version = "3", features = ["full", "parsing", "printing", "extra-traits"] }
+quote = "1"
+# The version task rewrites every manifest in place, keeping comments and layout; the
+# lints and standards tasks read the tables and the register with the same parser.
+toml_edit = "0.25"
+# The site task renders the Markdown pages and highlights their code at build time;
+# the fancy-regex engines keep the build free of C.
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+syntect = { version = "5.3", default-features = false, features = ["default-syntaxes", "regex-fancy"] }
+two-face = { version = "0.5", default-features = false, features = ["syntect-fancy"] }
+oxc = { version = "0.150", features = ["minifier", "codegen"] }
+
+[dev-dependencies]
+# The front-page budget test gzips the rendered files as a server would send them.
+flate2 = "1"
+
+[lints]
+workspace = true

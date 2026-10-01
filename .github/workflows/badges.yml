@@ -1,0 +1,26 @@
+# The badges on molexxxx's profile page, which reads this repository's registries and
+# CI. This repository's own badges are not these: `cargo xtask docs` draws them into
+# .github/badges/ in the site's palette, and they change when the version does.
+name: badges
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+# The dispatch is authenticated with a personal access token, so the workflow
+# itself needs nothing from the automatic GITHUB_TOKEN.
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger badge refresh in molexxxx/molexxxx
+        env:
+          GH_TOKEN: ${{ secrets.BADGES_DISPATCH_TOKEN }}
+        run: |
+          gh api -X POST repos/molexxxx/molexxxx/dispatches \
+            -f event_type=refresh-badges \
+            -f "client_payload[repo]=${{ github.repository }}"

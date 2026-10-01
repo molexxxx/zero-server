@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>ZeroServer</PackageId>
+    <AssemblyName>ZeroServer</AssemblyName>
+    <RootNamespace>ZeroServer</RootNamespace>
+    <Description>The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic C# facade.</Description>
+    <PackageTags>zero-server;http;server;web;framework</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ZeroServer.Core/ZeroServer.Core.csproj" />
+    <ProjectReference Include="../ZeroServer.Native/ZeroServer.Native.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,197 @@
+[hero]
+eyebrow = "the native core of zero-server"
+title = ["One Rust core.", "Three languages.", "Every byte", "held to its RFC."]
+lead = "zero-core is the memory-safe engine under zero-server: HTTP/1.1, routing, static files, WebSocket, server-sent events and TLS in Rust, reached from TypeScript, Python and C# through one C ABI, with every parser pinned to the specification it implements."
+
+# What it runs: three services and the host that drives them, each played by a
+# console in web/js/consoles.js under the same key. Every crate named here
+# ships in release 1.
+
+[[scenario]]
+key = "api"
+group = "server"
+tab = "API"
+eyebrow = "JSON API · router · request policy"
+title = "A request parsed, routed and answered without leaving the core."
+body = "A JSON API answers from the router: the head is parsed off the wire into byte ranges, the path is matched by method and segment, CORS and the security headers are applied from a rule table, and the response is written straight into the connection's buffer. Nothing crosses into the host language unless a route asks it to."
+crates = ["zero-http1", "zero-router", "zero-policy", "zero-json", "zero-http", "zero-http-types"]
+# The figure's opening state before the console runs; a placeholder, not a measurement.
+readings = [
+  { label = "Connections", value = "0", unit = "" },
+  { label = "Pipelined", value = "0", unit = "in flight" },
+  { label = "Route", value = "Idle", unit = "" },
+  { label = "Policy", value = "CORS, headers", unit = "" },
+  { label = "Host calls", value = "0", unit = "" },
+]
+
+[[scenario]]
+key = "site"
+group = "server"
+tab = "Site"
+eyebrow = "Static files · TLS · validators"
+title = "A site served from disk with the path checked on every segment."
+body = "A static site is served over TLS with a precomputed header block per asset, ETag and Last-Modified validators, byte ranges and a bounded per-core file cache. A symlink cannot escape the root, a dotfile segment is refused, and the media type comes from the file's own table."
+crates = ["zero-static", "zero-tls", "zero-mime", "zero-date"]
+readings = [
+  { label = "TLS", value = "1.3", unit = "" },
+  { label = "Cached assets", value = "0", unit = "" },
+  { label = "Conditional", value = "304", unit = "" },
+  { label = "Ranges", value = "On", unit = "" },
+  { label = "Root", value = "Sealed", unit = "" },
+]
+
+[[scenario]]
+key = "rooms"
+group = "server"
+tab = "Rooms"
+eyebrow = "WebSocket rooms · server-sent events"
+title = "Ten thousand open connections, and the frames never copied."
+body = "A chat server keeps its connections open in the core: frames are unmasked in place, text is validated across fragments as it arrives, rooms fan a message out across cores, and a dashboard reads a server-sent event stream that resumes from its last id. The host is called once per message, in a batch, never per frame."
+crates = ["zero-ws", "zero-realtime", "zero-sse", "zero-simd"]
+readings = [
+  { label = "Open sockets", value = "0", unit = "" },
+  { label = "Rooms", value = "0", unit = "" },
+  { label = "Fan-out", value = "Cross-core", unit = "" },
+  { label = "Event stream", value = "Idle", unit = "" },
+  { label = "Frames copied", value = "0", unit = "" },
+]
+
+[[scenario]]
+key = "host"
+group = "bindings"
+tab = "Host"
+eyebrow = "Node, Python, C# · one C ABI"
+title = "The same handler in TypeScript, Python and C#, over one core."
+body = "A route handler written in the host language runs on a batch of requests the core hands over through the C ABI. Each request is a slot in a per-worker arena with an ownership word, so a late accessor from the host finds a closed slot instead of another request's memory, and a panic anywhere in the core is caught at the boundary and answered with a 500."
+crates = ["zero-ffi", "zero-rt", "zero-io", "zero-core", "zero-limits", "zero-sys"]
+readings = [
+  { label = "Bindings", value = "3", unit = "" },
+  { label = "Batch size", value = "0", unit = "" },
+  { label = "Slots leased", value = "0", unit = "" },
+  { label = "Panics caught", value = "0", unit = "" },
+  { label = "Workers", value = "Per core", unit = "" },
+]
+
+# Where it is going. Each tag is in one state: `ships`, `next`, or `later`. A tag
+# that names a crate is checked against the workspace: one that ships must exist,
+# one that is planned must not. Release 1 ships; release 2 is next; release 3 is
+# later.
+
+[[track]]
+key = "http"
+title = "HTTP"
+lead = "The parser, the router and the rules a request meets before any handler, then the protocols that follow."
+tags = [
+  { text = "HTTP/1.1 request parsing and chunked framing", state = "ships", crate = "zero-http1" },
+  { text = "the connection driver with a pipelining ring", state = "ships", crate = "zero-http" },
+  { text = "header names, status lines and the request head", state = "ships", crate = "zero-http-types" },
+  { text = "IMF-fixdate", state = "ships", crate = "zero-date" },
+  { text = "routing with 404, 405 and Allow, 501, HEAD and OPTIONS", state = "ships", crate = "zero-router" },
+  { text = "URI parsing and dot-segment removal", state = "ships", crate = "zero-uri" },
+  { text = "query strings", state = "ships", crate = "zero-qs" },
+  { text = "a JSON writer and a strict parser", state = "ships", crate = "zero-json" },
+  { text = "base64", state = "ships", crate = "zero-base64" },
+  { text = "media types", state = "ships", crate = "zero-mime" },
+  { text = "static files with validators, ranges and a sealed root", state = "ships", crate = "zero-static" },
+  { text = "CORS, security headers, request ids, trust proxy and body limits", state = "ships", crate = "zero-policy" },
+  { text = "the limit table", state = "ships", crate = "zero-limits" },
+  { text = "HTTP/2", state = "next", crate = "zero-h2" },
+  { text = "HPACK", state = "next", crate = "zero-hpack" },
+  { text = "streaming request and response bodies", state = "next" },
+  { text = "multipart bodies", state = "next", crate = "zero-multipart" },
+  { text = "cookies", state = "next", crate = "zero-cookie" },
+  { text = "rate limiting, bearer extraction and timeouts", state = "next" },
+  { text = "compiled templates", state = "next", crate = "zero-template" },
+  { text = "a per-core cache with tags", state = "next", crate = "zero-cache" },
+  { text = "an outbound client with an egress policy", state = "next", crate = "zero-fetch" },
+  { text = "DEFLATE and gzip in house", state = "later", crate = "zero-compress" },
+]
+
+[[track]]
+key = "realtime"
+title = "Real time"
+lead = "Connections that stay open, with the frames handled where the bytes already are."
+tags = [
+  { text = "WebSocket framing, unmasking and UTF-8 across fragments", state = "ships", crate = "zero-ws" },
+  { text = "rooms and cross-core fan-out", state = "ships", crate = "zero-realtime" },
+  { text = "server-sent events with Last-Event-ID", state = "ships", crate = "zero-sse" },
+  { text = "SIMD scans, unmask and UTF-8 kernels with a SWAR reference", state = "ships", crate = "zero-simd" },
+  { text = "permessage-deflate", state = "later" },
+  { text = "WebRTC signaling, rooms and join tokens", state = "later", crate = "zero-webrtc" },
+  { text = "STUN", state = "later", crate = "zero-stun" },
+  { text = "SDP and ICE candidates", state = "later", crate = "zero-sdp" },
+]
+
+[[track]]
+key = "tls"
+title = "TLS and HTTP/3"
+lead = "rustls on both runtime drivers today; the QUIC transport when the codecs have their vectors."
+tags = [
+  { text = "TLS 1.3 through rustls, SNI, tickets and a session cache", state = "ships", crate = "zero-tls" },
+  { text = "SHA-1, random bytes and the crypto traits", state = "ships", crate = "zero-server-crypto" },
+  { text = "the QPACK static table, prefix and integer coding", state = "ships", crate = "zero-qpack" },
+  { text = "HTTP/3 frames, settings and stream types", state = "ships", crate = "zero-h3" },
+  { text = "kTLS, OCSP stapling and mTLS with CRLs", state = "next" },
+  { text = "QUIC per core with connection id steering", state = "later", crate = "zero-quic" },
+]
+
+[[track]]
+key = "data"
+title = "Data and auth"
+lead = "Wire protocols in house, one driver task per core, and the auth stack over injected primitives."
+tags = [
+  { text = "PostgreSQL wire codec with SCRAM", state = "next", crate = "zero-pg-proto" },
+  { text = "a PostgreSQL driver", state = "next", crate = "zero-pg" },
+  { text = "the SQL renderer per dialect", state = "next", crate = "zero-sql" },
+  { text = "the adapter trait and plan executor", state = "next", crate = "zero-db" },
+  { text = "JWT verification and JWKS", state = "next", crate = "zero-jwt" },
+  { text = "sessions and stores", state = "next" },
+  { text = "dotenv", state = "next", crate = "zero-env" },
+  { text = "MySQL and MariaDB", state = "later", crate = "zero-mysql-proto" },
+  { text = "MongoDB and BSON", state = "later", crate = "zero-mongo-proto" },
+  { text = "Redis", state = "later", crate = "zero-resp" },
+  { text = "SQLite", state = "later", crate = "zero-sqlite" },
+  { text = "migrations, tenancy, audit and views", state = "later", crate = "zero-orm" },
+  { text = "OAuth 2.0 with PKCE, OpenID discovery, TOTP and WebAuthn", state = "later", crate = "zero-auth" },
+]
+
+[[track]]
+key = "engine"
+title = "Engine and bindings"
+lead = "The runtime seam, the workers, the C ABI, and the three languages that ride it."
+tags = [
+  { text = "errors, buffers, slot ids and the crypto traits", state = "ships", crate = "zero-core" },
+  { text = "the runtime seam over tokio, with compio behind a feature", state = "ships", crate = "zero-io" },
+  { text = "workers, request arenas and the slot ownership protocol", state = "ships", crate = "zero-rt" },
+  { text = "every raw system call behind a checked wrapper", state = "ships", crate = "zero-sys" },
+  { text = "the C ABI with a generated header", state = "ships", crate = "zero-ffi" },
+  { text = "the bundle crate", state = "ships", crate = "zero-server" },
+  { text = "the Node binding with a per-core isolate pool", state = "next" },
+  { text = "a .NET smoke test and a Python smoke import over the same cdylib", state = "next" },
+  { text = "the Python and C# facades", state = "later" },
+  { text = "gRPC and Protocol Buffers", state = "later", crate = "zero-grpc" },
+  { text = "metrics, trace context and health", state = "later", crate = "zero-observe" },
+  { text = "native plugins under a documented trust model", state = "later", crate = "zero-plugin" },
+]
+
+# How the work is paid for. The software is free; what costs money is the
+# hardware a benchmark needs to be honest.
+
+[backing]
+lead = "zero-core is free and Apache-2.0 licensed. What costs money is the benchmark: a rented Linux host, or two bare-metal instances on the same switch, on which the numbers are taken. Until such a run exists, no throughput or latency figure is published for this core, and every figure that is published carries the ratio against the pinned reference entry measured beside it in the same session."
+note_title = "How a number gets published"
+note = "Every published figure is a median of five interleaved runs against the unmodified reference entry on the same hardware, with a win required in every run, error counters at zero at every level, and the ratio printed beside the absolute number. A run on a link that caps every entry at the same figure reports a ratio against the link ceiling only."
+offers = [
+  { name = "Benchmark hardware", state = "Not open" },
+  { name = "Sponsored builds", state = "Not open" },
+]
+opens = "Each opens once release 1 has shipped and the first tiered run is published."
+# The handler tiers a request can stop at, in the order the core tries them:
+# the cheaper the tier, the less the host is involved.
+rungs = [
+  { name = "Tier 0, policy", cost = "No boundary", detail = "Rules evaluated in Rust from a table: CORS, headers, limits, rate limits, a 4xx answered here." },
+  { name = "Tier 1, cache", cost = "No boundary", detail = "A per-core response cache with TTL and tag invalidation." },
+  { name = "Tier 2, data", cost = "No boundary", detail = "A query plan the core executes against a driver and renders itself." },
+  { name = "Tier 3, host handler", cost = "One call per batch", detail = "A handler in TypeScript, Python or C# over a batch of slots." },
+  { name = "Tier 4, native plugin", cost = "One call per request", detail = "A cdylib loaded under the documented trust model, with the full privilege of the process." },
+]

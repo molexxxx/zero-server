@@ -1,0 +1,45 @@
+name: node
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: node (build, smoke, guides)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/node
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build native addon and facade
+        run: npm run build
+
+      # A facade whose dist/ is missing publishes as a package that installs and then
+      # cannot be required, and npm reports no error while doing it.
+      - name: Every package carries the entry point it declares
+        run: npm run check:packaging
+
+      - name: Check generated bindings are in sync with the Rust source
+        run: |
+          if ! git diff --exit-code -- packages/native/index.js packages/native/index.d.ts; then
+            echo "::error::Generated bindings are stale. Run 'npm run build' in bindings/node and commit packages/native/index.js and packages/native/index.d.ts."
+            exit 1
+          fi
+
+      - name: Smoke, conformance, and guide tests
+        run: npm test

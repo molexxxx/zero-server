@@ -1,0 +1,25 @@
+[package]
+name = "zero-server-crypto"
+description = "SHA-1, SHA-256, HMAC, PBKDF2, random bytes, Ed25519, constant-time comparison, zeroizing secrets, and the std primitive traits for zero-server."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[dependencies]
+zero-core.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

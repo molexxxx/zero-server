@@ -1,0 +1,52 @@
+name: release-crates
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to release, with or without a leading v.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    uses: ./.github/workflows/release-preflight.yml
+    with:
+      version: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+
+  publish:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    needs: preflight
+    # New crates publish one per ten minutes, so a first-time release of the
+    # whole workspace sleeps through several waits. Give the job room for them.
+    timeout-minutes: 180
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.toml') }}
+
+      # Publish every workspace crate in dependency order. xtask skips versions
+      # already on crates.io and waits out the new-crate rate limit (one new
+      # crate per ten minutes), retrying until the whole workspace is published,
+      # so a first-time release of many crates completes in a single run.
+      - name: Publish crates
+        run: cargo xtask release

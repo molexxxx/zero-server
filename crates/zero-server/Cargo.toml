@@ -1,0 +1,100 @@
+[package]
+name = "zero-server"
+description = "The whole zero-server core in one crate: every capability behind a feature, all on by default."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = [
+    "limits",
+    "simd",
+    "http-types",
+    "date",
+    "http1",
+    "router",
+    "uri",
+    "qs",
+    "mime",
+    "base64",
+    "json",
+    "ws",
+    "sse",
+    "qpack",
+    "h3",
+    "sys",
+    "io",
+    "rt",
+    "http",
+    "static",
+    "policy",
+    "realtime",
+    "crypto",
+    "tls",
+]
+# Each capability is a feature named as its crate without the prefix, so an
+# application that turns off the default set compiles only what it uses. A feature
+# also turns on the capabilities its crate is built over, so the re-exported
+# surface stays consistent.
+limits = ["dep:zero-limits"]
+simd = ["dep:zero-simd"]
+http-types = ["dep:zero-http-types"]
+date = ["dep:zero-date"]
+http1 = ["dep:zero-http1", "http-types", "simd", "limits"]
+router = ["dep:zero-router", "http-types"]
+uri = ["dep:zero-uri"]
+qs = ["dep:zero-qs"]
+mime = ["dep:zero-mime"]
+base64 = ["dep:zero-base64"]
+json = ["dep:zero-json"]
+ws = ["dep:zero-ws", "simd"]
+sse = ["dep:zero-sse"]
+qpack = ["dep:zero-qpack"]
+h3 = ["dep:zero-h3", "qpack"]
+sys = ["dep:zero-sys"]
+io = ["dep:zero-io", "sys"]
+rt = ["dep:zero-rt", "limits", "io"]
+http = ["dep:zero-http", "limits", "http-types", "http1", "router", "io", "rt"]
+static = ["dep:zero-static", "http-types", "date", "mime", "io", "http"]
+policy = ["dep:zero-policy", "limits", "http-types", "http"]
+realtime = ["dep:zero-realtime", "ws", "sse", "rt", "http"]
+crypto = ["dep:zero-server-crypto"]
+tls = ["dep:zero-tls", "io"]
+
+[dependencies]
+zero-core.workspace = true
+zero-limits = { workspace = true, optional = true }
+zero-simd = { workspace = true, optional = true }
+zero-http-types = { workspace = true, optional = true }
+zero-date = { workspace = true, optional = true }
+zero-http1 = { workspace = true, optional = true }
+zero-router = { workspace = true, optional = true }
+zero-uri = { workspace = true, optional = true }
+zero-qs = { workspace = true, optional = true }
+zero-mime = { workspace = true, optional = true }
+zero-base64 = { workspace = true, optional = true }
+zero-json = { workspace = true, optional = true }
+zero-ws = { workspace = true, optional = true }
+zero-sse = { workspace = true, optional = true }
+zero-qpack = { workspace = true, optional = true }
+zero-h3 = { workspace = true, optional = true }
+zero-sys = { workspace = true, optional = true }
+zero-io = { workspace = true, optional = true }
+zero-rt = { workspace = true, optional = true }
+zero-http = { workspace = true, optional = true }
+zero-static = { workspace = true, optional = true }
+zero-policy = { workspace = true, optional = true }
+zero-realtime = { workspace = true, optional = true }
+zero-server-crypto = { workspace = true, optional = true }
+zero-tls = { workspace = true, optional = true }
+
+[lints]
+workspace = true

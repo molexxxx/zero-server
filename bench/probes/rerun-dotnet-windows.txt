@@ -1,0 +1,13 @@
+version: 0.1.18
+managed static method returning nint: 1.7 ns/call (sink 204000010000000)
+LibraryImport pamoja_version() -> IntPtr: 4.5 ns/call (sink -2564554512219103232)
+LibraryImport pamoja_version() -> IntPtr, SuppressGCTransition: 3.0 ns/call (sink -2564554512219103232)
+LibraryImport pamoja_last_error_message() -> IntPtr (thread-local read): 4.5 ns/call (sink 0)
+managed -> UnmanagedCallersOnly through delegate* unmanaged (reverse transition, no native hop): 4.7 ns/call (sink 200000010000000)
+native -> managed reverse P/Invoke, calling thread: 2.7 ns/call
+native -> managed reverse P/Invoke, fresh native thread (first attach amortized over 20M): 2.7 ns/call
+native -> managed reverse P/Invoke, fresh native thread, single call (thread attach cost): 11100 ns
+request view fill (struct by pointer, ReadOnlySpan over Rust memory): 1.3 ns/call (sink 480000000)
+request view fill, SuppressGCTransition, span construct: 1.3 ns/call (sink 480000000)
+request view fill + UTF8 decode of the path to string: 18.0 ns/call (sink 48000000)
+.NET 10.0.2 X64 Microsoft Windows 10.0.26200

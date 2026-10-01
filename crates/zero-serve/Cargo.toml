@@ -1,0 +1,28 @@
+[package]
+name = "zero-serve"
+description = "The standalone zero-server binary: serve, migrate, seed, and doctor."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+# The binary is invoked as `zero serve`, `zero migrate`, `zero seed` and `zero doctor`.
+[[bin]]
+name = "zero"
+path = "src/main.rs"
+
+[dependencies]
+zero-core.workspace = true
+zero-io.workspace = true
+zero-rt.workspace = true
+zero-http.workspace = true
+zero-static.workspace = true
+zero-policy.workspace = true
+zero-realtime.workspace = true
+zero-tls.workspace = true
+
+[lints]
+workspace = true
