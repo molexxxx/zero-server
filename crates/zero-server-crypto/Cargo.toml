@@ -13,6 +13,13 @@ authors.workspace = true
 [dependencies]
 zero-core.workspace = true
 zero-sys.workspace = true
+# The crypto provider, at the version crates.io reported on 2026-10-01: aws-lc-rs
+# 1.18.1 (updated 2026-09-01) over aws-lc-sys 0.45.0. `aws-lc-sys` selects the
+# non-FIPS build; `prebuilt-nasm` lets Windows x86-64 build without NASM installed.
+aws-lc-rs = { version = "1.18.1", default-features = false, features = [
+    "aws-lc-sys",
+    "prebuilt-nasm",
+] }
 
 [lints.rust]
 unsafe_code = "deny"

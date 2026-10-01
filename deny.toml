@@ -129,6 +129,9 @@ allow = [
     "dunce",
     "fs_extra",
     "jobserver",
+    # A build dependency of aws-lc-sys 0.45.0 (pkg-config 0.3.34, released
+    # 2026-08-14, checked on crates.io 2026-10-01).
+    "pkg-config",
     # Header generator, build-only in zero-ffi.
     "cbindgen",
     # The transitive graph of cbindgen 0.29 (measured with cargo tree over every
@@ -197,6 +200,16 @@ reason = "enabled by tempfile inside the cbindgen build-only tree"
 crate = "indexmap"
 allow = ["default"]
 reason = "enabled by cbindgen inside its build-only tree"
+
+[[bans.features]]
+crate = "shlex"
+allow = ["default", "std"]
+reason = "enabled by cc, a build dependency of aws-lc-sys; shlex's default feature is `std`, and it runs only in build scripts"
+
+[[bans.features]]
+crate = "zeroize"
+allow = ["default", "alloc"]
+reason = "enabled by aws-lc-rs in the shipped graph; zeroize's default feature is `alloc`, which every hosted target links anyway"
 
 [[bans.features]]
 crate = "libc"

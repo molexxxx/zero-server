@@ -189,6 +189,16 @@ allow = ["default"]
 reason = "enabled by cbindgen inside its build-only tree"
 
 [[bans.features]]
+crate = "shlex"
+allow = ["default", "std"]
+reason = "enabled by cc, a build dependency of aws-lc-sys; shlex's default feature is `std`, and it runs only in build scripts"
+
+[[bans.features]]
+crate = "zeroize"
+allow = ["default", "alloc"]
+reason = "enabled by aws-lc-rs in the shipped graph; zeroize's default feature is `alloc`, which every hosted target links anyway"
+
+[[bans.features]]
 crate = "libc"
 allow = ["default"]
 reason = "enabled by mio, tokio and socket2 in the shipped graph; libc's default feature is `std`, which every hosted target links anyway"
