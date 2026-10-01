@@ -262,7 +262,7 @@ backend.
 ## Standards and safety
 
 - **Standards first.** [`docs/standards.toml`](docs/standards.toml) lists every
-  specification the core is held to, 545 statements, each with the release that
+  specification the core is held to, 552 statements, each with the release that
   ships it and, once it ships, the test that pins it. Nothing is implemented
   from memory: the cited source is read first and the code cites its section.
 - **Unsafe code is fenced.** It is forbidden everywhere except a few audited
