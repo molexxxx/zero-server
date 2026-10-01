@@ -5,7 +5,9 @@
 //! of contents on the right, with the previous and next page under the article. Everything
 //! between the header and the footer sits in one `#page` element, which `site.js` swaps
 //! when a reader follows a link, so a page changes without a reload; every link in the
-//! shell is root-relative so a swapped page never carries a path from another depth. Every
+//! shell starts at the base path so a swapped page never carries a path from another depth.
+//! The base path is a setting (`DEFAULT_BASE`, `cargo xtask site --base <path>`), because a
+//! GitHub Pages project site is served under its repository's name rather than at `/`. Every
 //! page is still a complete document with its own title, description, canonical URL, and
 //! Open Graph card, so a crawler or a reader without scripts sees the same thing.
 //!
@@ -21,11 +23,12 @@ use super::{Kind, Page};
 /// The repository, for the edit links.
 const REPO: &str = "https://github.com/molexxxx/zero-server";
 
-/// Where the site is served from: its own origin, so every link in the shell starts here.
-const ROOT: &str = "/";
+/// The host the site is served from, for the canonical URL and the card each page carries.
+pub(crate) const HOST: &str = "https://molexxxx.github.io";
 
-/// The site's origin, for the canonical URL and the card each page carries.
-pub(crate) const ORIGIN: &str = "https://zero-server.molex.cloud";
+/// The base path of the site on that host: a GitHub Pages project site is served under the
+/// repository's name. `cargo xtask site --base <path>` renders for another one, `/` included.
+pub(crate) const DEFAULT_BASE: &str = "/zero-server/";
 
 /// What every page's shell needs beyond the page itself.
 pub struct Chrome<'a> {
@@ -35,12 +38,58 @@ pub struct Chrome<'a> {
     pub nav: &'a Nav,
     /// The stamp of the stylesheets and scripts, which names each of them in a page.
     pub stamp: &'a str,
+    /// The base path every link in the shell starts with, with both slashes (`/zero-server/`).
+    pub base: &'a str,
 }
 
 /// The prefix that reaches the site root from a page (`../` for `docs/index.html`), for
 /// the pages that must resolve on their own wherever they are opened.
 pub fn root_of(url: &str) -> String {
     "../".repeat(url.matches('/').count())
+}
+
+/// The public address of a page: the host, the base path, and the page, with the front page
+/// at the base path itself.
+///
+/// # Arguments
+///
+/// * `base` - the base path, with both slashes.
+/// * `url` - the page, site-relative.
+///
+/// # Returns
+///
+/// The absolute URL.
+pub fn canonical(base: &str, url: &str) -> String {
+    if url == "index.html" {
+        format!("{HOST}{base}")
+    } else {
+        format!("{HOST}{base}{url}")
+    }
+}
+
+/// Whether a base path is well formed: it starts and ends with a slash and holds no empty
+/// segment, so a site-relative URL appended to it is one path.
+///
+/// # Arguments
+///
+/// * `base` - the path as given.
+///
+/// # Returns
+///
+/// `true` for `/` and for `/zero-server/`, `false` for `zero-server`, `/zero-server` or
+/// `//`.
+pub fn valid_base(base: &str) -> bool {
+    base.starts_with('/') && base.ends_with('/') && !base.contains("//")
+}
+
+// The site's address as a page shows it: the host and the base path without the scheme and
+// the trailing slash (`molexxxx.github.io/zero-server`).
+fn shown(base: &str) -> String {
+    format!(
+        "{}{}",
+        HOST.trim_start_matches("https://"),
+        base.trim_end_matches('/')
+    )
 }
 
 /// A documentation page as a complete HTML document.
@@ -69,10 +118,11 @@ pub fn document(chrome: &Chrome, page: &Page) -> String {
             kind: "article",
         },
         chrome.stamp,
+        chrome.base,
     );
     out.push_str("<body>\n");
     out.push_str("<a class=\"skip\" href=\"#content\">Skip to content</a>\n");
-    out.push_str(&header(chrome.version, &page.url));
+    out.push_str(&header(chrome.version, &page.url, chrome.base));
     // A page carrying the block diagram opens out: the diagram needs more width than a
     // reading column, so the sheet widens and the table of contents stands down, the way a
     // datasheet prints its block diagram on a foldout.
@@ -81,7 +131,7 @@ pub fn document(chrome: &Chrome, page: &Page) -> String {
         "<div id=\"page\">\n<div class=\"docs{}\">\n<aside class=\"side\" id=\"side\">\n",
         if foldout { " docs-foldout" } else { "" }
     ));
-    out.push_str(&chrome.nav.sidebar(&page.url, ROOT));
+    out.push_str(&chrome.nav.sidebar(&page.url, chrome.base));
     out.push_str("</aside>\n<main class=\"content\" id=\"content\">\n");
     out.push_str(match page.kind {
         Kind::Guide => "<article class=\"article article-guide\">\n",
@@ -89,7 +139,7 @@ pub fn document(chrome: &Chrome, page: &Page) -> String {
     });
     out.push_str(&page.body);
     out.push_str("</article>\n");
-    out.push_str(&pager(previous, next));
+    out.push_str(&pager(previous, next, chrome.base));
     out.push_str(&format!(
         "<p class=\"edit\"><a href=\"{REPO}/edit/main/{}\">Edit this page on GitHub</a></p>\n",
         escape(&page.source)
@@ -99,10 +149,10 @@ pub fn document(chrome: &Chrome, page: &Page) -> String {
         out.push_str(&toc(&page.toc));
     }
     out.push_str("</div>\n</div>\n");
-    out.push_str(&footer(chrome.version));
+    out.push_str(&footer(chrome.version, chrome.base));
     out.push_str(&format!(
-        "<script src=\"/js/site.js?v={}\" defer></script>\n</body>\n</html>\n",
-        chrome.stamp
+        "<script src=\"{}js/site.js?v={}\" defer></script>\n</body>\n</html>\n",
+        chrome.base, chrome.stamp
     ));
     out
 }
@@ -120,36 +170,41 @@ pub fn document(chrome: &Chrome, page: &Page) -> String {
 ///
 /// The complete document.
 pub fn home(chrome: &Chrome, body: &str) -> String {
-    let mut out = head(&Head {
-        title: "zero-server",
-        description: "One memory-safe Rust web server core with bindings for TypeScript, Python, and C#, held to the standards it implements.",
-        url: "index.html",
-        kind: "website",
-    }, chrome.stamp);
+    let base = chrome.base;
+    let stamp = chrome.stamp;
+    let mut out = head(
+        &Head {
+            title: "zero-server",
+            description: "One memory-safe Rust web server core with bindings for TypeScript, Python, and C#, held to the standards it implements.",
+            url: "index.html",
+            kind: "website",
+        },
+        stamp,
+        base,
+    );
     out = out.replace(
-        &format!("<link rel=\"stylesheet\" href=\"/site.css?v={}\">\n", chrome.stamp),
+        &format!("<link rel=\"stylesheet\" href=\"{base}site.css?v={stamp}\">\n"),
         &format!(
-            "<link rel=\"stylesheet\" href=\"/site.css?v={0}\">\n<link rel=\"stylesheet\" href=\"/home.css?v={0}\">\n",
-            chrome.stamp
+            "<link rel=\"stylesheet\" href=\"{base}site.css?v={stamp}\">\n<link rel=\"stylesheet\" href=\"{base}home.css?v={stamp}\">\n"
         ),
     );
     out.push_str("<body class=\"is-home\">\n");
     out.push_str("<a class=\"skip\" href=\"#content\">Skip to content</a>\n");
-    out.push_str(&header(chrome.version, "index.html"));
+    out.push_str(&header(chrome.version, "index.html", base));
     out.push_str("<div id=\"page\">\n");
     out.push_str(&format!(
         "<nav class=\"side home-menu\" id=\"side\" aria-label=\"Site\">\n\
          <div class=\"side-nav\">\n\
          <ul>\n\
-         <li><a href=\"/docs/index.html\">Docs</a></li>\n\
-         <li><a href=\"/docs/install.html\">Install</a></li>\n\
-         <li><a href=\"/docs/examples.html\">Examples</a></li>\n\
-         <li><a href=\"/docs/about/standards.html\">Standards</a></li>\n\
-         <li><a href=\"/docs/reference/index.html\">API reference</a></li>\n\
+         <li><a href=\"{base}docs/index.html\">Docs</a></li>\n\
+         <li><a href=\"{base}docs/install.html\">Install</a></li>\n\
+         <li><a href=\"{base}docs/examples.html\">Examples</a></li>\n\
+         <li><a href=\"{base}docs/about/standards.html\">Standards</a></li>\n\
+         <li><a href=\"{base}docs/reference/index.html\">API reference</a></li>\n\
          </ul>\n\
          <details class=\"side-group\" open><summary>Project</summary><ul>\n\
          <li><a href=\"{REPO}\">Source on GitHub</a></li>\n\
-         <li><a href=\"/docs/community.html\">Contribute</a></li>\n\
+         <li><a href=\"{base}docs/community.html\">Contribute</a></li>\n\
          <li><a href=\"{REPO}/issues/new?template=bug.yml\">Report a bug</a></li>\n\
          <li><a href=\"{REPO}/issues/new?template=capability.yml\">Request a capability</a></li>\n\
          <li><a href=\"{REPO}/issues/new?template=docs.yml\">Report a documentation problem</a></li>\n\
@@ -160,12 +215,11 @@ pub fn home(chrome: &Chrome, body: &str) -> String {
     ));
     out.push_str(body);
     out.push_str("</div>\n");
-    out.push_str(&footer(chrome.version));
+    out.push_str(&footer(chrome.version, base));
     out.push_str(&format!(
-        "<script src=\"/js/site.js?v={0}\" defer></script>\n\
-         <script type=\"module\">import {{ init }} from '/js/home.js?v={0}'; init();</script>\n\
-         </body>\n</html>\n",
-        chrome.stamp
+        "<script src=\"{base}js/site.js?v={stamp}\" defer></script>\n\
+         <script type=\"module\">import {{ init }} from '{base}js/home.js?v={stamp}'; init();</script>\n\
+         </body>\n</html>\n"
     ));
     out
 }
@@ -183,6 +237,7 @@ pub fn home(chrome: &Chrome, body: &str) -> String {
 ///
 /// The complete document.
 pub fn not_found(chrome: &Chrome) -> String {
+    let base = chrome.base;
     let mut out = head(
         &Head {
             title: "Not found - zero-server",
@@ -191,23 +246,24 @@ pub fn not_found(chrome: &Chrome) -> String {
             kind: "website",
         },
         chrome.stamp,
+        base,
     );
     out.push_str("<body>\n");
-    out.push_str(&header(chrome.version, "404.html"));
-    out.push_str(
+    out.push_str(&header(chrome.version, "404.html", base));
+    out.push_str(&format!(
         "<div id=\"page\">\n<main class=\"content lone\" id=\"content\">\n<article class=\"article\">\n\
          <h1>There is no page here</h1>\n\
          <p>The address may have changed, or the link that brought you here may be stale. \
          The documentation is one step away.</p>\n\
          <ul>\n\
-         <li><a href=\"/docs/index.html\">The documentation</a>, with a guide per capability</li>\n\
-         <li><a href=\"/docs/install.html\">Install</a>, and what a narrow build costs</li>\n\
-         <li><a href=\"/docs/about/standards.html\">Standards</a>, the documents every implementation is held to</li>\n\
-         <li><a href=\"/docs/examples.html\">Examples</a>, every one run in CI</li>\n\
-         <li><a href=\"/docs/reference/index.html\">The API references</a> for every language</li>\n\
+         <li><a href=\"{base}docs/index.html\">The documentation</a>, with a guide per capability</li>\n\
+         <li><a href=\"{base}docs/install.html\">Install</a>, and what a narrow build costs</li>\n\
+         <li><a href=\"{base}docs/about/standards.html\">Standards</a>, the documents every implementation is held to</li>\n\
+         <li><a href=\"{base}docs/examples.html\">Examples</a>, every one run in CI</li>\n\
+         <li><a href=\"{base}docs/reference/index.html\">The API references</a> for every language</li>\n\
          </ul>\n</article>\n</main>\n</div>\n",
-    );
-    out.push_str(&footer(chrome.version));
+    ));
+    out.push_str(&footer(chrome.version, base));
     out.push_str(&format!(
         "<script src=\"/js/site.js?v={}\" defer></script>\n</body>\n</html>\n",
         chrome.stamp
@@ -262,14 +318,10 @@ struct Head<'a> {
     kind: &'a str,
 }
 
-fn head(page: &Head, stamp: &str) -> String {
-    let canonical = if page.url == "index.html" {
-        format!("{ORIGIN}/")
-    } else {
-        format!("{ORIGIN}/{}", page.url)
-    };
+fn head(page: &Head, stamp: &str, base: &str) -> String {
+    let canonical = canonical(base, page.url);
     format!(
-        "<!doctype html>\n<html lang=\"en\" class=\"no-js\" data-root=\"{ROOT}\" data-stamp=\"{stamp}\">\n<head>\n\
+        "<!doctype html>\n<html lang=\"en\" class=\"no-js\" data-root=\"{base}\" data-stamp=\"{stamp}\">\n<head>\n\
          <meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
          <title>{title}</title>\n\
@@ -282,11 +334,11 @@ fn head(page: &Head, stamp: &str) -> String {
          <meta property=\"og:description\" content=\"{description}\">\n\
          <meta property=\"og:url\" content=\"{canonical}\">\n\
          <meta name=\"twitter:card\" content=\"summary\">\n\
-         <link rel=\"icon\" href=\"/assets/zero-icon.svg\">\n\
-         <link rel=\"preload\" href=\"/fonts/Archivo.woff2\" as=\"font\" type=\"font/woff2\" crossorigin>\n\
-         <link rel=\"stylesheet\" href=\"/fonts/fonts.css?v={stamp}\">\n\
-         <link rel=\"stylesheet\" href=\"/theme.css?v={stamp}\">\n\
-         <link rel=\"stylesheet\" href=\"/site.css?v={stamp}\">\n\
+         <link rel=\"icon\" href=\"{base}assets/zero-icon.svg\">\n\
+         <link rel=\"preload\" href=\"{base}fonts/Archivo.woff2\" as=\"font\" type=\"font/woff2\" crossorigin>\n\
+         <link rel=\"stylesheet\" href=\"{base}fonts/fonts.css?v={stamp}\">\n\
+         <link rel=\"stylesheet\" href=\"{base}theme.css?v={stamp}\">\n\
+         <link rel=\"stylesheet\" href=\"{base}site.css?v={stamp}\">\n\
          <script>document.documentElement.classList.replace('no-js','js');\
 try{{var h=location.hash.slice(1);document.documentElement.dataset.lang=/^(rust|typescript|python|c)$/.test(h)?h:(localStorage.getItem('zero-server:lang')||'rust')}}catch(e){{document.documentElement.dataset.lang='rust'}}\
 try{{var s=localStorage.getItem('zero-server:scheme');if(s==='light'||s==='dark')document.documentElement.dataset.theme=s}}catch(e){{}}</script>\n\
@@ -305,7 +357,7 @@ try{{var s=localStorage.getItem('zero-server:scheme');if(s==='light'||s==='dark'
 // its revision, and its license. Every page gets the menu toggle: it opens the sidebar on
 // a documentation page and the drawer of site links on the front page, and site.js hides
 // it where there is neither.
-fn header(version: &str, here: &str) -> String {
+fn header(version: &str, here: &str, base: &str) -> String {
     let menu = "<button class=\"menu-toggle\" type=\"button\" aria-controls=\"side\" aria-expanded=\"false\">\
          <span class=\"menu-bars\" aria-hidden=\"true\"></span>Menu</button>\n";
     let matched = SECTIONS
@@ -320,14 +372,14 @@ fn header(version: &str, here: &str) -> String {
             } else {
                 ""
             };
-            format!("<a href=\"/{url}\"{current}>{label}</a>\n")
+            format!("<a href=\"{base}{url}\"{current}>{label}</a>\n")
         })
         .collect();
     format!(
         "<header class=\"band\">\n\
          <div class=\"band-row\">\n\
          {menu}\
-         <a class=\"brand\" href=\"/\" aria-label=\"zero-server home\">{}<span class=\"brand-word\">zero-server</span></a>\n\
+         <a class=\"brand\" href=\"{base}\" aria-label=\"zero-server home\">{}<span class=\"brand-word\">zero-server</span></a>\n\
          <p class=\"band-desc\">A web server core for TypeScript, Python, and C#</p>\n\
          <nav class=\"top-nav\" aria-label=\"Site\">\n{nav}</nav>\n\
          <div class=\"search\" role=\"search\">\n\
@@ -345,7 +397,7 @@ fn header(version: &str, here: &str) -> String {
          <a href=\"{REPO}/releases\" title=\"Releases and the changelog\" aria-label=\"Releases and the changelog\">{}</a>\n\
          </nav>\n\
          </div>\n\
-         <p class=\"docline\"><span>zero-server</span><span>Rev {}</span><span>Apache-2.0 license</span><span class=\"docline-end\">zero-server.molex.cloud</span></p>\n\
+         <p class=\"docline\"><span>zero-server</span><span>Rev {}</span><span>Apache-2.0 license</span><span class=\"docline-end\">{}</span></p>\n\
          </header>\n",
         mark(),
         ICON_GLASS,
@@ -357,6 +409,7 @@ fn header(version: &str, here: &str) -> String {
         ICON_REQUEST,
         ICON_TAG,
         escape(version),
+        shown(base),
     )
 }
 
@@ -456,14 +509,18 @@ fn toc(headings: &[Heading]) -> String {
     out
 }
 
-fn pager(previous: Option<&super::nav::Item>, next: Option<&super::nav::Item>) -> String {
+fn pager(
+    previous: Option<&super::nav::Item>,
+    next: Option<&super::nav::Item>,
+    base: &str,
+) -> String {
     if previous.is_none() && next.is_none() {
         return String::new();
     }
     let mut out = String::from("<nav class=\"pager\" aria-label=\"Previous and next page\">\n");
     match previous {
         Some(item) => out.push_str(&format!(
-            "<a class=\"pager-prev\" href=\"/{}\" rel=\"prev\"><span>Previous</span>{}</a>\n",
+            "<a class=\"pager-prev\" href=\"{base}{}\" rel=\"prev\"><span>Previous</span>{}</a>\n",
             item.url,
             escape(&item.title)
         )),
@@ -471,7 +528,7 @@ fn pager(previous: Option<&super::nav::Item>, next: Option<&super::nav::Item>) -
     }
     if let Some(item) = next {
         out.push_str(&format!(
-            "<a class=\"pager-next\" href=\"/{}\" rel=\"next\"><span>Next</span>{}</a>\n",
+            "<a class=\"pager-next\" href=\"{base}{}\" rel=\"next\"><span>Next</span>{}</a>\n",
             item.url,
             escape(&item.title)
         ));
@@ -480,7 +537,7 @@ fn pager(previous: Option<&super::nav::Item>, next: Option<&super::nav::Item>) -
     out
 }
 
-fn footer(version: &str) -> String {
+fn footer(version: &str, base: &str) -> String {
     format!(
         "<footer class=\"foot\">\n\
          <div class=\"foot-grid\">\n\
@@ -501,21 +558,22 @@ fn footer(version: &str) -> String {
          </nav>\n\
          <nav class=\"foot-links\" aria-labelledby=\"foot-legal\">\n\
          <h2 class=\"foot-head\" id=\"foot-legal\">Legal</h2>\n\
-         <a href=\"/docs/about/terms.html\">Terms</a>\n\
-         <a href=\"/docs/about/privacy.html\">Privacy</a>\n\
-         <a href=\"/docs/about/notices.html\">Notices</a>\n\
+         <a href=\"{base}docs/about/terms.html\">Terms</a>\n\
+         <a href=\"{base}docs/about/privacy.html\">Privacy</a>\n\
+         <a href=\"{base}docs/about/notices.html\">Notices</a>\n\
          <a href=\"{REPO}/blob/main/LICENSE\">Apache-2.0 license</a>\n\
          </nav>\n\
          <nav class=\"foot-links\" aria-labelledby=\"foot-contact\">\n\
          <h2 class=\"foot-head\" id=\"foot-contact\">Contact</h2>\n\
          <a href=\"{REPO}/issues/new/choose\">Open an issue</a>\n\
          <a href=\"{REPO}/security/advisories/new\">Report a vulnerability</a>\n\
-         <a href=\"/docs/about/notices.html#contact\">Email the maintainer</a>\n\
+         <a href=\"{base}docs/about/notices.html#contact\">Email the maintainer</a>\n\
          </nav>\n\
          </div>\n\
-         <p class=\"foot-fine\"><span>zero-server</span><span>Rev {}</span><span>Apache-2.0 license</span><span class=\"foot-host\">zero-server.molex.cloud</span></p>\n\
+         <p class=\"foot-fine\"><span>zero-server</span><span>Rev {}</span><span>Apache-2.0 license</span><span class=\"foot-host\">{}</span></p>\n\
          </footer>\n",
-        escape(version)
+        escape(version),
+        shown(base),
     )
 }
 
@@ -524,29 +582,36 @@ fn footer(version: &str) -> String {
 /// # Arguments
 ///
 /// * `urls` - every page, site-relative, `index.html` included.
+/// * `base` - the base path, with both slashes.
 ///
 /// # Returns
 ///
 /// The sitemap document.
-pub fn sitemap(urls: &[&str]) -> String {
+pub fn sitemap(urls: &[&str], base: &str) -> String {
     let mut out = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
     );
     for url in urls {
-        let location = if *url == "index.html" {
-            format!("{ORIGIN}/")
-        } else {
-            format!("{ORIGIN}/{url}")
-        };
-        out.push_str(&format!("<url><loc>{}</loc></url>\n", escape(&location)));
+        out.push_str(&format!(
+            "<url><loc>{}</loc></url>\n",
+            escape(&canonical(base, url))
+        ));
     }
     out.push_str("</urlset>\n");
     out
 }
 
 /// The site's `robots.txt`: everything may be crawled, and the sitemap is named.
-pub fn robots() -> String {
-    format!("User-agent: *\nAllow: /\nSitemap: {ORIGIN}/sitemap.xml\n")
+///
+/// # Arguments
+///
+/// * `base` - the base path, with both slashes.
+///
+/// # Returns
+///
+/// The file's text.
+pub fn robots(base: &str) -> String {
+    format!("User-agent: *\nAllow: /\nSitemap: {HOST}{base}sitemap.xml\n")
 }
 
 #[cfg(test)]
@@ -570,23 +635,24 @@ mod tests {
                 kind: "article",
             },
             "0123abcd",
+            DEFAULT_BASE,
         );
         assert!(html.contains(
-            "<link rel=\"canonical\" href=\"https://zero-server.molex.cloud/docs/guides/modbus.html\">"
+            "<link rel=\"canonical\" href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html\">"
         ));
         assert!(html.contains("<meta property=\"og:title\" content=\"Modbus RTU - zero-server\">"));
         assert!(
             html.contains("<meta property=\"og:description\" content=\"Frames &amp; replies.\">")
         );
         assert!(html.contains("<meta property=\"og:type\" content=\"article\">"));
-        assert!(html.contains("data-root=\"/\""));
+        assert!(html.contains("data-root=\"/zero-server/\""));
         assert!(
             html.contains("data-stamp=\"0123abcd\""),
             "the page carries the assets' stamp"
         );
         assert!(
-            html.contains("<link rel=\"stylesheet\" href=\"/site.css?v=0123abcd\">"),
-            "the stylesheet is named with the stamp"
+            html.contains("<link rel=\"stylesheet\" href=\"/zero-server/site.css?v=0123abcd\">"),
+            "the stylesheet is named with the stamp under the base path"
         );
         let front = head(
             &Head {
@@ -596,19 +662,89 @@ mod tests {
                 kind: "website",
             },
             "0123abcd",
+            DEFAULT_BASE,
         );
-        assert!(
-            front.contains("<link rel=\"canonical\" href=\"https://zero-server.molex.cloud/\">")
+        assert!(front
+            .contains("<link rel=\"canonical\" href=\"https://molexxxx.github.io/zero-server/\">"));
+        let at_root = head(
+            &Head {
+                title: "zero-server",
+                description: "x",
+                url: "docs/index.html",
+                kind: "article",
+            },
+            "0123abcd",
+            "/",
+        );
+        assert!(at_root.contains("data-root=\"/\""));
+        assert!(at_root.contains(
+            "<link rel=\"canonical\" href=\"https://molexxxx.github.io/docs/index.html\">"
+        ));
+        assert!(at_root.contains("<link rel=\"stylesheet\" href=\"/site.css?v=0123abcd\">"));
+    }
+
+    #[test]
+    fn the_shell_starts_every_link_at_the_base_path() {
+        let band = header("0.1.0", "docs/install.html", DEFAULT_BASE);
+        assert!(band.contains("<a class=\"brand\" href=\"/zero-server/\""));
+        assert!(band.contains("<a href=\"/zero-server/docs/install.html\" class=\"here\" aria-current=\"page\">Install</a>"));
+        assert!(band.contains("<span class=\"docline-end\">molexxxx.github.io/zero-server</span>"));
+        let foot = footer("0.1.0", DEFAULT_BASE);
+        assert!(foot.contains("<a href=\"/zero-server/docs/about/terms.html\">Terms</a>"));
+        assert!(foot.contains("<span class=\"foot-host\">molexxxx.github.io/zero-server</span>"));
+        for html in [&band, &foot] {
+            assert!(!html.contains("href=\"/docs"), "{html}");
+        }
+        let at_root = header("0.1.0", "index.html", "/");
+        assert!(at_root.contains("<a class=\"brand\" href=\"/\""));
+        assert!(at_root.contains("<a href=\"/docs/index.html\">Docs</a>"));
+        assert!(at_root.contains("<span class=\"docline-end\">molexxxx.github.io</span>"));
+        let pages = pager(
+            Some(&super::super::nav::Item {
+                title: "Install".to_owned(),
+                url: "docs/install.html".to_owned(),
+            }),
+            None,
+            DEFAULT_BASE,
+        );
+        assert!(pages.contains("href=\"/zero-server/docs/install.html\" rel=\"prev\""));
+    }
+
+    #[test]
+    fn a_base_path_carries_both_slashes_and_no_empty_segment() {
+        assert!(valid_base("/"));
+        assert!(valid_base("/zero-server/"));
+        assert!(valid_base("/a/b/"));
+        for bad in [
+            "",
+            "zero-server",
+            "/zero-server",
+            "zero-server/",
+            "//",
+            "/a//b/",
+        ] {
+            assert!(!valid_base(bad), "{bad}");
+        }
+        assert_eq!(
+            format!("{HOST}{DEFAULT_BASE}docs"),
+            crate::catalog::SITE,
+            "the catalog's absolute links point into the default site"
         );
     }
 
     #[test]
     fn the_sitemap_lists_every_page_at_its_public_address() {
-        let map = sitemap(&["index.html", "docs/index.html", "docs/guides/modbus.html"]);
-        assert!(map.contains("<loc>https://zero-server.molex.cloud/</loc>"));
-        assert!(map.contains("<loc>https://zero-server.molex.cloud/docs/guides/modbus.html</loc>"));
+        let map = sitemap(
+            &["index.html", "docs/index.html", "docs/guides/modbus.html"],
+            DEFAULT_BASE,
+        );
+        assert!(map.contains("<loc>https://molexxxx.github.io/zero-server/</loc>"));
+        assert!(map
+            .contains("<loc>https://molexxxx.github.io/zero-server/docs/guides/modbus.html</loc>"));
         assert_eq!(map.matches("<url>").count(), 3);
-        assert!(robots().contains("Sitemap: https://zero-server.molex.cloud/sitemap.xml"));
+        assert!(robots(DEFAULT_BASE)
+            .contains("Sitemap: https://molexxxx.github.io/zero-server/sitemap.xml"));
+        assert!(sitemap(&["index.html"], "/").contains("<loc>https://molexxxx.github.io/</loc>"));
     }
 
     #[test]

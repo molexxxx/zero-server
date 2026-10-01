@@ -100,7 +100,21 @@ the same commit.
   symbol on dark, described as pre-release) and a separate zero-server-node
   card for the Node line. Still on the old
   palette: `crates/xtask/src/site/layout.rs` (`THEME_COLOR` and the inlined
-  mark) and the pdoc `--logo` URL in `.github/workflows/docs.yml`.
+  mark).
+- The site generator renders for a base path: `layout::HOST` is
+  `https://molexxxx.github.io`, `layout::DEFAULT_BASE` is `/zero-server/`
+  (the GitHub Pages project site), and `cargo xtask site --base <path>` (also
+  with `--verify`) renders for another, `/` included. Every link of the shell,
+  the front page, the 404 page, the canonical URLs, the sitemap and
+  `robots.txt` start at the base path, `data-root` carries it for `site.js`,
+  `site --verify` refuses a tree rendered for another base path, and the link
+  check reports a root-absolute link that leaves it. `catalog::SITE` (the
+  absolute links of the committed tables) is
+  `https://molexxxx.github.io/zero-server/docs`; the pdoc logo in `docs.yml`,
+  the issue templates and `web/serve.mjs` (which serves under the base path,
+  `--base /` for the root) point at the same address. Still on the dead
+  `z-server.dev` address: the `homepage` fields of the Node packages under
+  `bindings/node`, which belong to the binding step.
 - The README (159 lines, audited 2026-10-01) opens with the animated lockup,
   states under the tagline that nothing is published or running yet, words
   its four rules as what the code is built to do, shows the diagram, one
@@ -236,16 +250,9 @@ stated there. The first release's items:
    httparse oracle behind a dev feature; the `http1Parser` and
    `responseSplitting` vector sections; the registry's HTTP/1.1 rows turn
    green one by one (`cargo xtask standards --check` names each by id).
-3. Site base path, a small change that can be taken between larger items:
-   the site generator under `crates/xtask/src/site/` came from pamoja with
-   root-absolute links (`/assets/zero-icon.svg`, `/docs/...`) and the domain
-   `zero-server.molex.cloud` in `layout.rs`, `catalog.rs` and their tests. A
-   GitHub Pages project site is served under `/zero-server/`, so add a base
-   path setting (default `/zero-server/`), make every generated link
-   relative to it, replace the domain with
-   `https://molexxxx.github.io/zero-server`, update the tests, and keep
-   `pages.yml` on `workflow_dispatch` until `cargo xtask site --verify`
-   passes.
+3. Site base path: done (see Position). `pages.yml` stays on
+   `workflow_dispatch` until the documentation pages and the web tree exist
+   and `cargo xtask site --verify` passes on a rendered tree.
 4. `zero-sys` and `zero-io` on tokio (R.3 step 4), then `zero-rt` and
    `zero-http` (step 5), the router and the small codecs (step 6), the
    benchmark harness and the thesis measurement (step 7), then steps 8 to 14

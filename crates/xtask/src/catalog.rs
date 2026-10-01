@@ -9,9 +9,10 @@ use std::path::Path;
 
 use toml_edit::{DocumentMut, Item};
 
-/// Where the site is published; the tables link into it with absolute URLs so the
-/// registry pages, which do not resolve relative links, reach the guides too.
-pub const SITE: &str = "https://zero-server.molex.cloud/docs";
+/// Where the site is published (`layout::HOST` under `layout::DEFAULT_BASE`); the tables
+/// link into it with absolute URLs so the registry pages, which do not resolve relative
+/// links, reach the guides too.
+pub const SITE: &str = "https://molexxxx.github.io/zero-server/docs";
 
 /// A group of capabilities that share a chapter of the guides.
 pub struct Chapter {
@@ -2001,22 +2002,22 @@ crate = "zero-server"
         ]);
 
         let chapters = catalog.render("chapters", &descriptions).unwrap();
-        assert!(chapters.contains("| Field I/O | [Modbus RTU](https://zero-server.molex.cloud/docs/guides/modbus.html), Transports | [`zero-modbus`](https://zero-server.molex.cloud/docs/reference/rust/zero_modbus/index.html) |"));
+        assert!(chapters.contains("| Field I/O | [Modbus RTU](https://molexxxx.github.io/zero-server/docs/guides/modbus.html), Transports | [`zero-modbus`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_modbus/index.html) |"));
         assert!(chapters.contains("| Engine |"));
-        assert!(chapters.ends_with("| Everything | `cargo add zero-server`: every capability above, behind a feature each | [`zero-server`](https://zero-server.molex.cloud/docs/reference/rust/zero_server/index.html) |"));
+        assert!(chapters.ends_with("| Everything | `cargo add zero-server`: every capability above, behind a feature each | [`zero-server`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_server/index.html) |"));
 
         let crates = catalog.render("crates", &descriptions).unwrap();
-        assert!(crates.contains("| **Engine** | [`zero-core`](https://zero-server.molex.cloud/docs/reference/rust/zero_core/index.html) | The device model |"));
-        assert!(crates.starts_with("| Chapter | Crate | What it does |\n| --- | --- | --- |\n| **Everything** | [`zero-server`](https://zero-server.molex.cloud/docs/reference/rust/zero_server/index.html) | Everything in one crate |"));
+        assert!(crates.contains("| **Engine** | [`zero-core`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_core/index.html) | The device model |"));
+        assert!(crates.starts_with("| Chapter | Crate | What it does |\n| --- | --- | --- |\n| **Everything** | [`zero-server`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_server/index.html) | Everything in one crate |"));
 
         let reference = catalog.render("reference modbus", &descriptions).unwrap();
-        assert!(reference.contains("- TypeScript: [`@zero-server/modbus`](https://zero-server.molex.cloud/docs/reference/node/modules/_zero_modbus.html)"));
-        assert!(reference.contains("- Rust: [`zero-modbus`](https://zero-server.molex.cloud/docs/reference/rust/zero_modbus/index.html)"));
-        assert!(reference.contains("- C#: [`ZeroServer.Modbus`](https://zero-server.molex.cloud/docs/reference/dotnet/api/ZeroServer.Modbus.html), [install](https://zero-server.molex.cloud/docs/reference/dotnet.html#dotnet-modbus)"));
+        assert!(reference.contains("- TypeScript: [`@zero-server/modbus`](https://molexxxx.github.io/zero-server/docs/reference/node/modules/_zero_modbus.html)"));
+        assert!(reference.contains("- Rust: [`zero-modbus`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_modbus/index.html)"));
+        assert!(reference.contains("- C#: [`ZeroServer.Modbus`](https://molexxxx.github.io/zero-server/docs/reference/dotnet/api/ZeroServer.Modbus.html), [install](https://molexxxx.github.io/zero-server/docs/reference/dotnet.html#dotnet-modbus)"));
 
         let binding = catalog.render("binding python", &descriptions).unwrap();
-        assert!(binding.contains("| **Field I/O** | [Modbus RTU](https://zero-server.molex.cloud/docs/guides/modbus.html) | [`zero_server.modbus`](https://zero-server.molex.cloud/docs/reference/python/zero_server/modbus.html) | Modbus RTU requests and replies |"));
-        assert!(binding.contains("| **Engine** | Transports | [`zero_server.core`](https://zero-server.molex.cloud/docs/reference/python/zero_server/core.html) | The transport surface |"));
+        assert!(binding.contains("| **Field I/O** | [Modbus RTU](https://molexxxx.github.io/zero-server/docs/guides/modbus.html) | [`zero_server.modbus`](https://molexxxx.github.io/zero-server/docs/reference/python/zero_server/modbus.html) | Modbus RTU requests and replies |"));
+        assert!(binding.contains("| **Engine** | Transports | [`zero_server.core`](https://molexxxx.github.io/zero-server/docs/reference/python/zero_server/core.html) | The transport surface |"));
 
         assert!(catalog.render("reference nothing", &descriptions).is_err());
         assert!(catalog.render("binding lua", &descriptions).is_err());
@@ -2029,11 +2030,11 @@ crate = "zero-server"
 
         let python = catalog.render("packages python", &descriptions).unwrap();
         assert!(python.starts_with("### Engine\n\n<div class=\"pkgs\">\n<div class=\"pkg\" id=\"python-transport\">\n<div class=\"pkg-head\">\n<div class=\"pkg-what\"><span class=\"pkg-title\">Transports</span><code class=\"pkg-import\">zero_server.core</code><p>The transport surface</p></div>"), "{python}");
-        assert!(python.contains("### Field I/O\n\n<div class=\"pkgs\">\n<div class=\"pkg\" id=\"python-modbus\">\n<div class=\"pkg-head\">\n<div class=\"pkg-what\"><a class=\"pkg-title\" href=\"https://zero-server.molex.cloud/docs/guides/modbus.html\">Modbus RTU</a><code class=\"pkg-import\">zero_server.modbus</code>"));
+        assert!(python.contains("### Field I/O\n\n<div class=\"pkgs\">\n<div class=\"pkg\" id=\"python-modbus\">\n<div class=\"pkg-head\">\n<div class=\"pkg-what\"><a class=\"pkg-title\" href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html\">Modbus RTU</a><code class=\"pkg-import\">zero_server.modbus</code>"));
         assert!(python.contains("<code class=\"cmd\">pip install zero-server-modbus</code><button class=\"copy\" type=\"button\" data-copy=\"pip install zero-server-modbus\""));
-        assert!(python.contains("<div class=\"pkg-foot\">\n<div class=\"pkg-btns\"><a class=\"pkg-btn api python\" href=\"https://zero-server.molex.cloud/docs/reference/python/zero_server/modbus.html\">API reference</a>"));
-        assert!(python.contains("<a class=\"pkg-btn\" href=\"https://zero-server.molex.cloud/docs/guides/modbus.html\">Guide</a><a class=\"pkg-btn\" href=\"https://zero-server.molex.cloud/docs/guides/modbus.html#python\">Worked example</a><a class=\"pkg-btn ext\" href=\"https://pypi.org/project/zero-server-modbus/\">PyPI</a></div>"));
-        assert!(python.contains("<span>Also in</span> <a href=\"https://zero-server.molex.cloud/docs/reference/rust.html#rust-modbus\" title=\"zero-modbus\">Rust</a> <a href=\"https://zero-server.molex.cloud/docs/reference/node.html#node-modbus\" title=\"@zero-server/modbus\">TypeScript</a> <a href=\"https://zero-server.molex.cloud/docs/reference/dotnet.html#dotnet-modbus\" title=\"ZeroServer.Modbus\">C#</a>"), "the other languages lead to the same row on their own pages");
+        assert!(python.contains("<div class=\"pkg-foot\">\n<div class=\"pkg-btns\"><a class=\"pkg-btn api python\" href=\"https://molexxxx.github.io/zero-server/docs/reference/python/zero_server/modbus.html\">API reference</a>"));
+        assert!(python.contains("<a class=\"pkg-btn\" href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html\">Guide</a><a class=\"pkg-btn\" href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html#python\">Worked example</a><a class=\"pkg-btn ext\" href=\"https://pypi.org/project/zero-server-modbus/\">PyPI</a></div>"));
+        assert!(python.contains("<span>Also in</span> <a href=\"https://molexxxx.github.io/zero-server/docs/reference/rust.html#rust-modbus\" title=\"zero-modbus\">Rust</a> <a href=\"https://molexxxx.github.io/zero-server/docs/reference/node.html#node-modbus\" title=\"@zero-server/modbus\">TypeScript</a> <a href=\"https://molexxxx.github.io/zero-server/docs/reference/dotnet.html#dotnet-modbus\" title=\"ZeroServer.Modbus\">C#</a>"), "the other languages lead to the same row on their own pages");
         assert!(python.ends_with("</p>\n</div>\n</div>\n</div>"));
 
         let rust = catalog.render("packages rust", &descriptions).unwrap();
@@ -2042,13 +2043,13 @@ crate = "zero-server"
             "the engine surface is the core crate"
         );
         assert!(rust.contains("<code class=\"pkg-import\">zero-modbus</code>"));
-        assert!(rust.contains("<a class=\"pkg-btn api rust\" href=\"https://zero-server.molex.cloud/docs/reference/rust/zero_modbus/index.html\">API reference</a>"));
+        assert!(rust.contains("<a class=\"pkg-btn api rust\" href=\"https://molexxxx.github.io/zero-server/docs/reference/rust/zero_modbus/index.html\">API reference</a>"));
         assert!(rust.contains("<a class=\"pkg-btn ext\" href=\"https://crates.io/crates/zero-modbus\">crates.io</a><a class=\"pkg-btn ext\" href=\"https://docs.rs/zero-modbus\">docs.rs</a>"));
 
         let dotnet = catalog.render("packages dotnet", &descriptions).unwrap();
         assert!(dotnet.contains("<code class=\"cmd\">dotnet add package ZeroServer.Modbus</code>"));
         assert!(dotnet.contains("<div class=\"pkg\" id=\"dotnet-modbus\">"));
-        assert!(dotnet.contains("<a class=\"pkg-btn\" href=\"https://zero-server.molex.cloud/docs/guides/modbus.html#c\">Worked example</a>"));
+        assert!(dotnet.contains("<a class=\"pkg-btn\" href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html#c\">Worked example</a>"));
     }
 
     #[test]
@@ -2060,51 +2061,51 @@ crate = "zero-server"
         let descriptions = BTreeMap::new();
 
         let node = catalog.render("install node", &descriptions).unwrap();
-        assert!(node.starts_with("<div class=\"domains\">\n<div class=\"domain\">\n<div class=\"pkg-head\">\n<div class=\"pkg-what\"><a class=\"pkg-title\" href=\"https://zero-server.molex.cloud/docs/reference/node.html#field-io\">Field I/O</a><code class=\"pkg-import\">@zero-server/field-io</code></div>"), "{node}");
+        assert!(node.starts_with("<div class=\"domains\">\n<div class=\"domain\">\n<div class=\"pkg-head\">\n<div class=\"pkg-what\"><a class=\"pkg-title\" href=\"https://molexxxx.github.io/zero-server/docs/reference/node.html#field-io\">Field I/O</a><code class=\"pkg-import\">@zero-server/field-io</code></div>"), "{node}");
         assert!(
             node.contains(
                 "<div class=\"pkg-get\"><code class=\"cmd\">npm install @zero-server/field-io</code>"
             ),
             "{node}"
         );
-        assert!(node.contains("<div class=\"pkg-btns\"><details class=\"guide-menu\">\n<summary><span class=\"guide-menu-n\">3</span> guides<span class=\"guide-menu-caret\" aria-hidden=\"true\"></span></summary>\n<ul class=\"guide-menu-list\"><li><a href=\"https://zero-server.molex.cloud/docs/guides/modbus.html\">Modbus RTU</a></li><li>Transports</li><li><a href=\"https://zero-server.molex.cloud/docs/guides/can.html\">CAN</a></li></ul>\n</details><a class=\"pkg-btn api node\""), "{node}");
-        assert!(node.contains("<a class=\"pkg-btn api node\" href=\"https://zero-server.molex.cloud/docs/reference/node.html#field-io\">API reference</a><a class=\"pkg-btn ext\" href=\"https://www.npmjs.com/package/@zero-server/field-io\">npm</a></div></div>"), "{node}");
+        assert!(node.contains("<div class=\"pkg-btns\"><details class=\"guide-menu\">\n<summary><span class=\"guide-menu-n\">3</span> guides<span class=\"guide-menu-caret\" aria-hidden=\"true\"></span></summary>\n<ul class=\"guide-menu-list\"><li><a href=\"https://molexxxx.github.io/zero-server/docs/guides/modbus.html\">Modbus RTU</a></li><li>Transports</li><li><a href=\"https://molexxxx.github.io/zero-server/docs/guides/can.html\">CAN</a></li></ul>\n</details><a class=\"pkg-btn api node\""), "{node}");
+        assert!(node.contains("<a class=\"pkg-btn api node\" href=\"https://molexxxx.github.io/zero-server/docs/reference/node.html#field-io\">API reference</a><a class=\"pkg-btn ext\" href=\"https://www.npmjs.com/package/@zero-server/field-io\">npm</a></div></div>"), "{node}");
 
         let rust = catalog.render("install rust", &descriptions).unwrap();
         assert!(rust.contains(
             "<code class=\"cmd\">cargo add zero-server --no-default-features --features std,field-io</code>"
         ));
         assert!(
-            rust.contains("<a class=\"pkg-title\" href=\"https://zero-server.molex.cloud/docs/reference/rust.html#field-io\">Field I/O</a></div>"),
+            rust.contains("<a class=\"pkg-title\" href=\"https://molexxxx.github.io/zero-server/docs/reference/rust.html#field-io\">Field I/O</a></div>"),
             "a feature has no registry page and no import of its own"
         );
-        assert!(rust.contains("</details><a class=\"pkg-btn api rust\" href=\"https://zero-server.molex.cloud/docs/reference/rust.html#field-io\">API reference</a></div>"), "every language opens the section that lists the domain, not the root of its whole reference");
+        assert!(rust.contains("</details><a class=\"pkg-btn api rust\" href=\"https://molexxxx.github.io/zero-server/docs/reference/rust.html#field-io\">API reference</a></div>"), "every language opens the section that lists the domain, not the root of its whole reference");
 
         let dotnet = catalog.render("install dotnet", &descriptions).unwrap();
         assert!(dotnet.contains("dotnet add package ZeroServer.FieldIo"));
-        assert!(dotnet.contains("<a class=\"pkg-btn api dotnet\" href=\"https://zero-server.molex.cloud/docs/reference/dotnet.html#field-io\">API reference</a><a class=\"pkg-btn ext\" href=\"https://www.nuget.org/packages/ZeroServer.FieldIo\">NuGet</a></div></div>"), "a NuGet domain package has no namespace page of its own, so it opens the section that lists it");
+        assert!(dotnet.contains("<a class=\"pkg-btn api dotnet\" href=\"https://molexxxx.github.io/zero-server/docs/reference/dotnet.html#field-io\">API reference</a><a class=\"pkg-btn ext\" href=\"https://www.nuget.org/packages/ZeroServer.FieldIo\">NuGet</a></div></div>"), "a NuGet domain package has no namespace page of its own, so it opens the section that lists it");
         let python = catalog.render("install python", &descriptions).unwrap();
         assert!(python.contains("<code class=\"pkg-import\">zero_server.field_io</code>"));
-        assert!(python.contains("<a class=\"pkg-btn api python\" href=\"https://zero-server.molex.cloud/docs/reference/python.html#field-io\">API reference</a>"));
+        assert!(python.contains("<a class=\"pkg-btn api python\" href=\"https://molexxxx.github.io/zero-server/docs/reference/python.html#field-io\">API reference</a>"));
 
         let door = catalog
             .render("reference-link python", &descriptions)
             .unwrap();
         assert!(door.starts_with("<div class=\"door\">\n<p>Every <code>zero-server</code> module, generated by pdoc from this commit. Each row below opens a module's API pages"), "{door}");
-        assert!(door.contains("<div class=\"door-actions\"><a class=\"btn btn-warm\" href=\"https://zero-server.molex.cloud/docs/reference/python/zero_server.html\">Browse the full API <small>pdoc</small></a><a class=\"btn btn-ghost\" href=\"https://zero-server.molex.cloud/docs/install.html\">Install</a><a class=\"btn btn-ghost\" href=\"https://zero-server.molex.cloud/docs/index.html\">Guides</a></div>"), "{door}");
+        assert!(door.contains("<div class=\"door-actions\"><a class=\"btn btn-warm\" href=\"https://molexxxx.github.io/zero-server/docs/reference/python/zero_server.html\">Browse the full API <small>pdoc</small></a><a class=\"btn btn-ghost\" href=\"https://molexxxx.github.io/zero-server/docs/install.html\">Install</a><a class=\"btn btn-ghost\" href=\"https://molexxxx.github.io/zero-server/docs/index.html\">Guides</a></div>"), "{door}");
 
         let references = catalog
             .render("references absolute", &descriptions)
             .unwrap();
-        assert!(references.starts_with("| Language | Install | Reference |\n| --- | --- | --- |\n| Rust | `cargo add zero-server` | [Rust reference](https://zero-server.molex.cloud/docs/reference/rust.html), every crate with its API pages, generated by rustdoc |"), "{references}");
-        assert!(references.contains("| C# | `dotnet add package ZeroServer` | [C# reference](https://zero-server.molex.cloud/docs/reference/dotnet.html), every package with its API pages, generated by DocFX |"));
+        assert!(references.starts_with("| Language | Install | Reference |\n| --- | --- | --- |\n| Rust | `cargo add zero-server` | [Rust reference](https://molexxxx.github.io/zero-server/docs/reference/rust.html), every crate with its API pages, generated by rustdoc |"), "{references}");
+        assert!(references.contains("| C# | `dotnet add package ZeroServer` | [C# reference](https://molexxxx.github.io/zero-server/docs/reference/dotnet.html), every package with its API pages, generated by DocFX |"));
         assert!(
             !references.contains("zero_server/index.html"),
             "the generated roots are not linked"
         );
         let relative = catalog.render("references", &descriptions).unwrap();
         assert!(relative.contains("[Python reference](reference/python.md)"));
-        assert!(door.contains("<a href=\"https://zero-server.molex.cloud/docs/reference/rust.html\">Rust</a>\n<a href=\"https://zero-server.molex.cloud/docs/reference/node.html\">TypeScript</a>\n<span aria-current=\"page\">Python</span>\n<a href=\"https://zero-server.molex.cloud/docs/reference/dotnet.html\">C#</a>"));
+        assert!(door.contains("<a href=\"https://molexxxx.github.io/zero-server/docs/reference/rust.html\">Rust</a>\n<a href=\"https://molexxxx.github.io/zero-server/docs/reference/node.html\">TypeScript</a>\n<span aria-current=\"page\">Python</span>\n<a href=\"https://molexxxx.github.io/zero-server/docs/reference/dotnet.html\">C#</a>"));
 
         let engine = catalog
             .render(

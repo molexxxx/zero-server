@@ -43,7 +43,7 @@ const TASKS: &[(&str, &str)] = &[
     ),
     (
         "site",
-        "render the documentation site into target/site (site [--out <dir>] | site --verify [<dir>])",
+        "render the documentation site into target/site (site [--out <dir>] [--base <path>] | site --verify [<dir>] [--base <path>])",
     ),
     (
         "links",

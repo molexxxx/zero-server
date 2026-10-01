@@ -2,6 +2,8 @@
 //   node serve.mjs 5050                  -> custom port
 //   node serve.mjs --no-open             -> do not open a browser
 //   node serve.mjs --root target/site    -> serve a rendered site instead of this directory
+//   node serve.mjs --base /              -> serve at the root instead of under /zero-server/,
+//                                           the base path the site is rendered for by default
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -15,6 +17,8 @@ const rootArg = args.indexOf('--root');
 const ROOT = rootArg >= 0 && args[rootArg + 1]
   ? resolve(args[rootArg + 1]) + sep
   : fileURLToPath(new URL('.', import.meta.url));
+const baseArg = args.indexOf('--base');
+const BASE = baseArg >= 0 && args[baseArg + 1] ? args[baseArg + 1] : '/zero-server/';
 const PORT = Number(args.find((a) => /^\d+$/.test(a))) || 8099;
 const OPEN = !args.includes('--no-open');
 
@@ -64,6 +68,11 @@ const server = createServer(async (req, res) =>
   try
   {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    // The site lives under BASE, as it does on Pages: the root and the bare base path lead
+    // there, and a path outside it is the mistake the link check reports.
+    if (path === '/' || path + '/' === BASE) { res.writeHead(302, { Location: BASE }).end(); return; }
+    if (!path.startsWith(BASE)) { res.writeHead(404, { 'Content-Type': 'text/plain' }).end(`not found: the site is served under ${BASE}`); return; }
+    path = '/' + path.slice(BASE.length);
     if (path === '/') path = '/index.html';
     const file = normalize(join(ROOT, path));
     if (!file.startsWith(ROOT)) { res.writeHead(403).end('forbidden'); return; }
@@ -88,7 +97,7 @@ const server = createServer(async (req, res) =>
 
 server.listen(PORT, () =>
 {
-  const url = `http://localhost:${PORT}`;
+  const url = `http://localhost:${PORT}${BASE}`;
   console.log(`\n  zero-server site -> ${url}\n  live reload on, editing files refreshes the tab\n  (Ctrl+C to stop)\n`);
   if (OPEN)
   {

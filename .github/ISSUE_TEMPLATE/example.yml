@@ -5,9 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Every program on the [examples page](https://z-server.dev/docs/examples.html)
+        Every program on the [examples page](https://molexxxx.github.io/zero-server/docs/examples.html)
         runs in CI on every change with no other service present. The
-        [building page](https://z-server.dev/docs/about/building.html)
+        [building page](https://molexxxx.github.io/zero-server/docs/about/building.html)
         says where a shared program goes and how it is registered; a pull request is the
         direct route, and this form is for a program you would rather hand over as text
         or a link.

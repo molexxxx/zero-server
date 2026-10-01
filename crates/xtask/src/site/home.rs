@@ -416,6 +416,7 @@ impl Home {
     /// * `catalog` - the capability map.
     /// * `lib_crates` - every library crate, for the numbers.
     /// * `descriptions` - each crate's one-line description, for the engine rows.
+    /// * `base` - the base path the site is served under, with both slashes.
     ///
     /// # Returns
     ///
@@ -431,11 +432,12 @@ impl Home {
         catalog: &Catalog,
         lib_crates: &[String],
         descriptions: &BTreeMap<String, String>,
+        base: &str,
     ) -> Result<String, String> {
         let mut out = String::from("<main class=\"home sheet\" id=\"content\">\n");
-        out.push_str(&self.front(root, catalog, lib_crates)?);
+        out.push_str(&self.front(root, catalog, lib_crates, base)?);
         out.push_str(&quickstart(root)?);
-        out.push_str(&covers(catalog, descriptions));
+        out.push_str(&covers(catalog, descriptions, base));
         out.push_str(&self.runs());
         out.push_str(&self.roadmap());
         out.push_str(&self.backing());
@@ -451,6 +453,7 @@ impl Home {
         root: &Path,
         catalog: &Catalog,
         lib_crates: &[String],
+        base: &str,
     ) -> Result<String, String> {
         let title: Vec<String> = self.hero.title.iter().map(|line| escape(line)).collect();
         let mut what = escape(&self.hero.eyebrow);
@@ -500,7 +503,7 @@ impl Home {
              <figure class=\"fig fig-lead\" id=\"figure-1\">\n\
              <div class=\"diorama\" data-diorama=\"{stage_key}\">{stage_still}</div>\n\
              <p class=\"fig-note\">Scripted illustration</p>\n\
-             <figcaption><b>Figure 1.</b> Typical application: a {stage_name} node. The readings are scripted, not measured. <a href=\"https://zero-server.molex.cloud/dashboard/\">Open the dashboard demo</a></figcaption>\n\
+             <figcaption><b>Figure 1.</b> Typical application: a {stage_name} node. The readings are scripted, not measured. <a href=\"{base}dashboard/\">Open the dashboard demo</a></figcaption>\n\
              </figure>\n\
              <div class=\"tbl\" id=\"table-1\">\n\
              <p class=\"tbl-caption\"><b>Table 1.</b> Ordering information. The language pin sets every listing on this site.</p>\n\
@@ -510,7 +513,7 @@ impl Home {
 {orders}</tbody>\n\
              </table>\n\
              </div>\n\
-             <p class=\"front-actions\"><a class=\"action\" href=\"/docs/index.html\">Get started</a><a class=\"action ghost\" href=\"/docs/reference/index.html\">API reference</a></p>\n\
+             <p class=\"front-actions\"><a class=\"action\" href=\"{base}docs/index.html\">Get started</a><a class=\"action ghost\" href=\"{base}docs/reference/index.html\">API reference</a></p>\n\
              </div>\n\
              <div class=\"front-cols\">\n\
              <section class=\"sec\" aria-labelledby=\"features-title\">\n\
@@ -755,7 +758,7 @@ fn quickstart(root: &Path) -> Result<String, String> {
 
 // The capability map: the four bindings across the top, then the engine, a cell per chapter
 // listing its capabilities, and the dashboard.
-fn covers(catalog: &Catalog, descriptions: &BTreeMap<String, String>) -> String {
+fn covers(catalog: &Catalog, descriptions: &BTreeMap<String, String>, base: &str) -> String {
     let crate_links = |crates: &[&str]| -> String {
         crates
             .iter()
@@ -841,7 +844,7 @@ fn covers(catalog: &Catalog, descriptions: &BTreeMap<String, String>) -> String 
         cells.push_str(&format!(
             "<article class=\"chapter\">\n\
              <p class=\"chapter-id\">4.{}</p>\n\
-             <h3><a href=\"https://zero-server.molex.cloud/dashboard/\">Dashboard</a></h3>\n\
+             <h3><a href=\"{base}dashboard/\">Dashboard</a></h3>\n\
              <p class=\"chapter-what\">{}</p>\n\
              <p class=\"chapter-list\">{}</p>\n\
              </article>\n",
@@ -1121,7 +1124,7 @@ detail = "With partners."
     #[ignore = "needs the docs pages and the web tree, which are not written yet"]
     fn the_map_puts_each_engine_crate_where_it_belongs() {
         let catalog = Catalog::load(&crate::docs::repo_root()).unwrap();
-        let map = covers(&catalog, &BTreeMap::new());
+        let map = covers(&catalog, &BTreeMap::new(), "/zero-server/");
         let cell = |from: &str| {
             let start = map.find(from).unwrap();
             map[start..start + map[start..].find("</article>").unwrap()].to_owned()

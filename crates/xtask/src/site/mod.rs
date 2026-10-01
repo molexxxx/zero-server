@@ -70,6 +70,7 @@ const HANDOFFS: [(&str, &str, &str); 2] = [
 /// The whole site, loaded and ready to render.
 pub struct Site {
     root: PathBuf,
+    base: String,
     version: String,
     catalog: Catalog,
     lib_crates: Vec<String>,
@@ -84,7 +85,9 @@ pub struct Site {
 /// # Arguments
 ///
 /// * `args` - `[--out <dir>]` renders into `dir` (default `target/site`); `--verify [<dir>]`
-///   checks every link of a finished site on disk instead.
+///   checks every link of a finished site on disk instead. `--base <path>` names the base
+///   path the site is served under (default `/zero-server/`, the project site on GitHub
+///   Pages; `/` for a site of its own), for either.
 ///
 /// # Returns
 ///
@@ -92,9 +95,30 @@ pub struct Site {
 pub fn run(args: &[String]) -> ExitCode {
     let root = docs::repo_root();
     let default_out = root.join("target/site");
+    let mut base = layout::DEFAULT_BASE.to_owned();
+    let mut rest: Vec<String> = Vec::new();
+    let mut given = args.iter();
+    while let Some(arg) = given.next() {
+        if arg == "--base" {
+            match given.next() {
+                Some(path) => base.clone_from(path),
+                None => {
+                    eprintln!("xtask site: --base needs a path");
+                    return ExitCode::FAILURE;
+                }
+            }
+        } else {
+            rest.push(arg.clone());
+        }
+    }
+    if !layout::valid_base(&base) {
+        eprintln!("xtask site: a base path starts and ends with a slash, like /zero-server/ or /");
+        return ExitCode::FAILURE;
+    }
+    let args: &[String] = &rest;
     let result = if args.first().map(String::as_str) == Some("--verify") {
         let dir = args.get(1).map_or(default_out, PathBuf::from);
-        verify(&dir)
+        verify(&dir, &base)
     } else {
         let out = match args.iter().position(|arg| arg == "--out") {
             Some(at) => match args.get(at + 1) {
@@ -106,7 +130,7 @@ pub fn run(args: &[String]) -> ExitCode {
             },
             None => default_out,
         };
-        Site::load(&root).and_then(|site| site.write(&out))
+        Site::load(&root, &base).and_then(|site| site.write(&out))
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -123,6 +147,7 @@ impl Site {
     /// # Arguments
     ///
     /// * `root` - the repository root.
+    /// * `base` - the base path the site is served under, with both slashes.
     ///
     /// # Returns
     ///
@@ -132,7 +157,7 @@ impl Site {
     ///
     /// When the map, the front page's data, or a page cannot be read, when a page is missing
     /// from the navigation, or when the front page's data disagrees with the workspace.
-    pub fn load(root: &Path) -> Result<Site, String> {
+    pub fn load(root: &Path, base: &str) -> Result<Site, String> {
         let catalog = Catalog::load(root)?;
         let lib_crates = docs::lib_crates()?;
         let descriptions = lib_crates
@@ -147,6 +172,7 @@ impl Site {
         let pages = pages::load(root, &nav)?;
         Ok(Site {
             root: root.to_path_buf(),
+            base: base.to_owned(),
             version: version::current()?,
             catalog,
             lib_crates,
@@ -174,6 +200,7 @@ impl Site {
             version: &self.version,
             nav: &self.nav,
             stamp: &stamp,
+            base: &self.base,
         };
         let mut files: Vec<(String, Vec<u8>)> = self
             .pages
@@ -190,6 +217,7 @@ impl Site {
             &self.catalog,
             &self.lib_crates,
             &self.descriptions,
+            &self.base,
         )?;
         files.push((
             "index.html".to_owned(),
@@ -203,9 +231,12 @@ impl Site {
         listed.extend(self.pages.iter().map(|page| page.url.as_str()));
         files.push((
             "sitemap.xml".to_owned(),
-            layout::sitemap(&listed).into_bytes(),
+            layout::sitemap(&listed, &self.base).into_bytes(),
         ));
-        files.push(("robots.txt".to_owned(), layout::robots().into_bytes()));
+        files.push((
+            "robots.txt".to_owned(),
+            layout::robots(&self.base).into_bytes(),
+        ));
         for (path, key, name) in HANDOFFS {
             files.push((
                 path.to_owned(),
@@ -218,7 +249,7 @@ impl Site {
         ));
         files.extend(assets);
         files.sort_by(|a, b| a.0.cmp(&b.0));
-        check::check(&check::Rendered::new(&files), &check::GENERATED)?;
+        check::check(&check::Rendered::new(&files), &check::GENERATED, &self.base)?;
         Ok(files)
     }
 
@@ -265,19 +296,37 @@ impl Site {
 /// # Arguments
 ///
 /// * `dir` - the site root, with the generated references in place.
+/// * `base` - the base path the site was rendered for, with both slashes; every page
+///   carries it as `data-root`, and a site rendered for another one is refused.
 ///
 /// # Errors
 ///
-/// Every broken link, one per line.
-pub fn verify(dir: &Path) -> Result<(), String> {
-    if !dir.join("docs/index.html").is_file() {
+/// Every broken link, one per line, or the base path the site was rendered for when it is
+/// not `base`.
+pub fn verify(dir: &Path, base: &str) -> Result<(), String> {
+    let front = dir.join("docs/index.html");
+    let Ok(html) = fs::read_to_string(&front) else {
         return Err(format!(
             "{} holds no site; run `cargo xtask site` first",
             dir.display()
         ));
+    };
+    let rendered = html
+        .split_once("data-root=\"")
+        .and_then(|(_, rest)| rest.split_once('"'))
+        .map(|(root, _)| root);
+    if rendered != Some(base) {
+        return Err(format!(
+            "{} was rendered for the base path {}, not {base}",
+            front.display(),
+            rendered.unwrap_or("(none)")
+        ));
     }
-    check::check(&check::OnDisk::new(dir), &[])?;
-    println!("site: every link under {} resolves", dir.display());
+    check::check(&check::OnDisk::new(dir), &[], base)?;
+    println!(
+        "site: every link under {} resolves beneath {base}",
+        dir.display()
+    );
     Ok(())
 }
 
@@ -288,7 +337,7 @@ mod tests {
     use super::*;
 
     fn site() -> Site {
-        Site::load(&docs::repo_root()).expect("the site loads")
+        Site::load(&docs::repo_root(), layout::DEFAULT_BASE).expect("the site loads")
     }
 
     /// The URLs the site has published; each keeps resolving.
@@ -598,7 +647,9 @@ mod tests {
                 "{path} has no swap region"
             );
             assert!(
-                html.contains("<link rel=\"canonical\" href=\"https://zero-server.molex.cloud/"),
+                html.contains(
+                    "<link rel=\"canonical\" href=\"https://molexxxx.github.io/zero-server/"
+                ),
                 "{path} has no canonical URL"
             );
             assert!(
@@ -637,9 +688,8 @@ mod tests {
         )
         .into_owned();
         assert_eq!(sitemap.matches("<url>").count(), site.pages.len() + 1);
-        assert!(
-            sitemap.contains("<loc>https://zero-server.molex.cloud/docs/guides/modbus.html</loc>")
-        );
+        assert!(sitemap
+            .contains("<loc>https://molexxxx.github.io/zero-server/docs/guides/modbus.html</loc>"));
     }
 
     #[test]

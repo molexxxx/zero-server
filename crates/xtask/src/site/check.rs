@@ -146,6 +146,7 @@ const BESIDE: [&str; 1] = ["dashboard"];
 ///
 /// * `corpus` - the pages and files to check.
 /// * `trusted` - path prefixes a link may point into without the target existing.
+/// * `base` - the base path the site was rendered for, with both slashes.
 ///
 /// # Returns
 ///
@@ -153,9 +154,9 @@ const BESIDE: [&str; 1] = ["dashboard"];
 ///
 /// # Errors
 ///
-/// Every broken link, one per line: a target that does not exist, or a fragment the target
-/// page has no id for.
-pub fn check(corpus: &dyn Corpus, trusted: &[&str]) -> Result<(), String> {
+/// Every broken link, one per line: a target that does not exist, a fragment the target
+/// page has no id for, or a root-absolute link that leaves the base path.
+pub fn check(corpus: &dyn Corpus, trusted: &[&str], base: &str) -> Result<(), String> {
     let mut problems = Vec::new();
     let mut ids: BTreeMap<String, Option<BTreeSet<String>>> = BTreeMap::new();
     for page in corpus.pages() {
@@ -163,7 +164,11 @@ pub fn check(corpus: &dyn Corpus, trusted: &[&str]) -> Result<(), String> {
             continue;
         };
         for link in links_in(&html) {
-            let Some(target) = resolve(&page, &link) else {
+            if outside_base(&link, base) {
+                problems.push(format!("{page}: `{link}` leaves the base path {base}"));
+                continue;
+            }
+            let Some(target) = resolve(&page, &link, base) else {
                 continue;
             };
             if trusted
@@ -235,22 +240,43 @@ pub fn ids_in(html: &str) -> BTreeSet<String> {
     out
 }
 
+/// Whether a root-absolute link steps outside the base path: `/docs/index.html` on a site
+/// served under `/zero-server/` reaches nothing, however the page was rendered.
+///
+/// # Arguments
+///
+/// * `link` - the `href` as written.
+/// * `base` - the base path, with both slashes.
+///
+/// # Returns
+///
+/// `true` for a link starting with `/` that is neither under the base path nor the base
+/// path itself; `false` for every other link, relative and external ones included.
+pub fn outside_base(link: &str, base: &str) -> bool {
+    if !link.starts_with('/') || link.starts_with("//") {
+        return false;
+    }
+    let path = link.split(['#', '?']).next().unwrap_or(link);
+    !(path.starts_with(base) || format!("{path}/") == base)
+}
+
 /// Where a link on the page at `from` points, or `None` for a link that leaves the site.
-/// An absolute link to the site's own origin is followed like a root-relative one, since
-/// the committed regions that GitHub renders too are written that way.
+/// An absolute link to the site's own address is followed like a root-absolute one, since
+/// the committed regions that GitHub renders too are written that way; a root-absolute
+/// link is taken under the base path, and one outside it points nowhere on the site.
 ///
 /// # Arguments
 ///
 /// * `from` - the page the link is on, site-relative.
 /// * `link` - the `href` as written.
+/// * `base` - the base path, with both slashes.
 ///
 /// # Returns
 ///
 /// The site-relative target, a directory link resolved to its `index.html`.
-pub fn resolve(from: &str, link: &str) -> Option<Target> {
-    let link = match link.strip_prefix(layout::ORIGIN) {
-        Some("") => "/",
-        Some(rest) if rest.starts_with('/') || rest.starts_with('#') => rest,
+pub fn resolve(from: &str, link: &str, base: &str) -> Option<Target> {
+    let link = match link.strip_prefix(layout::HOST) {
+        Some(rest) if rest.starts_with('/') => rest,
         _ => link,
     };
     if link.contains("://")
@@ -268,8 +294,12 @@ pub fn resolve(from: &str, link: &str) -> Option<Target> {
     let path = path.split('?').next().unwrap_or_default();
     let path = if path.is_empty() {
         from.to_owned()
-    } else if let Some(absolute) = path.strip_prefix('/') {
-        absolute.to_owned()
+    } else if path.starts_with('/') {
+        match path.strip_prefix(base) {
+            Some(under) => under.to_owned(),
+            None if format!("{path}/") == base => String::new(),
+            None => return None,
+        }
     } else {
         let base = from.rsplit_once('/').map_or("", |(dir, _)| dir);
         let joined = if base.is_empty() {
@@ -312,48 +342,101 @@ mod tests {
         })
     }
 
+    const BASE: &str = "/zero-server/";
+
     #[test]
     fn links_resolve_against_the_page_they_are_on() {
         let from = "docs/guides/modbus.html";
         assert_eq!(
-            resolve(from, "../install.html"),
+            resolve(from, "../install.html", BASE),
             target("docs/install.html", None)
         );
-        assert_eq!(resolve(from, "#rust"), target(from, Some("rust")));
+        assert_eq!(resolve(from, "#rust", BASE), target(from, Some("rust")));
         assert_eq!(
-            resolve(from, "../reference/rust/zero_modbus/index.html"),
+            resolve(from, "../reference/rust/zero_modbus/index.html", BASE),
             target("docs/reference/rust/zero_modbus/index.html", None)
         );
-        assert_eq!(resolve(from, "../../"), target("index.html", None));
+        assert_eq!(resolve(from, "../../", BASE), target("index.html", None));
         assert_eq!(
-            resolve(from, "/docs/index.html#a"),
+            resolve(from, "/zero-server/docs/index.html#a", BASE),
             target("docs/index.html", Some("a"))
         );
         assert_eq!(
-            resolve(from, "can.html?x=1#rust"),
+            resolve(from, "/docs/index.html#a", "/"),
+            target("docs/index.html", Some("a"))
+        );
+        assert_eq!(
+            resolve(from, "can.html?x=1#rust", BASE),
             target("docs/guides/can.html", Some("rust"))
         );
-        assert_eq!(resolve(from, "https://docs.rs/zero-server"), None);
+        assert_eq!(resolve(from, "https://docs.rs/zero-server", BASE), None);
         assert_eq!(
             resolve(
                 from,
-                "https://zero-server.molex.cloud/docs/install.html#node"
+                "https://molexxxx.github.io/zero-server/docs/install.html#node",
+                BASE
             ),
             target("docs/install.html", Some("node"))
         );
         assert_eq!(
-            resolve(from, "https://zero-server.molex.cloud"),
+            resolve(from, "https://molexxxx.github.io/zero-server", BASE),
             target("index.html", None)
         );
         assert_eq!(
-            resolve(from, "https://zero-server.molex.cloud/dashboard/"),
+            resolve(from, "https://molexxxx.github.io/zero-server/", BASE),
+            target("index.html", None)
+        );
+        assert_eq!(
+            resolve(
+                from,
+                "https://molexxxx.github.io/zero-server/dashboard/",
+                BASE
+            ),
             target("dashboard/index.html", None)
         );
         assert_eq!(
-            resolve(from, "https://zero-server.molex.cloud.example/"),
+            resolve(from, "https://molexxxx.github.io/other-project/", BASE),
+            None,
+            "another site on the same host is external"
+        );
+        assert_eq!(resolve(from, "https://molexxxx.github.io", BASE), None);
+        assert_eq!(
+            resolve(from, "https://molexxxx.github.io.example/", BASE),
             None
         );
-        assert_eq!(resolve(from, "mailto:x@y.z"), None);
+        assert_eq!(resolve(from, "mailto:x@y.z", BASE), None);
+    }
+
+    #[test]
+    fn a_root_absolute_link_outside_the_base_path_is_caught() {
+        assert!(outside_base("/docs/index.html", BASE));
+        assert!(outside_base("/zero-servers/x.html", BASE));
+        assert!(outside_base("/", BASE));
+        assert!(!outside_base("/zero-server", BASE));
+        assert!(!outside_base("/zero-server/", BASE));
+        assert!(!outside_base("/zero-server/docs/index.html#a", BASE));
+        assert!(!outside_base("/docs/index.html", "/"));
+        assert!(!outside_base("docs/index.html", BASE));
+        assert!(!outside_base("../index.html", BASE));
+        assert!(!outside_base("//cdn.example/x.js", BASE));
+        assert!(!outside_base("https://docs.rs/zero-server", BASE));
+        assert_eq!(resolve("index.html", "/docs/index.html", BASE), None);
+
+        let files = vec![
+            (
+                "docs/a.html".to_owned(),
+                b"<a href=\"/docs/b.html\">forgot the base</a><a href=\"/zero-server/docs/b.html#here\">ok</a><a href=\"/zero-server\">home</a>".to_vec(),
+            ),
+            ("docs/b.html".to_owned(), b"<h1 id=\"here\">B</h1>".to_vec()),
+            ("index.html".to_owned(), b"<p>home</p>".to_vec()),
+        ];
+        let corpus = Rendered::new(&files);
+        let err = check(&corpus, &[], BASE).unwrap_err();
+        assert!(err.contains("1 broken link(s)"), "{err}");
+        assert!(
+            err.contains("docs/a.html: `/docs/b.html` leaves the base path /zero-server/"),
+            "{err}"
+        );
     }
 
     #[test]
@@ -377,13 +460,13 @@ mod tests {
             ("site.css".to_owned(), b"body{}".to_vec()),
         ];
         let corpus = Rendered::new(&files);
-        let err = check(&corpus, &["docs/reference/rust"]).unwrap_err();
+        let err = check(&corpus, &["docs/reference/rust"], BASE).unwrap_err();
         assert!(err.contains("2 broken link(s)"), "{err}");
         assert!(err.contains("`b.html#gone` names a fragment docs/b.html has no id for"));
         assert!(err.contains("`c.html` points at nothing"));
         assert!(!err.contains("trusted") && !err.contains("site.css"));
 
-        let strict = check(&corpus, &[]).unwrap_err();
+        let strict = check(&corpus, &[], BASE).unwrap_err();
         assert!(strict.contains("3 broken link(s)"), "{strict}");
     }
 }

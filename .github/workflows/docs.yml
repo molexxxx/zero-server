@@ -88,7 +88,7 @@ jobs:
           pip install maturin pdoc==16.0
           maturin develop -m packages/native/Cargo.toml
           pip install $(find packages -mindepth 1 -maxdepth 1 -type d ! -name native)
-          pdoc zero_server '!zero_server._native' -o ../../target/site/docs/reference/python --docformat restructuredtext --template-directory ../../docs/theme/pdoc --logo https://z-server.dev/docs/assets/zero-server-logo.svg --logo-link https://z-server.dev/docs/
+          pdoc zero_server '!zero_server._native' -o ../../target/site/docs/reference/python --docformat restructuredtext --template-directory ../../docs/theme/pdoc --logo https://molexxxx.github.io/zero-server/docs/assets/zero-logo.svg --logo-link https://molexxxx.github.io/zero-server/docs/
 
       - name: .NET reference
         run: |

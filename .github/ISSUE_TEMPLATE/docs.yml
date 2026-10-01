@@ -7,7 +7,7 @@ body:
     attributes:
       label: Where
       description: The page, or the file in the repository.
-      placeholder: https://z-server.dev/docs/guides/router.html
+      placeholder: https://molexxxx.github.io/zero-server/docs/guides/router.html
     validations:
       required: true
 

@@ -6,8 +6,8 @@ body:
     attributes:
       value: |
         The catalog of what zero-server covers today is on the
-        [reference hub](https://z-server.dev/docs/reference/), and the standards it
-        implements are on the [standards page](https://z-server.dev/docs/about/standards.html).
+        [reference hub](https://molexxxx.github.io/zero-server/docs/reference/), and the standards it
+        implements are on the [standards page](https://molexxxx.github.io/zero-server/docs/about/standards.html).
 
   - type: textarea
     id: what
