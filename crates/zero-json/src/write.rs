@@ -267,7 +267,17 @@ impl<'a> Writer<'a> {
         }
         self.before_value()?;
         // Writing into a Vec never fails.
+        let start = self.out.len();
         let _ = write!(Sink(self.out), "{value}");
+        // An integral float prints without a fraction; the ".0" keeps it a float
+        // when the text is read back.
+        let integral = self
+            .out
+            .get(start..)
+            .is_some_and(|text| !text.iter().any(|byte| matches!(byte, b'.' | b'e' | b'E')));
+        if integral {
+            self.out.extend_from_slice(b".0");
+        }
         Ok(self)
     }
 
@@ -474,7 +484,7 @@ mod tests {
         assert_eq!(text(|w| w.float(0.1).map(|_| ())), Ok("0.1".to_string()));
         assert_eq!(
             text(|w| w.float(1e21).map(|_| ())),
-            Ok("1000000000000000000000".to_string())
+            Ok("1000000000000000000000.0".to_string())
         );
     }
 
@@ -559,5 +569,16 @@ mod tests {
             to_vec(&value),
             Ok(br#"{"a":[1,null],"b":[0,255],"c":-0.5}"#.to_vec())
         );
+    }
+
+    #[test]
+    fn integral_floats_keep_a_fraction_so_they_read_back_as_floats() {
+        assert_eq!(text(|w| w.float(2.0).map(|_| ())), Ok("2.0".to_string()));
+        assert_eq!(text(|w| w.float(-0.0).map(|_| ())), Ok("-0.0".to_string()));
+        assert_eq!(text(|w| w.float(2.5).map(|_| ())), Ok("2.5".to_string()));
+        let zero = Value::Array(alloc::vec![Value::Float(0.0), Value::Int(0)]);
+        let written = to_vec(&zero).unwrap_or_default();
+        assert_eq!(written, b"[0.0,0]");
+        assert_eq!(crate::parse(&written), Ok(zero));
     }
 }

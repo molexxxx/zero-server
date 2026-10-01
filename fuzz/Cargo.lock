@@ -133,18 +133,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "zero-json"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+]
+
+[[package]]
 name = "zero-limits"
 version = "0.1.0"
+
+[[package]]
+name = "zero-qs"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+]
+
+[[package]]
+name = "zero-router"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+ "zero-http-types",
+ "zero-uri",
+]
 
 [[package]]
 name = "zero-server-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "zero-core",
+ "zero-http-types",
  "zero-http1",
+ "zero-json",
  "zero-limits",
+ "zero-qs",
+ "zero-router",
  "zero-simd",
  "zero-sys",
+ "zero-uri",
 ]
 
 [[package]]
@@ -158,5 +187,12 @@ dependencies = [
  "libc",
  "socket2",
  "windows-sys",
+ "zero-core",
+]
+
+[[package]]
+name = "zero-uri"
+version = "0.1.0"
+dependencies = [
  "zero-core",
 ]

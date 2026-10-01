@@ -380,15 +380,28 @@ batch dispatcher's 503 rule). Unverified: the RFC 9457 text was read from the
 HTTP API working group's repository copy of the document, since the RFC
 Editor is unreachable from this environment.
 
-R.3 step 6 is in progress: the six crates are written and tested (see
-Position) and the routing rows of the registry pass. Still open in the step:
-the `router` section of `conformance/vectors.json`, the fuzz targets for
-`zero-uri`, `zero-qs`, `zero-json` and `zero-router`, the 400-route miss
-measurement against the 10.9 microsecond Node figure (the harness of step 7
-measures it), and the router tests transferred from the Node repository,
-which arrive with the corpus in step 13; until then the router's own tests
-and the regression entries of `DESIGN.md` section 15 (a child mount keeps the
-query string; a mount wins over an application-level `/*`) stand in.
+R.3 step 6 is complete except for two items that belong to later steps. The
+six crates are written and tested (see Position), the routing rows of the
+registry pass, `conformance/vectors.json` carries the `router` section (the
+route table every binding builds, with a mount, and 37 cases over it: static,
+parameter and catch-all matches with the captured parameters, HEAD served by
+GET, the automatic OPTIONS, 405 with `Allow`, 501, mounts, the encoded slash,
+unreserved decoding, dot-segments, the query, and the targets that are not
+paths), and the fuzz crate gained `uri_normalize` (parse, decode and
+normalize never panic, normalization is idempotent and its output has no
+dot-segment, lowercase triplet or unreserved triplet), `qs_parse` (one pair
+per sequence, valid strings), `json_parse` (never panics, a parsed value
+written back parses equal) and `router_resolve` (parameter ranges inside the
+path, the split and normalized path resolves the same); the first smoke
+runs found two defects, both fixed and their inputs kept as seeds: a path
+with a byte a path cannot hold after a dot-segment was normalized instead of
+refused, and an integral float was written without a fraction and read back
+as an integer. Still open: the 400-route miss measurement against the 10.9
+microsecond Node figure (the harness of step 7 measures it), and the router
+tests transferred from the Node repository, which arrive with the corpus in
+step 13; until then the router's own tests and the regression entries of
+`DESIGN.md` section 15 (a child mount keeps the query string; a mount wins
+over an application-level `/*`) stand in.
 Unverified: RFC 3986 was read from the uriparser project's copy and RFC 8259
 and RFC 4648 from the rfc-translater project's copies (the English column),
 because the RFC Editor is unreachable; the URL Standard from the WHATWG
@@ -421,9 +434,9 @@ stated there. The first release's items:
    and `cargo xtask site --verify` passes on a rendered tree.
 4. `zero-sys` and `zero-io` on tokio (R.3 step 4), `zero-rt` with
    `zero-http` (step 5), and the router with the small codecs (step 6): done
-   except for the parts named under "In progress". Next: the `router` vector
-   section and the step 6 fuzz targets, then the benchmark harness and the
-   thesis measurement (step 7), then steps 8 to 14 to the release 1 tag.
+   except for the parts named under "In progress". Next: the benchmark
+   harness and the thesis measurement (step 7), then steps 8 to 14 to the
+   release 1 tag.
 
 Before writing code for an item: read the roadmap entry, the design sections
 it cites, and the research note for the area; fetch every standard the code

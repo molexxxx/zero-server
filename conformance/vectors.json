@@ -461,5 +461,627 @@
       }
     ]
   },
+  "router": {
+    "cases": [
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 1,
+            "params": [],
+            "path": "/",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "root",
+        "target": "/"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 2,
+            "params": [],
+            "path": "/users",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "static segment",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 4,
+            "params": [],
+            "path": "/users/me",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "static over parameter",
+        "target": "/users/me"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 5,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "parameter",
+        "target": "/users/42"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 7,
+            "params": [
+              [
+                "id",
+                "42"
+              ],
+              [
+                "post",
+                "7"
+              ]
+            ],
+            "path": "/users/42/posts/7",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "two parameters",
+        "target": "/users/42/posts/7"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 5,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": "x=1&y=/users/me"
+          }
+        },
+        "method": "GET",
+        "name": "parameter with query",
+        "target": "/users/42?x=1&y=/users/me"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 6,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": null
+          }
+        },
+        "method": "DELETE",
+        "name": "other method on parameter route",
+        "target": "/users/42"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 9,
+            "params": [
+              [
+                "path",
+                "css/site.css"
+              ]
+            ],
+            "path": "/static/css/site.css",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "catch-all",
+        "target": "/static/css/site.css"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 9,
+            "params": [
+              [
+                "path",
+                ""
+              ]
+            ],
+            "path": "/static/",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "catch-all empty",
+        "target": "/static/"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 10,
+            "params": [
+              [
+                "*",
+                "anything/else"
+              ]
+            ],
+            "path": "/anything/else",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "root catch-all",
+        "target": "/anything/else"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 2,
+            "params": [],
+            "path": "/users/",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "trailing slash ignored",
+        "target": "/users/"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 10,
+            "params": [
+              [
+                "*",
+                "users//x"
+              ]
+            ],
+            "path": "/users//x",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "empty segment is no parameter",
+        "target": "/users//x"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": true,
+            "id": 2,
+            "params": [],
+            "path": "/users",
+            "query": null
+          }
+        },
+        "method": "HEAD",
+        "name": "head served by get",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "allow": "GET, HEAD, POST, OPTIONS",
+          "status": 200
+        },
+        "method": "OPTIONS",
+        "name": "options automatic",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "allow": "GET, HEAD, POST, OPTIONS",
+          "status": 405
+        },
+        "method": "PUT",
+        "name": "method not allowed",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "allow": "GET, HEAD, DELETE, OPTIONS",
+          "status": 405
+        },
+        "method": "PUT",
+        "name": "method not allowed on parameter route",
+        "target": "/users/42"
+      },
+      {
+        "expect": {
+          "status": 501
+        },
+        "method": "PATCH",
+        "name": "unimplemented token",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "status": 501
+        },
+        "method": "get",
+        "name": "lowercase token",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 20,
+            "params": [],
+            "path": "/admin",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "mount root",
+        "target": "/admin"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 20,
+            "params": [],
+            "path": "/admin/",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "mount root with slash",
+        "target": "/admin/"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 21,
+            "params": [],
+            "path": "/admin/list",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "mount route",
+        "target": "/admin/list"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 22,
+            "params": [
+              [
+                "key",
+                "theme"
+              ]
+            ],
+            "path": "/admin/settings/theme",
+            "query": null
+          }
+        },
+        "method": "PUT",
+        "name": "mount parameter",
+        "target": "/admin/settings/theme"
+      },
+      {
+        "expect": {
+          "status": 404
+        },
+        "method": "GET",
+        "name": "mount owns its prefix",
+        "target": "/admin/unknown"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 21,
+            "params": [],
+            "path": "/admin/list",
+            "query": "page=2"
+          }
+        },
+        "method": "GET",
+        "name": "mount keeps the query",
+        "target": "/admin/list?page=2"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 10,
+            "params": [
+              [
+                "*",
+                "administrator"
+              ]
+            ],
+            "path": "/administrator",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "not a mount",
+        "target": "/administrator"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 8,
+            "params": [
+              [
+                "name",
+                "a%2Fb"
+              ]
+            ],
+            "path": "/files/a%2Fb",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "encoded slash is data",
+        "target": "/files/a%2Fb"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 8,
+            "params": [
+              [
+                "name",
+                "a%2Fb"
+              ]
+            ],
+            "path": "/files/a%2Fb",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "encoded slash lowercase",
+        "target": "/files/a%2fb"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 10,
+            "params": [
+              [
+                "*",
+                "files/a/b"
+              ]
+            ],
+            "path": "/files/a/b",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "real slash is a separator",
+        "target": "/files/a/b"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 4,
+            "params": [],
+            "path": "/users/me",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "unreserved decoded",
+        "target": "/%75sers/m%65"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 5,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "unreserved parameter decoded",
+        "target": "/users/%34%32"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 21,
+            "params": [],
+            "path": "/admin/list",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "dot segments removed",
+        "target": "/public/../admin/list"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 4,
+            "params": [],
+            "path": "/users/me",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "encoded dot segments removed",
+        "target": "/admin/%2e%2E/users/me"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 2,
+            "params": [],
+            "path": "/users",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "leading dot-dot",
+        "target": "/../users"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 2,
+            "params": [],
+            "path": "/users",
+            "query": "/users/me"
+          }
+        },
+        "method": "GET",
+        "name": "query never matches",
+        "target": "/users?/users/me"
+      },
+      {
+        "expect": {
+          "status": 400
+        },
+        "method": "GET",
+        "name": "bad percent",
+        "target": "/users/%zz"
+      },
+      {
+        "expect": {
+          "status": 400
+        },
+        "method": "GET",
+        "name": "space in path",
+        "target": "/a b"
+      },
+      {
+        "expect": {
+          "status": 404
+        },
+        "method": "OPTIONS",
+        "name": "asterisk is not a path",
+        "target": "*"
+      }
+    ],
+    "table": {
+      "mounts": [
+        {
+          "prefix": "/admin",
+          "routes": [
+            {
+              "id": 20,
+              "method": "GET",
+              "pattern": "/"
+            },
+            {
+              "id": 21,
+              "method": "GET",
+              "pattern": "/list"
+            },
+            {
+              "id": 22,
+              "method": "PUT",
+              "pattern": "/settings/:key"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "id": 1,
+          "method": "GET",
+          "pattern": "/"
+        },
+        {
+          "id": 2,
+          "method": "GET",
+          "pattern": "/users"
+        },
+        {
+          "id": 3,
+          "method": "POST",
+          "pattern": "/users"
+        },
+        {
+          "id": 4,
+          "method": "GET",
+          "pattern": "/users/me"
+        },
+        {
+          "id": 5,
+          "method": "GET",
+          "pattern": "/users/:id"
+        },
+        {
+          "id": 6,
+          "method": "DELETE",
+          "pattern": "/users/:id"
+        },
+        {
+          "id": 7,
+          "method": "GET",
+          "pattern": "/users/:id/posts/:post"
+        },
+        {
+          "id": 8,
+          "method": "GET",
+          "pattern": "/files/:name"
+        },
+        {
+          "id": 9,
+          "method": "GET",
+          "pattern": "/static/*path"
+        },
+        {
+          "id": 10,
+          "method": "GET",
+          "pattern": "/*"
+        }
+      ],
+      "trailingSlash": "ignore"
+    }
+  },
   "tolerance": 1e-6
 }

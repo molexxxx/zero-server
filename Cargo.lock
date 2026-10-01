@@ -1630,6 +1630,7 @@ dependencies = [
  "zero-http-types",
  "zero-http1",
  "zero-limits",
+ "zero-router",
  "zero-server",
 ]
 

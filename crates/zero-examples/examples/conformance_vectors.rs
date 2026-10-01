@@ -11,7 +11,9 @@ use std::path::Path;
 
 use serde_json::{json, Map, Value};
 use zero_http1::{parse_request, BodyLength, Field, ResponseWriter, Status, WriteError};
+use zero_http_types::Method;
 use zero_limits::http1::Http1Limits;
+use zero_router::{Resolution, Router};
 
 /// One request-head case: the bytes, and either the head that results or
 /// the rejection.
@@ -401,6 +403,150 @@ fn serializer_accepts(name: &str, value: &[u8]) -> bool {
     }
 }
 
+/// The route table every binding builds for the `router` section: method,
+/// pattern and the integer descriptor the match returns; mounts are child tables
+/// under a prefix.
+fn router_table() -> (Value, Router<u32>) {
+    let routes: Vec<(&str, &str, u32)> = vec![
+        ("GET", "/", 1),
+        ("GET", "/users", 2),
+        ("POST", "/users", 3),
+        ("GET", "/users/me", 4),
+        ("GET", "/users/:id", 5),
+        ("DELETE", "/users/:id", 6),
+        ("GET", "/users/:id/posts/:post", 7),
+        ("GET", "/files/:name", 8),
+        ("GET", "/static/*path", 9),
+        ("GET", "/*", 10),
+    ];
+    let admin: Vec<(&str, &str, u32)> = vec![
+        ("GET", "/", 20),
+        ("GET", "/list", 21),
+        ("PUT", "/settings/:key", 22),
+    ];
+    let mut router = Router::new();
+    for (method, pattern, id) in &routes {
+        router
+            .route(
+                Method::parse(method.as_bytes()).expect("a known method"),
+                pattern,
+                *id,
+            )
+            .expect("a valid route");
+    }
+    let mut child = Router::new();
+    for (method, pattern, id) in &admin {
+        child
+            .route(
+                Method::parse(method.as_bytes()).expect("a known method"),
+                pattern,
+                *id,
+            )
+            .expect("a valid route");
+    }
+    router.mount("/admin", child).expect("a valid mount");
+    let describe = |rows: &[(&str, &str, u32)]| -> Vec<Value> {
+        rows.iter()
+            .map(|(method, pattern, id)| json!({ "method": method, "pattern": pattern, "id": id }))
+            .collect()
+    };
+    let table = json!({
+        "routes": describe(&routes),
+        "mounts": [{ "prefix": "/admin", "routes": describe(&admin) }],
+        "trailingSlash": "ignore",
+    });
+    (table, router)
+}
+
+/// What the router answers for a method token and a request target.
+fn router_outcome(router: &Router<u32>, method: &str, target: &str) -> Value {
+    let mut scratch = Vec::new();
+    let Ok(resolved) = router.resolve_target(method.as_bytes(), target.as_bytes(), &mut scratch)
+    else {
+        return json!({ "status": 400 });
+    };
+    let allow_value = |allow: zero_router::Allow| {
+        let mut value = Vec::new();
+        allow.write(&mut value);
+        String::from_utf8(value).expect("method names are ASCII")
+    };
+    match resolved.resolution {
+        Resolution::Matched {
+            descriptor,
+            params,
+            head,
+        } => json!({
+            "matched": {
+                "id": descriptor,
+                "head": head,
+                "path": String::from_utf8_lossy(resolved.path),
+                "query": resolved.query.map(String::from_utf8_lossy),
+                "params": params
+                    .iter()
+                    .map(|(name, range)| json!([
+                        String::from_utf8_lossy(name),
+                        String::from_utf8_lossy(&resolved.path[range]),
+                    ]))
+                    .collect::<Vec<_>>(),
+            }
+        }),
+        Resolution::NotFound => json!({ "status": 404 }),
+        Resolution::MethodNotAllowed { allow } => {
+            json!({ "status": 405, "allow": allow_value(allow) })
+        }
+        Resolution::Options { allow } => json!({ "status": 200, "allow": allow_value(allow) }),
+        Resolution::NotImplemented => json!({ "status": 501 }),
+    }
+}
+
+/// The `router` cases: a name, the method token, the target, and the outcome the
+/// router must produce over [`router_table`].
+fn router_cases() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        ("root", "GET", "/"),
+        ("static segment", "GET", "/users"),
+        ("static over parameter", "GET", "/users/me"),
+        ("parameter", "GET", "/users/42"),
+        ("two parameters", "GET", "/users/42/posts/7"),
+        ("parameter with query", "GET", "/users/42?x=1&y=/users/me"),
+        ("other method on parameter route", "DELETE", "/users/42"),
+        ("catch-all", "GET", "/static/css/site.css"),
+        ("catch-all empty", "GET", "/static/"),
+        ("root catch-all", "GET", "/anything/else"),
+        ("trailing slash ignored", "GET", "/users/"),
+        ("empty segment is no parameter", "GET", "/users//x"),
+        ("head served by get", "HEAD", "/users"),
+        ("options automatic", "OPTIONS", "/users"),
+        ("method not allowed", "PUT", "/users"),
+        ("method not allowed on parameter route", "PUT", "/users/42"),
+        ("unimplemented token", "PATCH", "/users"),
+        ("lowercase token", "get", "/users"),
+        ("mount root", "GET", "/admin"),
+        ("mount root with slash", "GET", "/admin/"),
+        ("mount route", "GET", "/admin/list"),
+        ("mount parameter", "PUT", "/admin/settings/theme"),
+        ("mount owns its prefix", "GET", "/admin/unknown"),
+        ("mount keeps the query", "GET", "/admin/list?page=2"),
+        ("not a mount", "GET", "/administrator"),
+        ("encoded slash is data", "GET", "/files/a%2Fb"),
+        ("encoded slash lowercase", "GET", "/files/a%2fb"),
+        ("real slash is a separator", "GET", "/files/a/b"),
+        ("unreserved decoded", "GET", "/%75sers/m%65"),
+        ("unreserved parameter decoded", "GET", "/users/%34%32"),
+        ("dot segments removed", "GET", "/public/../admin/list"),
+        (
+            "encoded dot segments removed",
+            "GET",
+            "/admin/%2e%2E/users/me",
+        ),
+        ("leading dot-dot", "GET", "/../users"),
+        ("query never matches", "GET", "/users?/users/me"),
+        ("bad percent", "GET", "/users/%zz"),
+        ("space in path", "GET", "/a b"),
+        ("asterisk is not a path", "OPTIONS", "*"),
+    ]
+}
+
 fn main() {
     let mut http1_parser = Vec::new();
     for case in head_cases() {
@@ -433,6 +579,17 @@ fn main() {
         }));
     }
 
+    let (router_table_value, router) = router_table();
+    let mut router_cases_value = Vec::new();
+    for (name, method, target) in router_cases() {
+        router_cases_value.push(json!({
+            "name": name,
+            "method": method,
+            "target": target,
+            "expect": router_outcome(&router, method, target),
+        }));
+    }
+
     let mut document = Map::new();
     document.insert(
         "note".into(),
@@ -443,6 +600,10 @@ fn main() {
     document.insert(
         "responseSplitting".into(),
         json!({ "cases": response_splitting }),
+    );
+    document.insert(
+        "router".into(),
+        json!({ "table": router_table_value, "cases": router_cases_value }),
     );
 
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance/vectors.json");

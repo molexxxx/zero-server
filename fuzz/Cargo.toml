@@ -21,6 +21,12 @@ zero-simd = { path = "../crates/zero-simd" }
 zero-http1 = { path = "../crates/zero-http1" }
 zero-limits = { path = "../crates/zero-limits" }
 zero-sys = { path = "../crates/zero-sys" }
+zero-uri = { path = "../crates/zero-uri" }
+zero-qs = { path = "../crates/zero-qs" }
+zero-json = { path = "../crates/zero-json" }
+zero-router = { path = "../crates/zero-router" }
+zero-core = { path = "../crates/zero-core" }
+zero-http-types = { path = "../crates/zero-http-types" }
 
 [[bin]]
 name = "cmsg_decode"
@@ -53,6 +59,34 @@ bench = false
 [[bin]]
 name = "http1_chunked"
 path = "fuzz_targets/http1_chunked.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "uri_normalize"
+path = "fuzz_targets/uri_normalize.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "qs_parse"
+path = "fuzz_targets/qs_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json_parse"
+path = "fuzz_targets/json_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "router_resolve"
+path = "fuzz_targets/router_resolve.rs"
 test = false
 doc = false
 bench = false

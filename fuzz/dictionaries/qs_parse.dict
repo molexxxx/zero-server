@@ -1,0 +1,10 @@
+# Form-urlencoded delimiters and encodings.
+amp="&"
+eq="="
+plus="+"
+pct_plus="%2B"
+pct_space="%20"
+pct_euro="%E2%82%AC"
+pct_bad="%zz"
+pct_short="%2"
+pct_ff="%FF"

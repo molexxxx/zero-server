@@ -192,26 +192,28 @@ pub fn percent_decode(input: &[u8], out: &mut Vec<u8>) -> Result<(), UriError> {
 
 /// Whether a path is already in the form [`normalize_path`] produces: every
 /// percent-encoding valid, no triplet for an unreserved octet, uppercase
-/// hexadecimal digits, no dot-segment, and every byte allowed in a path.
+/// hexadecimal digits, no dot-segment, and every byte allowed in a path. The
+/// whole path is checked for bytes and triplets it cannot hold before the
+/// verdict, so a path that is not normal is still known to be a path.
 fn is_normal_path(path: &[u8]) -> Result<bool, UriError> {
     let mut at = 0usize;
     let mut segment_start = 0usize;
+    let mut normal = true;
     while let Some(&byte) = path.get(at) {
         match byte {
             b'%' => {
                 let octet = percent_octet(path, at)?;
-                if is_unreserved(octet) {
-                    return Ok(false);
-                }
                 let digits = path.get(at.saturating_add(1)..at.saturating_add(3));
-                if digits.is_some_and(|pair| pair.iter().any(u8::is_ascii_lowercase)) {
-                    return Ok(false);
+                if is_unreserved(octet)
+                    || digits.is_some_and(|pair| pair.iter().any(u8::is_ascii_lowercase))
+                {
+                    normal = false;
                 }
                 at = at.saturating_add(3);
             }
             b'/' => {
                 if is_dot_segment(path.get(segment_start..at).unwrap_or(&[])) {
-                    return Ok(false);
+                    normal = false;
                 }
                 at = at.saturating_add(1);
                 segment_start = at;
@@ -220,7 +222,7 @@ fn is_normal_path(path: &[u8]) -> Result<bool, UriError> {
             _ => return Err(UriError::InvalidByte(at)),
         }
     }
-    Ok(!is_dot_segment(path.get(segment_start..).unwrap_or(&[])))
+    Ok(normal && !is_dot_segment(path.get(segment_start..).unwrap_or(&[])))
 }
 
 const fn is_dot_segment(segment: &[u8]) -> bool {
@@ -515,6 +517,11 @@ mod tests {
         assert_eq!(
             normalize_path(b"/sp ace", &mut scratch),
             Err(UriError::InvalidByte(3))
+        );
+        assert_eq!(
+            normalize_path(b"/a/./b#f", &mut scratch),
+            Err(UriError::InvalidByte(6)),
+            "a byte a path cannot hold is refused even after a dot-segment"
         );
         assert_eq!(
             normalize_path("/caf\u{e9}".as_bytes(), &mut scratch),
