@@ -537,12 +537,27 @@ than 16 ranges refused, `Content-Range` for 206 and 416 and the
 route, `Content-Disposition: attachment` with the ASCII fallback and the RFC
 8187 ext-value, the Last-Modified clamp), with the tests of rows `static-01` to
 `static-04`, `static-06` to `static-11` and `static-14` to `static-16` in
-`lib.rs`. Next in the step, in order: the file layer (path policy on every
-segment, the Windows name rules, `O_NOFOLLOW` through `zero-sys`, the handler
-over `zero-http`'s `Call` with ETag from size and modification time, 304 with
-the Section 15.4.5 fields, `Accept-Ranges: bytes`, the per-core small-file
-cache) with rows `static-05`, `static-12` and `static-13`; then the
-`zero-policy` subset; then `zero-ws`, `zero-sse` and `zero-realtime`. The RFC texts for the step sit in a session's scratch
+`lib.rs`. Done: the file layer (`files.rs`: `Files::new(root, Options)` with
+`serve(call)` and `serve_path(call, path)` for a mounted route; the path policy
+on every segment after `zero-uri` normalization and strict percent-decoding,
+with the Windows colon and tilde-digit rules; the open through
+`zero_sys::fs::open_nofollow` (`O_NOFOLLOW | O_CLOEXEC` on Unix, a plain open
+on Windows), the resolved path compared against the resolved root and on Unix
+the opened file's device and inode compared with the resolved path's; a
+strong ETag from the modification time and the length, `Last-Modified`
+clamped to now, 304 with ETag and Cache-Control beside the driver's Date, 412,
+`Accept-Ranges: bytes`, 206 single and multipart, 416, `Content-Disposition`
+for a download route, 405 with `Allow: GET, HEAD`, the index file for a
+directory path, the per-core small-file cache revalidated by one stat per hit
+and bounded by a byte budget with insertion-order eviction), with rows
+`static-05`, `static-12` and `static-13` and a Unix symlink-escape test, all
+driven through `zero-http`'s server in `lib.rs`. All 16 static rows name
+their tests. Not in the crate: the platform file-send path (bodies are
+buffered on the handler ABI until release 2's streaming), a directory
+listing, and precomputed header blocks per asset beyond the cached ETag and
+media type. Next in the step: the `zero-policy` subset (CORS, security
+headers, request id, trust proxy, body limits); then `zero-ws`, `zero-sse`
+and `zero-realtime`. The RFC texts for the step sit in a session's scratch
 directory only: RFC 9110 from the HTTP Working Group's repository copy, RFC
 6266, 8187 and 9111 from the tex2e/rfc-translater repository's copies (the
 English column), all read 2026-10-01; a fresh session fetches them again from

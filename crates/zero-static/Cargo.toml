@@ -17,6 +17,8 @@ zero-date.workspace = true
 zero-mime.workspace = true
 zero-io.workspace = true
 zero-http.workspace = true
+zero-sys.workspace = true
+zero-uri.workspace = true
 
 [lints]
 workspace = true

@@ -3,7 +3,7 @@
 //!
 //! Safe, bounds-checked wrappers over socket options ([`sockopt`]), `sendmsg` and
 //! `recvmsg` with control-message construction and parsing ([`msg`], [`cmsg`]), and
-//! thread affinity ([`affinity`]). Every other crate stays at `unsafe_code = "forbid"`
+//! thread affinity ([`affinity`]), and the open that refuses a symbolic link ([`fs`]). Every other crate stays at `unsafe_code = "forbid"`
 //! because the raw calls live here; each `unsafe` block carries the reason it is sound.
 //! Where socket2 already exposes an option as a safe method, the wrapper delegates to it
 //! and adds nothing. The [`alloc`] module holds the counting wrapper over the system
@@ -18,6 +18,7 @@ pub mod alloc;
 #[cfg(unix)]
 pub mod cmsg;
 pub mod error;
+pub mod fs;
 #[cfg(unix)]
 pub mod msg;
 #[cfg(unix)]
