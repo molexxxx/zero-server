@@ -19,8 +19,12 @@ the same commit.
   `SlotId` with its generation check and `next_generation`, the `Value` model
   with linear-scan objects, and the `Digest`, `Mac`, `Kdf` and `Rng` traits
   (`crates/zero-core/src/{buf,codec,slot,value,primitive}.rs`, 25 unit tests,
-  no_std and thumbv7em green). Every other crate is a skeleton with only its
-  `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
+  no_std and thumbv7em green). `zero-date` holds `civil_from_days` and
+  `days_from_civil` over every four-digit year (tested day by day across the
+  whole range), `ImfFixdate` from a u64 unix timestamp with the RFC 9110
+  section 5.6.7 example pinned by the `routing-10` standards row, and the
+  20-byte `Decimal` formatter checked against `core::fmt` (16 unit tests).
+  Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
   registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -103,7 +107,7 @@ the same commit.
 
 R.3 step 2, the foundation no_std crates, taken one crate per commit in the
 order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
-Done: `zero-core`. Next: `zero-date`.
+Done: `zero-core`, `zero-date`. Next: `zero-limits`.
 
 ## Next, in order
 
