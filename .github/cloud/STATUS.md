@@ -158,6 +158,26 @@ the same commit.
   `resolve_target` with a caller scratch buffer, route introspection). Rows
   `routing-01` to `routing-06`, `routing-08`, `routing-14` to `routing-22` and
   `body-01` to `body-11` cite their tests.
+  `zero-bench` holds the two TechEmpower entries over the driver (`entries.rs`:
+  `zero-server`, Realistic, through the router with the `zero-limits` defaults,
+  `Server: zero` and `Date` on every response; `zero-server-plt`, Stripped and
+  Platform, the raw handler comparing the path itself), their binaries
+  (`--port`, `--threads`, `--handoff`), the pipelined load generator on tokio
+  (`load.rs`: connections spread over client threads, a pipeline depth per
+  connection, warm-up, requests, errors, bytes and batch latency percentiles),
+  the idle probe (`idle.rs`: keep-alive connections with one request each and
+  the server's resident set from `/proc/<pid>/status` before and after), the
+  route-miss timing (`miss.rs`: a 400-route table in an application's shape,
+  a miss timed per resolution) and the `zero-bench load|idle|miss` binary;
+  `tests/entries.rs` checks both entries' json and plaintext responses and a
+  short zero-error load. `bench/techempower/` holds the entry files for a
+  self-run of the archived toolset: `benchmark_config.json` (`default`
+  Realistic and Micro, `plt` Stripped and Platform, port 8080), the two
+  dockerfiles and a README. An idle connection costs about 6.9 KB of resident
+  memory on this machine: the boxed connection task (the driver with its
+  32-entry ring and one turn's futures, 5.2 KB), the runtime's task cell, the
+  completion list and the socket registration; `conn.rs` holds a size test
+  that keeps the task under twice the driver.
   Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
   nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
@@ -408,6 +428,39 @@ because the RFC Editor is unreachable; the URL Standard from the WHATWG
 repository's `url.bs`; the IANA media type registry is unreachable too, so
 the extension table rests on mime-db's compilation of it.
 
+R.3 step 7 has what this machine can give: the entries, the load generator,
+the idle probe, the route-miss timing and the TechEmpower entry files (see
+Position). Measured here on a 4-core container, the server on 2 cores and
+the generator on the other 2, 5 s runs after 1 s of warm-up, loopback, no
+acceptance value (the tiers run on other hardware): the Realistic entry
+serves plaintext at 256 connections with 16 pipelined requests at 1,225,326
+requests per second and at 1,024 connections at 1,246,027, json at 256
+connections at 178,460 and at 16 connections at 181,118, every run with
+zero errors; the Platform entry 1,412,861 on plaintext and 192,209 on json
+at 256 connections. The 16-connection json figure equals the 256-connection
+one here, so the 25K to 30K band of section 5.7 does not show on loopback
+with this generator. Bytes per idle connection on `io-tokio` with the lazy
+lease: 6,914 resident bytes at 10,000 connections after one request each
+(one core, `zero-bench idle`); the probe's first reading was 37,894, which
+was the connection future stored six times over, fixed in `zero-rt` and
+`zero-http` and held by the size test in `conn.rs`; 100k and 1M need a
+host with the descriptors and the memory. The route miss: 230 ns per miss
+against 400 routes and 316 ns against 4,000 (`zero-bench miss`, release
+build, the median of five batches of a million), against the 10.9
+microsecond Node figure of section 7.1, which closes step 6's measurement.
+The counting-allocator gate over the real path is `zero-http`'s
+`tests/no_alloc.rs`. What needs hardware and the owner: the tier A json
+ratio against the pinned Drogon entry, the tier B plaintext ratios against
+the ceiling reference, the nodejs and uwebsockets.js yardsticks, five
+interleaved runs with medians, the 16,384-connection level, the
+`overflow-checks` run, the hardware rental and the go decision; `.docs/bench/`
+is owner-local, so this machine's numbers live here and in the commit
+bodies. For the self-run: at toolset commit 523534bb ntex's `plt` entries
+declare `approach` Realistic with `classification` Platform
+(`frameworks/Rust/ntex/benchmark_config.json`, read 2026-10-01), where the
+design describes them as Stripped; `zero-server-plt` keeps the design's
+Stripped and Platform.
+
 ## Next, in order
 
 The work is `ROADMAP.md` section R.3, taken in order with the exit criteria
@@ -433,10 +486,11 @@ stated there. The first release's items:
    `workflow_dispatch` until the documentation pages and the web tree exist
    and `cargo xtask site --verify` passes on a rendered tree.
 4. `zero-sys` and `zero-io` on tokio (R.3 step 4), `zero-rt` with
-   `zero-http` (step 5), and the router with the small codecs (step 6): done
-   except for the parts named under "In progress". Next: the benchmark
-   harness and the thesis measurement (step 7), then steps 8 to 14 to the
-   release 1 tag.
+   `zero-http` (step 5), the router with the small codecs (step 6), and the
+   harness with the measurements this machine can take (step 7): done except
+   for the parts named under "In progress"; step 7's tier runs wait for
+   hardware and the owner. Next: the `io-compio` backend of `zero-io` with
+   the comparison baseline (step 8), then steps 9 to 14 to the release 1 tag.
 
 Before writing code for an item: read the roadmap entry, the design sections
 it cites, and the research note for the area; fetch every standard the code
@@ -512,6 +566,10 @@ implements and work from its text (`RULES.md`, Standards-first).
   `ZERO_TEST_HANDOFF=1` makes the echo, driver and routing tests use the
   one-listener accept handoff those platforms run, on Linux, so a failure of
   that path reproduces here (`ListenConfig::handoff`).
+- The container's descriptor hard limit is 20,000 (`ulimit -Hn`) over a soft
+  limit of 4,096; `ulimit -n 20000` before `zero-bench idle`, since the server
+  and the probe each hold one descriptor per connection, and a server past its
+  limit leaves connections in the backlog where the probe's read times out.
 - CI's `rustup` stable is newer than a long-lived container's (1.98.1
   against 1.97.0 on 2026-10-01) and its clippy carries lints the older one
   lacks, so run `rustup update stable` before the protocol's clippy step;

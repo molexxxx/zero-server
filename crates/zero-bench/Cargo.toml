@@ -14,6 +14,28 @@ io-compio = ["zero-server/io-compio"]
 
 [dependencies]
 zero-server.workspace = true
+# The load generator and the idle probe open thousands of client connections, which
+# takes a reactor; the same tokio feature set zero-io names, so the graph gains
+# nothing (crates.io max_stable_version 1.53.1, updated 2026-07-20, read 2026-10-01).
+tokio = { version = "1.53.1", default-features = false, features = [
+  "rt",
+  "net",
+  "time",
+  "sync",
+  "io-util",
+] }
+
+[[bin]]
+name = "zero-server"
+path = "src/bin/zero-server.rs"
+
+[[bin]]
+name = "zero-server-plt"
+path = "src/bin/zero-server-plt.rs"
+
+[[bin]]
+name = "zero-bench"
+path = "src/bin/zero-bench.rs"
 
 [lints]
 workspace = true

@@ -1611,6 +1611,7 @@ dependencies = [
 name = "zero-bench"
 version = "0.1.0"
 dependencies = [
+ "tokio",
  "zero-server",
 ]
 

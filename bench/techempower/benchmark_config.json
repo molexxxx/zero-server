@@ -1,0 +1,41 @@
+{
+  "framework": "zero-server",
+  "tests": [{
+    "default": {
+        "json_url": "/json",
+        "plaintext_url": "/plaintext",
+        "port": 8080,
+        "approach": "Realistic",
+        "classification": "Micro",
+        "database": "None",
+        "framework": "zero-server",
+        "language": "Rust",
+        "orm": "Raw",
+        "platform": "None",
+        "webserver": "zero-server",
+        "os": "Linux",
+        "database_os": "Linux",
+        "display_name": "zero-server [tokio]",
+        "notes": "Through the router, the zero-limits defaults, Server and Date on every response.",
+        "versus": ""
+    },
+    "plt": {
+        "json_url": "/json",
+        "plaintext_url": "/plaintext",
+        "port": 8080,
+        "approach": "Stripped",
+        "classification": "Platform",
+        "database": "None",
+        "framework": "zero-server",
+        "language": "Rust",
+        "orm": "Raw",
+        "platform": "None",
+        "webserver": "zero-server",
+        "os": "Linux",
+        "database_os": "Linux",
+        "display_name": "zero-server [tokio,platform]",
+        "notes": "The raw HTTP/1.1 handler with no router; compared with the ceiling reference only.",
+        "versus": ""
+    }
+  }]
+}
