@@ -24,7 +24,16 @@ the same commit.
   whole range), `ImfFixdate` from a u64 unix timestamp with the RFC 9110
   section 5.6.7 example pinned by the `routing-10` standards row, and the
   20-byte `Decimal` formatter checked against `core::fmt` (16 unit tests).
-  Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
+  `zero-limits` holds every value of `DESIGN.md` section 10.4 as a `const`
+  default in `http1`, `transport` (TLS, HTTP/2, QUIC and HTTP/3) and
+  `services` (memory and batch budgets, WebSocket, gRPC, WebRTC, body and
+  session), the `Limits` struct of nested per-protocol structs with
+  `Limits::check` for the relations the parsers rely on, and a test that pins
+  every default. Where the design gave no number, these defaults were chosen
+  and are recorded in the commit body: `MAX_CONNECTIONS` 2^20,
+  `WS_MAX_FRAGMENTS` 1,024, `WS_MAX_CONTROL_FRAMES_PER_SECOND` 64, and the
+  HTTP/3 reset window equal to the HTTP/2 one (200 per 10 s). Every other
+  crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and nothing is published to any
   registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -107,7 +116,7 @@ the same commit.
 
 R.3 step 2, the foundation no_std crates, taken one crate per commit in the
 order `zero-core`, `zero-date`, `zero-limits`, `zero-http-types`, `zero-simd`.
-Done: `zero-core`, `zero-date`. Next: `zero-limits`.
+Done: `zero-core`, `zero-date`, `zero-limits`. Next: `zero-http-types`.
 
 ## Next, in order
 
