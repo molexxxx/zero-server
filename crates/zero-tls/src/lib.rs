@@ -515,7 +515,7 @@ mod tests {
                 true,
                 Some(&[[0x03, 0x02], [0x03, 0x01]]),
             ),
-            // RFC 9846 Section 4.1.2: a TLS 1.3 hello's legacy_version is 0x0303.
+            // RFC 9846 Section 4.2.2: a TLS 1.3 hello's legacy_version is 0x0303.
             hello([0x03, 0x04], &[[0x13, 0x01]], true, Some(&[[0x03, 0x04]])),
         ] {
             match gate(&bytes, true) {
@@ -770,7 +770,7 @@ mod tests {
             let Hello::Read(sent, _) = gate(&bytes, true) else {
                 panic!("a whole hello");
             };
-            match (table.choose(sent.as_deref()), expected) {
+            match (table.choose(sent.as_deref(), None), expected) {
                 (Choice::Serve(identity), Some(served)) => {
                     assert_eq!(identity.names().first().map(|name| &**name), Some(served));
                 }
@@ -801,7 +801,7 @@ mod tests {
             panic!("a whole hello");
         };
         assert_eq!(sent, None);
-        assert!(matches!(identities().choose(None), Choice::Missing));
+        assert!(matches!(identities().choose(None, None), Choice::Missing));
         let mut rest = &fatal_alert(MISSING_EXTENSION)[..];
         client.read_tls(&mut rest).unwrap();
         assert_eq!(
@@ -809,7 +809,71 @@ mod tests {
             Error::AlertReceived(AlertDescription::MissingExtension)
         );
         let with_default = Identities::new(&[], Some(localhost()));
-        assert!(matches!(with_default.choose(None), Choice::Serve(_)));
+        assert!(matches!(with_default.choose(None, None), Choice::Serve(_)));
+    }
+
+    #[test]
+    fn every_name_and_address_an_identity_serves_is_one_its_certificate_is_valid_for() {
+        let served = Identity::from_pem(
+            LOCALHOST,
+            LOCALHOST_KEY,
+            &["LOCALHOST.", "127.0.0.1", "[::1]", "::ffff:127.0.0.1"],
+        )
+        .unwrap();
+        assert_eq!(
+            served
+                .names()
+                .iter()
+                .map(|name| &**name)
+                .collect::<Vec<_>>(),
+            ["localhost", "127.0.0.1", "[::1]", "127.0.0.1"]
+        );
+        for name in ["127.0.0.1", "::1", "localhost", "*.test", "a b"] {
+            assert!(
+                Identity::from_pem(OTHER, OTHER_KEY, &[name]).is_err(),
+                "other.test's certificate does not cover {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_default_identity_serves_its_own_names_and_a_client_without_a_name_gets_the_identity_listing_the_address_it_reached(
+    ) {
+        let only_default = Identities::new(&[], Some(localhost()));
+        assert!(matches!(
+            only_default.choose(Some("localhost"), None),
+            Choice::Serve(_)
+        ));
+        assert!(matches!(
+            only_default.choose(Some("other.test"), None),
+            Choice::Unrecognized
+        ));
+        let by_address =
+            Identity::from_pem(LOCALHOST, LOCALHOST_KEY, &["localhost", "127.0.0.1"]).unwrap();
+        let other = Identity::from_pem(OTHER, OTHER_KEY, &["other.test"]).unwrap();
+        let table = Identities::new(&[by_address], Some(other));
+        let loopback = std::net::IpAddr::from([127, 0, 0, 1]);
+        let mapped = std::net::IpAddr::from(std::net::Ipv4Addr::LOCALHOST.to_ipv6_mapped());
+        for local in [loopback, mapped] {
+            match table.choose(None, Some(local)) {
+                Choice::Serve(identity) => {
+                    assert_eq!(
+                        identity.names().first().map(|name| &**name),
+                        Some("localhost")
+                    );
+                }
+                choice => panic!("{local}: {choice:?}"),
+            }
+        }
+        match table.choose(None, Some(std::net::IpAddr::from([10, 0, 0, 1]))) {
+            Choice::Serve(identity) => {
+                assert_eq!(
+                    identity.names().first().map(|name| &**name),
+                    Some("other.test")
+                );
+            }
+            choice => panic!("{choice:?}"),
+        }
     }
 
     #[test]

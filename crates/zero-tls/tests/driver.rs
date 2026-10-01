@@ -53,17 +53,26 @@ struct Server {
     workers: Option<Workers>,
     addr: SocketAddr,
     log: Arc<Mutex<Vec<String>>>,
+    identities: Arc<Identities>,
+}
+
+fn localhost() -> Identity {
+    Identity::from_pem(LOCALHOST, LOCALHOST_KEY, &["localhost", "127.0.0.1"]).unwrap()
 }
 
 impl Server {
     fn start(driver: Driver, limits: TlsLimits, threads: usize) -> Self {
-        let localhost =
-            Identity::from_pem(LOCALHOST, LOCALHOST_KEY, &["localhost", "127.0.0.1"]).unwrap();
         let other = Identity::from_pem(OTHER, OTHER_KEY, &["other.test"]).unwrap();
-        let identities = Arc::new(Identities::new(
-            &[localhost.clone(), other],
-            Some(localhost),
-        ));
+        let identities = Arc::new(Identities::new(&[localhost(), other], Some(localhost())));
+        Server::start_with(driver, limits, threads, identities)
+    }
+
+    fn start_with(
+        driver: Driver,
+        limits: TlsLimits,
+        threads: usize,
+        identities: Arc<Identities>,
+    ) -> Self {
         let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
         let config = Config {
             runtime: zero_rt::Config {
@@ -80,7 +89,7 @@ impl Server {
         let workers = serve(
             "127.0.0.1:0".parse().unwrap(),
             config,
-            identities,
+            Arc::clone(&identities),
             TlsOptions {
                 limits,
                 driver,
@@ -97,6 +106,7 @@ impl Server {
             workers: Some(workers),
             addr,
             log,
+            identities,
         }
     }
 
@@ -317,6 +327,93 @@ fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeo
         let state = client.process_new_packets();
         let closed = matches!(&state, Ok(io) if io.peer_has_closed());
         assert_eq!(closed, driver == Driver::Buffered, "{driver:?}: {state:?}");
+        server.stop().unwrap();
+    }
+}
+
+/// Move records between a client and the server until the client's handshake is
+/// done.
+fn finish(client: &mut ClientConnection, tcp: &mut TcpStream) {
+    while client.is_handshaking() {
+        while client.wants_write() {
+            client.write_tls(tcp).unwrap();
+        }
+        if client.is_handshaking() && client.wants_read() {
+            client.read_tls(tcp).unwrap();
+            client.process_new_packets().unwrap();
+        }
+    }
+    while client.wants_write() {
+        client.write_tls(tcp).unwrap();
+    }
+}
+
+#[test]
+fn a_reload_during_a_hello_retry_request_keeps_the_certificate_the_listener_chose() {
+    for driver in DRIVERS {
+        let server = Server::with(driver);
+        let mut provider = rustls::crypto::aws_lc_rs::default_provider();
+        provider.kx_groups = vec![
+            rustls::crypto::aws_lc_rs::kx_group::MLKEM1024,
+            rustls::crypto::aws_lc_rs::kx_group::SECP256R1,
+        ];
+        let mut roots = RootCertStore::empty();
+        roots
+            .add(CertificateDer::from_pem_slice(CA).unwrap())
+            .unwrap();
+        let config = ClientConfig::builder_with_provider(Arc::new(provider))
+            .with_protocol_versions(&[&TLS13])
+            .unwrap()
+            .with_root_certificates(roots)
+            .with_no_client_auth();
+        let mut client =
+            ClientConnection::new(Arc::new(config), ServerName::try_from("localhost").unwrap())
+                .unwrap();
+        let mut tcp = server.tcp();
+        client.write_tls(&mut tcp).unwrap();
+        while !client.wants_write() {
+            client.read_tls(&mut tcp).unwrap();
+            client.process_new_packets().unwrap();
+        }
+        // The server asked for another key share; the table loses every identity
+        // before the second hello arrives.
+        server.identities.replace(&[], None);
+        finish(&mut client, &mut tcp);
+        assert_eq!(
+            client.handshake_kind(),
+            Some(rustls::HandshakeKind::FullWithHelloRetryRequest),
+            "{driver:?}"
+        );
+        let mut stream = StreamOwned::new(client, tcp);
+        stream
+            .write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
+        assert_eq!(response(&mut stream).0, 200, "{driver:?}");
+        server.stop().unwrap();
+    }
+}
+
+#[test]
+fn a_client_that_connects_by_address_without_a_server_name_gets_the_identity_listing_that_address()
+{
+    for driver in DRIVERS {
+        let identities = Arc::new(Identities::new(&[localhost()], None));
+        let server = Server::start_with(driver, TlsLimits::DEFAULT, 1, identities);
+        let ip = ServerName::IpAddress(std::net::Ipv4Addr::LOCALHOST.into());
+        let conn = ClientConnection::new(client(&[&TLS13, &TLS12]), ip).unwrap();
+        let mut stream = StreamOwned::new(conn, server.tcp());
+        stream
+            .write_all(b"GET /hello HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+            .unwrap();
+        assert_eq!(
+            response(&mut stream),
+            (200, b"hello secure".to_vec()),
+            "{driver:?}"
+        );
+        stream
+            .write_all(b"GET /hello HTTP/1.1\r\nHost: [::ffff:127.0.0.1]\r\n\r\n")
+            .unwrap();
+        assert_eq!(response(&mut stream).0, 200, "{driver:?}");
         server.stop().unwrap();
     }
 }

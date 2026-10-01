@@ -802,7 +802,11 @@ impl Accept for Gate {
             }
             Ok(Prepared {
                 stream,
-                authorities: Some(Arc::from(vec![Box::from("t"), Box::from("[::1]")])),
+                authorities: Some(Arc::from(vec![
+                    Box::from("t"),
+                    Box::from("[::1]"),
+                    Box::from("192.0.2.1"),
+                ])),
             })
         }
     }
@@ -848,11 +852,22 @@ fn a_prepared_listener_reports_secure_connections_drops_refused_ones_and_pauses_
 
     let mut conn = connect();
     assert_eq!(get(&mut conn, "/secure").text(), "secure");
-    for host in ["T:8443", "t.", "[::1]:443"] {
+    for host in [
+        "T:8443",
+        "t.",
+        "[::1]:443",
+        "[0:0:0:0:0:0:0:1]",
+        "[::ffff:192.0.2.1]",
+        "[::FFFF:c000:201]:8443",
+        "192.0.2.1",
+    ] {
         conn.write_all(format!("GET /secure HTTP/1.1\r\nHost: {host}\r\n\r\n").as_bytes())
             .unwrap();
         assert_eq!(read_response(&mut conn).unwrap().text(), "secure", "{host}");
     }
+    conn.write_all(b"GET /secure HTTP/1.1\r\nHost: [::2]\r\n\r\n")
+        .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().status, 421);
     conn.write_all(b"GET /secure HTTP/1.1\r\nHost: other.test\r\n\r\n")
         .unwrap();
     let misdirected = read_response(&mut conn).unwrap();
@@ -910,6 +925,24 @@ fn a_prepared_listener_reports_secure_connections_drops_refused_ones_and_pauses_
     );
     assert_eq!(get(&mut conn, "/secure").text(), "secure", "served on");
     workers.stop().unwrap();
+}
+
+#[test]
+fn a_request_for_an_https_resource_received_over_a_connection_that_is_not_secured_is_rejected_with_421(
+) {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    conn.write_all(b"GET https://t/hello HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    let rejected = read_response(&mut conn).unwrap();
+    assert_eq!(rejected.status, 421, "RFC 9110 Section 7.4");
+    conn.write_all(b"GET HTTPS://t/hello HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().status, 421);
+    conn.write_all(b"GET http://t/hello HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().text(), "hello");
+    server.stop().unwrap();
 }
 
 /// A stream whose `close_write` never finishes, as a TLS stream's does when its peer

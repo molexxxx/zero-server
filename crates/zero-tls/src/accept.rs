@@ -46,7 +46,7 @@ use zero_rt::Worker;
 use crate::buffered::BufferedStream;
 use crate::config::{Driver, TlsOptions};
 use crate::hello::{fatal_alert, Hello, HelloReader, MISSING_EXTENSION, UNRECOGNIZED_NAME};
-use crate::identity::{Choice, Identities};
+use crate::identity::{Choice, Identities, Pinned};
 use crate::unbuffered::UnbufferedStream;
 
 /// The largest hello the listener reads before it gives up: one handshake message
@@ -242,7 +242,8 @@ impl TlsAccept {
             Hello::Read(name, first) => (name, first),
             Hello::Refused(record, reason) => return Err(refuse(&stream, &record, reason).await),
         };
-        let identity = match self.identities.choose(name.as_deref()) {
+        let local = stream.local_addr().ok().map(|address| address.ip());
+        let identity = match self.identities.choose(name.as_deref(), local) {
             Choice::Serve(identity) => identity,
             Choice::Unrecognized => {
                 let reason =
@@ -252,22 +253,21 @@ impl TlsAccept {
             Choice::Missing => {
                 let reason = io::Error::new(
                     io::ErrorKind::InvalidData,
-                    "no server name and no default identity",
+                    "no server name and no identity for the address or by default",
                 );
                 return Err(refuse(&stream, &fatal_alert(MISSING_EXTENSION), reason).await);
             }
         };
+        // The certificate rustls presents is the one chosen here, also if the table
+        // is replaced before rustls asks for it.
+        let mut pinned = (*self.config).clone();
+        pinned.cert_resolver = Arc::new(Pinned(Arc::clone(identity.certified())));
+        let pinned = Arc::new(pinned);
         let session = match self.driver {
-            Driver::Buffered => TlsStream::Buffered(BufferedStream::new(
-                stream,
-                Arc::clone(&self.config),
-                first,
-            )?),
-            Driver::Unbuffered => TlsStream::Unbuffered(UnbufferedStream::new(
-                stream,
-                Arc::clone(&self.config),
-                first,
-            )?),
+            Driver::Buffered => TlsStream::Buffered(BufferedStream::new(stream, pinned, first)?),
+            Driver::Unbuffered => {
+                TlsStream::Unbuffered(UnbufferedStream::new(stream, pinned, first)?)
+            }
         };
         Ok((session, Arc::clone(identity.names())))
     }

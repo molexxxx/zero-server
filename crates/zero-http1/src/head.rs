@@ -19,9 +19,10 @@
 //! - No whitespace may precede the colon of a field line (Section 5.1), and a
 //!   field value holds no CR, LF, NUL or other control character (RFC 9110
 //!   Section 5.5).
-//! - An HTTP/1.1 request carries exactly one `Host`, with a value made of
-//!   authority characters (Section 3.2); with an absolute-form target the
-//!   target's authority is the request's and `Host` is recorded only.
+//! - An HTTP/1.1 request carries exactly one `Host`, whose value is
+//!   `uri-host [ ":" port ]` (Section 3.2, RFC 9110 Section 7.2); with an
+//!   absolute-form target the target's authority, held to the same grammar, is
+//!   the request's and `Host` is recorded only.
 //! - `Transfer-Encoding` with `Content-Length`, a coding list that does not
 //!   end in `chunked`, `Transfer-Encoding` on HTTP/1.0, an invalid or
 //!   repeated `Content-Length` and a `Content-Length` list are refused with
@@ -976,6 +977,31 @@ mod tests {
             rejected(b"GET / HTTP/1.1\r\nHost: u@a\r\n\r\n"),
             (400, true)
         );
+        // Host = uri-host [ ":" port ]: the grammar, not only its characters.
+        for host in [
+            &b"[::1]:abc"[..],
+            b"[::1]x",
+            b"[::1].evil.example",
+            b"a.example:abc",
+            b"::1",
+            b"[::1",
+        ] {
+            let mut request = b"GET / HTTP/1.1\r\nHost: ".to_vec();
+            request.extend_from_slice(host);
+            request.extend_from_slice(b"\r\n\r\n");
+            assert_eq!(
+                rejected(&request),
+                (400, true),
+                "{}",
+                String::from_utf8_lossy(host)
+            );
+        }
+        for target in [&b"http://a.example:abc/"[..], b"https://[::1]x/"] {
+            let mut request = b"GET ".to_vec();
+            request.extend_from_slice(target);
+            request.extend_from_slice(b" HTTP/1.1\r\nHost: a.example\r\n\r\n");
+            assert_eq!(rejected(&request), (400, true));
+        }
         let old = parse_head(b"GET / HTTP/1.0\r\n\r\n");
         assert_eq!(old.version, Version::Http10);
         assert_eq!(old.host, None);

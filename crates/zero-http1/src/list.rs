@@ -1,9 +1,9 @@
 //! The small value grammars the head parser evaluates: optional whitespace,
-//! comma-separated lists, `Content-Length`, and the bytes a `Host` value may
-//! hold.
+//! comma-separated lists, `Content-Length`, and `Host`.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.1>
 //! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.3>
+//! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-7.2>
 //! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6>
 
 /// Returns `true` for SP or HTAB, the octets of `OWS`.
@@ -71,46 +71,111 @@ pub fn parse_content_length(value: &[u8]) -> Option<u64> {
     Some(length)
 }
 
-/// Returns `true` when every byte could belong to `uri-host [ ":" port ]`:
-/// the unreserved, sub-delimiter, percent, colon and bracket characters.
+/// Returns `true` when `value` is `uri-host [ ":" port ]` (RFC 9110 Section 7.2):
+/// an `IP-literal` in brackets holding an IPv6 address or an `IPvFuture`, or a
+/// `reg-name` or IPv4 address of unreserved, percent-encoded and sub-delimiter
+/// characters, then optionally a colon and a port of digits (RFC 3986 Sections
+/// 3.2.2 and 3.2.3).
 ///
-/// A byte outside that set, including whitespace, a slash, a query or
-/// fragment delimiter, an `@` or a control character, cannot be part of a
-/// `Host` value, so the field is invalid. The full `uri-host` grammar is
-/// applied where the authority is resolved.
+/// Anything else, such as whitespace, a slash, an `@`, a port that is not digits,
+/// bytes after an `IP-literal`, or an IPv6 address without its brackets, makes the
+/// `Host` field invalid.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-7.2>
+/// @see <https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2>
 ///
 /// # Arguments
 ///
 /// * `value` - the `Host` value after `OWS` was stripped; empty is valid.
 #[must_use]
 pub fn is_host_value(value: &[u8]) -> bool {
-    value.iter().all(|byte| {
-        matches!(
-            byte,
-            b'A'..=b'Z'
-                | b'a'..=b'z'
-                | b'0'..=b'9'
-                | b'-'
-                | b'.'
-                | b'_'
-                | b'~'
-                | b'%'
-                | b'!'
-                | b'$'
-                | b'&'
-                | b'\''
-                | b'('
-                | b')'
-                | b'*'
-                | b'+'
-                | b','
-                | b';'
-                | b'='
-                | b':'
-                | b'['
-                | b']'
-        )
-    })
+    let port = if value.first() == Some(&b'[') {
+        let Some(close) = value.iter().position(|byte| *byte == b']') else {
+            return false;
+        };
+        let (literal, port) = value.split_at(close.saturating_add(1));
+        if !is_ip_literal(literal) {
+            return false;
+        }
+        port
+    } else {
+        let (host, port) = match value.iter().position(|byte| *byte == b':') {
+            Some(colon) => value.split_at(colon),
+            None => (value, &[][..]),
+        };
+        if !is_reg_name(host) {
+            return false;
+        }
+        port
+    };
+    match port.split_first() {
+        None => true,
+        Some((b':', digits)) => digits.iter().all(u8::is_ascii_digit),
+        Some(_) => false,
+    }
+}
+
+/// `reg-name`, which covers `IPv4address`: unreserved, percent-encoded and
+/// sub-delimiter characters.
+fn is_reg_name(bytes: &[u8]) -> bool {
+    let mut rest = bytes;
+    while let Some((&byte, after)) = rest.split_first() {
+        if byte == b'%' {
+            match after {
+                [high, low, tail @ ..] if high.is_ascii_hexdigit() && low.is_ascii_hexdigit() => {
+                    rest = tail;
+                }
+                _ => return false,
+            }
+        } else if is_unreserved(byte) || is_sub_delim(byte) {
+            rest = after;
+        } else {
+            return false;
+        }
+    }
+    true
+}
+
+/// `IP-literal`: `"[" ( IPv6address / IPvFuture ) "]"`.
+fn is_ip_literal(literal: &[u8]) -> bool {
+    let Some(inner) = literal
+        .strip_prefix(b"[")
+        .and_then(|rest| rest.strip_suffix(b"]"))
+    else {
+        return false;
+    };
+    match inner.split_first() {
+        Some((b'v' | b'V', future)) => {
+            let Some(dot) = future.iter().position(|byte| *byte == b'.') else {
+                return false;
+            };
+            let (version, rest) = future.split_at(dot);
+            let tail = rest.get(1..).unwrap_or(&[]);
+            !version.is_empty()
+                && version.iter().all(u8::is_ascii_hexdigit)
+                && !tail.is_empty()
+                && tail
+                    .iter()
+                    .all(|&byte| is_unreserved(byte) || is_sub_delim(byte) || byte == b':')
+        }
+        _ => core::str::from_utf8(inner)
+            .ok()
+            .and_then(|text| text.parse::<core::net::Ipv6Addr>().ok())
+            .is_some(),
+    }
+}
+
+/// `unreserved`: letters, digits, `-`, `.`, `_` and `~`.
+const fn is_unreserved(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~')
+}
+
+/// `sub-delims`.
+const fn is_sub_delim(byte: u8) -> bool {
+    matches!(
+        byte,
+        b'!' | b'$' | b'&' | b'\'' | b'(' | b')' | b'*' | b'+' | b',' | b';' | b'='
+    )
 }
 
 /// Returns `true` when `value` is `1*DIGIT`.
@@ -163,12 +228,30 @@ mod tests {
     }
 
     #[test]
-    fn host_values_hold_only_authority_characters() {
+    fn host_values_follow_the_uri_host_and_port_grammar() {
         assert!(is_host_value(b"www.example.org"));
         assert!(is_host_value(b"www.example.org:8080"));
+        assert!(is_host_value(b"www.example.org:"));
         assert!(is_host_value(b"[::1]:443"));
+        assert!(is_host_value(b"[::1]"));
+        assert!(is_host_value(b"[::ffff:192.0.2.1]"));
+        assert!(is_host_value(b"[v1.fe80::a+en1]"));
+        assert!(is_host_value(b"192.0.2.1:80"));
+        assert!(is_host_value(b"ex%41mple.org"));
         assert!(is_host_value(b"xn--nxasmq6b.example"));
         assert!(is_host_value(b""));
+        assert!(!is_host_value(b"[::1]:abc"));
+        assert!(!is_host_value(b"[::1]x"));
+        assert!(!is_host_value(b"[::1].evil.example"));
+        assert!(!is_host_value(b"[::1"));
+        assert!(!is_host_value(b"[example.org]"));
+        assert!(!is_host_value(b"[fe80::1%25en1]"));
+        assert!(!is_host_value(b"[v.x]"));
+        assert!(!is_host_value(b"::1"));
+        assert!(!is_host_value(b"a.example:abc"));
+        assert!(!is_host_value(b"a.example:80:80"));
+        assert!(!is_host_value(b"ex%4mple.org"));
+        assert!(!is_host_value(b"a]b"));
         assert!(!is_host_value(b"example.org/path"));
         assert!(!is_host_value(b"a b"));
         assert!(!is_host_value(b"user@example.org"));

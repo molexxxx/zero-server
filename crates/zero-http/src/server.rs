@@ -74,9 +74,12 @@ pub struct Prepared<S> {
     /// The stream the driver serves.
     pub stream: S,
     /// The hosts the connection may serve, such as the names the TLS certificate
-    /// that secured it covers: lowercase, without a port or a trailing dot. A
-    /// request for another host is answered `421 Misdirected Request` (RFC 9110
-    /// Section 7.4). `None` serves any host.
+    /// that secured it covers: lowercase, without a port or a trailing dot, an IPv4
+    /// address in dotted form and an IPv6 address in brackets in its canonical text
+    /// (RFC 5952), an IPv4-mapped IPv6 address as IPv4. A request for another host
+    /// is answered `421 Misdirected Request` (RFC 9110 Section 7.4); a `Host` that
+    /// spells one of these addresses differently is the same host. `None` serves any
+    /// host.
     pub authorities: Option<Arc<[Box<str>]>>,
 }
 

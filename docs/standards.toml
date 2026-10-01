@@ -917,7 +917,7 @@ evidence = "crates/zero-tls/src/lib.rs"
 at = "fn the_server_negotiates_only_tls_1_3_and_tls_1_2_and_a_clienthello_offering"
 anchor = "rule"
 release = 1
-note = "RFC 8996 Sections 4 and 5; RFC 9846 Sections 4.1.2 and 4.3.1 and Appendices E.2 and E.5; RFC 9325 Section 3.1.1. The listener checks the versions on the raw hello before rustls or the server name, so a hello without signature_algorithms gets the same alert, as does a TLS 1.3 hello whose legacy_version is not 0x0303"
+note = "RFC 8996 Sections 4 and 5; RFC 9846 Sections 4.2.2 and 4.3.1 and Appendices E.2 and E.5; RFC 9325 Section 3.1.1. The listener checks the versions on the raw hello before rustls or the server name, so a hello without signature_algorithms gets the same alert, as does a TLS 1.3 hello whose legacy_version is not 0x0303"
 
 [[entry]]
 key = "tls-02"
@@ -1165,6 +1165,58 @@ at = "fn the_server_shall_not_select_a_protocol_it_then_does_not_speak_so_serve_
 anchor = "rule"
 release = 1
 note = "RFC 7301 Section 3.2; serve offers http/1.1 alone while the HTTP/1.1 driver is the only one"
+
+[[entry]]
+key = "tls-21"
+chapter = "tls"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A request for an https resource MUST be rejected unless it has been received over a connection secured via a certificate valid for that target URI's origin, so an https absolute-form target over cleartext is answered 421"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.4"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn a_request_for_an_https_resource_received_over_a_connection_that_is_not_secured"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 7.4 and 15.5.20; no gateway is trusted"
+
+[[entry]]
+key = "tls-22"
+chapter = "tls"
+designation = "RFC 9110"
+body = "IETF"
+subject = "Every DNS name and IP address an identity serves is one its certificate is valid for, so the 421 check never admits a host the certificate does not cover"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.4"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn every_name_and_address_an_identity_serves_is_one_its_certificate_is_valid_for"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 4.3.4 and 7.4; names are checked with rustls's verify_server_name"
+
+[[entry]]
+key = "tls-23"
+chapter = "tls"
+designation = "RFC 6066"
+body = "IETF"
+subject = "Literal IPv4 and IPv6 addresses are not permitted in HostName, so a client that connects by address sends no server_name and gets the identity that lists the address it reached"
+url = "https://www.rfc-editor.org/rfc/rfc6066.html#section-3"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_client_that_connects_by_address_without_a_server_name_gets_the_identity_listing"
+anchor = "rule"
+release = 1
+note = "RFC 6066 Section 3; RFC 9846 Section 9.2 for missing_extension when no identity lists the address and there is no default"
+
+[[entry]]
+key = "tls-24"
+chapter = "tls"
+designation = "RFC 9110"
+body = "IETF"
+subject = "The certificate a handshake presents is the one the listener chose from the server name, also when the identities are replaced during a HelloRetryRequest, so the hosts a connection serves match its certificate"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.4"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_reload_during_a_hello_retry_request_keeps_the_certificate_the_listener_chose"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 7.4; RFC 9846 Section 4.2.4 for HelloRetryRequest"
 
 
 # Error responses

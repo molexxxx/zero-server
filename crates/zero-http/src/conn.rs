@@ -13,7 +13,7 @@
 use std::cell::{Cell, RefCell};
 use std::future::{poll_fn, Future};
 use std::io::{self, IoSlice};
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::pin::pin;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -23,7 +23,8 @@ use std::time::{Duration, Instant};
 use zero_core::OwnedBuf;
 use zero_http1::{
     body_allowed, content_length_allowed, parse_request, parse_trailers, BodyLength,
-    ChunkedDecoder, Expect, Field, Head, Reject, ResponseWriter, Status, Step, Version, WriteError,
+    ChunkedDecoder, Expect, Field, Head, Reject, ResponseWriter, Status, Step, TargetForm, Version,
+    WriteError,
 };
 use zero_http_types::{HeaderName, StatusCode};
 use zero_io::pool::Pool;
@@ -371,10 +372,27 @@ where
         self
     }
 
-    /// Whether the request's target host is one this connection serves. A request
-    /// without an authority (HTTP/1.0 without `Host`) targets the server's default
-    /// name, which the connection serves.
+    /// Whether this connection serves the request's target (RFC 9110 Section 7.4):
+    /// an `https` target only over a secure connection, and a host among the
+    /// connection's authorities when it has any. A request without an authority
+    /// (HTTP/1.0 without `Host`) targets the server's default name, which the
+    /// connection serves. No gateway is trusted to have checked an `https` target's
+    /// connection, so one received in the clear is always refused.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-7.4>
     fn serves(&self, record: &Record, head: &Head) -> bool {
+        if head.form == TargetForm::Absolute && !self.shared.secure {
+            let target = record
+                .head
+                .get(head.target.start..head.target.end)
+                .unwrap_or(&[]);
+            if target
+                .get(..HTTPS.len())
+                .is_some_and(|scheme| scheme.eq_ignore_ascii_case(HTTPS))
+            {
+                return false;
+            }
+        }
         let Some(names) = &self.authorities else {
             return true;
         };
@@ -387,9 +405,11 @@ where
                 .get(authority.start..authority.end)
                 .unwrap_or(&[]),
         );
-        names
-            .iter()
-            .any(|name| name.as_bytes().eq_ignore_ascii_case(host))
+        let address = ip_literal(host);
+        names.iter().any(|name| match &address {
+            Some(address) => name.as_ref() == address.as_str(),
+            None => name.as_bytes().eq_ignore_ascii_case(host),
+        })
     }
 
     /// Serve the connection until it closes.
@@ -1132,6 +1152,27 @@ where
         };
         let _ = core.timeout(LINGER, drain).await;
     }
+}
+
+/// The scheme prefix of an `https` absolute-form target.
+const HTTPS: &[u8] = b"https://";
+
+/// An IP address host as [`Prepared::authorities`](crate::Prepared) holds it: IPv4
+/// dotted, IPv6 in brackets in its canonical text, an IPv4-mapped IPv6 address as
+/// IPv4; `None` for a name.
+fn ip_literal(host: &[u8]) -> Option<String> {
+    let text = std::str::from_utf8(host).ok()?;
+    let address = match text
+        .strip_prefix('[')
+        .and_then(|rest| rest.strip_suffix(']'))
+    {
+        Some(inner) => IpAddr::V6(inner.parse().ok()?),
+        None => IpAddr::V4(text.parse().ok()?),
+    };
+    Some(match address.to_canonical() {
+        IpAddr::V4(address) => address.to_string(),
+        IpAddr::V6(address) => format!("[{address}]"),
+    })
 }
 
 /// The host of an authority: without its port and without one trailing dot; an

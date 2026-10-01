@@ -7,14 +7,14 @@
 //! checked on its raw bytes before the server name picks an identity, so each refusal
 //! carries the alert its RFC names: `protocol_version` for a client that offers no
 //! version the server speaks (RFC 8996 Sections 4 and 5, RFC 9846 Appendix E.2) and
-//! for a TLS 1.3 hello whose `legacy_version` is not 0x0303 (RFC 9846 Section 4.1.2),
+//! for a TLS 1.3 hello whose `legacy_version` is not 0x0303 (RFC 9846 Section 4.2.2),
 //! and `missing_extension` for a TLS 1.3 hello without the extensions RFC 9846
 //! Section 9.2 requires. rustls checks other things first and would answer these
 //! with `handshake_failure`. Versions come from `supported_versions` when the hello
 //! carries it and from `legacy_version` otherwise (RFC 9846 Section 4.3.1).
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc8996.html#section-4>
-//! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-4.1.2>
+//! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-4.2.2>
 //! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-4.3.1>
 //! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-9.2>
 //! @see <https://www.rfc-editor.org/rfc/rfc9846.html#appendix-E.2>
