@@ -20,9 +20,9 @@ use std::thread::ThreadId;
 use std::time::{Duration, Instant};
 
 use compio_buf::BufResult;
-use compio_driver::{Key, Proactor, PushEntry};
+use compio_driver::{Key, OpCode, Proactor, PushEntry};
+use zero_core::OwnedBuf;
 
-use super::ops::{Cancelled, Reap, Returns};
 use super::time::Timers;
 use crate::pool::Pool;
 
@@ -36,8 +36,8 @@ const STAGING_KEPT: usize = 64;
 /// The entries the driver's queues are created with.
 const DRIVER_CAPACITY: u32 = 1024;
 
-/// How long a stopping worker waits for its cancelled operations to complete.
-const REAP_LIMIT: Duration = Duration::from_secs(1);
+/// How many driver turns a stopping core gives its cancellations.
+const CLEAR_TURNS: usize = 4;
 
 /// A core's driver and executor, shared by everything that runs on the core.
 pub(crate) struct Handle {
@@ -48,8 +48,7 @@ pub(crate) struct Handle {
     pub(crate) timers: RefCell<Timers>,
     live: Cell<usize>,
     staging: RefCell<Vec<Vec<u8>>>,
-    cancelled: RefCell<Vec<Option<Cancelled>>>,
-    /// This core's receive-buffer pool, where a cancelled read's block goes back.
+    /// This core's receive-buffer pool, where a cancelled read returns its lease.
     pub(crate) pool: Rc<Pool>,
 }
 
@@ -123,7 +122,6 @@ impl Handle {
             timers: RefCell::new(Timers::default()),
             live: Cell::new(0),
             staging: RefCell::new(Vec::new()),
-            cancelled: RefCell::new(Vec::new()),
             pool,
         }))
     }
@@ -189,18 +187,18 @@ impl Handle {
         self.proactor.borrow_mut()
     }
 
-    /// Cancel an operation whose future is gone and keep its key until the
-    /// completion arrives, so the kernel's buffer comes back.
-    pub(crate) fn abandon<T: Reap>(&self, key: Key<T>, pooled: bool) {
-        let kept = key.clone();
+    /// Cancel an operation whose future is gone. The driver keeps the operation
+    /// and its buffer until the cancellation completes, so a block leased from the
+    /// pool returns its lease now and the block itself goes with the operation.
+    pub(crate) fn abandon<T: OpCode>(&self, key: Key<T>, pooled: bool) {
         drop(self.proactor.borrow_mut().cancel(key));
-        self.cancelled
-            .borrow_mut()
-            .push(Some(T::cancelled(kept, pooled)));
+        if pooled {
+            self.pool.release(OwnedBuf::with_capacity(0));
+        }
     }
 
     /// Submit an operation; the future it returns completes with the result.
-    pub(crate) fn push<T: Reap>(self: &Rc<Self>, op: T) -> Op<T> {
+    pub(crate) fn push<T: OpCode + 'static>(self: &Rc<Self>, op: T) -> Op<T> {
         Op {
             handle: Rc::clone(self),
             state: Some(State::Fresh(op)),
@@ -208,36 +206,14 @@ impl Handle {
         }
     }
 
-    /// Submit a receive into a block leased from the pool, which goes back to the
-    /// pool if the future is dropped before the receive completes.
-    pub(crate) fn push_pooled<T: Reap>(self: &Rc<Self>, op: T) -> Op<T> {
+    /// Submit a receive into a block leased from the pool, whose lease returns to
+    /// the pool if the future is dropped before the receive completes.
+    pub(crate) fn push_pooled<T: OpCode + 'static>(self: &Rc<Self>, op: T) -> Op<T> {
         Op {
             handle: Rc::clone(self),
             state: Some(State::Fresh(op)),
             pooled: true,
         }
-    }
-
-    /// Reap the completions of cancelled operations that have arrived; the list
-    /// keeps its capacity, so a warm core allocates nothing here.
-    fn reap(&self) {
-        let mut cancelled = self.cancelled.borrow_mut();
-        if cancelled.is_empty() {
-            return;
-        }
-        let mut proactor = self.proactor.borrow_mut();
-        let mut staging = self.staging.borrow_mut();
-        let mut returns = Returns {
-            pool: &self.pool,
-            staging: &mut staging,
-            staging_kept: STAGING_KEPT,
-        };
-        for slot in cancelled.iter_mut() {
-            if let Some(pending) = slot.take() {
-                *slot = pending.reap(&mut proactor, &mut returns);
-            }
-        }
-        cancelled.retain(Option::is_some);
     }
 
     /// A staging buffer for a vectored write, empty, with whatever capacity it kept.
@@ -312,7 +288,6 @@ impl Handle {
             }
         }
         self.timers.borrow_mut().fire(Instant::now());
-        self.reap();
     }
 
     /// Run `future` to completion on this core, beside the tasks already queued.
@@ -353,23 +328,15 @@ impl Handle {
     }
 
     /// Drop every task that is still queued, which cancels its operations and
-    /// closes its sockets, then wait for the cancellations to complete so that
-    /// every buffer the kernel held is back before the driver goes.
+    /// closes its sockets, then give the driver a few turns to process the
+    /// cancellations before it goes.
     pub(crate) fn clear(&self) {
         let slots = std::mem::take(&mut self.tasks.borrow_mut().slots);
         drop(slots);
         self.tasks.borrow_mut().free.clear();
         self.live.set(0);
-        let started = Instant::now();
-        loop {
-            self.reap();
-            if self.cancelled.borrow().is_empty() || started.elapsed() >= REAP_LIMIT {
-                return;
-            }
-            let outcome = self
-                .proactor
-                .borrow_mut()
-                .poll(Some(Duration::from_millis(1)));
+        for _ in 0..CLEAR_TURNS {
+            let outcome = self.proactor.borrow_mut().poll(Some(Duration::ZERO));
             if let Err(err) = outcome {
                 if !matches!(
                     err.kind(),
@@ -451,20 +418,20 @@ pub(crate) fn exit() {
 }
 
 /// One operation on its way through the driver.
-pub(crate) struct Op<T: Reap> {
+pub(crate) struct Op<T: OpCode + 'static> {
     handle: Rc<Handle>,
     state: Option<State<T>>,
     pooled: bool,
 }
 
-enum State<T: Reap> {
+enum State<T: OpCode + 'static> {
     Fresh(T),
     Pending(Key<T>),
 }
 
 impl<T> Future for Op<T>
 where
-    T: Reap + Unpin,
+    T: OpCode + Unpin + 'static,
 {
     type Output = BufResult<usize, T>;
 
@@ -487,11 +454,9 @@ where
     }
 }
 
-impl<T: Reap> Drop for Op<T> {
+impl<T: OpCode + 'static> Drop for Op<T> {
     fn drop(&mut self) {
         if let Some(State::Pending(key)) = self.state.take() {
-            // The kernel keeps the buffer until the cancellation completes; the
-            // key is kept so the completion is reaped on a later wait.
             self.handle.abandon(key, self.pooled);
         }
     }

@@ -471,10 +471,14 @@ Windows, kqueue through polling on macOS) with an executor of this crate's own,
 since the design keeps compio-runtime out of the graph: `executor.rs` (a run
 queue of `!Send` tasks whose wakers push an index and interrupt the driver only
 from another thread, the operation future that submits on first poll and pops
-the completion, `block_on` for a core without the workers), `ops.rs` (every
-operation named once, and the record kept for an operation whose future was
-dropped: the key stays until the completion arrives and the block it held goes
-back to the pool, so a read cut short by a timeout leaks nothing), `time.rs`
+the completion, `block_on` for a core without the workers), `ops.rs` (the
+operations kept across futures, named once; a dropped future cancels its
+operation and the driver keeps the operation and its buffer until the
+cancellation completes, as compio-runtime does, while a block leased from the
+pool returns its lease at once, so a read cut short by a timeout costs one
+block's allocation later and never the pool's budget; the first version kept
+the cancelled keys and popped their completions, which the polling driver on
+macOS answered with its "Key not unique" panic in CI), `time.rs`
 (the deadlines in a binary heap whose entries know their position, so a sleep
 leaves in logarithmic time and a warm core allocates nothing for timers),
 `shutdown.rs`, `listen.rs` (an accept operation per core on Linux, core 0's
@@ -510,7 +514,9 @@ provided buffer ring (`RecvManaged` with compio's `BufferPool`) would take one
 and keep the lazy lease, and the driver's record per operation is the one
 allocation per request this backend has. Also open: the Windows and macOS runs
 of the backend wait for CI's `seam` job (compile-checked for both targets from
-here), and the section 5.7 CPU-per-request figure needs cgroup accounting.
+here; the first macOS run failed on the cancelled-key reaping described above,
+the second is the cancel-only protocol), and the section 5.7 CPU-per-request
+figure needs cgroup accounting.
 Unverified: compio-driver's API was read from the crate sources downloaded from
 the registry (0.12.5) and from the repository's clone (last commit
 2026-09-30, so not archived), since docs.rs is unreachable here.
