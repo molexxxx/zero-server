@@ -32,6 +32,15 @@ use crate::outbox::Outbox;
 /// The most plaintext one write encrypts.
 const WRITE_CHUNK: usize = 64 * 1024;
 
+/// The most ciphertext waiting on one incomplete message: a handshake message of the
+/// largest length rustls joins (2^16 - 1 bytes) and one record of the largest size
+/// on the wire (2^14 + 2048 + 5 bytes). rustls's unbuffered connection joins a
+/// fragmented message inside this driver's buffer and discards nothing until it is
+/// whole, so without this bound a peer sending one-byte records would grow the buffer
+/// by a record header and tag per byte. rustls's buffered connection, which joins
+/// the payloads alone, refuses a message past the same length.
+const MAX_PENDING: usize = 0xffff + 18_437;
+
 /// What one pass asks of the connection besides processing input.
 #[derive(Clone, Copy)]
 enum Action<'a> {
@@ -121,6 +130,7 @@ impl<S: Stream> UnbufferedStream<S> {
             if outcome == Outcome::Closed {
                 return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
             }
+            self.check_pending()?;
             match self.inner.read_leased(pool).await? {
                 Leased::Data(buf) => {
                     self.incoming.borrow_mut().extend_from_slice(buf.filled());
@@ -243,6 +253,18 @@ impl<S: Stream> UnbufferedStream<S> {
         })
     }
 
+    /// Refuse to read more while the input that made no progress already holds
+    /// [`MAX_PENDING`] bytes.
+    fn check_pending(&self) -> io::Result<()> {
+        if self.incoming.borrow().len() >= MAX_PENDING {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "a TLS message larger than the largest handshake message",
+            ));
+        }
+        Ok(())
+    }
+
     /// Copy waiting plaintext into `out`.
     fn take_plain(&self, out: &mut [u8]) -> usize {
         let mut plain = self.plain.borrow_mut();
@@ -301,6 +323,7 @@ impl<S: Stream> UnbufferedStream<S> {
                     continue;
                 }
             }
+            self.check_pending()?;
             if let Some(leased) = self.pull(pool).await? {
                 return Ok(Some(leased));
             }

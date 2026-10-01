@@ -917,7 +917,7 @@ evidence = "crates/zero-tls/src/lib.rs"
 at = "fn the_server_negotiates_only_tls_1_3_and_tls_1_2_and_a_clienthello_offering"
 anchor = "rule"
 release = 1
-note = "RFC 8996 Sections 4 and 5; RFC 9846 Appendix E.5; RFC 9325 Section 3.1.1"
+note = "RFC 8996 Sections 4 and 5; RFC 9846 Sections 4.1.2 and 4.3.1 and Appendices E.2 and E.5; RFC 9325 Section 3.1.1. The listener checks the versions on the raw hello before rustls or the server name, so a hello without signature_algorithms gets the same alert, as does a TLS 1.3 hello whose legacy_version is not 0x0303"
 
 [[entry]]
 key = "tls-02"
@@ -1139,6 +1139,32 @@ at = "fn a_record_that_fails_decryption_is_answered_with_a_fatal_bad_record_mac_
 anchor = "rule"
 release = 1
 note = "RFC 9846 Sections 5.2 and 6.1; the queued alert is flushed before an aborted connection closes"
+
+[[entry]]
+key = "tls-19"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "A TLS 1.3 ClientHello without pre_shared_key must carry signature_algorithms and supported_groups, supported_groups and key_share come together, and servers receiving one that does not conform MUST abort the handshake with a missing_extension alert"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-9.2"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn a_tls_1_3_clienthello_without_the_extensions_rfc_9846_section_9_2_requires_is_refused"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Sections 9.2 and 6.2; an empty KeyShare.client_shares list is permitted"
+
+[[entry]]
+key = "tls-20"
+chapter = "tls"
+designation = "RFC 7301"
+body = "IETF"
+subject = "The server SHALL NOT respond with a selected protocol and subsequently use a different protocol for application data exchange"
+url = "https://www.rfc-editor.org/rfc/rfc7301.html#section-3.2"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn the_server_shall_not_select_a_protocol_it_then_does_not_speak_so_serve_refuses_any"
+anchor = "rule"
+release = 1
+note = "RFC 7301 Section 3.2; serve offers http/1.1 alone while the HTTP/1.1 driver is the only one"
 
 
 # Error responses

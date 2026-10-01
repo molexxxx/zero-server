@@ -5,8 +5,10 @@
 //! TLS 1.2, ALPN `http/1.1`, no early data, stateless tickets that rotate. The
 //! [`Identities`] table picks a certificate by the client's server name and is
 //! replaced whole on reload. [`TlsAccept`] runs on each core: it reads the client's
-//! hello, refuses an unknown name with `unrecognized_name` and a missing one, when
-//! there is no default identity, with `missing_extension`, completes the handshake
+//! hello, refuses one that offers no version the server speaks with
+//! `protocol_version` and a TLS 1.3 hello without its required extensions with
+//! `missing_extension`, refuses an unknown name with `unrecognized_name` and a missing
+//! one, when there is no default identity, with `missing_extension`, completes the handshake
 //! under the handshake timeout and the per-core limit on handshakes in progress, and
 //! hands the HTTP driver a [`TlsStream`] that serves only its identity's names. Two
 //! drivers implement the stream: [`BufferedStream`] over rustls's buffered connection,
@@ -25,6 +27,7 @@
 mod accept;
 pub mod buffered;
 mod config;
+mod hello;
 mod identity;
 mod outbox;
 pub mod unbuffered;
@@ -68,8 +71,12 @@ pub(crate) fn provider() -> Arc<CryptoProvider> {
 ///
 /// # Errors
 ///
-/// `InvalidInput` for options the provider cannot serve or limits that allow no
-/// handshake at all; otherwise as [`zero_http::serve`].
+/// `InvalidInput` for options the provider cannot serve, limits that allow no
+/// handshake at all, or an ALPN protocol other than `http/1.1`, which the HTTP/1.1
+/// driver would then be handed without speaking it (RFC 7301 Section 3.2); otherwise
+/// as [`zero_http::serve`].
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc7301.html#section-3.2>
 pub fn serve<H, M>(
     addr: SocketAddr,
     config: zero_http::Config,
@@ -88,20 +95,33 @@ where
             "the TLS limits allow no handshake",
         ));
     }
+    if let Some(other) = options
+        .alpn
+        .iter()
+        .find(|protocol| protocol.as_slice() != HTTP_1_1)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "the ALPN protocol {:?} is not one this server speaks",
+                String::from_utf8_lossy(other)
+            ),
+        ));
+    }
     let tls = server_config(Arc::clone(&identities), &options)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err.to_string()))?;
-    let limits = options.limits;
-    let driver = options.driver;
     zero_http::serve_with(addr, config, status, make, move |worker| {
         TlsAccept::new(
             Arc::clone(&identities),
             Arc::clone(&tls),
             worker.clone(),
-            limits,
-            driver,
+            &options,
         )
     })
 }
+
+/// The ALPN identifier of HTTP/1.1 (RFC 7301 Section 6).
+const HTTP_1_1: &[u8] = b"http/1.1";
 
 #[cfg(test)]
 mod tests {
@@ -111,16 +131,20 @@ mod tests {
     use rustls::crypto::{aws_lc_rs, CryptoProvider};
     use rustls::pki_types::pem::PemObject;
     use rustls::pki_types::{CertificateDer, ServerName};
-    use rustls::server::{Acceptor, ServerSessionMemoryCache};
+    use rustls::server::ServerSessionMemoryCache;
     use rustls::version::{TLS12, TLS13};
     use rustls::{
         AlertDescription, ClientConfig, ClientConnection, Error, HandshakeKind, NamedGroup,
         PeerIncompatible, ProtocolVersion, RootCertStore, ServerConfig, ServerConnection,
     };
 
-    use super::accept::{fatal_alert, inspect, MISSING_EXTENSION, UNRECOGNIZED_NAME};
+    use super::hello::{
+        fatal_alert, Hello, HelloReader, MISSING_EXTENSION, PROTOCOL_VERSION, UNRECOGNIZED_NAME,
+    };
     use super::identity::Choice;
-    use super::{provider, server_config, Identities, Identity, TlsOptions, MAX_TICKET_LIFETIME};
+    use super::{
+        provider, serve, server_config, Identities, Identity, TlsOptions, MAX_TICKET_LIFETIME,
+    };
 
     const CA: &[u8] = include_bytes!("../tests/fixtures/ca.pem");
     const LOCALHOST: &[u8] = include_bytes!("../tests/fixtures/localhost.pem");
@@ -265,33 +289,26 @@ mod tests {
 
     /// A hand-built ClientHello: the record, the handshake header, the version, a
     /// random, no session id, the suites, null compression and the extensions.
-    fn hello(
-        legacy: [u8; 2],
-        suites: &[[u8; 2]],
-        ems: bool,
-        versions: Option<&[[u8; 2]]>,
-    ) -> Vec<u8> {
-        let mut extensions = Vec::new();
-        let name = b"localhost";
-        extensions.extend_from_slice(&[0x00, 0x00]);
-        extensions.extend_from_slice(&((name.len() + 5) as u16).to_be_bytes());
-        extensions.extend_from_slice(&((name.len() + 3) as u16).to_be_bytes());
-        extensions.push(0x00);
-        extensions.extend_from_slice(&(name.len() as u16).to_be_bytes());
-        extensions.extend_from_slice(name);
-        extensions.extend_from_slice(&[0x00, 0x0a, 0x00, 0x04, 0x00, 0x02, 0x00, 0x17]);
-        extensions.extend_from_slice(&[0x00, 0x0d, 0x00, 0x04, 0x00, 0x02, 0x04, 0x03]);
-        if ems {
-            extensions.extend_from_slice(&[0x00, 0x17, 0x00, 0x00]);
-        }
-        if let Some(versions) = versions {
-            extensions.extend_from_slice(&[0x00, 0x2b]);
-            extensions.extend_from_slice(&((versions.len() * 2 + 1) as u16).to_be_bytes());
-            extensions.push((versions.len() * 2) as u8);
-            for version in versions {
-                extensions.extend_from_slice(version);
-            }
-        }
+    /// One extension: its type, its length and its data.
+    fn extension(kind: u16, data: &[u8]) -> Vec<u8> {
+        let mut out = kind.to_be_bytes().to_vec();
+        out.extend_from_slice(&(data.len() as u16).to_be_bytes());
+        out.extend_from_slice(data);
+        out
+    }
+
+    /// The `server_name` extension for `name`.
+    fn sni(name: &[u8]) -> Vec<u8> {
+        let mut list = vec![0x00];
+        list.extend_from_slice(&(name.len() as u16).to_be_bytes());
+        list.extend_from_slice(name);
+        let mut data = (list.len() as u16).to_be_bytes().to_vec();
+        data.extend_from_slice(&list);
+        extension(0, &data)
+    }
+
+    /// A hand-built hello record with exactly these extensions.
+    fn client_hello(legacy: [u8; 2], suites: &[[u8; 2]], extensions: &[u8]) -> Vec<u8> {
         let mut body = Vec::new();
         body.extend_from_slice(&legacy);
         body.extend_from_slice(&[0x5a; 32]);
@@ -301,8 +318,10 @@ mod tests {
             body.extend_from_slice(suite);
         }
         body.extend_from_slice(&[0x01, 0x00]);
-        body.extend_from_slice(&(extensions.len() as u16).to_be_bytes());
-        body.extend_from_slice(&extensions);
+        if !extensions.is_empty() {
+            body.extend_from_slice(&(extensions.len() as u16).to_be_bytes());
+            body.extend_from_slice(extensions);
+        }
         let mut handshake = vec![0x01];
         handshake.extend_from_slice(&(body.len() as u32).to_be_bytes()[1..]);
         handshake.extend_from_slice(&body);
@@ -310,6 +329,35 @@ mod tests {
         record.extend_from_slice(&(handshake.len() as u16).to_be_bytes());
         record.extend_from_slice(&handshake);
         record
+    }
+
+    /// What the listener's hello reader decides for one whole hello.
+    fn gate(bytes: &[u8], tls12: bool) -> Hello {
+        HelloReader::new(tls12)
+            .push(bytes)
+            .expect("the hello is whole")
+    }
+
+    fn hello(
+        legacy: [u8; 2],
+        suites: &[[u8; 2]],
+        ems: bool,
+        versions: Option<&[[u8; 2]]>,
+    ) -> Vec<u8> {
+        let mut extensions = sni(b"localhost");
+        extensions.extend_from_slice(&[0x00, 0x0a, 0x00, 0x04, 0x00, 0x02, 0x00, 0x17]);
+        extensions.extend_from_slice(&[0x00, 0x0d, 0x00, 0x04, 0x00, 0x02, 0x04, 0x03]);
+        if ems {
+            extensions.extend_from_slice(&[0x00, 0x17, 0x00, 0x00]);
+        }
+        if let Some(versions) = versions {
+            let mut data = vec![(versions.len() * 2) as u8];
+            for version in versions {
+                data.extend_from_slice(version);
+            }
+            extensions.extend_from_slice(&extension(43, &data));
+        }
+        client_hello(legacy, suites, &extensions)
     }
 
     /// Feed a hand-built hello to a server and collect its answer.
@@ -453,6 +501,122 @@ mod tests {
             );
             assert_eq!(out.first(), Some(&0x15), "an alert record, no ServerHello");
             assert!(out.ends_with(&[0x02, 0x46]), "protocol_version: {out:?}");
+        }
+        // The listener decides before rustls looks at anything else, so the alert is
+        // the same for a hello without signature_algorithms, as TLS 1.0 and 1.1
+        // clients send, and for one naming a server the listener does not serve.
+        for bytes in [
+            hello([0x03, 0x01], &[[0xc0, 0x2b]], true, None),
+            client_hello([0x03, 0x01], &[[0x00, 0x2f]], &[]),
+            client_hello([0x03, 0x02], &[[0x00, 0x2f]], &sni(b"unknown.test")),
+            hello(
+                [0x03, 0x03],
+                &[[0xc0, 0x2b]],
+                true,
+                Some(&[[0x03, 0x02], [0x03, 0x01]]),
+            ),
+            // RFC 9846 Section 4.1.2: a TLS 1.3 hello's legacy_version is 0x0303.
+            hello([0x03, 0x04], &[[0x13, 0x01]], true, Some(&[[0x03, 0x04]])),
+        ] {
+            match gate(&bytes, true) {
+                Hello::Refused(record, _) => assert_eq!(record, fatal_alert(PROTOCOL_VERSION)),
+                other => panic!("{other:?}"),
+            }
+        }
+        match gate(&hello([0x03, 0x03], &[[0xc0, 0x2b]], true, None), false) {
+            Hello::Refused(record, _) => assert_eq!(
+                record,
+                fatal_alert(PROTOCOL_VERSION),
+                "a TLS 1.2 hello to a listener with TLS 1.2 off"
+            ),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_tls_1_3_clienthello_without_the_extensions_rfc_9846_section_9_2_requires_is_refused_with_a_fatal_missing_extension_alert(
+    ) {
+        let versions = extension(43, &[0x02, 0x03, 0x04]);
+        let signatures = extension(13, &[0x00, 0x02, 0x04, 0x03]);
+        let groups = extension(10, &[0x00, 0x02, 0x00, 0x17]);
+        let shares = extension(51, &[0x00, 0x00]);
+        let name = sni(b"localhost");
+        let suites = &[[0x13, 0x01]];
+        for extensions in [
+            [&versions[..], &name, &groups, &shares].concat(),
+            [&versions[..], &name, &signatures, &shares].concat(),
+            [&versions[..], &name, &signatures, &groups].concat(),
+            [&versions[..], &name, &signatures].concat(),
+        ] {
+            match gate(&client_hello([0x03, 0x03], suites, &extensions), true) {
+                Hello::Refused(record, _) => assert_eq!(record, fatal_alert(MISSING_EXTENSION)),
+                other => panic!("{other:?}"),
+            }
+        }
+        let whole = [&versions[..], &name, &signatures, &groups, &shares].concat();
+        assert!(
+            matches!(
+                gate(&client_hello([0x03, 0x03], suites, &whole), true),
+                Hello::Read(Some(name), _) if name == "localhost"
+            ),
+            "an empty key_share list is permitted"
+        );
+    }
+
+    #[test]
+    fn a_client_hello_spread_over_several_records_and_reads_is_read_whole() {
+        let mut config = client_config(&[]);
+        config.alpn_protocols = (0..100)
+            .map(|index| format!("{index:0>200}").into_bytes())
+            .collect();
+        let mut client = connect(&Arc::new(config), "localhost");
+        let mut bytes = Vec::new();
+        while client.wants_write() {
+            client.write_tls(&mut bytes).unwrap();
+        }
+        assert!(bytes.len() > 18_437, "two records: {}", bytes.len());
+        let mut reader = HelloReader::new(true);
+        let mut decided = None;
+        for chunk in bytes.chunks(8 * 1024) {
+            assert!(decided.is_none());
+            decided = reader.push(chunk);
+        }
+        assert!(
+            matches!(&decided, Some(Hello::Read(Some(name), _)) if name == "localhost"),
+            "{decided:?}"
+        );
+    }
+
+    struct Nothing;
+
+    impl zero_http::Handler for Nothing {
+        async fn handle(&self, _call: &mut zero_http::Call<'_>) -> zero_core::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn the_server_shall_not_select_a_protocol_it_then_does_not_speak_so_serve_refuses_any_alpn_protocol_but_http_1_1(
+    ) {
+        for alpn in [
+            vec![b"h2".to_vec(), b"http/1.1".to_vec()],
+            vec![b"x-test".to_vec()],
+        ] {
+            let refused = serve(
+                "127.0.0.1:0".parse().unwrap(),
+                zero_http::Config::default(),
+                identities(),
+                TlsOptions {
+                    alpn,
+                    ..TlsOptions::default()
+                },
+                Arc::new(|_| {}),
+                |_| Nothing,
+            );
+            assert_eq!(
+                refused.err().map(|err| err.kind()),
+                Some(std::io::ErrorKind::InvalidInput)
+            );
         }
     }
 
@@ -603,8 +767,7 @@ mod tests {
             while client.wants_write() {
                 client.write_tls(&mut bytes).unwrap();
             }
-            let mut acceptor = Acceptor::default();
-            let Ok(Some(sent)) = inspect(&mut acceptor, &bytes) else {
+            let Hello::Read(sent, _) = gate(&bytes, true) else {
                 panic!("a whole hello");
             };
             match (table.choose(sent.as_deref()), expected) {
@@ -634,8 +797,7 @@ mod tests {
         while client.wants_write() {
             client.write_tls(&mut bytes).unwrap();
         }
-        let mut acceptor = Acceptor::default();
-        let Ok(Some(sent)) = inspect(&mut acceptor, &bytes) else {
+        let Hello::Read(sent, _) = gate(&bytes, true) else {
             panic!("a whole hello");
         };
         assert_eq!(sent, None);

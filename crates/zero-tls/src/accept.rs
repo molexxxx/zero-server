@@ -1,13 +1,14 @@
 //! The TLS listener: the [`Accept`] that turns each TCP connection into a TLS
 //! session before the HTTP driver serves it.
 //!
-//! The client's hello is read first, through rustls's `Acceptor`, and the server
-//! name it carries picks the identity. A name the listener does not serve is refused
-//! with a fatal `unrecognized_name` alert (RFC 9325 Section 3.7), and a hello without a
-//! name when no default identity exists with a fatal `missing_extension` alert (RFC
-//! 9846 Section 9.2); rustls itself would answer both with `access_denied`. Otherwise
-//! the hello starts the chosen driver's handshake, and the connection serves only the
-//! names of its identity.
+//! The client's hello is read first (see [`crate::hello`]): a hello that offers no
+//! version the server speaks, or a TLS 1.3 hello without its required extensions, is
+//! refused there, and the server name it carries picks the identity. A name the
+//! listener does not serve is refused with a fatal `unrecognized_name` alert (RFC
+//! 9325 Section 3.7), and a hello without a name when no default identity exists with
+//! a fatal `missing_extension` alert (RFC 9846 Section 9.2); rustls itself would
+//! answer both with `access_denied`. Otherwise the hello starts the chosen driver's
+//! handshake, and the connection serves only the names of its identity.
 //!
 //! The handshake runs under the handshake timeout, from the first byte to the last
 //! record of the server's final flight, so a client cannot hold a handshake open
@@ -15,9 +16,10 @@
 //! `close_notify` before its transport closes (RFC 9846 Section 6.1), which the
 //! buffered driver can do at any point of the handshake; rustls's unbuffered state
 //! machine offers no way to queue an alert until the handshake completes, so on that
-//! driver a timed-out handshake only closes the transport. Each core counts its handshakes in
-//! progress; at the limit it stops accepting, the kernel's backlog holds the rest, and
-//! a connection accepted just as the limit was reached waits until a handshake ends.
+//! driver a timed-out handshake only closes the transport. Each core counts its
+//! handshakes in progress; at the limit it stops accepting, the kernel's backlog
+//! holds the rest, and a connection accepted just as the limit was reached waits
+//! until a handshake ends.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc9325.html#section-3.7>
 //! @see <https://www.rfc-editor.org/rfc/rfc9846.html#section-9.2>
@@ -32,7 +34,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use rustls::server::Acceptor;
 use rustls::ServerConfig;
 use zero_core::OwnedBuf;
 use zero_http::{Accept, Prepared};
@@ -42,8 +43,9 @@ use zero_io::seam::{Leased, Stream, Timer};
 use zero_limits::TlsLimits;
 use zero_rt::Worker;
 
-use crate::buffered::{tls_error, BufferedStream};
-use crate::config::Driver;
+use crate::buffered::BufferedStream;
+use crate::config::{Driver, TlsOptions};
+use crate::hello::{fatal_alert, Hello, HelloReader, MISSING_EXTENSION, UNRECOGNIZED_NAME};
 use crate::identity::{Choice, Identities};
 use crate::unbuffered::UnbufferedStream;
 
@@ -53,18 +55,6 @@ const MAX_HELLO: usize = (1 << 16) + 1024;
 
 /// How long a handshake that timed out may take to send its `close_notify`.
 const CLOSE_GRACE: Duration = Duration::from_secs(1);
-
-/// The alert description `unrecognized_name` (RFC 9846 Section 6.2).
-pub(crate) const UNRECOGNIZED_NAME: u8 = 112;
-
-/// The alert description `missing_extension` (RFC 9846 Section 6.2).
-pub(crate) const MISSING_EXTENSION: u8 = 109;
-
-/// A fatal alert record, sent in the clear before any key exists, with the record
-/// version 0x0303 that RFC 9846 Section 5.1 sets for every record but the first hello.
-pub(crate) const fn fatal_alert(description: u8) -> [u8; 7] {
-    [0x15, 0x03, 0x03, 0x00, 0x02, 0x02, description]
-}
 
 /// A TLS session served by either driver.
 #[derive(Debug)]
@@ -143,59 +133,18 @@ impl<S: Stream> Stream for TlsStream<S> {
     }
 }
 
-/// What the hello asked for.
-pub(crate) enum Hello {
-    /// The server name, if any, and every byte read so far.
-    Read(Option<String>, Vec<u8>),
-    /// The hello was refused; the alert to send.
-    Refused(Vec<u8>, rustls::Error),
-}
-
-/// Feed bytes to an acceptor until it has a whole hello.
-///
-/// # Returns
-///
-/// The server name when the hello is complete, `None` while it is not.
-pub(crate) fn inspect(
-    acceptor: &mut Acceptor,
-    bytes: &[u8],
-) -> Result<Option<Option<String>>, (Vec<u8>, rustls::Error)> {
-    let mut rest = bytes;
-    while !rest.is_empty() {
-        match acceptor.read_tls(&mut rest) {
-            Ok(0) | Err(_) => break,
-            Ok(_) => {}
-        }
-    }
-    match acceptor.accept() {
-        Ok(Some(accepted)) => Ok(Some(
-            accepted.client_hello().server_name().map(str::to_owned),
-        )),
-        Ok(None) => Ok(None),
-        Err((err, mut alert)) => {
-            let mut record = Vec::new();
-            let _ = alert.write_all(&mut record);
-            Err((record, err))
-        }
-    }
-}
-
 /// Read the client's hello.
-async fn read_hello<S: Stream>(stream: &S, pool: &Pool) -> io::Result<Hello> {
-    let mut acceptor = Acceptor::default();
-    let mut bytes = Vec::new();
+async fn read_hello<S: Stream>(stream: &S, pool: &Pool, tls12: bool) -> io::Result<Hello> {
+    let mut reader = HelloReader::new(tls12);
     loop {
         match stream.read_leased(pool).await? {
             Leased::Data(buf) => {
-                let start = bytes.len();
-                bytes.extend_from_slice(buf.filled());
+                let decided = reader.push(buf.filled());
                 pool.release(buf);
-                match inspect(&mut acceptor, bytes.get(start..).unwrap_or(&[])) {
-                    Ok(Some(name)) => return Ok(Hello::Read(name, bytes)),
-                    Ok(None) => {}
-                    Err((record, err)) => return Ok(Hello::Refused(record, err)),
+                if let Some(hello) = decided {
+                    return Ok(hello);
                 }
-                if bytes.len() > MAX_HELLO {
+                if reader.len() > MAX_HELLO {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,
                         "the client hello is larger than one handshake message",
@@ -243,6 +192,7 @@ pub struct TlsAccept {
     worker: Worker,
     limits: TlsLimits,
     driver: Driver,
+    tls12: bool,
     in_progress: Cell<usize>,
 }
 
@@ -253,24 +203,24 @@ impl TlsAccept {
     ///
     /// * `identities` - the identities the server names pick from.
     /// * `config` - the config from [`server_config`](crate::server_config) over the
-    ///   same identities.
+    ///   same identities and `options`.
     /// * `worker` - the core's worker.
-    /// * `limits` - the handshake timeout and the per-core limit.
-    /// * `driver` - the TLS driver.
+    /// * `options` - the TLS options: the versions, the handshake timeout, the
+    ///   per-core limit and the driver.
     #[must_use]
     pub fn new(
         identities: Arc<Identities>,
         config: Arc<ServerConfig>,
         worker: Worker,
-        limits: TlsLimits,
-        driver: Driver,
+        options: &TlsOptions,
     ) -> Self {
         TlsAccept {
             identities,
             config,
             worker,
-            limits,
-            driver,
+            limits: options.limits,
+            driver: options.driver,
+            tls12: options.tls12,
             in_progress: Cell::new(0),
         }
     }
@@ -288,11 +238,9 @@ impl TlsAccept {
         stream: TcpStream,
         pool: &Pool,
     ) -> io::Result<(TlsStream<TcpStream>, Arc<[Box<str>]>)> {
-        let (name, first) = match read_hello(&stream, pool).await? {
+        let (name, first) = match read_hello(&stream, pool, self.tls12).await? {
             Hello::Read(name, first) => (name, first),
-            Hello::Refused(record, err) => {
-                return Err(refuse(&stream, &record, tls_error(err)).await)
-            }
+            Hello::Refused(record, reason) => return Err(refuse(&stream, &record, reason).await),
         };
         let identity = match self.identities.choose(name.as_deref()) {
             Choice::Serve(identity) => identity,

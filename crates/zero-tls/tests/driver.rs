@@ -322,6 +322,50 @@ fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeo
 }
 
 #[test]
+fn a_handshake_message_sent_one_byte_per_record_is_refused_once_it_outgrows_the_largest_message() {
+    for driver in DRIVERS {
+        let limits = TlsLimits {
+            handshake_timeout: Duration::from_secs(6),
+            ..TlsLimits::DEFAULT
+        };
+        let server = Server::start(driver, limits, 1);
+        let mut tcp = server.tcp();
+        let mut client = ClientConnection::new(
+            client(&[&TLS12]),
+            ServerName::try_from("localhost").unwrap(),
+        )
+        .unwrap();
+        client.write_tls(&mut tcp).unwrap();
+        let mut flight = [0u8; 1024];
+        assert!(tcp.read(&mut flight).unwrap() > 0, "{driver:?}: the flight");
+        // A client_key_exchange header claiming 65535 bytes, then its body one byte
+        // per plaintext record, 6 bytes on the wire for each byte of message.
+        let mut records = Vec::new();
+        for byte in [0x10, 0x00, 0xff, 0xff]
+            .into_iter()
+            .chain(std::iter::repeat_n(0u8, 30_000))
+        {
+            records.extend_from_slice(&[0x16, 0x03, 0x03, 0x00, 0x01, byte]);
+        }
+        let started = Instant::now();
+        let _ = tcp.write_all(&records);
+        let mut rest = Vec::new();
+        let ended = tcp.read_to_end(&mut rest);
+        assert!(
+            ended.is_ok()
+                || matches!(&ended, Err(err) if err.kind() == io::ErrorKind::ConnectionReset),
+            "{driver:?}: {ended:?}"
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "{driver:?}: closed before the handshake timeout, after {:?}",
+            started.elapsed()
+        );
+        server.stop().unwrap();
+    }
+}
+
+#[test]
 fn a_record_that_fails_decryption_is_answered_with_a_fatal_bad_record_mac_alert() {
     for driver in DRIVERS {
         let server = Server::with(driver);
