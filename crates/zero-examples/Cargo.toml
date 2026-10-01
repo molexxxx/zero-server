@@ -11,6 +11,11 @@ publish = false
 
 [dependencies]
 zero-server.workspace = true
+zero-http1.workspace = true
+zero-http-types.workspace = true
+zero-limits.workspace = true
+# The conformance vector generator writes one sorted JSON document.
+serde_json = "1"
 
 [lints]
 workspace = true

@@ -15,7 +15,13 @@ authors.workspace = true
 # targets. Turn it off (`default-features = false`) to build for a `no_std`
 # target, where the crate relies only on `core` and `alloc`.
 default = ["std"]
-std = ["zero-core/std", "zero-http-types/std", "zero-simd/std", "zero-limits/std"]
+std = [
+  "zero-core/std",
+  "zero-http-types/std",
+  "zero-simd/std",
+  "zero-limits/std",
+  "zero-date/std",
+]
 
 [dependencies]
 # This crate is `no_std`, so it takes its dependencies without their default `std`
@@ -25,6 +31,7 @@ zero-core = { path = "../zero-core", version = "0.1.0", default-features = false
 zero-http-types = { path = "../zero-http-types", version = "0.1.0", default-features = false }
 zero-simd = { path = "../zero-simd", version = "0.1.0", default-features = false }
 zero-limits = { path = "../zero-limits", version = "0.1.0", default-features = false }
+zero-date = { path = "../zero-date", version = "0.1.0", default-features = false }
 
 [lints.rust]
 unsafe_code = "forbid"
