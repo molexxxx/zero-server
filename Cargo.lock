@@ -2262,6 +2262,8 @@ name = "zero-sse"
 version = "0.1.0"
 dependencies = [
  "zero-core",
+ "zero-http-types",
+ "zero-simd",
 ]
 
 [[package]]
