@@ -68,6 +68,15 @@ pub trait Listener {
 }
 
 /// A connected byte stream.
+///
+/// A connection driver races its reads, its writes and its timers and drops the
+/// futures that lose, so every method here may be dropped at any await. A dropped
+/// read loses no bytes: what it took from the transport is either returned by it or
+/// left for the next read. A dropped write may already have committed some of its
+/// bytes, to the kernel or, for TLS, to records already encrypted, so the next
+/// [`writev`](Self::writev) must start with the same bytes the dropped one was given;
+/// its count then includes those committed bytes, and it never exceeds what that
+/// call was given.
 pub trait Stream {
     /// Wait until a read would return something, without leasing a buffer for it.
     ///
@@ -79,8 +88,8 @@ pub trait Stream {
     /// Read into a buffer leased from `pool` only once there is something to read: the
     /// lazy lease of `DESIGN.md` section 5.6. A readiness backend waits for readiness,
     /// leases, and reads at once, returning the block to the pool when the readiness
-    /// was spurious, so a connection that is waiting holds no buffer; a completion
-    /// backend takes the block from the kernel's buffer ring with the completion.
+    /// was spurious, so a connection that is waiting holds no buffer; the completion
+    /// backend does the same over its readiness operation.
     ///
     /// # Arguments
     ///
@@ -121,7 +130,8 @@ pub trait Stream {
     /// How many bytes were written and the buffer, in every case.
     fn write(&self, buf: OwnedBuf) -> impl Future<Output = (io::Result<usize>, OwnedBuf)>;
 
-    /// Write several slices in one call.
+    /// Write several slices in one call. After a call is dropped, the next call must
+    /// start with the same bytes (see the trait's documentation).
     ///
     /// # Arguments
     ///
@@ -129,7 +139,8 @@ pub trait Stream {
     ///
     /// # Returns
     ///
-    /// How many bytes were written, which can be fewer than the slices hold.
+    /// How many bytes were written, which can be fewer than the slices hold and is
+    /// never more.
     ///
     /// # Errors
     ///

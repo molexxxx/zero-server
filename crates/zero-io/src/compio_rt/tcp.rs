@@ -1,26 +1,35 @@
-//! A TCP stream on the completion backend: every operation takes the buffer's
-//! storage by value and hands it back with the count.
+//! A TCP stream on the completion backend.
 //!
 //! A read waits for readability first (a poll operation on Unix, a zero-length
-//! receive on IOCP) and leases its block only then, so a connection that is waiting
-//! holds no buffer, the lazy lease of `DESIGN.md` section 5.6. The readiness
-//! operation belongs to the stream, not to the future that waits on it: a driver
-//! that races its read against a write and a timer each turn drops the wait
-//! whenever something else wins, and cancelling an operation per turn would cost
-//! a cancel and two completions each time. The operation stays in flight until
-//! readiness arrives and the next wait takes it. The io_uring driver could take
-//! the block from a provided buffer ring with the completion instead; that path is
+//! receive on IOCP), leases its block only then, and receives into it at once
+//! without blocking, so a connection that is waiting holds no buffer, the lazy lease
+//! of `DESIGN.md` section 5.6. The readiness operation belongs to the stream, not to
+//! the future that waits on it: a driver that races its read against a write and a
+//! timer each turn drops the wait whenever something else wins, and cancelling an
+//! operation per turn would cost a cancel and two completions each time. The
+//! operation stays in flight until readiness arrives and the next wait takes it.
+//! Nothing is awaited between the receive and its return, so a dropped read never
+//! loses bytes the kernel already handed over. The io_uring driver could take the
+//! block from a provided buffer ring with the completion instead; that path is
 //! recorded in the status file as the follow-up it is.
+//!
+//! A write stages its slices into a buffer the kernel owns for the length of the
+//! send. The send belongs to the stream too: one whose future is dropped stays in
+//! flight, since cancelling it cannot tell whether the kernel already sent its bytes,
+//! and the next write, which the seam requires to start with the same bytes, takes
+//! its count instead of sending them again.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::future::{poll_fn, Future};
-use std::io::{self, IoSlice};
+use std::io::{self, IoSlice, Read};
 use std::net::SocketAddr;
 use std::rc::Rc;
 use std::task::Poll;
 
-use compio_buf::{BufResult, IntoInner, IoBuf};
-use compio_driver::op::{Recv, RecvFlags, Send, SendFlags};
+use compio_buf::{BufResult, IntoInner};
+#[cfg(windows)]
+use compio_driver::op::{Recv, RecvFlags};
+use compio_driver::op::{Send, SendFlags};
 use compio_driver::{Key, PushEntry, SharedFd};
 use socket2::Socket;
 use zero_core::OwnedBuf;
@@ -36,18 +45,29 @@ type ReadyOp = super::ops::PollOp;
 #[cfg(windows)]
 type ReadyOp = super::ops::ProbeOp;
 
+/// A send of staged bytes.
+type SendOp = Send<Vec<u8>, SharedFd<Socket>>;
+
 /// A connected TCP stream on this core.
 pub struct TcpStream {
     fd: SharedFd<Socket>,
     handle: Rc<Handle>,
     /// The readiness operation in flight, kept across the futures that wait on it.
     ready: RefCell<Option<Key<ReadyOp>>>,
+    /// The send in flight, kept across the futures that wait on it.
+    send: RefCell<Option<Key<SendOp>>>,
+    /// Bytes a finished send reported beyond what the write that took its count was
+    /// given, owed to the next write.
+    carried: Cell<usize>,
 }
 
 impl Drop for TcpStream {
     fn drop(&mut self) {
         if let Some(key) = self.ready.borrow_mut().take() {
-            self.handle.abandon(key, false);
+            self.handle.abandon(key);
+        }
+        if let Some(key) = self.send.borrow_mut().take() {
+            self.handle.abandon(key);
         }
     }
 }
@@ -85,6 +105,8 @@ impl TcpStream {
             fd: SharedFd::new(inner),
             handle,
             ready: RefCell::new(None),
+            send: RefCell::new(None),
+            carried: Cell::new(0),
         })
     }
 
@@ -144,25 +166,54 @@ impl TcpStream {
         .await
     }
 
-    /// Receive into the unfilled part of `buf`; a block from the pool goes back to
-    /// it if the receive is dropped before it completes.
-    async fn receive(&self, buf: OwnedBuf, pooled: bool) -> (io::Result<usize>, OwnedBuf) {
-        let (storage, filled) = buf.into_parts();
-        let op = Recv::new(self.fd.clone(), storage.slice(filled..), RecvFlags::empty());
-        let submitted = if pooled {
-            self.handle.push_pooled(op)
-        } else {
-            self.handle.push(op)
+    /// Receive into the unfilled part of `buf` without blocking.
+    fn receive_now(&self, buf: &mut OwnedBuf) -> io::Result<usize> {
+        let count = loop {
+            match (&*self.fd).read(buf.unfilled_mut()) {
+                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
+                outcome => break outcome?,
+            }
         };
-        let BufResult(result, op) = submitted.await;
-        let storage = op.into_inner().into_inner();
-        match result {
-            Ok(count) => (
-                Ok(count),
-                OwnedBuf::from_parts(storage, filled.saturating_add(count)),
-            ),
-            Err(err) => (Err(err), OwnedBuf::from_parts(storage, filled)),
-        }
+        buf.advance(count)
+            .map_err(|err| io::Error::other(err.to_string()))?;
+        Ok(count)
+    }
+
+    /// Wait for the stream's send in flight, submitting `op` first when there is
+    /// none; the send stays with the stream if this future is dropped.
+    async fn sent(&self, op: Option<SendOp>) -> io::Result<usize> {
+        let mut op = op;
+        poll_fn(|cx| {
+            let mut proactor = self.handle.proactor();
+            let mut send = self.send.borrow_mut();
+            let pushed = match send.take() {
+                Some(key) => proactor.pop(key),
+                None => match op.take() {
+                    Some(op) => proactor.push(op),
+                    None => return Poll::Ready(Ok(0)),
+                },
+            };
+            match pushed {
+                PushEntry::Ready(BufResult(result, op)) => {
+                    self.handle.give_staging(op.into_inner());
+                    Poll::Ready(result)
+                }
+                PushEntry::Pending(key) => {
+                    proactor.update_waker(&key, cx.waker());
+                    *send = Some(key);
+                    Poll::Pending
+                }
+            }
+        })
+        .await
+    }
+
+    /// Report a finished send's count against a write of `total` bytes, owing any
+    /// excess to the next write.
+    fn report(&self, count: usize, total: usize) -> usize {
+        let reported = count.min(total);
+        self.carried.set(count.saturating_sub(reported));
+        reported
     }
 }
 
@@ -174,11 +225,10 @@ impl Stream for TcpStream {
     async fn read_leased(&self, pool: &Pool) -> io::Result<Leased> {
         loop {
             self.wait_readable().await?;
-            let Some(buf) = pool.lease() else {
+            let Some(mut buf) = pool.lease() else {
                 return Ok(Leased::NoBudget);
             };
-            let (result, buf) = self.receive(buf, true).await;
-            match result {
+            match self.receive_now(&mut buf) {
                 Ok(0) => {
                     pool.release(buf);
                     return Ok(Leased::Eof);
@@ -196,6 +246,7 @@ impl Stream for TcpStream {
     }
 
     async fn read_into(&self, buf: OwnedBuf) -> (io::Result<usize>, OwnedBuf) {
+        let mut buf = buf;
         if buf.remaining() == 0 {
             return (
                 Err(io::Error::new(
@@ -205,11 +256,11 @@ impl Stream for TcpStream {
                 buf,
             );
         }
-        let mut buf = buf;
         loop {
-            let (result, back) = self.receive(buf, false).await;
-            buf = back;
-            match result {
+            if let Err(err) = self.wait_readable().await {
+                return (Err(err), buf);
+            }
+            match self.receive_now(&mut buf) {
                 Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
                 outcome => return (outcome, buf),
             }
@@ -217,44 +268,41 @@ impl Stream for TcpStream {
     }
 
     async fn write(&self, buf: OwnedBuf) -> (io::Result<usize>, OwnedBuf) {
-        if buf.is_empty() {
-            return (Ok(0), buf);
-        }
-        let (storage, filled) = buf.into_parts();
-        let mut slice = storage.slice(..filled);
-        loop {
-            let op = Send::new(self.fd.clone(), slice, send_flags());
-            let BufResult(result, back) = self.handle.push(op).await;
-            slice = back.into_inner();
-            match result {
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
-                outcome => return (outcome, OwnedBuf::from_parts(slice.into_inner(), filled)),
-            }
-        }
+        let written = self.writev(&[IoSlice::new(buf.filled())]).await;
+        (written, buf)
     }
 
     async fn writev(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        // The one copy the seam costs a completion backend: the slices are staged
-        // into a buffer the kernel can own for the length of the operation.
-        let mut staging = self.handle.take_staging();
-        for slice in bufs {
-            staging.extend_from_slice(slice);
+        let total = bufs
+            .iter()
+            .fold(0usize, |sum, slice| sum.saturating_add(slice.len()));
+        let carried = self.carried.get();
+        if carried > 0 {
+            return Ok(self.report(carried, total));
         }
-        if staging.is_empty() {
-            self.handle.give_staging(staging);
+        // A send left in flight by a dropped write carries the first bytes of these.
+        if self.send.borrow().is_some() {
+            match self.sent(None).await {
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
+                outcome => return outcome.map(|count| self.report(count, total)),
+            }
+        }
+        if total == 0 {
             return Ok(0);
         }
-        let result = loop {
-            let op = Send::new(self.fd.clone(), staging, send_flags());
-            let BufResult(result, back) = self.handle.push(op).await;
-            staging = back.into_inner();
-            match result {
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
-                outcome => break outcome,
+        loop {
+            // The one copy the seam costs a completion backend: the slices are staged
+            // into a buffer the kernel can own for the length of the operation.
+            let mut staging = self.handle.take_staging();
+            for slice in bufs {
+                staging.extend_from_slice(slice);
             }
-        };
-        self.handle.give_staging(staging);
-        result
+            let op = Send::new(self.fd.clone(), staging, send_flags());
+            match self.sent(Some(op)).await {
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
+                outcome => return outcome.map(|count| self.report(count, total)),
+            }
+        }
     }
 
     fn shutdown_write(&self) -> io::Result<()> {

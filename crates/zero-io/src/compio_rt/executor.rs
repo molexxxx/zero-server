@@ -21,7 +21,6 @@ use std::time::{Duration, Instant};
 
 use compio_buf::BufResult;
 use compio_driver::{Key, OpCode, Proactor, PushEntry};
-use zero_core::OwnedBuf;
 
 use super::time::Timers;
 use crate::pool::Pool;
@@ -48,7 +47,7 @@ pub(crate) struct Handle {
     pub(crate) timers: RefCell<Timers>,
     live: Cell<usize>,
     staging: RefCell<Vec<Vec<u8>>>,
-    /// This core's receive-buffer pool, where a cancelled read returns its lease.
+    /// This core's receive-buffer pool.
     pub(crate) pool: Rc<Pool>,
 }
 
@@ -188,13 +187,9 @@ impl Handle {
     }
 
     /// Cancel an operation whose future is gone. The driver keeps the operation
-    /// and its buffer until the cancellation completes, so a block leased from the
-    /// pool returns its lease now and the block itself goes with the operation.
-    pub(crate) fn abandon<T: OpCode>(&self, key: Key<T>, pooled: bool) {
+    /// and its buffer until the cancellation completes.
+    pub(crate) fn abandon<T: OpCode>(&self, key: Key<T>) {
         drop(self.proactor.borrow_mut().cancel(key));
-        if pooled {
-            self.pool.release(OwnedBuf::with_capacity(0));
-        }
     }
 
     /// Submit an operation; the future it returns completes with the result.
@@ -202,17 +197,6 @@ impl Handle {
         Op {
             handle: Rc::clone(self),
             state: Some(State::Fresh(op)),
-            pooled: false,
-        }
-    }
-
-    /// Submit a receive into a block leased from the pool, whose lease returns to
-    /// the pool if the future is dropped before the receive completes.
-    pub(crate) fn push_pooled<T: OpCode + 'static>(self: &Rc<Self>, op: T) -> Op<T> {
-        Op {
-            handle: Rc::clone(self),
-            state: Some(State::Fresh(op)),
-            pooled: true,
         }
     }
 
@@ -421,7 +405,6 @@ pub(crate) fn exit() {
 pub(crate) struct Op<T: OpCode + 'static> {
     handle: Rc<Handle>,
     state: Option<State<T>>,
-    pooled: bool,
 }
 
 enum State<T: OpCode + 'static> {
@@ -457,7 +440,7 @@ where
 impl<T: OpCode + 'static> Drop for Op<T> {
     fn drop(&mut self) {
         if let Some(State::Pending(key)) = self.state.take() {
-            self.handle.abandon(key, self.pooled);
+            self.handle.abandon(key);
         }
     }
 }
