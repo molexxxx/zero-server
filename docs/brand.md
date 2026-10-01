@@ -11,15 +11,19 @@ draws its labels as outlines of Outfit and JetBrains Mono (SIL Open Font License
 
 The zero is a ring. One segment of it is lit, with a narrow slot cut on each side
 so the lit segment reads as a body traveling inside the ring rather than a stripe
-painted on it. In the animated files that segment laps the ring once every three
-seconds.
+painted on it. In the animated files that segment goes once around the ring in
+eight ticks: each tick turns it an eighth of a lap with an ease-out and holds it,
+so the motion reads as work being handed on, not as a spinner waiting.
 
 That is the core's runtime drawn literally: one non-blocking event loop per CPU
 core, each with one thing in hand and a free slot ahead of it, and nothing else
-moving. The static mark shows the segment at rest at the one-thirty position.
+moving. Every file rests with the segment at the one-thirty position, and the
+animated files end where they began.
 
 The wordmark `zero-server` is built from constructed monoline letterforms drawn
-as paths (a 100 unit x-height, a stroke of 20, round caps and joins), so it renders
+as paths (a 100 unit x-height, a stroke of 20, round caps and joins, an s with
+elliptical bowls so its width sits near the e and the o, and the space after the
+open r closed up before the o and the v), so it renders
 the same in a browser, through GitHub's image proxy, and on crates.io, npm, PyPI
 and NuGet, none of which can load a font for an image. The hyphen takes the ring's
 color and ties the name to the symbol.
@@ -29,14 +33,16 @@ the mark reads by value alone and survives grayscale and small sizes:
 
 | Surface | Ring | Pulse | Lightness (CIE L*) |
 | --- | --- | --- | --- |
-| light (bone) | `hero-deep` #5F470F | `accent-deep` #688D00 | 31.7 and 54.0 |
+| light (bone or white) | `hero-mid` #8C6A12 | `accent-deep` #688D00 | 46.9 and 54.0 |
 | dark (ink) | `hero` #CFAE45 | `accent` #D9F542 | 72.2 and 91.9 |
 
 ## Palette
 
 One hero, one accent, ink, a light surface and two grays. The hero and the accent
 each have a deep partner of the same hue for the light surface, because brass and
-flare are bright by design and cannot carry text on bone. No color in the palette,
+flare are bright by design and cannot carry text on bone. The hero has a third
+step, gilt, used only for the ring and the hyphen on light pages, so the mark
+stays gold there instead of turning brown; text keeps bronze. No color in the palette,
 or anywhere the brand appears, has an HSL hue between 170 and 300 degrees: no
 teal, cyan, blue, indigo, violet or purple. The hero is a muted brass at hue 46,
 clear of the rust oranges near hue 18 to 22.
@@ -48,7 +54,8 @@ clear of the rust oranges near hue 18 to 22.
 | `gray-1` | graphite | #57534A | 42 | 35.4 | muted text and rules on the light surface | 6.63:1 | 2.40:1 |
 | `gray-2` | ash | #A39E93 | 41 | 65.2 | muted text and rules on ink | 2.31:1 | 6.90:1 |
 | `hero` | brass | #CFAE45 | 46 | 72.2 | the ring; headings and links on ink | 1.85:1 | 8.58:1 |
-| `hero-deep` | bronze | #5F470F | 42 | 31.7 | the ring; headings and links on the light surface | 7.58:1 | 2.10:1 |
+| `hero-mid` | gilt | #8C6A12 | 43 | 46.9 | the ring and the hyphen on light surfaces; never text (5.02:1 on white) | 4.34:1 | |
+| `hero-deep` | bronze | #5F470F | 42 | 31.7 | headings and links on the light surface | 7.58:1 | 2.10:1 |
 | `accent` | flare | #D9F542 | 69 | 91.9 | the pulse; focus and status on ink | 1.06:1 | 14.98:1 |
 | `accent-deep` | moss | #688D00 | 76 | 54.0 | the pulse; focus and status on the light surface | 3.36:1 | 4.73:1 |
 
@@ -67,7 +74,8 @@ Ratios are WCAG 2.x contrast ratios from relative luminance. Body text needs
 | headings and links on ink | `hero` | `ink` | 8.58:1 | 4.5:1 |
 | large text, focus and status on the light surface | `accent-deep` | `surface` | 3.36:1 | 3:1 |
 | large text, focus and status on ink | `accent` | `ink` | 14.98:1 | 3:1 |
-| the ring on the light surface | `hero-deep` | `surface` | 7.58:1 | 3:1 |
+| the ring on the light surface | `hero-mid` | `surface` | 4.34:1 | 3:1 |
+| the ring on white | `hero-mid` | #FFFFFF | 5.02:1 | 3:1 |
 | the ring on ink | `hero` | `ink` | 8.58:1 | 3:1 |
 | label text on a `hero-deep` fill | `surface` | `hero-deep` | 7.58:1 | 4.5:1 |
 | label text on a `hero` fill | `ink` | `hero` | 8.58:1 | 4.5:1 |
@@ -125,7 +133,9 @@ mark exactly as `zero-logo-dark.svg` draws it, and the page's `theme-color` is
 | `assets/zero-logo.svg` | the static lockup for light backgrounds, transparent | documents, slides, package pages, anywhere motion is out of place |
 | `assets/zero-logo-dark.svg` | the static lockup for dark backgrounds, transparent | the same, on ink or any dark page |
 | `assets/zero-icon.svg` | the symbol on its own ink plate, 64 by 64 | the favicon, avatars, social and package icons, from 16 px up |
-| `assets/zero-icon-animated.svg` | the icon with the loop | profile and project cards at 40 px and up, where one moving icon is welcome |
+| `assets/zero-icon-animated.svg` | the icon with the loop | profile and project cards at 40 px and up on light pages |
+| `assets/zero-symbol.svg`, `assets/zero-symbol-dark.svg` | the bare symbol, no plate, for light and dark pages | anywhere from 24 px up where the ink plate would read as a muddy tile, such as GitHub's dark theme |
+| `assets/zero-symbol-animated-dark.svg` | the bare symbol for dark pages with the loop | profile and project cards on dark pages |
 | `assets/zero-server-icon.png` | `zero-icon.svg` rasterized at 128 by 128 | the NuGet package icon (`bindings/dotnet/Directory.Build.props` packs it); NuGet takes no SVG |
 | `assets/architecture.svg`, `assets/architecture-dark.svg`, `assets/architecture-narrow.svg`, `assets/architecture-narrow-dark.svg` | the architecture diagram, 960 wide and 400 wide, for light and dark pages; generated by `python scripts/architecture.py`, never edited by hand | the README's "How it works", narrow below 600 px |
 | `web/assets/zero-logo.svg`, `web/assets/zero-logo-dark.svg`, `web/assets/zero-icon.svg` | the site's copies, byte for byte the files in `assets/` | the documentation site; `/assets/zero-icon.svg` is its favicon |
@@ -141,8 +151,10 @@ The README picks a file per GitHub theme with `<picture>`:
 </picture>
 ```
 
-When a file in `assets/` changes, the copies in `web/assets/` change with it in the
-same commit, and `cargo xtask docs` rewrites the ones in `docs/assets/`.
+Every mark file and its copies in `web/assets/` and `docs/assets/` are written by
+`node scripts/brand.mjs`, which checks the hue rule, every contrast role in this
+page and the ring-to-pulse lightness order before it writes anything. Edit the
+script, never the files.
 
 ## Usage
 
@@ -161,10 +173,9 @@ same commit, and `cargo xtask docs` rewrites the ones in `docs/assets/`.
   outlines, stretch it, rotate it, rebuild the wordmark in a typeface, or change
   the letter spacing. In running text the name is written `zero-server`,
   lowercase, with the hyphen.
-- Show at most one animated mark per screen. The loop is one lap in three
-  seconds at constant speed; its fading trail is visible only while it moves.
-  Under `prefers-reduced-motion: reduce` the loop stops with the lit segment
-  parked at twelve o'clock, and a renderer without CSS animation draws the static
-  mark. An SVG shown through `<img>` is a separate document, and headless
-  Chromium with the preference emulated kept the loop running there; where motion
-  must be guaranteed off, use the static file.
+- Show at most one animated mark per screen. The animation plays once, after a
+  0.6 s pause: one lap in eight ticks over 3.2 s, ending at rest, so it never
+  runs longer than five seconds and needs no pause control (WCAG 2.2.2). Under
+  `prefers-reduced-motion: reduce` it does not run, and a renderer without CSS
+  animation draws the static mark; both rest at one-thirty, like every static
+  file.

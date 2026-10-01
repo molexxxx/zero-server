@@ -46,8 +46,8 @@ PALETTES = {
         "text": "#16140F",
         "muted": "#57534A",
         "line": "#57534A",
-        "station": "#5F470F",
-        "ring": "#5F470F",
+        "station": "#8C6A12",
+        "ring": "#8C6A12",
         "lit": "#688D00",
         "accent": "#688D00",
         "idle": "#57534A",
@@ -132,9 +132,10 @@ class Face:
 class Canvas:
     """Collects the elements of one diagram and serializes them."""
 
-    def __init__(self, width, height, palette, faces):
+    def __init__(self, width, height, palette, faces, top=0):
         self.width = width
         self.height = height
+        self.top = top
         self.palette = palette
         self.faces = faces
         self.parts = []
@@ -191,9 +192,10 @@ class Canvas:
     def svg(self):
         """Returns the finished document."""
         body = "".join(self.parts)
+        visible = self.height - self.top
         return (
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.width} {self.height}"'
-            f' width="{self.width}" height="{self.height}" role="img" aria-labelledby="t d">'
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 {self.top} {self.width} {visible}"'
+            f' width="{self.width}" height="{visible}" role="img" aria-labelledby="t d">'
             f'<title id="t">{TITLE}</title><desc id="d">{DESC}</desc>{body}</svg>\n'
         )
 
@@ -211,7 +213,7 @@ def tier_label(c, number, name, x, y, size, anchor):
 
 def wide(palette, faces):
     """The 960-wide variant: the request path read left to right."""
-    c = Canvas(960, 312, palette, faces)
+    c = Canvas(960, 312, palette, faces, top=44)
     track_y = 110
     ring_x = 140
     stations = [260, 400, 540, 690, 840]
