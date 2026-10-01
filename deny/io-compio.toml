@@ -155,6 +155,7 @@ allow = [
     "io-uring",
     "polling",
     "cfg_aliases",
+    "concurrent-queue",
     "crossbeam-queue",
     "crossbeam-utils",
     "flume",
@@ -218,8 +219,66 @@ reason = "enabled by cbindgen inside its build-only tree"
 # feature exists.
 [[bans.features]]
 crate = "rustix"
-allow = ["default", "event", "fs", "net", "pipe", "process", "std", "time"]
-reason = "enabled by tempfile, compio-driver and polling"
+allow = ["default", "event", "fs", "mm", "net", "pipe", "process", "std", "system", "time"]
+reason = "enabled by tempfile, compio-driver (mm and system for the io_uring ring) and polling"
+
+# io-compio: the defaults the compio graph enables on its own dependencies, each
+# the crate's `std` build (feature lists read from the manifests on 2026-10-01).
+[[bans.features]]
+crate = "concurrent-queue"
+allow = ["default", "std"]
+reason = "enabled by polling"
+
+[[bans.features]]
+crate = "crossbeam-queue"
+allow = ["default", "std", "alloc"]
+reason = "enabled by compio-driver"
+
+[[bans.features]]
+crate = "futures-util"
+allow = ["default", "std", "alloc", "async-await", "async-await-macro", "futures-macro", "slab"]
+reason = "enabled by compio-driver"
+
+[[bans.features]]
+crate = "linux-raw-sys"
+allow = [
+    "default",
+    "std",
+    "general",
+    "errno",
+    "io_uring",
+    "elf",
+    "ioctl",
+    "no_std",
+    "auxvec",
+    "if_ether",
+    "net",
+    "netlink",
+    "prctl",
+    "system",
+    "xdp",
+]
+reason = "enabled by rustix (net, event, mm, system) and compio-driver (io_uring)"
+
+[[bans.features]]
+crate = "lock_api"
+allow = ["default", "atomic_usize"]
+reason = "enabled by spin inside synchrony"
+
+[[bans.features]]
+crate = "once_cell"
+allow = ["default", "std", "alloc", "race"]
+reason = "enabled by compio-driver"
+
+[[bans.features]]
+crate = "spin"
+allow = ["default", "lock_api", "mutex", "spin_mutex", "rwlock", "once", "lazy", "barrier"]
+reason = "enabled by synchrony"
+
+[[bans.features]]
+crate = "syn"
+allow = ["default", "clone-impls", "derive", "parsing", "printing", "proc-macro", "full"]
+reason = "enabled by futures-macro and compio-send-wrapper"
 
 [[bans.features]]
 crate = "serde_derive"

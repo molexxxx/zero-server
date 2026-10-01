@@ -13,8 +13,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use zero_http_types::field::validate_field_value;
+use zero_io::rt::Acceptor;
 use zero_io::seam::{Listener, Shutdown, Timer};
-use zero_io::tokio_rt::Acceptor;
 use zero_limits::{Http1Limits, Limits};
 use zero_rt::{StatusSink, Worker, Workers};
 

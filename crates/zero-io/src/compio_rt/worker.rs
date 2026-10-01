@@ -1,21 +1,20 @@
-//! The workers: one thread per core, each with its own runtime, pool, date block and
-//! listener, running the caller's per-core future.
+//! The workers: one thread per core, each with its own driver, executor, pool, date
+//! block and listener, running the caller's per-core future.
 
-use std::cell::Cell;
 use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::num::NonZeroUsize;
-use std::pin::pin;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::Notify;
+use compio_driver::SharedFd;
+use socket2::Socket;
 
-use super::listen::{self, Acceptor, Handoff};
+use super::executor::{self, Handle};
+use super::listen::{self, Acceptor, Slot};
 use super::shutdown::ShutdownHandle;
 use crate::date::{Date, DATE_BLOCK_LEN};
 use crate::net::{self, ListenConfig};
@@ -38,8 +37,8 @@ pub struct Config {
     /// The request memory one core may lease at once
     /// (`zero_limits::services::REQUEST_MEMORY_PER_CORE`).
     pub memory_budget: u64,
-    /// How long a stopping worker waits for its tasks to finish before it leaks what is
-    /// left and returns, the second of tokio's two shutdown modes.
+    /// How long a stopping worker waits for its tasks to finish before it drops
+    /// what is left and returns.
     pub drain: Duration,
 }
 
@@ -57,7 +56,7 @@ impl Default for Config {
 }
 
 /// What a per-core future is given: this core's pool, date block, clock and signal.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Core {
     index: usize,
     count: usize,
@@ -67,30 +66,17 @@ pub struct Core {
     /// This core's `Date` block.
     pub date: Rc<Date>,
     shutdown: ShutdownHandle,
-    tasks: Rc<Tasks>,
+    handle: Rc<Handle>,
 }
 
-/// The tasks a core spawned through [`Runtime::spawn_local`] and has not seen end,
-/// so the worker can drain them to the deadline before its runtime goes.
-#[derive(Debug, Default)]
-struct Tasks {
-    live: Cell<usize>,
-    notify: Notify,
-}
-
-impl Tasks {
-    /// Wait until no spawned task is left.
-    async fn drained(&self) {
-        loop {
-            // Register before checking the count, so a task ending between the
-            // check and the wait still wakes this one.
-            let mut notified = pin!(self.notify.notified());
-            notified.as_mut().enable();
-            if self.live.get() == 0 {
-                return;
-            }
-            notified.await;
-        }
+impl std::fmt::Debug for Core {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Core")
+            .field("index", &self.index)
+            .field("count", &self.count)
+            .field("pinned", &self.pinned)
+            .field("io_uring", &self.handle.is_io_uring())
+            .finish_non_exhaustive()
     }
 }
 
@@ -122,7 +108,14 @@ impl Core {
     /// How many tasks spawned through [`Runtime::spawn_local`] are still running.
     #[must_use]
     pub fn live_tasks(&self) -> usize {
-        self.tasks.live.get()
+        self.handle.live()
+    }
+
+    /// Whether this core's driver is io_uring rather than the epoll fallback, IOCP
+    /// or kqueue.
+    #[must_use]
+    pub fn is_io_uring(&self) -> bool {
+        self.handle.is_io_uring()
     }
 }
 
@@ -131,21 +124,13 @@ impl Runtime for Core {
     where
         F: Future<Output = ()> + 'static,
     {
-        let tasks = Rc::clone(&self.tasks);
-        tasks.live.set(tasks.live.get().saturating_add(1));
-        drop(tokio::task::spawn_local(async move {
-            future.await;
-            tasks.live.set(tasks.live.get().saturating_sub(1));
-            if tasks.live.get() == 0 {
-                tasks.notify.notify_waiters();
-            }
-        }));
+        self.handle.spawn(future);
     }
 }
 
 impl Timer for Core {
     fn sleep(&self, duration: Duration) -> impl Future<Output = ()> {
-        super::time::sleep(duration)
+        super::time::sleep_on(&self.handle, duration)
     }
 
     fn timeout<F>(
@@ -156,7 +141,7 @@ impl Timer for Core {
     where
         F: Future,
     {
-        super::time::timeout(duration, future)
+        super::time::timeout_on(&self.handle, duration, future)
     }
 }
 
@@ -229,25 +214,22 @@ enum Seed {
     /// The shared listener this core accepts on for everyone, plus its own share.
     Distribute {
         listener: std::net::TcpListener,
-        cores: Vec<UnboundedSender<Handoff>>,
-        receiver: UnboundedReceiver<Handoff>,
+        cores: Vec<Arc<Slot>>,
+        slot: Arc<Slot>,
         addr: SocketAddr,
     },
     /// This core's share of the shared listener.
-    Handoff {
-        receiver: UnboundedReceiver<Handoff>,
-        addr: SocketAddr,
-    },
+    Handoff { slot: Arc<Slot>, addr: SocketAddr },
 }
 
-/// Start one worker per core, each running `per_core` on its own runtime.
+/// Start one worker per core, each running `per_core` on its own driver.
 ///
 /// # Arguments
 ///
 /// * `addr` - where to listen; port 0 picks one, and every core then listens there.
 /// * `config` - how many workers, pinning, the listener options, the pool sizes.
 /// * `per_core` - the future each core runs, given its [`Core`] and its [`Acceptor`];
-///   when it returns, the core's runtime drains for [`Config::drain`] and the worker
+///   when it returns, the core drains its tasks for [`Config::drain`] and the worker
 ///   ends. It is called on the worker's thread.
 ///
 /// # Returns
@@ -281,22 +263,16 @@ where
             seeds.push(Seed::Own(net::bind_listener(bound, &config.listen, index)?));
         }
     } else {
-        let (senders, receivers): (Vec<_>, Vec<_>) =
-            (0..count).map(|_| unbounded_channel()).unzip();
-        let mut receivers = receivers.into_iter();
-        let receiver = receivers
-            .next()
-            .ok_or_else(|| io::Error::other("no cores"))?;
+        let slots: Vec<Arc<Slot>> = (0..count).map(|_| Arc::new(Slot::default())).collect();
+        let mut rest = slots.iter().cloned();
+        let slot = rest.next().ok_or_else(|| io::Error::other("no cores"))?;
         seeds.push(Seed::Distribute {
             listener: first,
-            cores: senders,
-            receiver,
+            cores: slots.clone(),
+            slot,
             addr: bound,
         });
-        seeds.extend(receivers.map(|receiver| Seed::Handoff {
-            receiver,
-            addr: bound,
-        }));
+        seeds.extend(rest.map(|slot| Seed::Handoff { slot, addr: bound }));
     }
 
     let mut threads = Vec::with_capacity(count);
@@ -325,33 +301,23 @@ where
     })
 }
 
-/// Run `future` on a runtime of its own on the current thread, for a test or a tool
-/// that needs the backend without the workers.
-///
-/// # Arguments
-///
-/// * `future` - the work; it runs inside a `LocalSet`, so it may spawn local tasks.
-///
-/// # Returns
-///
-/// The future's output.
-///
-/// # Errors
-///
-/// When the runtime cannot be created on this thread.
-pub fn block_on<F>(future: F) -> io::Result<F::Output>
-where
-    F: Future + 'static,
-{
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()?;
-    let local = tokio::task::LocalSet::new();
-    Ok(local.block_on(&runtime, future))
+/// A listener as the driver sees it, attached where the driver needs that.
+fn share_listener(
+    handle: &Rc<Handle>,
+    listener: std::net::TcpListener,
+) -> io::Result<SharedFd<Socket>> {
+    let listener = Socket::from(listener);
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawSocket;
+        handle.attach(listener.as_raw_socket() as compio_driver::RawFd)?;
+    }
+    #[cfg(not(windows))]
+    let _ = handle;
+    Ok(SharedFd::new(listener))
 }
 
-/// One worker thread: the runtime, the pin, the core, the per-core future.
+/// One worker thread: the driver, the pin, the core, the per-core future.
 fn worker<F, Fut>(
     index: usize,
     count: usize,
@@ -364,68 +330,84 @@ where
     F: Fn(Core, Acceptor) -> Fut,
     Fut: Future<Output = io::Result<()>> + 'static,
 {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()?;
+    let pool = Rc::new(Pool::new(config.receive_block, config.memory_budget));
+    let handle = Handle::new(pool)?;
+    executor::enter(&handle);
+    let outcome = run(index, count, seed, config, per_core, shutdown, &handle);
+    // Whatever is still queued after the drain goes with the executor: the tasks
+    // are dropped first, which cancels their operations and closes their sockets,
+    // then the driver.
+    handle.clear();
+    executor::exit();
+    outcome
+}
+
+/// The worker's body, on its thread with the core set.
+fn run<F, Fut>(
+    index: usize,
+    count: usize,
+    seed: Seed,
+    config: &Config,
+    per_core: &F,
+    shutdown: ShutdownHandle,
+    handle: &Rc<Handle>,
+) -> io::Result<()>
+where
+    F: Fn(Core, Acceptor) -> Fut,
+    Fut: Future<Output = io::Result<()>> + 'static,
+{
     let pinned = config.pin && zero_sys::affinity::pin_current_thread(&[index]).is_ok();
-    let local = tokio::task::LocalSet::new();
-    let outcome = local.block_on(&runtime, async {
-        let pool = Rc::new(Pool::new(config.receive_block, config.memory_budget));
-        let date = Rc::new(Date::now());
-        let core = Core {
-            index,
-            count,
-            pinned,
-            pool,
-            date: Rc::clone(&date),
-            shutdown: shutdown.clone(),
-            tasks: Rc::new(Tasks::default()),
-        };
-        let tasks = Rc::clone(&core.tasks);
-        let ticker = shutdown.clone();
-        drop(tokio::task::spawn_local(async move {
-            let mut tick = tokio::time::interval(Duration::from_secs(1));
-            while ticker.until(tick.tick()).await.is_some() {
-                date.refresh();
+    let date = Rc::new(Date::now());
+    let core = Core {
+        index,
+        count,
+        pinned,
+        pool: Rc::clone(&handle.pool),
+        date: Rc::clone(&date),
+        shutdown: shutdown.clone(),
+        handle: Rc::clone(handle),
+    };
+    let ticker = core.clone();
+    handle.spawn(async move {
+        loop {
+            if ticker
+                .shutdown
+                .until(ticker.sleep(Duration::from_secs(1)))
+                .await
+                .is_none()
+            {
+                return;
             }
-        }));
-        let nodelay = config.listen.nodelay;
-        let acceptor = match seed {
-            Seed::Own(listener) => Acceptor::Own {
-                listener: tokio::net::TcpListener::from_std(listener)?,
-                nodelay,
-            },
-            Seed::Distribute {
+            date.refresh();
+        }
+    });
+    let nodelay = config.listen.nodelay;
+    let acceptor = match seed {
+        Seed::Own(listener) => Acceptor::own(
+            share_listener(handle, listener)?,
+            Rc::clone(handle),
+            nodelay,
+        ),
+        Seed::Distribute {
+            listener,
+            cores,
+            slot,
+            addr,
+        } => {
+            let listener = share_listener(handle, listener)?;
+            handle.spawn(listen::distribute(
+                Rc::clone(handle),
                 listener,
                 cores,
-                receiver,
-                addr,
-            } => {
-                let listener = tokio::net::TcpListener::from_std(listener)?;
-                drop(tokio::task::spawn_local(listen::distribute(
-                    listener,
-                    cores,
-                    shutdown.clone(),
-                )));
-                Acceptor::Handoff {
-                    receiver: std::cell::RefCell::new(receiver),
-                    addr,
-                    nodelay,
-                }
-            }
-            Seed::Handoff { receiver, addr } => Acceptor::Handoff {
-                receiver: std::cell::RefCell::new(receiver),
-                addr,
-                nodelay,
-            },
-        };
-        let outcome = per_core(core, acceptor).await;
-        // Drain: the tasks still running (the open connections) finish on their own
-        // up to the deadline, then go with the runtime.
-        let _ = tokio::time::timeout(config.drain, tasks.drained()).await;
-        outcome
-    });
-    runtime.shutdown_timeout(config.drain);
+                shutdown.clone(),
+            ));
+            Acceptor::handoff(slot, Rc::clone(handle), addr, nodelay)
+        }
+        Seed::Handoff { slot, addr } => Acceptor::handoff(slot, Rc::clone(handle), addr, nodelay),
+    };
+    let outcome = handle.block_on(per_core(core, acceptor));
+    // Drain: the tasks still running (the open connections) finish on their own up
+    // to the deadline.
+    handle.drain(config.drain);
     outcome
 }

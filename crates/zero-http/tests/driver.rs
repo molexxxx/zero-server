@@ -125,14 +125,14 @@ impl Server {
         let events: Arc<Mutex<Vec<Event>>> = Arc::new(Mutex::new(Vec::new()));
         let config = Config {
             runtime: zero_rt::Config {
-                io: zero_io::tokio_rt::Config {
+                io: zero_io::rt::Config {
                     threads: 2,
                     drain,
-                    listen: zero_io::tokio_rt::ListenConfig {
+                    listen: zero_io::rt::ListenConfig {
                         handoff: std::env::var_os("ZERO_TEST_HANDOFF").is_some(),
-                        ..zero_io::tokio_rt::ListenConfig::default()
+                        ..zero_io::rt::ListenConfig::default()
                     },
-                    ..zero_io::tokio_rt::Config::default()
+                    ..zero_io::rt::Config::default()
                 },
             },
             limits,

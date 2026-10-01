@@ -80,12 +80,23 @@ jobs:
         run: cargo test --workspace
 
       # The completion backend is a feature of the runtime seam, off in every published
-      # default, so the crates that sit on the seam are tested a second time with it on.
+      # default, so the crates that sit on the seam are tested a second time with it on;
+      # `rt` resolves to it whenever the feature is on, so the tests above the seam
+      # need no change.
       - name: Test on the io-compio backend
         run: |
-          cargo test -p zero-io --features io-compio
+          cargo test -p zero-io --no-default-features --features io-compio
           cargo test -p zero-http --features io-compio
           cargo test -p zero-bench --features io-compio
+
+      # The shipped graph carries no completion-backend crate (DESIGN.md section 5.3):
+      # the default build's dependency tree names none of them.
+      - name: No compio crate in the default graph
+        run: |
+          if cargo tree --workspace -e normal --prefix none | grep -E "^(compio|io-uring|polling) "; then
+            echo "::error::a completion-backend crate is in the default graph"
+            exit 1
+          fi
 
       # Every example runs to completion with no other service present. The generator
       # regenerates the cross-language conformance vectors, and the diff fails if the
@@ -231,6 +242,24 @@ jobs:
         env:
           ZERO_TEST_HANDOFF: "1"
         run: cargo test -p zero-io -p zero-http --test echo --test driver --test routing --test no_alloc
+
+      # The completion backend has a driver per operating system (io_uring with the
+      # epoll fallback, IOCP, kqueue), so the same tests run on it on all three.
+      - name: Test the seam, the workers and the driver on the io-compio backend
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          { cargo test -p zero-io --no-default-features --features io-compio --no-fail-fast \
+              && cargo test -p zero-http --features io-compio --no-fail-fast; } 2>&1 \
+            | tee compio-test.log || status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -A2 -E "panicked at" compio-test.log | grep -v -E "^--$|^stack backtrace|^note: run with" \
+              | head -10 | sed 's/^/::error::/'
+            grep -E "^test .*FAILED$|^test result: FAILED" compio-test.log | head -10 | sed 's/^/::warning::/'
+            grep -E "^error" compio-test.log | head -10 | sed 's/^/::notice::/'
+          fi
+          exit "$status"
 
   msrv:
     name: minimum supported rust

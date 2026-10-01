@@ -1,12 +1,6 @@
-//! The listener strategy per operating system (`DESIGN.md` section 5.4).
-//!
-//! Linux: one `SO_REUSEPORT` listener per core, created with socket2, backlog 1,024,
-//! optionally `SO_INCOMING_CPU`, `TCP_DEFER_ACCEPT` and `TCP_FASTOPEN`; the kernel
-//! distributes connections across the group. Windows and macOS: one listener (with
-//! `SO_EXCLUSIVEADDRUSE` on Windows, where `SO_REUSEADDR` is unsafe for servers and
-//! there is no reuse-port group; Apple's `SO_REUSEPORT` does not distribute TCP) whose
-//! accepted sockets core 0 hands round-robin to every core over an unbounded channel,
-//! the explicit wake of section 5.1.
+//! The acceptor of the `io-tokio` backend over the listener strategy of
+//! [`crate::net`]: a core's own listener on Linux, or the sockets core 0's listener
+//! hands it over an unbounded channel on Windows and macOS.
 
 use std::cell::RefCell;
 use std::future::poll_fn;
@@ -14,94 +8,12 @@ use std::io;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use socket2::{Domain, Protocol, Socket, Type};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use super::shutdown::ShutdownHandle;
 use super::tcp::TcpStream;
+pub(crate) use crate::net::{is_transient, Handoff};
 use crate::seam::{Listener, Shutdown};
-
-/// How a listening socket is set up.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ListenConfig {
-    /// The `listen` backlog; 1,024 as the Round 23 Rust entries use.
-    pub backlog: i32,
-    /// `TCP_DEFER_ACCEPT` (Linux): wake the acceptor only once data arrives, waiting
-    /// at most this long.
-    pub defer_accept: Option<Duration>,
-    /// `TCP_FASTOPEN` (Linux): the queue length for connections carrying data in the
-    /// SYN.
-    pub fastopen: Option<u32>,
-    /// `SO_INCOMING_CPU` (Linux): steer each core's listener to its own CPU.
-    pub incoming_cpu: bool,
-    /// `TCP_NODELAY` on every accepted socket.
-    pub nodelay: bool,
-    /// One listener on core 0 handing sockets to the cores in turn, the strategy
-    /// Windows and macOS always use; on Linux it replaces the per-core
-    /// `SO_REUSEPORT` listeners, which lets the handoff path run on every platform.
-    pub handoff: bool,
-}
-
-impl Default for ListenConfig {
-    fn default() -> Self {
-        ListenConfig {
-            backlog: 1024,
-            defer_accept: None,
-            fastopen: None,
-            incoming_cpu: false,
-            nodelay: true,
-            handoff: false,
-        }
-    }
-}
-
-/// Whether every core gets a listener of its own: Linux, unless the handoff
-/// strategy was chosen.
-pub(crate) const fn per_core_listeners(config: &ListenConfig) -> bool {
-    cfg!(target_os = "linux") && !config.handoff
-}
-
-/// A listening socket at `addr`, non-blocking, ready for the runtime.
-///
-/// # Arguments
-///
-/// * `addr` - where to listen; port 0 picks one.
-/// * `config` - the options.
-/// * `core` - the core the listener belongs to, for `SO_INCOMING_CPU`.
-pub(crate) fn bind(
-    addr: SocketAddr,
-    config: &ListenConfig,
-    core: usize,
-) -> io::Result<std::net::TcpListener> {
-    let socket = Socket::new(Domain::for_address(addr), Type::STREAM, Some(Protocol::TCP))?;
-    #[cfg(target_os = "linux")]
-    {
-        zero_sys::sockopt::set_reuse_port(&socket, true)?;
-        if config.incoming_cpu {
-            zero_sys::sockopt::set_incoming_cpu(&socket, core)?;
-        }
-    }
-    #[cfg(not(target_os = "linux"))]
-    let _ = core;
-    #[cfg(windows)]
-    zero_sys::sockopt::set_exclusive_address_use(&socket, true)?;
-    socket.bind(&addr.into())?;
-    #[cfg(target_os = "linux")]
-    {
-        if let Some(wait) = config.defer_accept {
-            zero_sys::sockopt::set_tcp_defer_accept(&socket, wait)?;
-        }
-        if let Some(queue) = config.fastopen {
-            zero_sys::sockopt::set_tcp_fastopen(&socket, queue)?;
-        }
-    }
-    socket.listen(config.backlog)?;
-    socket.set_nonblocking(true)?;
-    Ok(socket.into())
-}
-
-/// An accepted connection on its way to a core: the socket and the peer's address.
-pub(crate) type Handoff = (std::net::TcpStream, SocketAddr);
 
 /// Where a core's connections come from.
 #[derive(Debug)]
@@ -191,15 +103,4 @@ pub(crate) async fn distribute(
             Err(_) => break,
         }
     }
-}
-
-/// Whether an accept error passes with time rather than ending the listener.
-pub(crate) fn is_transient(err: &io::Error) -> bool {
-    matches!(
-        err.kind(),
-        io::ErrorKind::WouldBlock
-            | io::ErrorKind::Interrupted
-            | io::ErrorKind::ConnectionAborted
-            | io::ErrorKind::ConnectionReset
-    ) || zero_sys::error::out_of_resources(err)
 }

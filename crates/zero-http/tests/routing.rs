@@ -150,14 +150,14 @@ impl Server {
     fn start() -> Self {
         let config = Config {
             runtime: zero_rt::Config {
-                io: zero_io::tokio_rt::Config {
+                io: zero_io::rt::Config {
                     threads: 2,
                     drain: Duration::from_secs(2),
-                    listen: zero_io::tokio_rt::ListenConfig {
+                    listen: zero_io::rt::ListenConfig {
                         handoff: std::env::var_os("ZERO_TEST_HANDOFF").is_some(),
-                        ..zero_io::tokio_rt::ListenConfig::default()
+                        ..zero_io::rt::ListenConfig::default()
                     },
-                    ..zero_io::tokio_rt::Config::default()
+                    ..zero_io::rt::Config::default()
                 },
             },
             ..Config::default()

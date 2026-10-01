@@ -14,8 +14,8 @@ use std::net::SocketAddr;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use zero_io::rt::{self, Acceptor, Core, ShutdownHandle};
 use zero_io::seam::Runtime;
-use zero_io::tokio_rt::{self, Acceptor, Core, ShutdownHandle};
 
 use crate::contain::contain;
 
@@ -55,7 +55,7 @@ pub type StatusSink = Arc<dyn Fn(Event) + Send + Sync>;
 #[derive(Clone, Debug, Default)]
 pub struct Config {
     /// The runtime seam's settings: threads, pinning, the listener, the pool.
-    pub io: tokio_rt::Config,
+    pub io: rt::Config,
 }
 
 /// One core's worker: the seam's core plus the panic counter and the status sink.
@@ -147,7 +147,7 @@ impl Worker {
 /// The running workers.
 #[derive(Debug)]
 pub struct Workers {
-    inner: tokio_rt::Workers,
+    inner: rt::Workers,
 }
 
 impl Workers {
@@ -215,7 +215,7 @@ where
     F: Fn(Worker, Acceptor) -> Fut + Send + Sync + 'static,
     Fut: Future<Output = io::Result<()>> + 'static,
 {
-    let inner = tokio_rt::serve(addr, config.io, move |core, acceptor| {
+    let inner = rt::serve(addr, config.io, move |core, acceptor| {
         let status = Arc::clone(&status);
         let worker = Worker {
             core,
@@ -257,17 +257,17 @@ mod tests {
 
     fn config() -> Config {
         Config {
-            io: zero_io::tokio_rt::Config {
+            io: zero_io::rt::Config {
                 threads: 2,
                 drain: Duration::from_secs(2),
-                ..zero_io::tokio_rt::Config::default()
+                ..zero_io::rt::Config::default()
             },
         }
     }
 
     /// Answer each line with the core's panic count; a line saying `panic` panics the
     /// connection task first.
-    async fn serve(worker: Worker, acceptor: zero_io::tokio_rt::Acceptor) -> std::io::Result<()> {
+    async fn serve(worker: Worker, acceptor: zero_io::rt::Acceptor) -> std::io::Result<()> {
         while let Some(accepted) = worker.shutdown().until(acceptor.accept()).await {
             let (stream, _) = accepted?;
             let task_worker = worker.clone();

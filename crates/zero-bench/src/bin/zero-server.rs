@@ -26,9 +26,10 @@ fn main() -> ExitCode {
     match start_realistic(addr, config(threads, args.flag("handoff"))) {
         Ok(workers) => {
             println!(
-                "zero-server listening on {} with {} core(s), pid {}",
+                "zero-server listening on {} with {} core(s) ({}), pid {}",
                 workers.local_addr(),
                 workers.count(),
+                zero_bench::entries::backend(),
                 std::process::id()
             );
             match workers.join() {

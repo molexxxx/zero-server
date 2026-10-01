@@ -19,17 +19,36 @@
 //! with no work stealing and no `Send` bound: [`tokio_rt::serve`] starts one worker
 //! thread per CPU, pins it where the platform allows, gives it its own listener on
 //! Linux (`SO_REUSEPORT`) or its share of one listener's accepts on Windows and macOS
-//! (section 5.4), and runs the caller's per-core future on it. Every raw socket option
-//! and affinity call goes through `zero-sys`, so this crate stays at
+//! (section 5.4), and runs the caller's per-core future on it. The `io-compio`
+//! backend (a feature, off in every published default) is the same shape over
+//! compio-driver's proactor: io_uring on Linux with the epoll fallback, IOCP on
+//! Windows, kqueue on macOS, with an executor of this crate's own, so every crate
+//! above the seam runs on both and the two are compared on one binary (section
+//! 5.3). [`rt`] names whichever is in the build. Every raw socket option and
+//! affinity call goes through `zero-sys`, so this crate stays at
 //! `unsafe_code = "forbid"`.
 
+#[cfg(feature = "io-compio")]
+pub mod compio_rt;
 pub mod date;
+mod net;
 pub mod pool;
 pub mod seam;
 #[cfg(feature = "io-tokio")]
 pub mod tokio_rt;
 
+/// The backend the crates above the seam run on: [`compio_rt`] when the
+/// `io-compio` feature is on, which is how the comparison runs reach every crate
+/// unchanged, otherwise [`tokio_rt`].
+pub mod rt {
+    #[cfg(feature = "io-compio")]
+    pub use crate::compio_rt::*;
+    #[cfg(all(feature = "io-tokio", not(feature = "io-compio")))]
+    pub use crate::tokio_rt::*;
+}
+
 pub use date::{Date, DATE_BLOCK_LEN};
+pub use net::{DatagramConfig, ListenConfig};
 pub use pool::Pool;
 pub use seam::{DatagramMeta, Ecn, Leased};
 

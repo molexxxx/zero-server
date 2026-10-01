@@ -4,6 +4,7 @@
 //! borrowed slice ever outlives the operation that uses it. The storage is
 //! allocated once at its final capacity and is never grown.
 
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::vec::Vec;
 use core::fmt;
@@ -16,7 +17,7 @@ use crate::{Error, Result};
 /// [`put`](Self::put); the bytes from `len()` to `capacity()` are free for the
 /// next write. The capacity is set at construction and never changes.
 pub struct OwnedBuf {
-    storage: Vec<u8>,
+    storage: Box<[u8]>,
     filled: usize,
 }
 
@@ -33,7 +34,7 @@ impl OwnedBuf {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            storage: alloc::vec![0; capacity],
+            storage: alloc::vec![0; capacity].into_boxed_slice(),
             filled: 0,
         }
     }
@@ -51,9 +52,39 @@ impl OwnedBuf {
     pub fn from_vec(bytes: Vec<u8>) -> Self {
         let filled = bytes.len();
         Self {
-            storage: bytes,
+            storage: bytes.into_boxed_slice(),
             filled,
         }
+    }
+
+    /// Wraps a boxed slice as a buffer with `filled` bytes already in it.
+    ///
+    /// A completion backend hands the storage to the kernel by value and gets it
+    /// back with a count; this puts the two together again without a copy.
+    ///
+    /// # Arguments
+    ///
+    /// * `storage` - the bytes; their length is the capacity.
+    /// * `filled` - how many leading bytes are filled; more than the capacity
+    ///   counts as the whole capacity.
+    ///
+    /// # Returns
+    ///
+    /// The buffer.
+    #[must_use]
+    pub fn from_parts(storage: Box<[u8]>, filled: usize) -> Self {
+        let filled = filled.min(storage.len());
+        Self { storage, filled }
+    }
+
+    /// Takes the buffer apart into its storage and its filled length.
+    ///
+    /// # Returns
+    ///
+    /// The storage, whose length is the capacity, and the filled length.
+    #[must_use]
+    pub fn into_parts(self) -> (Box<[u8]>, usize) {
+        (self.storage, self.filled)
     }
 
     /// Returns the number of bytes the buffer can hold.
@@ -190,7 +221,7 @@ impl OwnedBuf {
     /// Returns the filled bytes as a vector, giving up the spare capacity.
     #[must_use]
     pub fn into_vec(self) -> Vec<u8> {
-        let mut bytes = self.storage;
+        let mut bytes = Vec::from(self.storage);
         bytes.truncate(self.filled);
         bytes
     }
@@ -303,5 +334,17 @@ mod tests {
         fn clone_filled(&self) -> alloc::vec::Vec<u8> {
             self.filled().to_vec()
         }
+    }
+
+    #[test]
+    fn parts_round_trip_without_losing_the_capacity() {
+        let mut buf = OwnedBuf::with_capacity(8);
+        assert!(buf.put(b"abc").is_ok());
+        let (storage, filled) = buf.into_parts();
+        assert_eq!((storage.len(), filled), (8, 3));
+        let buf = OwnedBuf::from_parts(storage, filled);
+        assert_eq!((buf.capacity(), buf.filled()), (8, &b"abc"[..]));
+        let clamped = OwnedBuf::from_parts(alloc::vec![1; 4].into_boxed_slice(), 9);
+        assert_eq!(clamped.len(), 4);
     }
 }

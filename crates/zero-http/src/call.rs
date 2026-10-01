@@ -17,7 +17,7 @@ use zero_core::Error;
 use zero_http1::{Field, Head, TargetForm, Version};
 use zero_http_types::field::{validate_field_name, validate_field_value};
 use zero_http_types::{HeaderName, Method, StatusCode};
-use zero_io::tokio_rt::Core;
+use zero_io::rt::Core;
 use zero_router::{Allow, Resolution, Router};
 use zero_rt::Worker;
 use zero_uri::{percent_decode, split_query};

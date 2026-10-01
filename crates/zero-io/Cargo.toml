@@ -15,7 +15,7 @@ default = ["io-tokio"]
 # The readiness backend: one tokio current-thread runtime per core.
 io-tokio = ["dep:tokio"]
 # The completion backend, built and tested beside io-tokio and never on by default.
-io-compio = []
+io-compio = ["dep:compio-driver", "dep:compio-buf"]
 
 [dependencies]
 zero-core.workspace = true
@@ -36,6 +36,16 @@ tokio = { version = "1.53.1", default-features = false, features = [
   "io-util",
 ], optional = true }
 socket2 = { version = "0.6.5", default-features = false }
+# The completion backend: compio-driver's proactor (io_uring with the polling
+# fallback on Linux, IOCP on Windows, kqueue through polling on macOS) and the
+# buffer traits its operations take (crates.io max_stable_version compio-driver
+# 0.12.5 published 2026-08-18 and compio-buf 0.8.3 published 2026-06-14, read
+# 2026-10-01; neither yanked; the 0.13 and 0.9 betas of 2026-09-29 are not stable).
+compio-driver = { version = "0.12.5", default-features = false, features = [
+  "io-uring",
+  "polling",
+], optional = true }
+compio-buf = { version = "0.8.3", default-features = false, optional = true }
 
 [lints]
 workspace = true

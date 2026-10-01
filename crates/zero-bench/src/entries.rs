@@ -9,6 +9,17 @@ use zero_server::http::{serve, Call, Config, Handler, Router, Workers};
 use zero_server::http_types::Method;
 use zero_server::json::Writer;
 
+/// The backend and driver an entry runs on, for the start line: `io-tokio on
+/// epoll`, `io-compio on io_uring`, and so on.
+#[must_use]
+pub fn backend() -> String {
+    format!(
+        "{} on {}",
+        zero_server::io::rt::BACKEND,
+        zero_server::io::rt::driver().unwrap_or("an unknown driver")
+    )
+}
+
 /// The `Server` field value both entries send.
 pub const SERVER: &str = "zero";
 

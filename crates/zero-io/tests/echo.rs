@@ -2,18 +2,18 @@
 //! and a connection that is idle holds no receive buffer, which the pool's lease count
 //! shows from inside the core.
 
-#![cfg(feature = "io-tokio")]
+#![cfg(any(feature = "io-tokio", feature = "io-compio"))]
 
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
 use zero_core::OwnedBuf;
+use zero_io::rt::{serve, Acceptor, Config, Core};
 use zero_io::seam::{Leased, Listener, Runtime, Shutdown, Stream};
-use zero_io::tokio_rt::{serve, Acceptor, Config, Core};
 
 /// Echo what arrives, then report how many buffers this core has out on lease.
-async fn echo(core: Core, stream: zero_io::tokio_rt::TcpStream) {
+async fn echo(core: Core, stream: zero_io::rt::TcpStream) {
     loop {
         let Some(read) = core.shutdown().until(stream.read_leased(&core.pool)).await else {
             return;
@@ -67,9 +67,9 @@ async fn per_core(core: Core, acceptor: Acceptor) -> io::Result<()> {
 fn config() -> Config {
     Config {
         drain: Duration::from_secs(2),
-        listen: zero_io::tokio_rt::ListenConfig {
+        listen: zero_io::rt::ListenConfig {
             handoff: std::env::var_os("ZERO_TEST_HANDOFF").is_some(),
-            ..zero_io::tokio_rt::ListenConfig::default()
+            ..zero_io::rt::ListenConfig::default()
         },
         ..Config::default()
     }

@@ -93,8 +93,11 @@ the same commit.
   `x86_64-pc-windows-msvc` and `aarch64-apple-darwin` from the Linux runner
   (CI's `rust` job), and its Linux tests run on real sockets (`#[cfg_attr(miri,
   ignore)]`); only the control-message codec and the allocator run under Miri.
-  `zero-io` holds the seam traits, the per-core pool and date block, and the
-  `io-tokio` backend (see "In progress", step 4). `zero-rt` holds the chunked
+  `zero-io` holds the seam traits, the per-core pool and date block, the
+  `io-tokio` backend (see "In progress", step 4) and the `io-compio` backend
+  (`crates/zero-io/src/compio_rt/`, a feature off in every default; see "In
+  progress", step 8); `zero_io::rt` names whichever backend the build has, and
+  every crate above the seam uses that name. `zero-rt` holds the chunked
   arena, the slot state word, the tiers, the cancel flag, panic containment and
   the per-core workers with the status callback (step 5, first half).
   `zero-http` holds the HTTP/1.1 connection driver over the seam
@@ -461,6 +464,57 @@ declare `approach` Realistic with `classification` Platform
 design describes them as Stripped; `zero-server-plt` keeps the design's
 Stripped and Platform.
 
+R.3 step 8 is in: the `io-compio` backend of `zero-io` behind the feature of
+that name, over compio-driver 0.12.5's proactor (io_uring on Linux with the
+epoll fallback compio's fusion driver takes when the ring is refused, IOCP on
+Windows, kqueue through polling on macOS) with an executor of this crate's own,
+since the design keeps compio-runtime out of the graph: `executor.rs` (a run
+queue of `!Send` tasks whose wakers push an index and interrupt the driver only
+from another thread, the operation future that submits on first poll and pops
+the completion, `block_on` for a core without the workers), `ops.rs` (every
+operation named once, and the record kept for an operation whose future was
+dropped: the key stays until the completion arrives and the block it held goes
+back to the pool, so a read cut short by a timeout leaks nothing), `time.rs`
+(the deadlines in a binary heap whose entries know their position, so a sleep
+leaves in logarithmic time and a warm core allocates nothing for timers),
+`shutdown.rs`, `listen.rs` (an accept operation per core on Linux, core 0's
+listener handing sockets through a slot with a waker elsewhere), `tcp.rs` (every
+read and write takes the block's storage by value through `OwnedBuf::into_parts`
+and `from_parts`, which `zero-core` gained for it, and the readiness operation
+belongs to the stream across the futures that wait on it, since the HTTP driver
+drops its read each turn another branch wins), `udp.rs` (readiness then the
+`zero-sys` batch calls on Unix, one operation per datagram on Windows) and
+`worker.rs`. The listener and datagram setup both backends share moved to
+`crate::net`. CI runs `zero-io` without the tokio default and `zero-http` with
+the feature on all three runners (`seam` job) and fails if a compio, io-uring
+or polling crate appears in the default `cargo tree`; `deny/io-compio.toml` was
+confirmed by its first run (concurrent-queue and the default features the
+graph enables added, rustix `mm` and `system` for the ring), and the 38 crates
+the feature adds to the lockfile carry safe-to-deploy exemptions in
+`supply-chain/config.toml`. Every test of `zero-io` and `zero-http` passes on
+both backends on this machine, where compio picks io_uring (kernel 6.18, the
+ring not blocked here). Measured on the same container as step 7 (server on 2
+cores, generator on 2, loopback, 4 s runs): the Realistic entry on `io-compio`
+serves plaintext at 256 connections at 1,015,067 requests per second (tokio
+1,225,326), at 1,024 connections 679,495 (tokio 1,246,027), json at 256
+connections 166,194 (tokio 178,460) and at 16 connections 108,017 (tokio
+181,118), the Platform entry 1,012,520 and 165,711; zero errors everywhere;
+resident bytes per idle connection 6,282 at 10,000 connections (tokio 6,914);
+the counting allocator sees 5 allocations per warm request on `io-compio`, all
+inside the driver, which allocates one record per operation it owns
+(`tests/no_alloc.rs` asserts the number stays constant on that backend and zero
+on `io-tokio`). The gaps at 1,024 and at 16 connections are the backend's own
+and are the next thing to look at: the receive still takes two operations (a
+readiness poll, then the receive into the leased block) where io_uring's
+provided buffer ring (`RecvManaged` with compio's `BufferPool`) would take one
+and keep the lazy lease, and the driver's record per operation is the one
+allocation per request this backend has. Also open: the Windows and macOS runs
+of the backend wait for CI's `seam` job (compile-checked for both targets from
+here), and the section 5.7 CPU-per-request figure needs cgroup accounting.
+Unverified: compio-driver's API was read from the crate sources downloaded from
+the registry (0.12.5) and from the repository's clone (last commit
+2026-09-30, so not archived), since docs.rs is unreachable here.
+
 ## Next, in order
 
 The work is `ROADMAP.md` section R.3, taken in order with the exit criteria
@@ -489,8 +543,11 @@ stated there. The first release's items:
    `zero-http` (step 5), the router with the small codecs (step 6), and the
    harness with the measurements this machine can take (step 7): done except
    for the parts named under "In progress"; step 7's tier runs wait for
-   hardware and the owner. Next: the `io-compio` backend of `zero-io` with
-   the comparison baseline (step 8), then steps 9 to 14 to the release 1 tag.
+   hardware and the owner. The `io-compio` backend (step 8) is in and tested
+   on both backends here; its buffer-ring receive and its Windows and macOS
+   runs are named under "In progress". Next: step 9 (static files and
+   conditional requests, `zero-static`), then steps 10 to 14 to the release
+   1 tag.
 
 Before writing code for an item: read the roadmap entry, the design sections
 it cites, and the research note for the area; fetch every standard the code
@@ -566,6 +623,11 @@ implements and work from its text (`RULES.md`, Standards-first).
   `ZERO_TEST_HANDOFF=1` makes the echo, driver and routing tests use the
   one-listener accept handoff those platforms run, on Linux, so a failure of
   that path reproduces here (`ListenConfig::handoff`).
+- io_uring is available in this container (kernel 6.18, `io_uring_disabled`
+  0), so `cargo test -p zero-io --no-default-features --features io-compio`
+  exercises the ring and `zero-server --threads 1` prints `io-compio on
+  io_uring` when built with the feature; a container whose seccomp profile
+  blocks the ring takes compio's epoll fallback and prints `on epoll`.
 - The container's descriptor hard limit is 20,000 (`ulimit -Hn`) over a soft
   limit of 4,096; `ulimit -n 20000` before `zero-bench idle`, since the server
   and the probe each hold one descriptor per connection, and a server past its

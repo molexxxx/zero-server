@@ -1,22 +1,14 @@
 //! The datagram batch trait over loopback: peers, destinations, truncation, and on
 //! Linux the ECN codepoint and the segmentation and coalescing offloads.
 
-#![cfg(feature = "io-tokio")]
+#![cfg(any(feature = "io-tokio", feature = "io-compio"))]
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use zero_core::OwnedBuf;
+use zero_io::rt::{DatagramConfig, UdpSocket};
 use zero_io::seam::Datagram;
-use zero_io::tokio_rt::{DatagramConfig, UdpSocket};
 use zero_io::{DatagramMeta, Ecn};
-
-fn runtime() -> tokio::runtime::Runtime {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap()
-}
 
 fn bufs(count: usize, capacity: usize) -> Vec<OwnedBuf> {
     (0..count)
@@ -34,7 +26,7 @@ async fn receive_all(
     while out.len() < expected {
         let mut incoming = bufs(4, capacity);
         let mut meta = vec![DatagramMeta::default(); 4];
-        let count = tokio::time::timeout(
+        let count = zero_io::rt::timeout(
             std::time::Duration::from_secs(5),
             socket.recv_batch(&mut incoming, &mut meta),
         )
@@ -51,7 +43,7 @@ async fn receive_all(
 
 #[test]
 fn a_batch_crosses_loopback_with_its_metadata() {
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let sender =
             UdpSocket::bind("127.0.0.1:0".parse().unwrap(), &DatagramConfig::default()).unwrap();
         let receiver =
@@ -91,12 +83,13 @@ fn a_batch_crosses_loopback_with_its_metadata() {
             #[cfg(any(target_os = "linux", target_vendor = "apple"))]
             assert_eq!(entry.local, Some(IpAddr::V4(Ipv4Addr::LOCALHOST)));
         }
-    });
+    })
+    .unwrap();
 }
 
 #[test]
 fn a_datagram_longer_than_the_buffer_is_marked_truncated() {
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let sender =
             UdpSocket::bind("127.0.0.1:0".parse().unwrap(), &DatagramConfig::default()).unwrap();
         let receiver =
@@ -113,12 +106,13 @@ fn a_datagram_longer_than_the_buffer_is_marked_truncated() {
         #[cfg(unix)]
         assert!(entry.truncated);
         let _ = entry;
-    });
+    })
+    .unwrap();
 }
 
 #[test]
 fn mismatched_metadata_is_refused_before_any_call() {
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let socket =
             UdpSocket::bind("127.0.0.1:0".parse().unwrap(), &DatagramConfig::default()).unwrap();
         let mut incoming = bufs(2, 16);
@@ -132,13 +126,14 @@ fn mismatched_metadata_is_refused_before_any_call() {
         assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
         assert_eq!(socket.recv_batch(&mut [], &mut []).await.unwrap(), 0);
         assert!(!socket.is_v6());
-    });
+    })
+    .unwrap();
 }
 
 #[cfg(target_os = "linux")]
 #[test]
 fn the_ecn_codepoint_travels_per_datagram() {
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let sender =
             UdpSocket::bind("127.0.0.1:0".parse().unwrap(), &DatagramConfig::default()).unwrap();
         let receiver =
@@ -170,13 +165,14 @@ fn the_ecn_codepoint_travels_per_datagram() {
             };
             assert_eq!(entry.ecn, expected, "{:?}", buf.filled());
         }
-    });
+    })
+    .unwrap();
 }
 
 #[cfg(target_os = "linux")]
 #[test]
 fn segmentation_splits_a_buffer_and_coalescing_reports_the_size() {
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let sender =
             UdpSocket::bind("127.0.0.1:0".parse().unwrap(), &DatagramConfig::default()).unwrap();
         let receiver = UdpSocket::bind(
@@ -212,7 +208,8 @@ fn segmentation_splits_a_buffer_and_coalescing_reports_the_size() {
                 entry.segment_size
             );
         }
-    });
+    })
+    .unwrap();
 }
 
 #[test]
@@ -221,7 +218,7 @@ fn ipv6_loopback_carries_the_destination_when_available() {
         return;
     };
     drop(sender);
-    runtime().block_on(async {
+    zero_io::rt::block_on(async {
         let v6: SocketAddr = "[::1]:0".parse().unwrap();
         let sender = UdpSocket::bind(v6, &DatagramConfig::default()).unwrap();
         let receiver = UdpSocket::bind(v6, &DatagramConfig::default()).unwrap();
@@ -238,5 +235,6 @@ fn ipv6_loopback_carries_the_destination_when_available() {
         assert_eq!(entry.peer, Some(sender.local_addr().unwrap()));
         #[cfg(any(target_os = "linux", target_vendor = "apple"))]
         assert_eq!(entry.local, Some(IpAddr::V6(std::net::Ipv6Addr::LOCALHOST)));
-    });
+    })
+    .unwrap();
 }

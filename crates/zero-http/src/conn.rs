@@ -1142,7 +1142,7 @@ mod tests {
     use std::rc::Rc;
 
     use zero_core::Error;
-    use zero_io::tokio_rt::TcpStream;
+    use zero_io::rt::TcpStream;
 
     use super::{request_task, Conn, Shared};
     use crate::call::Call;
