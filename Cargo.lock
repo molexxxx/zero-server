@@ -2176,7 +2176,12 @@ version = "0.1.0"
 dependencies = [
  "zero-core",
  "zero-http",
+ "zero-http-types",
+ "zero-http1",
+ "zero-io",
+ "zero-limits",
  "zero-rt",
+ "zero-server-crypto",
  "zero-sse",
  "zero-ws",
 ]

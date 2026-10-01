@@ -680,6 +680,19 @@ release = 1
 note = "RFC 9110 Section 7.8"
 
 [[entry]]
+key = "h1-19"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A 426 Upgrade Required response carries Upgrade naming the acceptable protocol and the upgrade connection option"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.8"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn a_426_upgrade_required_response_carries_upgrade_and_the_upgrade_connection_option"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 7.8 and 15.5.22"
+
+[[entry]]
 key = "h1-18"
 chapter = "http"
 designation = "RFC 9112"

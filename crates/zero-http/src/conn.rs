@@ -1159,6 +1159,7 @@ pub(crate) fn serialize<H>(shared: &Shared<H>, record: &mut Record, close: bool)
         close,
         keep_alive_10: !close && record.version() == Version::Http10 && record.keep_alive(),
         upgrade: kind == Some(TakeOver::Upgrade),
+        advertise_upgrade: record.advertise_upgrade,
         stream: kind == Some(TakeOver::Stream),
     };
     // RFC 9110 Section 7.8: a request with both Upgrade and 100-continue gets the
@@ -1191,6 +1192,7 @@ pub(crate) fn serialize<H>(shared: &Shared<H>, record: &mut Record, close: bool)
                     status: StatusCode::INTERNAL_SERVER_ERROR,
                     body_len: 0,
                     upgrade: false,
+                    advertise_upgrade: false,
                     stream: false,
                     ..parts
                 };
@@ -1216,6 +1218,8 @@ struct HeadParts<'a> {
     keep_alive_10: bool,
     /// A `101` that switches protocols: `Connection: upgrade`.
     upgrade: bool,
+    /// Another response with an `Upgrade` field: `Connection` lists `upgrade` too.
+    advertise_upgrade: bool,
     /// A streamed body: no `Content-Length`.
     stream: bool,
 }
@@ -1234,9 +1238,10 @@ fn write_head(
         writer.content_length(parts.body_len)?;
     }
     writer.raw(fields)?;
-    if parts.upgrade {
+    if parts.upgrade || parts.advertise_upgrade {
         writer.field_id(HeaderName::Connection, b"upgrade")?;
-    } else if parts.close {
+    }
+    if parts.close {
         writer.connection_close()?;
     } else if parts.keep_alive_10 {
         writer.field_id(HeaderName::Connection, b"keep-alive")?;

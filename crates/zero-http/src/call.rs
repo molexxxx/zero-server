@@ -119,6 +119,25 @@ impl<'a> Call<'a> {
         Ok(())
     }
 
+    /// Refuse a request that must switch protocols first: `426 Upgrade Required` with
+    /// `Upgrade: <protocol>` and the `upgrade` connection option, as RFC 9110
+    /// Section 7.8 asks of a server that sends 426 and of any sender of `Upgrade`.
+    ///
+    /// # Arguments
+    ///
+    /// * `protocol` - the acceptable protocol, such as `websocket`.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Codec`] for a protocol that is not a field value; nothing is set
+    /// then.
+    pub fn upgrade_required(&mut self, protocol: &[u8]) -> Result<(), Error> {
+        self.response().header_id(HeaderName::Upgrade, protocol)?;
+        self.response().status(StatusCode::UPGRADE_REQUIRED);
+        self.record.advertise_upgrade = true;
+        Ok(())
+    }
+
     /// Stream the response body: the head goes out without `Content-Length` and with
     /// `Connection: close`, the body set so far follows it, and
     /// [`Handler::taken`](crate::Handler::taken) writes the rest until it closes the

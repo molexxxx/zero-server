@@ -83,6 +83,9 @@ impl App {
             "/upgrade-other" => {
                 call.upgrade(b"h2c", 8)?;
             }
+            "/upgrade-required" => {
+                call.upgrade_required(b"websocket")?;
+            }
             "/stream" => {
                 call.response()
                     .content_type(b"text/plain")?
@@ -679,6 +682,28 @@ fn an_upgrade_to_a_protocol_the_client_did_not_offer_is_refused_and_http_continu
         400,
         "RFC 9110 Section 7.8: Upgrade on HTTP/1.0 is ignored"
     );
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_426_upgrade_required_response_carries_upgrade_and_the_upgrade_connection_option() {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    let response = get(&mut conn, "/upgrade-required");
+    assert_eq!(response.status, 426);
+    assert_eq!(response.header("upgrade"), Some("websocket"));
+    assert_eq!(response.header("connection"), Some("upgrade"));
+    assert_eq!(get(&mut conn, "/hello").text(), "hello", "HTTP goes on");
+    conn.write_all(b"GET /upgrade-required HTTP/1.1\r\nHost: t\r\nConnection: close\r\n\r\n")
+        .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    let options: Vec<&str> = response
+        .headers
+        .iter()
+        .filter(|(name, _)| name.eq_ignore_ascii_case("connection"))
+        .map(|(_, value)| value.as_str())
+        .collect();
+    assert_eq!(options, ["upgrade", "close"]);
     server.stop().unwrap();
 }
 

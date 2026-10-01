@@ -60,6 +60,8 @@ pub struct Record {
     pub(crate) claim: Option<Claim>,
     /// A `100 Continue` was written for this request.
     pub(crate) continued: bool,
+    /// The response carries `Upgrade`, so `Connection` lists the `upgrade` option.
+    pub(crate) advertise_upgrade: bool,
 }
 
 impl Record {
@@ -115,6 +117,7 @@ impl Record {
         self.response_body.clear();
         self.response_head.clear();
         self.claim = None;
+        self.advertise_upgrade = false;
     }
 
     /// Replace whatever the handler wrote with a problem details response.

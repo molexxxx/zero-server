@@ -16,6 +16,11 @@ zero-ws.workspace = true
 zero-sse.workspace = true
 zero-rt.workspace = true
 zero-http.workspace = true
+zero-http1.workspace = true
+zero-http-types.workspace = true
+zero-io.workspace = true
+zero-limits.workspace = true
+zero-server-crypto.workspace = true
 
 [lints]
 workspace = true
