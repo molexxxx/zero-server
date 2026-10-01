@@ -46,6 +46,8 @@ pub mod chunked;
 pub mod error;
 pub mod head;
 pub mod list;
+#[cfg(test)]
+mod no_alloc;
 pub mod response;
 
 pub use chunked::{

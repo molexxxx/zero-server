@@ -33,6 +33,11 @@ zero-simd = { path = "../zero-simd", version = "0.1.0", default-features = false
 zero-limits = { path = "../zero-limits", version = "0.1.0", default-features = false }
 zero-date = { path = "../zero-date", version = "0.1.0", default-features = false }
 
+[dev-dependencies]
+# The counting allocator the unit tests install to show that the parser, the
+# chunked decoder and the serializer never call the global allocator.
+zero-sys = { path = "../zero-sys", version = "0.1.0" }
+
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "deny"

@@ -68,10 +68,15 @@ the same commit.
   libFuzzer targets under `fuzz/`. `zero-http1` holds the request head
   parser (`head.rs`), the chunked decoder and encoder with the trailer
   parser (`chunked.rs`), the validating `ResponseWriter` (`response.rs`),
-  the list and whitespace helpers (`list.rs`) and `Reject` (`error.rs`), 34
-  unit tests, no_std and thumbv7em green; `conformance/vectors.json` carries
-  its `http1Parser` and `responseSplitting` sections. Every other crate is a
-  skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
+  the list and whitespace helpers (`list.rs`) and `Reject` (`error.rs`), 37
+  unit tests of which three hold the allocation-free claim under the
+  counting allocator, no_std and thumbv7em green; `conformance/vectors.json`
+  carries its `http1Parser` and `responseSplitting` sections. `zero-sys`
+  holds `alloc::Counting`, the system allocator with a per-thread count of
+  allocations and reallocations (`crates/zero-sys/src/alloc.rs`, the one
+  `unsafe impl` of the workspace so far, with its `SAFETY` comments), which
+  test binaries and the measurement harnesses install as their global
+  allocator. Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
   nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -195,8 +200,13 @@ it. `crates/zero-examples/examples/conformance_vectors.rs` generates
 every vector before writing; CI runs it from `crates/zero-examples/examples`
 and diffs the file. The fuzz crate gained `http1_head` (never panics, every
 proper prefix of a complete head is partial, spans stay inside the input)
-and `http1_chunked` (whole and byte-wise feedings agree). Still open in the
-step: the httparse oracle, which the dependency rule blocks today: crates.io
+and `http1_chunked` (whole and byte-wise feedings agree). The crate's unit
+tests install `zero_sys::alloc::Counting` as the global allocator and show
+that the head parser (complete, partial and rejected input), the chunked
+decoder with the trailer parser, and the serializer (fixed length and
+chunked) make no allocation (`crates/zero-http1/src/no_alloc.rs`), which is
+the step's counting-allocator criterion. Still open in the step: the
+httparse oracle, which the dependency rule blocks today: crates.io
 reports httparse 1.10.1 as the newest stable release, published 2025-03-03,
 more than twelve months ago, and the crate does not declare itself finished
 (checked 2026-10-01); the parser's conformance vectors, property tests and
