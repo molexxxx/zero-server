@@ -368,12 +368,7 @@ impl Session {
 
     /// Append one unmasked, final frame to the output.
     fn write_frame(&mut self, opcode: Opcode, payload: &[u8]) {
-        let mut header = [0u8; 10];
-        let len = u64::try_from(payload.len()).unwrap_or(u64::MAX);
-        let written = frame::encode(true, opcode, len, &mut header);
-        self.output
-            .extend_from_slice(header.get(..written).unwrap_or(&[]));
-        self.output.extend_from_slice(payload);
+        frame::write(opcode, payload, &mut self.output);
     }
 
     /// Refuse a send once a Close was sent or the connection is done.
@@ -412,6 +407,22 @@ impl Session {
     pub fn send_binary(&mut self, data: &[u8]) -> Result<()> {
         self.ensure_open()?;
         self.write_frame(Opcode::Binary, data);
+        Ok(())
+    }
+
+    /// Queue a data frame already encoded with [`frame::write`], such as a message
+    /// broadcast to many connections and encoded once for all of them.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` - one whole, final, unmasked text or binary frame.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Closed`] once a Close was sent or the connection failed.
+    pub fn send_encoded(&mut self, frame: &[u8]) -> Result<()> {
+        self.ensure_open()?;
+        self.output.extend_from_slice(frame);
         Ok(())
     }
 

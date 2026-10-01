@@ -16,6 +16,7 @@
 use std::future::{poll_fn, Future};
 use std::pin::pin;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::task::Poll;
 use std::time::{Duration, Instant};
 
@@ -28,6 +29,8 @@ use zero_server_crypto::Sha1;
 use zero_ws::handshake::{self, Config, Reason};
 use zero_ws::session::{Event, Session};
 use zero_ws::CloseCode;
+
+use crate::rooms::{MemberId, Membership, Rooms};
 
 /// The protocol name a WebSocket upgrade switches to.
 pub const PROTOCOL: &[u8] = b"websocket";
@@ -100,32 +103,19 @@ pub enum Message {
     Binary(Vec<u8>),
 }
 
-/// What one read produced.
+/// What one wait for input produced.
 enum Read {
     Data,
     Done,
     Shutdown,
+    Inbox,
 }
 
-/// The first of two futures to finish.
-enum Either<A, B> {
-    Left(A),
-    Right(B),
-}
-
-async fn race<A: Future, B: Future>(a: A, b: B) -> Either<A::Output, B::Output> {
-    let mut a = pin!(a);
-    let mut b = pin!(b);
-    poll_fn(|cx| {
-        if let Poll::Ready(value) = a.as_mut().poll(cx) {
-            return Poll::Ready(Either::Left(value));
-        }
-        if let Poll::Ready(value) = b.as_mut().poll(cx) {
-            return Poll::Ready(Either::Right(value));
-        }
-        Poll::Pending
-    })
-    .await
+/// What woke a wait for input.
+enum Woke {
+    Read(std::io::Result<Leased>),
+    Shutdown,
+    Inbox,
 }
 
 /// A server-side WebSocket connection.
@@ -136,6 +126,7 @@ pub struct WebSocket<S> {
     start: usize,
     started: Instant,
     closing: bool,
+    membership: Option<Membership>,
 }
 
 impl<S> std::fmt::Debug for WebSocket<S> {
@@ -164,6 +155,67 @@ impl<S: Stream + 'static> WebSocket<S> {
             start: 0,
             started: Instant::now(),
             closing: false,
+            membership: None,
+        }
+    }
+
+    /// This connection's id in the rooms it joined, to leave it out of its own
+    /// broadcasts.
+    #[must_use]
+    pub fn id(&self) -> Option<MemberId> {
+        self.membership.as_ref().map(|membership| membership.id)
+    }
+
+    /// Join a room, so its broadcasts reach this connection; joining rooms of
+    /// another table leaves the rooms of the first.
+    ///
+    /// # Arguments
+    ///
+    /// * `rooms` - the server's rooms.
+    /// * `room` - the room's name.
+    ///
+    /// # Returns
+    ///
+    /// This connection's id in the rooms.
+    pub fn join(&mut self, rooms: &Arc<Rooms>, room: &str) -> MemberId {
+        let membership = match self.membership.take() {
+            Some(membership) if membership.is_in(rooms) => membership,
+            _ => Membership::new(rooms),
+        };
+        let membership = self.membership.insert(membership);
+        membership.join(room);
+        membership.id
+    }
+
+    /// Leave a room.
+    ///
+    /// # Arguments
+    ///
+    /// * `room` - the room's name.
+    pub fn leave(&mut self, room: &str) {
+        if let Some(membership) = self.membership.as_mut() {
+            membership.leave(room);
+        }
+    }
+
+    /// Queue the frames broadcast to this connection, or close it with 1013 when it
+    /// fell too far behind.
+    fn deliver(&mut self) {
+        let Some(membership) = self.membership.as_ref() else {
+            return;
+        };
+        let (frames, overflowed) = membership.inbox.take();
+        if overflowed {
+            self.membership = None;
+            if self.session.close(CloseCode::TRY_AGAIN_LATER, "").is_ok() {
+                self.closing = true;
+            }
+            return;
+        }
+        for frame in frames {
+            if self.session.send_encoded(&frame).is_err() {
+                break;
+            }
         }
     }
 
@@ -194,6 +246,7 @@ impl<S: Stream + 'static> WebSocket<S> {
     /// server drained.
     pub async fn recv(&mut self) -> Option<Message> {
         loop {
+            self.deliver();
             if !self.flush().await || self.session.is_finished() {
                 return None;
             }
@@ -224,7 +277,7 @@ impl<S: Stream + 'static> WebSocket<S> {
             self.input.drain(..self.start.min(self.input.len()));
             self.start = 0;
             match self.read().await {
-                Read::Data => {}
+                Read::Data | Read::Inbox => {}
                 Read::Done => return None,
                 Read::Shutdown => {
                     if self.session.going_away().is_ok() {
@@ -310,37 +363,55 @@ impl<S: Stream + 'static> WebSocket<S> {
         }
     }
 
-    /// Read more input, or notice the shutdown signal.
+    /// Read more input, or notice the shutdown signal or a broadcast.
     async fn read(&mut self) -> Read {
         let core = self.taken.core();
         let pool = Rc::clone(&core.pool);
-        let outcome = if self.closing {
+        let woke = if self.closing {
             match core
                 .timeout(CLOSE_TIMEOUT, self.taken.stream().read_leased(&pool))
                 .await
             {
-                Ok(outcome) => Either::Left(outcome),
+                Ok(outcome) => Woke::Read(outcome),
                 Err(_) => return Read::Done,
             }
         } else {
-            race(
-                self.taken.stream().read_leased(&pool),
-                self.taken.worker().shutdown().requested(),
-            )
+            let inbox = self
+                .membership
+                .as_ref()
+                .map(|membership| Arc::clone(&membership.inbox));
+            let mut read = pin!(self.taken.stream().read_leased(&pool));
+            let mut shutdown = pin!(self.taken.worker().shutdown().requested());
+            poll_fn(|cx| {
+                if let Poll::Ready(outcome) = read.as_mut().poll(cx) {
+                    return Poll::Ready(Woke::Read(outcome));
+                }
+                if shutdown.as_mut().poll(cx).is_ready() {
+                    return Poll::Ready(Woke::Shutdown);
+                }
+                if inbox
+                    .as_ref()
+                    .is_some_and(|inbox| inbox.poll_ready(cx).is_ready())
+                {
+                    return Poll::Ready(Woke::Inbox);
+                }
+                Poll::Pending
+            })
             .await
         };
-        match outcome {
-            Either::Left(Ok(Leased::Data(buf))) => {
+        match woke {
+            Woke::Read(Ok(Leased::Data(buf))) => {
                 self.input.extend_from_slice(buf.filled());
                 pool.release(buf);
                 Read::Data
             }
-            Either::Left(Ok(Leased::NoBudget)) => {
+            Woke::Read(Ok(Leased::NoBudget)) => {
                 core.sleep(BUDGET_RETRY).await;
                 Read::Data
             }
-            Either::Left(Ok(Leased::Eof) | Err(_)) => Read::Done,
-            Either::Right(()) => Read::Shutdown,
+            Woke::Read(Ok(Leased::Eof) | Err(_)) => Read::Done,
+            Woke::Shutdown => Read::Shutdown,
+            Woke::Inbox => Read::Inbox,
         }
     }
 }

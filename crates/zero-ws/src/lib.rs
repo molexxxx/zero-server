@@ -794,6 +794,19 @@ mod tests {
     }
 
     #[test]
+    fn a_frame_encoded_once_is_queued_as_is_and_refused_after_a_close() {
+        let mut encoded = Vec::new();
+        frame::write(Opcode::Text, b"Hello", &mut encoded);
+        assert_eq!(encoded, b"\x81\x05Hello");
+        let mut session = fresh();
+        assert!(session.send_encoded(&encoded).is_ok());
+        assert_eq!(session.output(), &encoded[..]);
+        assert!(session.close(CloseCode::NORMAL, "").is_ok());
+        assert!(session.send_encoded(&encoded).is_err());
+        assert_eq!(server_frames(session.output()).len(), 2);
+    }
+
+    #[test]
     fn control_frames_past_the_per_second_budget_fail_with_1008() {
         let limits = WebSocketLimits {
             max_control_frames_per_second: 2,

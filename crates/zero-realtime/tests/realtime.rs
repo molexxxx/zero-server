@@ -15,7 +15,7 @@ use zero_http_types::StatusCode;
 use zero_io::seam::{Stream, Timer};
 use zero_limits::{Http1Limits, WebSocketLimits};
 use zero_realtime::{
-    accept_websocket, start_event_stream, stop_reconnecting, EventStream, Message, WebSocket,
+    accept_websocket, start_event_stream, stop_reconnecting, EventStream, Message, Rooms, WebSocket,
 };
 use zero_sse::{Decoder, Event};
 use zero_ws::handshake::Config as WsConfig;
@@ -26,6 +26,7 @@ const MASK: [u8; 4] = [0x37, 0xfa, 0x21, 0x3d];
 
 struct App {
     log: Arc<Mutex<Vec<String>>>,
+    rooms: Arc<Rooms>,
 }
 
 impl Handler for App {
@@ -50,6 +51,7 @@ impl Handler for App {
 
     fn taken<S: Stream + 'static>(&self, taken: Taken<S>) -> impl Future<Output = ()> {
         let log = Arc::clone(&self.log);
+        let rooms = Arc::clone(&self.rooms);
         async move {
             let note = |line: String| log.lock().unwrap().push(line);
             match taken.token() {
@@ -57,6 +59,22 @@ impl Handler for App {
                     let mut ws = WebSocket::new(taken, WebSocketLimits::DEFAULT);
                     while let Some(message) = ws.recv().await {
                         match message {
+                            Message::Text(text) if text.starts_with("join:") => {
+                                ws.join(&rooms, &text["join:".len()..]);
+                                let _ = ws.send_text("joined").await;
+                            }
+                            Message::Text(text) if text.starts_with("say:") => {
+                                let (room, said) = text["say:".len()..].split_once(':').unwrap();
+                                let count = rooms.broadcast_text(room, said, ws.id());
+                                let _ = ws.send_text(&format!("sent {count}")).await;
+                            }
+                            Message::Text(text) if text.starts_with("flood:") => {
+                                let (room, count) = text["flood:".len()..].split_once(':').unwrap();
+                                for _ in 0..count.parse::<usize>().unwrap() {
+                                    rooms.broadcast_binary(room, &[7u8; 4096], ws.id());
+                                }
+                                let _ = ws.send_text("flooded").await;
+                            }
                             Message::Text(text) if text == "close" => {
                                 let _ = ws.close(CloseCode::NORMAL, "bye").await;
                                 let late = ws.send_text("late").await;
@@ -110,15 +128,21 @@ struct Server {
     workers: Option<Workers>,
     addr: SocketAddr,
     log: Arc<Mutex<Vec<String>>>,
+    rooms: Arc<Rooms>,
 }
 
 impl Server {
     fn start() -> Self {
+        Server::with(2, Rooms::new())
+    }
+
+    fn with(threads: usize, rooms: Rooms) -> Self {
         let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+        let rooms = Arc::new(rooms);
         let config = Config {
             runtime: zero_rt::Config {
                 io: zero_io::rt::Config {
-                    threads: 2,
+                    threads,
                     drain: Duration::from_secs(3),
                     ..zero_io::rt::Config::default()
                 },
@@ -127,12 +151,14 @@ impl Server {
             server: None,
         };
         let app_log = Arc::clone(&log);
+        let app_rooms = Arc::clone(&rooms);
         let workers = serve(
             "127.0.0.1:0".parse().unwrap(),
             config,
             Arc::new(|_| {}),
             move |_worker| App {
                 log: Arc::clone(&app_log),
+                rooms: Arc::clone(&app_rooms),
             },
         )
         .unwrap();
@@ -141,6 +167,7 @@ impl Server {
             workers: Some(workers),
             addr,
             log,
+            rooms,
         }
     }
 
@@ -419,6 +446,86 @@ fn a_draining_server_closes_websocket_connections_with_1001_going_away() {
         .lock()
         .unwrap()
         .contains(&"closed Some(1001)".to_owned()));
+}
+
+fn open(server: &Server) -> TcpStream {
+    let mut conn = server.connect();
+    assert_eq!(handshake(&mut conn, "", b"").status, 101);
+    conn
+}
+
+fn say(conn: &mut TcpStream, text: &str) {
+    conn.write_all(&client(0x81, text.as_bytes())).unwrap();
+}
+
+fn text(conn: &mut TcpStream) -> String {
+    let (first, payload) = read_frame(conn);
+    assert_eq!(first, 0x81);
+    String::from_utf8(payload).unwrap()
+}
+
+/// Poll until `done` holds, for state another thread settles.
+fn wait_for(mut done: impl FnMut() -> bool) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !done() {
+        assert!(std::time::Instant::now() < deadline, "timed out");
+        std::thread::yield_now();
+    }
+}
+
+#[test]
+fn a_broadcast_reaches_every_member_of_a_room_but_the_sender_and_a_closed_member_leaves() {
+    let server = Server::start();
+    let mut members: Vec<TcpStream> = (0..3).map(|_| open(&server)).collect();
+    for member in &mut members {
+        say(member, "join:lobby");
+        assert_eq!(text(member), "joined");
+    }
+    let mut outsider = open(&server);
+    say(&mut outsider, "join:other");
+    assert_eq!(text(&mut outsider), "joined");
+    assert_eq!(server.rooms.members("lobby"), 3);
+
+    say(&mut members[0], "say:lobby:hi");
+    assert_eq!(text(&mut members[0]), "sent 2", "the sender is left out");
+    assert_eq!(text(&mut members[1]), "hi");
+    assert_eq!(text(&mut members[2]), "hi");
+
+    let mut leaving = members.pop().unwrap();
+    leaving
+        .write_all(&client(0x88, &close_body(1000, "")))
+        .unwrap();
+    assert_eq!(read_frame(&mut leaving).0, 0x88);
+    assert!(closed(&mut leaving));
+    wait_for(|| server.rooms.members("lobby") == 2);
+
+    say(&mut members[1], "say:lobby:again");
+    assert_eq!(text(&mut members[1]), "sent 1");
+    assert_eq!(text(&mut members[0]), "again");
+    say(&mut outsider, "echo");
+    assert_eq!(
+        text(&mut outsider),
+        "echo",
+        "nothing from another room came first"
+    );
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_member_that_falls_too_far_behind_is_closed_with_1013_try_again_later() {
+    let server = Server::with(1, Rooms::with_inbox_limit(64 * 1024));
+    let mut slow = open(&server);
+    say(&mut slow, "join:lobby");
+    assert_eq!(text(&mut slow), "joined");
+    let mut fast = open(&server);
+    say(&mut fast, "flood:lobby:100");
+    assert_eq!(text(&mut fast), "flooded");
+    assert_eq!(read_frame(&mut slow), (0x88, close_body(1013, "")));
+    slow.write_all(&client(0x88, &close_body(1013, "")))
+        .unwrap();
+    assert!(closed(&mut slow));
+    wait_for(|| server.rooms.members("lobby") == 0);
+    server.stop().unwrap();
 }
 
 fn read_stream(conn: &mut TcpStream, last_event_id: &str) -> (Head, Vec<u8>) {

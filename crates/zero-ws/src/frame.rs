@@ -168,6 +168,21 @@ pub fn decode(input: &[u8], allowed_rsv: u8) -> Result<Option<Header>, CloseCode
     }))
 }
 
+/// Append one whole, final, unmasked frame: the header, then the payload.
+///
+/// # Arguments
+///
+/// * `opcode` - the opcode.
+/// * `payload` - the payload.
+/// * `out` - the buffer the frame is appended to.
+pub fn write(opcode: Opcode, payload: &[u8], out: &mut alloc::vec::Vec<u8>) {
+    let mut header = [0u8; 10];
+    let len = u64::try_from(payload.len()).unwrap_or(u64::MAX);
+    let written = encode(true, opcode, len, &mut header);
+    out.extend_from_slice(header.get(..written).unwrap_or(&[]));
+    out.extend_from_slice(payload);
+}
+
 /// Encode the header of a frame the server sends, which is never masked.
 ///
 /// # Arguments
