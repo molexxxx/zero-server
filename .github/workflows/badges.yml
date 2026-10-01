@@ -9,8 +9,10 @@ on:
     workflows: [ci]
     types: [completed]
 
-# The dispatch is authenticated with a personal access token, so the workflow
-# itself needs nothing from the automatic GITHUB_TOKEN.
+# The dispatch is authenticated with a personal access token stored as the
+# repository secret BADGES_DISPATCH_TOKEN, so the workflow itself needs nothing
+# from the automatic GITHUB_TOKEN. Without the secret the step reports and
+# skips rather than failing the run.
 permissions: {}
 
 jobs:
@@ -21,6 +23,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BADGES_DISPATCH_TOKEN }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::BADGES_DISPATCH_TOKEN is not set on this repository; the profile badges were not refreshed."
+            exit 0
+          fi
           gh api -X POST repos/molexxxx/molexxxx/dispatches \
             -f event_type=refresh-badges \
             -f "client_payload[repo]=${{ github.repository }}"

@@ -335,7 +335,8 @@ fn display(path: &Path) -> String {
 /// A scratch repository under the system temp directory, for tests.
 #[cfg(test)]
 fn scratch(name: &str) -> std::path::PathBuf {
-    let root = std::env::temp_dir().join(format!("zero-server-lints-{name}-{}", std::process::id()));
+    let root =
+        std::env::temp_dir().join(format!("zero-server-lints-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(root.join("docs/lints")).unwrap();
     root
