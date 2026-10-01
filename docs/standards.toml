@@ -894,15 +894,238 @@ note = "RFC 7301 Section 3.2"
 [[entry]]
 key = "h2-15"
 chapter = "tls"
-designation = "RFC 8446"
+designation = "RFC 9846"
 body = "IETF"
-subject = "0-RTT early data is disabled or restricted to replay-safe requests because TLS 1.3 gives no cross-connection replay protection"
-url = "https://www.rfc-editor.org/rfc/rfc8446.html#section-8"
+subject = "0-RTT early data is never accepted, so early data a client sends is skipped and its request is served only after the handshake completes"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-8"
 evidence = "crates/zero-tls/src/lib.rs"
-at = "fn status_0_rtt_early_data_is_disabled_or_restricted_to_replay_safe_requests"
+at = "fn status_0_rtt_early_data_is_never_accepted_so_early_data_a_client"
 anchor = "rule"
 release = 1
-note = "RFC 8446 Section 8"
+note = "RFC 9846 Section 8, Section 4.3.10 and Appendix F.5; RFC 9846 obsoletes RFC 8446"
+
+# TLS server
+
+[[entry]]
+key = "tls-01"
+chapter = "tls"
+designation = "RFC 8996"
+body = "IETF"
+subject = "The server negotiates only TLS 1.3 and TLS 1.2, and a ClientHello offering nothing newer than TLS 1.1 is refused with a fatal protocol_version alert"
+url = "https://www.rfc-editor.org/rfc/rfc8996.html#section-4"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn the_server_negotiates_only_tls_1_3_and_tls_1_2_and_a_clienthello_offering"
+anchor = "rule"
+release = 1
+note = "RFC 8996 Sections 4 and 5; RFC 9846 Appendix E.5; RFC 9325 Section 3.1.1"
+
+[[entry]]
+key = "tls-02"
+chapter = "tls"
+designation = "RFC 9325"
+body = "IETF"
+subject = "When the client offers TLS 1.3 the server selects TLS 1.3"
+url = "https://www.rfc-editor.org/rfc/rfc9325.html#section-3.1.1"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn when_the_client_offers_tls_1_3_the_server_selects_tls_1_3"
+anchor = "rule"
+release = 1
+note = "RFC 9325 Section 3.1.1; RFC 9852 Section 5"
+
+[[entry]]
+key = "tls-03"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "A TLS 1.2 ServerHello from a server that also supports TLS 1.3 ends its random with the bytes 44 4F 57 4E 47 52 44 01"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-4.2.3"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn a_tls_1_2_serverhello_from_a_server_that_also_supports_tls_1_3"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 4.2.3"
+
+[[entry]]
+key = "tls-04"
+chapter = "tls"
+designation = "RFC 10015"
+body = "IETF"
+subject = "TLS 1.2 is negotiated only with ECDHE AEAD cipher suites, and a ClientHello offering only static RSA or finite-field DHE suites is refused with a fatal handshake_failure alert"
+url = "https://www.rfc-editor.org/rfc/rfc10015.html#section-3"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn tls_1_2_is_negotiated_only_with_ecdhe_aead_cipher_suites_and_a"
+anchor = "rule"
+release = 1
+note = "RFC 10015 Sections 3 and 4; RFC 9325 Section 4.2"
+
+[[entry]]
+key = "tls-05"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "A client offering only TLS_AES_128_GCM_SHA256 and secp256r1 completes a TLS 1.3 handshake"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-9.1"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn a_client_offering_only_tls_aes_128_gcm_sha256_and_secp256r1_completes"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 9.1"
+
+[[entry]]
+key = "tls-06"
+chapter = "tls"
+designation = "RFC 9325"
+body = "IETF"
+subject = "On TLS 1.2 a ClientHello without the extended_main_secret extension is refused with a fatal handshake_failure alert"
+url = "https://www.rfc-editor.org/rfc/rfc9325.html#section-3.5"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn on_tls_1_2_a_clienthello_without_the_extended_main_secret_extension_is"
+anchor = "rule"
+release = 1
+note = "RFC 9325 Section 3.5; RFC 7627 Section 5.2; RFC 9846 Appendix D"
+
+[[entry]]
+key = "tls-07"
+chapter = "tls"
+designation = "RFC 5746"
+body = "IETF"
+subject = "On TLS 1.2 a ClientHello carrying TLS_EMPTY_RENEGOTIATION_INFO_SCSV receives an empty renegotiation_info extension in the ServerHello"
+url = "https://www.rfc-editor.org/rfc/rfc5746.html#section-3.6"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn on_tls_1_2_a_clienthello_carrying_tls_empty_renegotiation_info_scsv_receives"
+anchor = "rule"
+release = 1
+note = "RFC 5746 Section 3.6; RFC 9325 Section 3.5"
+
+[[entry]]
+key = "tls-08"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "A ClientHello without the ALPN extension gets no ALPN extension in the reply and is served HTTP/1.1"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-4.3"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn a_clienthello_without_the_alpn_extension_gets_no_alpn_extension_in_the"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 4.3; RFC 7301 Section 3.1"
+
+[[entry]]
+key = "tls-09"
+chapter = "tls"
+designation = "RFC 9325"
+body = "IETF"
+subject = "A ClientHello naming a server the configuration has no certificate for is refused with a fatal unrecognized_name alert before any certificate is sent"
+url = "https://www.rfc-editor.org/rfc/rfc9325.html#section-3.7"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn a_clienthello_naming_a_server_the_configuration_has_no_certificate_for_is"
+anchor = "rule"
+release = 1
+note = "RFC 9325 Section 3.7; RFC 6066 Section 3"
+
+[[entry]]
+key = "tls-10"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "With no default certificate configured, a ClientHello without server_name is refused with a fatal missing_extension alert"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-9.2"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn with_no_default_certificate_configured_a_clienthello_without_server_name_is_refused"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 9.2"
+
+[[entry]]
+key = "tls-11"
+chapter = "tls"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A request whose Host is not covered by the certificate that secured the connection is answered 421 Misdirected Request"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.4"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_request_whose_host_is_not_covered_by_the_certificate_that_secured"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 7.4 and 15.5.20"
+
+[[entry]]
+key = "tls-12"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "The server sends close_notify before closing its write side, so a client reads a clean end of stream rather than a truncation error"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-6.1"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn the_server_sends_close_notify_before_closing_its_write_side_so_a"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 6.1; RFC 9112 Section 9.8"
+
+[[entry]]
+key = "tls-13"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "A close_notify from the client still lets the server finish writing the response in progress and then send its own close_notify"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-6.1"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_close_notify_from_the_client_still_lets_the_server_finish_writing"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 6.1"
+
+[[entry]]
+key = "tls-14"
+chapter = "tls"
+designation = "RFC 9112"
+body = "IETF"
+subject = "A transport close without close_notify in the middle of a Content-Length or chunked request body is never handed to the handler as a complete body"
+url = "https://www.rfc-editor.org/rfc/rfc9112.html#section-9.8"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_transport_close_without_close_notify_in_the_middle_of_a_content"
+anchor = "rule"
+release = 1
+note = "RFC 9112 Section 9.8"
+
+[[entry]]
+key = "tls-15"
+chapter = "tls"
+designation = "RFC 9846"
+body = "IETF"
+subject = "Every NewSessionTicket carries a ticket_lifetime of at most 604800 seconds"
+url = "https://www.rfc-editor.org/rfc/rfc9846.html#section-4.7.1"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn every_newsessionticket_carries_a_ticket_lifetime_of_at_most_604800_seconds"
+anchor = "rule"
+release = 1
+note = "RFC 9846 Section 4.7.1"
+
+[[entry]]
+key = "tls-16"
+chapter = "tls"
+designation = "RFC 9325"
+body = "IETF"
+subject = "Ticket-encryption keys rotate at least once a week, and a ticket sealed under a retired key falls back to a full handshake"
+url = "https://www.rfc-editor.org/rfc/rfc9325.html#section-3.4"
+evidence = "crates/zero-tls/src/lib.rs"
+at = "fn ticket_encryption_keys_rotate_at_least_once_a_week_and_a_ticket"
+anchor = "rule"
+release = 1
+note = "RFC 9325 Section 3.4"
+
+[[entry]]
+key = "tls-17"
+chapter = "tls"
+designation = "Node.js tls"
+body = "OpenJS Foundation"
+subject = "A connection whose TLS handshake has not completed within the handshake timeout is closed, and the default timeout does not exceed 120 seconds"
+url = "https://nodejs.org/api/tls.html#tlscreateserveroptions-secureconnectionlistener"
+evidence = "crates/zero-tls/tests/driver.rs"
+at = "fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeout"
+anchor = "rule"
+release = 1
+note = "Node.js tls.createServer handshakeTimeout; local policy, no TLS RFC sets one"
 
 
 # Error responses

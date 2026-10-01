@@ -2447,7 +2447,11 @@ version = "0.1.0"
 dependencies = [
  "rustls",
  "zero-core",
+ "zero-http",
  "zero-io",
+ "zero-limits",
+ "zero-rt",
+ "zero-server-crypto",
 ]
 
 [[package]]
