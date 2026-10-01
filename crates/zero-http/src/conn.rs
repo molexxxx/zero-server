@@ -749,6 +749,7 @@ where
         let Stage::Body {
             framing,
             continue_pending,
+            max_body,
         } = &mut entry.stage
         else {
             return Fed::Stalled;
@@ -785,7 +786,7 @@ where
                 Ok(Step::Data { data, consumed }) => {
                     let after = u64::try_from(record.body.len().saturating_add(data.len()))
                         .unwrap_or(u64::MAX);
-                    if after > limits.max_body {
+                    if after > *max_body {
                         return Fed::Reject(StatusCode::CONTENT_TOO_LARGE);
                     }
                     record.body.extend_from_slice(data);
@@ -877,16 +878,22 @@ where
         }
         let stage = match head.body {
             BodyLength::None | BodyLength::Length(0) => Stage::Waiting,
-            BodyLength::Length(length) if length > limits.max_body => {
-                return self.answer_now(record, StatusCode::CONTENT_TOO_LARGE, now);
+            BodyLength::Length(length) => {
+                let max_body = self.body_limit(&record, head);
+                if length > max_body {
+                    // RFC 9110 Section 15.5.14: refused before any content is read.
+                    return self.answer_now(record, StatusCode::CONTENT_TOO_LARGE, now);
+                }
+                Stage::Body {
+                    framing: Framing::Length(length),
+                    continue_pending: self.owes_continue(head),
+                    max_body,
+                }
             }
-            BodyLength::Length(length) => Stage::Body {
-                framing: Framing::Length(length),
-                continue_pending: self.owes_continue(head),
-            },
             BodyLength::Chunked => Stage::Body {
                 framing: Framing::Chunked(ChunkedDecoder::new()),
                 continue_pending: self.owes_continue(head),
+                max_body: self.body_limit(&record, head),
             },
         };
         let entry = Entry::new(record, stage, now);
@@ -894,6 +901,19 @@ where
             self.release_entry(entry);
             self.aborted = true;
         }
+    }
+
+    /// The body limit for one request: the handler's answer for its method and path,
+    /// or the server's `max_body`.
+    fn body_limit(&self, record: &Record, head: Head) -> u64 {
+        let path = record
+            .head
+            .get(head.path.start..head.path.end)
+            .unwrap_or(&[]);
+        self.shared
+            .handler
+            .body_limit(head.method, path)
+            .unwrap_or(self.shared.limits.max_body)
     }
 
     /// Whether a `100 Continue` is owed: an HTTP/1.1 request that expects it and

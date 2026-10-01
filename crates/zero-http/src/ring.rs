@@ -38,6 +38,9 @@ pub(crate) enum Stage {
         framing: Framing,
         /// A `100 Continue` is owed before the client sends the body.
         continue_pending: bool,
+        /// The largest decoded body this request may carry, from the handler's
+        /// per-request limit or the server's `max_body`.
+        max_body: u64,
     },
     /// The request is complete and waits for its turn to run.
     Waiting,

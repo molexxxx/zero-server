@@ -2062,6 +2062,32 @@ anchor = "rule"
 release = 1
 note = "OWASP HTTP Security Response Headers Cheat Sheet"
 
+[[entry]]
+key = "policy-30"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A per-request body limit from the handler refuses a declared Content-Length over it with 413 before the content is read, and a chunked body once it grows past it"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.14"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn a_per_request_body_limit_from_the_handler_refuses_a_declared_content_length"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 15.5.14"
+
+[[entry]]
+key = "policy-31"
+chapter = "http"
+designation = "RFC 3986"
+body = "IETF"
+subject = "Body limit prefixes match on segment boundaries after RFC 3986 normalization, so a dot-segment cannot borrow another route's limit"
+url = "https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2"
+evidence = "crates/zero-policy/src/lib.rs"
+at = "fn body_limit_prefixes_match_on_segment_boundaries_after_rfc_3986_normalization"
+anchor = "rule"
+release = 1
+note = "RFC 3986 Sections 3.4, 5.2.4 and 6.2.2; RFC 9110 Section 15.5.14"
+
 
 # Rate limiting
 

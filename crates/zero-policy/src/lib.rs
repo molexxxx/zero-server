@@ -8,14 +8,17 @@
 //! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS
 //! protocol; [`security`] the security response headers; [`fetch_metadata`] the
 //! refusal of cross-site requests that would change state; [`request_id`] the
-//! identifier each request is logged under.
+//! identifier each request is logged under; [`body_limit`] the largest content each
+//! path prefix takes.
 
+pub mod body_limit;
 pub mod cors;
 pub mod fetch_metadata;
 pub mod forwarded;
 pub mod request_id;
 pub mod security;
 
+pub use body_limit::BodyLimits;
 pub use cors::{AllowOrigin, Cors, Decision};
 pub use fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
 pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
@@ -35,6 +38,7 @@ mod tests {
     use zero_http_types::Method;
     use zero_server_crypto::SystemRng;
 
+    use super::body_limit::BodyLimits;
     use super::cors::{AllowOrigin, Cors, Decision};
     use super::fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
     use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
@@ -1095,5 +1099,68 @@ mod tests {
             panic!("allowed");
         };
         assert_eq!(field(&fields, b"Vary"), None);
+    }
+
+    #[test]
+    fn body_limit_prefixes_match_on_segment_boundaries_after_rfc_3986_normalization_so_a_dot_segment_cannot_borrow_another_routes_limit(
+    ) {
+        let limits = BodyLimits::new(1024)
+            .route("/upload", 1 << 20)
+            .unwrap()
+            .route("/upload/avatar/", 4096)
+            .unwrap()
+            .route("/api", 64)
+            .unwrap();
+        assert_eq!(limits.limit(b"/upload"), 1 << 20);
+        assert_eq!(limits.limit(b"/upload/file?name=x"), 1 << 20);
+        assert_eq!(
+            limits.limit(b"/upload/avatar"),
+            4096,
+            "the longest prefix wins"
+        );
+        assert_eq!(limits.limit(b"/upload/avatar/me"), 4096);
+        assert_eq!(limits.limit(b"/uploads"), 1024, "not a segment boundary");
+        assert_eq!(limits.limit(b"/hello"), 1024);
+        assert_eq!(limits.limit(b""), 1024, "the authority and asterisk forms");
+        assert_eq!(
+            limits.limit(b"/upload/../api/x"),
+            64,
+            "Section 5.2.4: dot-segments are removed before matching"
+        );
+        assert_eq!(
+            limits.limit(b"/%75pload/x"),
+            1 << 20,
+            "Section 6.2.2.2: an unreserved octet is decoded"
+        );
+        assert_eq!(
+            limits.limit(b"/upload%2Fx"),
+            1024,
+            "Section 2.2: an encoded slash is not a separator"
+        );
+        assert_eq!(
+            limits.limit(b"/api?/upload"),
+            64,
+            "Section 3.4: the query never takes part"
+        );
+        assert_eq!(
+            limits.limit(b"/upload/%zz"),
+            64,
+            "a path that cannot be normalized gets the smallest limit"
+        );
+
+        let root = BodyLimits::new(10).route("/", 20).unwrap();
+        assert_eq!(root.limit(b"/anything"), 20);
+        assert_eq!(root.limit(b""), 10);
+
+        let replaced = BodyLimits::new(1)
+            .route("/a", 2)
+            .unwrap()
+            .route("/a/", 3)
+            .unwrap();
+        assert_eq!(replaced.limit(b"/a/b"), 3, "a prefix added again replaces");
+
+        for bad in ["upload", "/a?b", "/a%zz", ""] {
+            assert!(BodyLimits::new(1).route(bad, 2).is_err(), "{bad:?}");
+        }
     }
 }

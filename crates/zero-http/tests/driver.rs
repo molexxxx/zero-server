@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use zero_core::Error;
 use zero_http::{serve, Call, Config, Event, Handler, Workers};
-use zero_http_types::{HeaderName, StatusCode};
+use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_io::seam::{Shutdown, Timer};
 use zero_limits::Http1Limits;
 
@@ -52,7 +52,7 @@ impl App {
             "/hello" => {
                 call.response().content_type(b"text/plain")?.body(b"hello");
             }
-            "/echo" => {
+            "/echo" | "/echo/small" | "/echo/large" => {
                 let (request, mut response) = call.parts();
                 if let Some(kind) = request.header_id(HeaderName::ContentType) {
                     response.content_type(kind)?;
@@ -108,6 +108,18 @@ impl Handler for App {
         let outcome = self.route(call, &path).await;
         self.note(format!("end {tag}"));
         outcome
+    }
+
+    fn body_limit(&self, method: Option<Method>, path: &[u8]) -> Option<u64> {
+        self.note(format!(
+            "limit {method:?} {}",
+            String::from_utf8_lossy(path)
+        ));
+        match path {
+            b"/echo/small" => Some(4),
+            b"/echo/large" => Some(64),
+            _ => None,
+        }
     }
 }
 
@@ -469,6 +481,86 @@ fn a_body_past_the_limit_is_refused_with_413_and_the_connection_closes() {
     );
     assert!(closed(&mut conn));
     server.stop().unwrap();
+}
+
+#[test]
+fn a_per_request_body_limit_from_the_handler_refuses_a_declared_content_length_over_it_with_413_before_the_content_is_read(
+) {
+    let server = Server::start(
+        Http1Limits {
+            max_body: 16,
+            ..Http1Limits::DEFAULT
+        },
+        Duration::from_secs(2),
+    );
+
+    let mut conn = server.connect();
+    conn.write_all(b"POST /echo/large HTTP/1.1\r\nHost: t\r\nContent-Length: 40\r\n\r\n")
+        .unwrap();
+    conn.write_all(&[b'x'; 40]).unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(
+        (response.status, response.body.len()),
+        (200, 40),
+        "a route may take more than the server default"
+    );
+    conn.write_all(
+        b"POST /echo/large HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n14\r\n0123456789abcdefghij\r\n0\r\n\r\n",
+    )
+    .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(
+        (response.status, response.text()),
+        (200, "0123456789abcdefghij".to_owned())
+    );
+    assert_eq!(get(&mut conn, "/hello").text(), "hello");
+
+    let mut conn = server.connect();
+    conn.write_all(
+        b"POST /echo/small HTTP/1.1\r\nHost: t\r\nContent-Length: 5\r\nExpect: 100-continue\r\n\r\n",
+    )
+    .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(
+        response.status, 413,
+        "refused instead of a 100 Continue, so the client never sends the content"
+    );
+    assert_eq!(response.header("connection"), Some("close"));
+    assert!(closed(&mut conn));
+
+    let mut conn = server.connect();
+    conn.write_all(
+        b"POST /echo/small HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n2\r\nde\r\n0\r\n\r\n",
+    )
+    .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(
+        response.status, 413,
+        "a chunked body is refused once it passes the route's limit"
+    );
+    assert!(closed(&mut conn));
+
+    let log = server.log();
+    server.stop().unwrap();
+    let asked: Vec<&str> = log
+        .iter()
+        .filter_map(|line| line.strip_prefix("limit "))
+        .collect();
+    assert_eq!(
+        asked,
+        [
+            "Some(Post) /echo/large",
+            "Some(Post) /echo/large",
+            "Some(Post) /echo/small",
+            "Some(Post) /echo/small",
+        ],
+        "asked once per request with content, never for one without"
+    );
+    assert!(
+        !log.iter()
+            .any(|line| line.starts_with("start POST /echo/small")),
+        "a refused request never reaches the handler"
+    );
 }
 
 #[test]

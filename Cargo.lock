@@ -2091,6 +2091,7 @@ dependencies = [
  "zero-http-types",
  "zero-limits",
  "zero-server-crypto",
+ "zero-uri",
 ]
 
 [[package]]

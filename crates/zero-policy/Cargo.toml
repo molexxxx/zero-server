@@ -17,6 +17,7 @@ zero-http-types.workspace = true
 zero-date.workspace = true
 zero-http.workspace = true
 zero-base64.workspace = true
+zero-uri.workspace = true
 
 [dev-dependencies]
 zero-server-crypto.workspace = true
