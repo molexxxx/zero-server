@@ -13,6 +13,22 @@ authors.workspace = true
 [dependencies]
 zero-core.workspace = true
 
+# The raw calls go through the crates tokio's own graph already carries, at the versions
+# crates.io reported on 2026-10-01: libc 0.2.189 (updated 2026-08-03), socket2 0.6.5
+# (updated 2026-07-13; `all` unlocks the Linux-only setters it wraps) and windows-sys
+# 0.61.2 (updated 2025-10-06).
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2.189", default-features = false }
+socket2 = { version = "0.6.5", default-features = false, features = ["all"] }
+
+[target.'cfg(windows)'.dependencies]
+socket2 = { version = "0.6.5", default-features = false, features = ["all"] }
+windows-sys = { version = "0.61.2", default-features = false, features = [
+  "Win32_Foundation",
+  "Win32_Networking_WinSock",
+  "Win32_System_Threading",
+] }
+
 [lints.rust]
 unsafe_code = "deny"
 missing_docs = "deny"

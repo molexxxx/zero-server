@@ -20,6 +20,14 @@ libfuzzer-sys = "0.4.13"
 zero-simd = { path = "../crates/zero-simd" }
 zero-http1 = { path = "../crates/zero-http1" }
 zero-limits = { path = "../crates/zero-limits" }
+zero-sys = { path = "../crates/zero-sys" }
+
+[[bin]]
+name = "cmsg_decode"
+path = "fuzz_targets/cmsg_decode.rs"
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "utf8_validate"

@@ -82,7 +82,10 @@ allow = [
     "zero-tls",
     "zero-uri",
     "zero-ws",
-    # Runtime seam, io-tokio.
+    # Runtime seam, io-tokio. Checked against crates.io on 2026-10-01: none yanked,
+    # each released within the year (socket2 0.6.5 on 2026-07-13, libc 0.2.189 on
+    # 2026-08-03, windows-sys 0.61.2 on 2025-10-06, windows-link 0.2.1 as its
+    # dependency); libc and windows-sys stay on the 0.x lines tokio itself pins.
     "tokio",
     "mio",
     "socket2",
@@ -177,6 +180,11 @@ allow = ["default"]
 reason = "enabled by cbindgen inside its build-only tree"
 
 [[bans.features]]
+crate = "libc"
+allow = ["default"]
+reason = "enabled by socket2 in the shipped graph; libc's default feature is `std`, which every hosted target links anyway"
+
+[[bans.features]]
 crate = "proc-macro2"
 allow = ["default"]
 reason = "enabled by cbindgen inside its build-only tree"
@@ -221,8 +229,11 @@ allow = [
     "Win32_System",
     "Win32_System_Diagnostics",
     "Win32_System_Diagnostics_Debug",
+    "Win32_System_IO",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
 ]
-reason = "enabled by tempfile inside the cbindgen build-only tree"
+reason = "enabled by tempfile inside the cbindgen build-only tree, and by socket2 and zero-sys (sockets, affinity) in the shipped graph"
 
 [bans.build]
 # Every crate allowed to run a build script, workspace members included. The

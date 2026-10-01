@@ -37,6 +37,15 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      # The audited system crate has Windows and macOS code paths that only compile for
+      # those targets, so it is linted for each of them from this runner as well.
+      - name: Clippy zero-sys for Windows and macOS
+        run: |
+          rustup target add x86_64-pc-windows-msvc aarch64-apple-darwin
+          for target in x86_64-pc-windows-msvc aarch64-apple-darwin; do
+            cargo clippy -p zero-sys --all-targets --target "$target" -- -D warnings
+          done
+
       # The Node and Python binding crates are excluded from the root workspace, so
       # neither check above reaches them; lint them through their own manifests.
       - name: Format and clippy the out-of-workspace bindings

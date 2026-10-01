@@ -76,7 +76,24 @@ the same commit.
   allocations and reallocations (`crates/zero-sys/src/alloc.rs`, the one
   `unsafe impl` of the workspace so far, with its `SAFETY` comments), which
   test binaries and the measurement harnesses install as their global
-  allocator. Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
+  allocator. `zero-sys` also holds the first operating-system wrappers of R.3
+  step 4 (`sockopt.rs`: `TCP_NODELAY` and `SO_REUSEPORT` through socket2,
+  `SO_INCOMING_CPU`, `TCP_DEFER_ACCEPT`, `TCP_FASTOPEN`, `UDP_SEGMENT`,
+  `UDP_GRO`, the path-MTU probe mode, `IP_RECVERR`, packet information, the
+  received and sent type-of-service byte, each a `setsockopt` with one C
+  `int` and a getter that checks the length the kernel wrote, and
+  `SO_EXCLUSIVEADDRUSE` on Windows; `msg.rs`: `sendmsg` and `recvmsg` over
+  borrowed `IoSlice`s, a control buffer and socket2's address storage, the
+  slice count capped at 1,024; `cmsg.rs`: the control-message builder and
+  walk, written without a pointer from libc's `cmsghdr` offsets and the
+  length field's own type, total over any bytes; `affinity.rs`:
+  `sched_setaffinity` on Linux, `SetThreadAffinityMask` on Windows, and
+  `Unsupported` on Apple platforms). The crate depends on libc, socket2 and
+  windows-sys at the versions the lockfile pins, is linted for
+  `x86_64-pc-windows-msvc` and `aarch64-apple-darwin` from the Linux runner
+  (CI's `rust` job), and its Linux tests run on real sockets (`#[cfg_attr(miri,
+  ignore)]`); only the control-message codec and the allocator run under Miri.
+  Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
   nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
@@ -228,6 +245,19 @@ fuzz targets stand in for it until the owner decides on an exception or a
 newer release appears. Also open: the 24 CPU-hour fuzz runs (only a schedule
 can provide them), and `h1-13` (pipelining order), which belongs to the
 connection driver of `zero-http` in step 5.
+
+R.3 step 4 has begun with `zero-sys`: the socket options the design lists
+for release 1 (section 4.2 row and 5.4), `sendmsg` and `recvmsg` with the
+control-message codec (`cmsg_decode` fuzz target, Miri), and thread affinity.
+The Linux tests set and read every option on real sockets and pass a packet
+information message both ways over loopback; the Windows and macOS code is
+compile-checked by clippy for those targets and has run on no such machine
+yet. Not yet in the crate: kTLS (release 2), `memfd_create` and `bpf(2)`
+(release 3). Next in the step is `zero-io` on `io-tokio`: a dependency commit
+that adds tokio with the feature set `DESIGN.md` section 5.3 fixes (`rt`,
+`net`, `time`, `sync`, `io-util`), the seam traits of section 5.2, per-core
+runtimes, the per-operating-system listener strategy of section 5.4, the
+lazy buffer lease of section 5.6, timers, `DateService` and shutdown.
 
 ## Next, in order
 
