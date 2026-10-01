@@ -93,6 +93,34 @@ the same commit.
   `x86_64-pc-windows-msvc` and `aarch64-apple-darwin` from the Linux runner
   (CI's `rust` job), and its Linux tests run on real sockets (`#[cfg_attr(miri,
   ignore)]`); only the control-message codec and the allocator run under Miri.
+  `zero-io` holds the seam traits, the per-core pool and date block, and the
+  `io-tokio` backend (see "In progress", step 4). `zero-rt` holds the chunked
+  arena, the slot state word, the tiers, the cancel flag, panic containment and
+  the per-core workers with the status callback (step 5, first half).
+  `zero-http` holds the HTTP/1.1 connection driver over the seam
+  (`crates/zero-http/src/conn.rs`: one task per connection, the input block
+  leased on readiness and returned when consumed, the pipelining ring of
+  `ring.rs` with responses written in request order through one vectored
+  write per turn, safe methods run beside each other and an unsafe method
+  waits for everything before it, `Expect: 100-continue`, the head, body,
+  idle, keep-alive and request-total timeouts of section 10.4 answered 408 or
+  503 with `Connection: close`, 413 for a body past the limit, 417 for an
+  unknown expectation, HTTP/1.0 persistence with `Connection: keep-alive`, the
+  request cap, `Date` and `Server` on every response, and the drain rule), the
+  tier 4 handler ABI (`handler.rs`, `call.rs`: `Handler::handle(&self, &mut
+  Call)` returning a `!Send` future polled inline by the connection task, the
+  request views and the response builder that validates every field once and
+  refuses the framing names), the error registry (`error.rs`: every
+  `zero_core::Error` variant mapped to a status and a code, the RFC 9457
+  problem details body with `type`, `title`, `status`, `code` and a `detail`
+  only for the client-side variants), the per-core accept loop with the
+  request-memory budget that pauses accepts (`server.rs`), and the tests
+  (`tests/driver.rs`, 24 cases through real sockets on two cores;
+  `tests/no_alloc.rs`, the counting allocator over the whole path of a tier
+  4 request: zero global allocations per request on a warm connection).
+  Records are boxed and pooled per core and move by pointer between the pool,
+  the ring and the handler future; the arena's slot ids address them from
+  step 12, when the FFI needs the lease protocol.
   Every other crate is a skeleton with only its `VERSION` export. Every crate is at 0.1.0 and
   nothing is published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
@@ -279,24 +307,41 @@ completion backend). `tests/datagram.rs` passes batches over loopback and,
 on Linux, ECN codepoints and an 1,800-byte buffer segmented at 600. Not yet
 in `zero-io`: the `io-compio` backend (step 8).
 
-R.3 step 5 has begun with the first half of `zero-rt`: `arena.rs` (the
-chunked per-worker arena over `zero-core`'s `SlotId`, chunks added and never
-moved, a free list that hands indices back with the next generation, `&mut`
-access through the worker's exclusive borrow and no `unsafe`), `slot.rs` (the
-per-slot atomic state word of `DESIGN.md` section 7.3: `Free`, `Parsing`,
-`WorkerOwned`, `Leased`, `Completing`, `Closed`, a 16-bit reader count, the
-cancel flag and the 30-bit generation in one `AtomicU64`; `borrow` is one
-compare-and-swap that checks the generation and the lease, `recycle` refuses
-while a reader is counted in and bumps the generation; the epoch-based
-index reuse, the loom model and the TSan race belong to step 12), `tier.rs`
-(the five tiers), `cancel.rs` (the per-request cancel flag with a waker),
-`contain.rs` (every poll under `catch_unwind`, a panic becomes `Panicked`
-and the future is dropped), and `worker.rs` (`start` over `zero-io`'s
-`serve`: every spawned task is contained, a task panic counts on the core
-and reaches the status callback as `TaskPanic` while the core serves on, and
-a panic in the core's own loop stops that core and is reported as
-`WorkerPanic`; the tests drive both through real connections). Next:
-`zero-http`, the HTTP/1.1 connection driver over the seam.
+R.3 step 5 is complete except for the part that needs the router. `zero-rt`
+first half: `arena.rs` (the chunked per-worker arena over `zero-core`'s
+`SlotId`, chunks added and never moved, a free list that hands indices back
+with the next generation, records reset in place through the `Reset` trait,
+`&mut` access through the worker's exclusive borrow and no `unsafe`),
+`slot.rs` (the per-slot atomic state word of `DESIGN.md` section 7.3: `Free`,
+`Parsing`, `WorkerOwned`, `Leased`, `Completing`, `Closed`, a 16-bit reader
+count, the cancel flag and the 30-bit generation in one `AtomicU64`; `borrow`
+is one compare-and-swap that checks the generation and the lease, `recycle`
+refuses while a reader is counted in and bumps the generation; the
+epoch-based index reuse, the loom model and the TSan race belong to step 12),
+`tier.rs` (the five tiers), `cancel.rs` (the per-request cancel flag with a
+waker), `contain.rs` (every poll under `catch_unwind`, a panic becomes
+`Panicked` and the future is dropped), and `worker.rs` (`start` over
+`zero-io`'s `serve`: every spawned task is contained, a task panic counts on
+the core and reaches the status callback as `TaskPanic` while the core serves
+on, `note_panic` counts one a connection task contained itself, and a panic
+in the core's own loop stops that core and is reported as `WorkerPanic`; the
+tests drive both through real connections). `zero-io`'s workers now count
+the tasks a core spawned and drain them to the deadline after the per-core
+future returns, so in-flight connections finish during a shutdown instead of
+being dropped with the `LocalSet`. `zero-http`: see Position. The step's
+exit criteria met here: pipelined responses leave in request order (the RFC
+9112 section 9.3.2 test, row `h1-13`), a panicking tier 4 handler yields 500
+and the connection and core stay usable, the counting allocator reports zero
+global allocations per request on a tier 4 route. Rows `routing-11`,
+`runtime-02`, `runtime-03`, `runtime-08`, `runtime-09` and `errors-01` to
+`errors-07` cite the driver tests. Still open in the step: the 27 semantics
+statements through the router and driver, which need `zero-router` (step 6);
+`errors-08` (a consumer rule, for the client side when one exists),
+`errors-09` (the 401 challenge belongs to `zero-policy`'s JWT step) and
+`errors-10` (`Retry-After` on 429 and 503, with the rate limiter and the
+batch dispatcher's 503 rule). Unverified: the RFC 9457 text was read from the
+HTTP API working group's repository copy of the document, since the RFC
+Editor is unreachable from this environment.
 
 ## Next, in order
 
@@ -322,8 +367,11 @@ stated there. The first release's items:
 3. Site base path: done (see Position). `pages.yml` stays on
    `workflow_dispatch` until the documentation pages and the web tree exist
    and `cargo xtask site --verify` passes on a rendered tree.
-4. `zero-sys` and `zero-io` on tokio (R.3 step 4), then `zero-rt` and
-   `zero-http` (step 5), the router and the small codecs (step 6), the
+4. `zero-sys` and `zero-io` on tokio (R.3 step 4) and `zero-rt` with
+   `zero-http` (step 5): done except for the parts named under "In
+   progress". Next: the router and the small codecs (step 6: `zero-router`
+   with the salvaged semantics, `zero-json`, `zero-uri`, `zero-qs`,
+   `zero-mime`, `zero-base64`, the `router` vector section), then the
    benchmark harness and the thesis measurement (step 7), then steps 8 to 14
    to the release 1 tag.
 

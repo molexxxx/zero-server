@@ -107,17 +107,26 @@ impl Worker {
     /// * `future` - the task body; a panic in it is counted and reported, and the
     ///   task ends there.
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
-        let panics = Rc::clone(&self.panics);
-        let status = Arc::clone(&self.status);
-        let core = self.core.index();
+        let worker = self.clone();
         self.core.spawn_local(async move {
             if let Err(panicked) = contain(future).await {
-                panics.set(panics.get().saturating_add(1));
-                status(Event::TaskPanic {
-                    core,
-                    message: panicked.message,
-                });
+                worker.note_panic(panicked.message);
             }
+        });
+    }
+
+    /// Count a panic this core contained itself, such as a handler future polled
+    /// inline by a connection task under [`contain`], and report it as
+    /// [`Event::TaskPanic`].
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - the panic message.
+    pub fn note_panic(&self, message: String) {
+        self.panics.set(self.panics.get().saturating_add(1));
+        (self.status)(Event::TaskPanic {
+            core: self.core.index(),
+            message,
         });
     }
 

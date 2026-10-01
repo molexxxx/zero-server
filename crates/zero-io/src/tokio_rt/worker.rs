@@ -1,16 +1,19 @@
 //! The workers: one thread per core, each with its own runtime, pool, date block and
 //! listener, running the caller's per-core future.
 
+use std::cell::Cell;
 use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::num::NonZeroUsize;
+use std::pin::pin;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::Notify;
 
 use super::listen::{self, Acceptor, Handoff, ListenConfig};
 use super::shutdown::ShutdownHandle;
@@ -63,6 +66,31 @@ pub struct Core {
     /// This core's `Date` block.
     pub date: Rc<Date>,
     shutdown: ShutdownHandle,
+    tasks: Rc<Tasks>,
+}
+
+/// The tasks a core spawned through [`Runtime::spawn_local`] and has not seen end,
+/// so the worker can drain them to the deadline before its runtime goes.
+#[derive(Debug, Default)]
+struct Tasks {
+    live: Cell<usize>,
+    notify: Notify,
+}
+
+impl Tasks {
+    /// Wait until no spawned task is left.
+    async fn drained(&self) {
+        loop {
+            // Register before checking the count, so a task ending between the
+            // check and the wait still wakes this one.
+            let mut notified = pin!(self.notify.notified());
+            notified.as_mut().enable();
+            if self.live.get() == 0 {
+                return;
+            }
+            notified.await;
+        }
+    }
 }
 
 impl Core {
@@ -89,6 +117,12 @@ impl Core {
     pub const fn shutdown(&self) -> &ShutdownHandle {
         &self.shutdown
     }
+
+    /// How many tasks spawned through [`Runtime::spawn_local`] are still running.
+    #[must_use]
+    pub fn live_tasks(&self) -> usize {
+        self.tasks.live.get()
+    }
 }
 
 impl Runtime for Core {
@@ -96,7 +130,15 @@ impl Runtime for Core {
     where
         F: Future<Output = ()> + 'static,
     {
-        drop(tokio::task::spawn_local(future));
+        let tasks = Rc::clone(&self.tasks);
+        tasks.live.set(tasks.live.get().saturating_add(1));
+        drop(tokio::task::spawn_local(async move {
+            future.await;
+            tasks.live.set(tasks.live.get().saturating_sub(1));
+            if tasks.live.get() == 0 {
+                tasks.notify.notify_waiters();
+            }
+        }));
     }
 }
 
@@ -311,7 +353,9 @@ where
             pool,
             date: Rc::clone(&date),
             shutdown: shutdown.clone(),
+            tasks: Rc::new(Tasks::default()),
         };
+        let tasks = Rc::clone(&core.tasks);
         let ticker = shutdown.clone();
         drop(tokio::task::spawn_local(async move {
             let mut tick = tokio::time::interval(Duration::from_secs(1));
@@ -349,7 +393,11 @@ where
                 nodelay,
             },
         };
-        per_core(core, acceptor).await
+        let outcome = per_core(core, acceptor).await;
+        // Drain: the tasks still running (the open connections) finish on their own
+        // up to the deadline, then go with the runtime.
+        let _ = tokio::time::timeout(config.drain, tasks.drained()).await;
+        outcome
     });
     runtime.shutdown_timeout(config.drain);
     outcome

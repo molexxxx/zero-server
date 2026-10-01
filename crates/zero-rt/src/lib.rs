@@ -22,7 +22,7 @@ pub mod slot;
 pub mod tier;
 pub mod worker;
 
-pub use arena::Arena;
+pub use arena::{Arena, Reset};
 pub use cancel::Cancel;
 pub use contain::{contain, Panicked};
 pub use slot::{Borrow, Refused, SlotState, SlotWord};

@@ -11,6 +11,8 @@ categories.workspace = true
 authors.workspace = true
 
 [features]
+default = ["io-tokio"]
+io-tokio = ["zero-io/io-tokio"]
 io-compio = ["zero-io/io-compio"]
 
 [dependencies]
@@ -18,9 +20,12 @@ zero-core.workspace = true
 zero-limits.workspace = true
 zero-http-types.workspace = true
 zero-http1.workspace = true
-zero-router.workspace = true
 zero-io.workspace = true
 zero-rt.workspace = true
+zero-sys.workspace = true
+
+[dev-dependencies]
+zero-date.workspace = true
 
 [lints]
 workspace = true

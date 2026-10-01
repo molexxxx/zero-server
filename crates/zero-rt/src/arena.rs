@@ -16,6 +16,15 @@ use zero_core::{Error, Result, SlotId};
 
 use crate::slot::{Refused, SlotState, SlotWord};
 
+/// A record the arena reuses: `reset` returns it to its empty state and keeps whatever
+/// capacity it holds, so a slot allocated again allocates nothing.
+pub trait Reset: Default {
+    /// Return to the empty state, keeping capacity.
+    fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
 /// One slot: its state word and the request record.
 #[derive(Debug)]
 struct Entry<T> {
@@ -34,7 +43,7 @@ pub struct Arena<T> {
     limit: usize,
 }
 
-impl<T: Default> Arena<T> {
+impl<T: Reset> Arena<T> {
     /// An empty arena for worker `worker`, growing by `chunk` slots at a time up to
     /// `limit` slots.
     ///
@@ -79,7 +88,7 @@ impl<T: Default> Arena<T> {
     }
 
     /// Allocate a slot: a free one first, else a slot of a new chunk. The slot moves
-    /// to `Parsing` and the record is reset to its default.
+    /// to `Parsing` and the record is [`reset`](Reset::reset), keeping its capacity.
     ///
     /// # Returns
     ///
@@ -98,7 +107,7 @@ impl<T: Default> Arena<T> {
             .word
             .transition(SlotState::Free, SlotState::Parsing)
             .map_err(|_| Error::Closed)?;
-        *entry.value.get_mut() = T::default();
+        entry.value.get_mut().reset();
         let generation = entry.word.generation();
         self.live = self.live.saturating_add(1);
         SlotId::new(self.worker, generation, index).ok_or(Error::Closed)
@@ -240,6 +249,12 @@ mod tests {
     #[derive(Debug, Default)]
     struct Record {
         bytes: Vec<u8>,
+    }
+
+    impl super::Reset for Record {
+        fn reset(&mut self) {
+            self.bytes.clear();
+        }
     }
 
     #[test]
