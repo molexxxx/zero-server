@@ -1239,6 +1239,8 @@ dependencies = [
  "zero-limits",
  "zero-router",
  "zero-rt",
+ "zero-sys",
+ "zero-uri",
 ]
 
 [[package]]
@@ -1281,6 +1283,7 @@ version = "0.1.0"
 dependencies = [
  "zero-core",
  "zero-http-types",
+ "zero-uri",
 ]
 
 [[package]]
@@ -1312,6 +1315,13 @@ dependencies = [
  "libc",
  "socket2",
  "windows-sys",
+ "zero-core",
+]
+
+[[package]]
+name = "zero-uri"
+version = "0.1.0"
+dependencies = [
  "zero-core",
 ]
 

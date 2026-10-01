@@ -55,6 +55,7 @@ allow = [
     "zero-io",
     "zero-limits",
     "zero-router",
+    "zero-uri",
     "zero-rt",
     "zero-simd",
     "zero-sys",
@@ -172,6 +173,16 @@ reason = "the binding links the std build of the core"
 crate = "zero-router"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-uri"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-http"
+allow = ["default", "io-tokio"]
+reason = "the binding links the core on its default readiness backend"
 
 [[bans.features]]
 crate = "zero-io"
