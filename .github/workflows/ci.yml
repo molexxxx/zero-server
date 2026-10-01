@@ -254,7 +254,7 @@ jobs:
       # Pinned to the crates.io version of 2026-09-30, the one deny.toml and deny/ are
       # checked against locally.
       - name: Install cargo-deny
-        uses: taiki-e/install-action@v2.87.13
+        uses: taiki-e/install-action@v2.87.21
         with:
           tool: cargo-deny@0.20.2
 
