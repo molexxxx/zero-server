@@ -14,6 +14,12 @@ pub fn iterations(native: usize) -> usize {
     }
 }
 
+/// Returns the byte values an exhaustive grid test covers: every value on a
+/// native run, every seventh under Miri.
+pub fn grid_bytes() -> impl Iterator<Item = u8> {
+    (0u8..=255).step_by(if cfg!(miri) { 7 } else { 1 })
+}
+
 /// An xorshift64* generator; the same seed always yields the same inputs, so
 /// a failing case can be rerun.
 pub struct Rng(u64);

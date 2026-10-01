@@ -83,7 +83,7 @@ jobs:
       # committed file no longer matches.
       - name: Examples run and the conformance vectors are current
         run: |
-          for example in $(ls examples/*.rs examples/guides/*.rs 2>/dev/null | xargs -n1 basename | sed 's/\.rs$//'); do
+          for example in $(ls crates/zero-examples/examples/*.rs crates/zero-examples/examples/guides/*.rs 2>/dev/null | xargs -n1 basename | sed 's/\.rs$//'); do
             cargo run -p zero-examples --example "$example" > /dev/null
           done
           git diff --exit-code -- conformance/vectors.json
@@ -141,6 +141,35 @@ jobs:
           -p zero-core -p zero-limits -p zero-simd -p zero-http-types -p zero-date
           -p zero-http1 -p zero-router -p zero-uri -p zero-qs -p zero-mime
           -p zero-base64 -p zero-json -p zero-ws -p zero-sse -p zero-qpack -p zero-h3
+
+  arm:
+    name: aarch64 kernels
+    # The NEON kernels run only on an AArch64 host; the x86-64 jobs compile them
+    # and never execute them. The runner label is from the actions/runner-images
+    # README (ubuntu-24.04-arm, arm64), read 2026-10-01.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install components
+        run: rustup component add rustfmt clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-arm-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Clippy the kernels
+        run: cargo clippy -p zero-simd --all-targets -- -D warnings
+
+      # Every NEON kernel is checked against the SWAR reference for every byte at
+      # every lane position and on random inputs.
+      - name: Test the kernels against the SWAR reference
+        run: cargo test -p zero-simd
 
   msrv:
     name: minimum supported rust
@@ -313,14 +342,17 @@ jobs:
       - name: Install cargo-fuzz
         run: command -v cargo-fuzz || cargo install cargo-fuzz --locked
 
-      # Every parser entry point has a libFuzzer target with a checked-in seed corpus.
-      # Each runs for a minute here, optimized with debug assertions on and under
+      # Every parser entry point has a libFuzzer target with a checked-in seed set
+      # under fuzz/seeds/<target> and a dictionary under fuzz/dictionaries. Each runs
+      # for a minute here from its seeds, optimized with debug assertions on and under
       # address sanitizer, so a checked operation that panics on arbitrary bytes fails
       # the job rather than shipping; the long runs are a separate schedule.
       - name: Run every target for a minute
         run: |
           for target in $(cargo +nightly fuzz list); do
-            cargo +nightly fuzz run "$target" -O -a -s address -- -max_total_time=60
+            mkdir -p "fuzz/corpus/$target"
+            cargo +nightly fuzz run "$target" "fuzz/corpus/$target" "fuzz/seeds/$target" \
+              -O -a -s address -- -max_total_time=60 "-dict=fuzz/dictionaries/$target.dict"
           done
 
   reproducible:

@@ -1,10 +1,21 @@
 //! The cached feature token that selects a kernel.
 //!
 //! Detection runs once per process and is remembered in an atomic, so a
-//! dispatch costs one relaxed load. With the `std` feature the x86 features
-//! come from the standard library's runtime detection; without it, only the
-//! features the target was compiled with are used, so a `no_std` build never
-//! executes an instruction its target does not guarantee.
+//! dispatch costs one relaxed load. On x86-64 the probe asks the CPU directly
+//! with `cpuid` and `xgetbv`, which `core` exposes, so a `no_std` build
+//! detects the same features a hosted build does: SSE4.2 from leaf 1, and
+//! AVX2 from leaf 7 only when the CPU reports XSAVE and AVX, the operating
+//! system has enabled XSAVE, and the extended control register says the OS
+//! saves the SSE and AVX register state. On AArch64, NEON is a compile-time
+//! feature of the target. Under Miri, which interprets no `cpuid`, the probe
+//! reports the target's compile-time features.
+//!
+//! The leaf and bit positions are those the standard library's detection
+//! uses (`std_detect`, `detect/os/x86.rs`): leaf 1 ECX bit 20 for SSE4.2,
+//! bits 26, 27 and 28 for XSAVE, OSXSAVE and AVX, XCR0 bits 1 and 2 for the
+//! SSE and AVX state, and leaf 7 subleaf 0 EBX bit 5 for AVX2.
+//!
+//! @see <https://raw.githubusercontent.com/rust-lang/rust/master/library/std_detect/src/detect/os/x86.rs>
 
 use core::sync::atomic::{AtomicU8, Ordering};
 
@@ -56,10 +67,11 @@ impl Features {
 
     fn probe() -> Self {
         let mut bits = DETECTED;
-        if x86_sse42() {
+        let (sse42, avx2) = x86_features();
+        if sse42 {
             bits |= SSE42;
         }
-        if x86_avx2() {
+        if avx2 {
             bits |= AVX2;
         }
         if cfg!(all(target_arch = "aarch64", target_feature = "neon")) {
@@ -69,30 +81,78 @@ impl Features {
     }
 }
 
-#[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-fn x86_sse42() -> bool {
-    std::arch::is_x86_feature_detected!("sse4.2")
+/// Leaf 1 ECX bit 20: SSE4.2.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const LEAF1_ECX_SSE42: u32 = 0x0010_0000;
+/// Leaf 1 ECX bit 26: the CPU supports XSAVE.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const LEAF1_ECX_XSAVE: u32 = 0x0400_0000;
+/// Leaf 1 ECX bit 27: the operating system has enabled XSAVE.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const LEAF1_ECX_OSXSAVE: u32 = 0x0800_0000;
+/// Leaf 1 ECX bit 28: AVX.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const LEAF1_ECX_AVX: u32 = 0x1000_0000;
+/// XCR0 bits 1 and 2: the operating system saves the SSE and AVX state.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const XCR0_SSE_AVX: u64 = 0b110;
+/// Leaf 7 subleaf 0 EBX bit 5: AVX2.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+const LEAF7_EBX_AVX2: u32 = 0x0000_0020;
+
+/// Asks the CPU for SSE4.2 and usable AVX2.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+#[allow(unsafe_code)]
+fn x86_features() -> (bool, bool) {
+    use core::arch::x86_64::{__cpuid, __cpuid_count};
+
+    let max_leaf = __cpuid(0).eax;
+    if max_leaf < 1 {
+        return (false, false);
+    }
+    let leaf1 = __cpuid(1).ecx;
+    let sse42 = leaf1 & LEAF1_ECX_SSE42 != 0;
+    let xsave = leaf1 & LEAF1_ECX_XSAVE != 0;
+    let osxsave = leaf1 & LEAF1_ECX_OSXSAVE != 0;
+    let avx = leaf1 & LEAF1_ECX_AVX != 0;
+    if max_leaf < 7 || !(xsave && osxsave && avx) {
+        return (sse42, false);
+    }
+    // SAFETY: the CPU reports XSAVE and the operating system has set OSXSAVE,
+    // so the XGETBV instruction is enabled.
+    let xcr0 = unsafe { extended_control_register() };
+    let os_saves_avx_state = xcr0 & XCR0_SSE_AVX == XCR0_SSE_AVX;
+    let avx2 = os_saves_avx_state && __cpuid_count(7, 0).ebx & LEAF7_EBX_AVX2 != 0;
+    (sse42, avx2)
 }
 
-#[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-fn x86_avx2() -> bool {
-    std::arch::is_x86_feature_detected!("avx2")
+/// Reads XCR0.
+///
+/// The caller must have confirmed XSAVE and OSXSAVE in CPUID leaf 1, or the
+/// instruction faults.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
+#[allow(unsafe_code)]
+#[target_feature(enable = "xsave")]
+unsafe fn extended_control_register() -> u64 {
+    // SAFETY: the caller confirmed XSAVE and OSXSAVE, under which XGETBV with
+    // register 0 is defined.
+    unsafe { core::arch::x86_64::_xgetbv(0) }
 }
 
-#[cfg(not(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64"))))]
-fn x86_sse42() -> bool {
-    cfg!(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse4.2"
-    ))
-}
-
-#[cfg(not(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64"))))]
-fn x86_avx2() -> bool {
-    cfg!(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))
+/// Reports the x86 features the target was compiled with, on targets and
+/// interpreters where the CPU cannot be asked.
+#[cfg(not(all(target_arch = "x86_64", not(miri))))]
+fn x86_features() -> (bool, bool) {
+    (
+        cfg!(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "sse4.2"
+        )),
+        cfg!(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        )),
+    )
 }
 
 #[cfg(test)]
@@ -117,5 +177,19 @@ mod tests {
         assert!(first.has_neon());
         #[cfg(not(target_arch = "aarch64"))]
         assert!(!first.has_neon());
+    }
+
+    #[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
+    #[test]
+    fn the_probe_agrees_with_the_standard_library() {
+        let features = Features::detect();
+        assert_eq!(
+            features.has_sse42(),
+            std::arch::is_x86_feature_detected!("sse4.2")
+        );
+        assert_eq!(
+            features.has_avx2(),
+            std::arch::is_x86_feature_detected!("avx2")
+        );
     }
 }

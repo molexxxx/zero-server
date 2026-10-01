@@ -7,7 +7,7 @@
 //! [`swar`] are property-tested against them and are the reference every
 //! SIMD kernel is property-tested against in turn. The functions at the crate
 //! root dispatch on the cached [`Features`] token: AVX2 or SSE2 on x86-64,
-//! SWAR everywhere else.
+//! NEON on AArch64, SWAR everywhere else.
 //!
 //! This is the one no_std crate allowed `unsafe`: the dispatch call site and
 //! every pointer-taking load and store inside a SIMD kernel carry a
@@ -45,6 +45,8 @@
 extern crate alloc;
 
 pub mod detect;
+#[cfg(target_arch = "aarch64")]
+pub mod neon;
 pub mod scalar;
 pub mod swar;
 pub mod utf8;
@@ -71,7 +73,11 @@ pub fn scan_ascii(bytes: &[u8]) -> usize {
     {
         x86::scan_ascii(bytes)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::scan_ascii(bytes)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::scan_ascii(bytes)
     }
@@ -89,7 +95,11 @@ pub fn scan_target(bytes: &[u8]) -> usize {
     {
         x86::scan_target(bytes)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::scan_target(bytes)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::scan_target(bytes)
     }
@@ -106,7 +116,11 @@ pub fn scan_header_name(bytes: &[u8]) -> usize {
     {
         x86::scan_header_name(bytes)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::scan_header_name(bytes)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::scan_header_name(bytes)
     }
@@ -124,7 +138,11 @@ pub fn scan_header_value(bytes: &[u8]) -> usize {
     {
         x86::scan_header_value(bytes)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::scan_header_value(bytes)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::scan_header_value(bytes)
     }
@@ -142,7 +160,11 @@ pub fn find_byte(haystack: &[u8], needle: u8) -> Option<usize> {
     {
         x86::find_byte(haystack, needle)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::find_byte(haystack, needle)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::find_byte(haystack, needle)
     }
@@ -159,7 +181,11 @@ pub fn find_cr_or_lf(haystack: &[u8]) -> Option<usize> {
     {
         x86::find_cr_or_lf(haystack)
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::find_cr_or_lf(haystack)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::find_cr_or_lf(haystack)
     }
@@ -177,7 +203,11 @@ pub fn unmask(payload: &mut [u8], key: [u8; 4]) {
     {
         x86::unmask(payload, key);
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        neon::unmask(payload, key);
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         swar::unmask(payload, key);
     }

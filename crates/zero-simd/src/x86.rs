@@ -488,7 +488,7 @@ mod tests {
     use super::{avx2, sse2};
     use crate::detect::Features;
     use crate::swar;
-    use crate::test_support::{iterations, Rng};
+    use crate::test_support::{grid_bytes, iterations, Rng};
 
     /// Every kernel's answer for one input.
     #[derive(Debug, PartialEq, Eq)]
@@ -567,7 +567,7 @@ mod tests {
 
     #[test]
     fn every_byte_at_every_position_agrees_with_swar() {
-        for byte in 0u8..=255 {
+        for byte in grid_bytes() {
             for position in 0..72usize {
                 let mut buffer = [b'a'; 72];
                 if let Some(slot) = buffer.get_mut(position) {

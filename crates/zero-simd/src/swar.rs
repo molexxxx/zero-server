@@ -170,11 +170,11 @@ mod tests {
         scan_header_name, scan_header_value, scan_target, unmask, HI,
     };
     use crate::scalar;
-    use crate::test_support::{iterations, Rng};
+    use crate::test_support::{grid_bytes, iterations, Rng};
 
     #[test]
     fn masks_are_exact_per_lane() {
-        for byte in 0u8..=255 {
+        for byte in grid_bytes() {
             for lane in 0..8usize {
                 let mut chunk = [b'a'; 8];
                 if let Some(slot) = chunk.get_mut(lane) {
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn every_byte_at_every_position_agrees_with_the_scalar_reference() {
-        for byte in 0u8..=255 {
+        for byte in grid_bytes() {
             for position in 0..24usize {
                 let mut buffer = [b'a'; 24];
                 if let Some(slot) = buffer.get_mut(position) {
