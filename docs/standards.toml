@@ -640,6 +640,58 @@ anchor = "rule"
 release = 1
 note = "RFC 9112 Section 4"
 
+[[entry]]
+key = "h1-15"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A 101 response carries Upgrade and the upgrade connection option, and the bytes after the request head reach the new protocol unparsed"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.8"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn an_upgrade_is_answered_101_with_upgrade_and_connection_upgrade_and_the_bytes"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 7.8 and 15.2.2"
+
+[[entry]]
+key = "h1-16"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "The server never switches to a protocol the request's Upgrade field did not offer, and ignores Upgrade on HTTP/1.0"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.8"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn an_upgrade_to_a_protocol_the_client_did_not_offer_is_refused_and_http"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 7.8"
+
+[[entry]]
+key = "h1-17"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A request with both Upgrade and Expect: 100-continue receives the 100 before the 101"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-7.8"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn a_request_with_upgrade_and_100_continue_gets_the_100_before_the_101"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 7.8"
+
+[[entry]]
+key = "h1-18"
+chapter = "http"
+designation = "RFC 9112"
+body = "IETF"
+subject = "A streamed response has no Content-Length, carries Connection: close, and its body ends when the server closes the connection"
+url = "https://www.rfc-editor.org/rfc/rfc9112.html#section-6.3"
+evidence = "crates/zero-http/tests/driver.rs"
+at = "fn a_streamed_body_has_no_content_length_and_ends_when_the_connection_closes"
+anchor = "rule"
+release = 1
+note = "RFC 9112 Section 6.3, item 8"
+
 
 # HTTP/2 and TLS transport
 

@@ -64,6 +64,9 @@ pub(crate) struct Entry {
     /// Whether the method is safe, which decides whether it runs beside its
     /// predecessors.
     pub(crate) safe: bool,
+    /// Whether the request asked to switch protocols, which stops the parsing of
+    /// later input until it is answered.
+    pub(crate) upgrade: bool,
     /// The body bytes counted on the core's request-memory budget for this entry.
     pub(crate) body_bytes: u64,
     /// The future slot the running handler lives in.
@@ -74,12 +77,14 @@ impl Entry {
     /// An entry for a request whose head just completed.
     pub(crate) fn new(record: Box<Record>, stage: Stage, now: Instant) -> Self {
         let safe = record.safe();
+        let upgrade = record.parsed.is_some_and(|head| head.upgrade);
         Entry {
             record: Some(record),
             stage,
             accepted: now,
             last_byte: now,
             safe,
+            upgrade,
             body_bytes: 0,
             slot: None,
         }
@@ -191,6 +196,22 @@ impl<F> Ring<F> {
         }
         self.entry(self.position(self.len - 1))
             .is_some_and(|entry| matches!(entry.stage, Stage::Body { .. }))
+    }
+
+    /// Whether the tail entry asked to switch protocols and its body is in, so the
+    /// input after it may belong to another protocol and is left unparsed.
+    pub(crate) fn upgrade_pending(&self) -> bool {
+        if self.len == 0 {
+            return false;
+        }
+        self.entry(self.position(self.len - 1))
+            .is_some_and(|entry| entry.upgrade && !matches!(entry.stage, Stage::Body { .. }))
+    }
+
+    /// The index from the head of the entry at a position, if one is there.
+    pub(crate) fn index_of(&self, position: usize) -> Option<usize> {
+        let index = (position + CAP - self.head) % CAP;
+        (index < self.len).then_some(index)
     }
 
     /// Remove the head entry; its future, if any, is dropped.

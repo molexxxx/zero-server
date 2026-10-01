@@ -11,9 +11,10 @@
 //! request-memory budget that pauses accepts. The handler ABI for tier 4 is
 //! [`Handler`] over [`Call`]; a handler's error is answered from the error registry
 //! ([`error`]) as a problem details body, and a handler's panic is answered 500
-//! while the connection and the core serve on (section 10.2). The `StreamTransport`
-//! seam, Alt-Svc emission and the WebSocket and SSE entry points follow in their
-//! own steps.
+//! while the connection and the core serve on (section 10.2). A handler can claim
+//! its connection ([`takeover`]) to switch protocols after a `101` or to stream a
+//! body, which is what WebSocket and server-sent events build on. The
+//! `StreamTransport` seam and Alt-Svc emission follow in their own steps.
 
 pub mod call;
 mod conn;
@@ -22,11 +23,13 @@ pub mod handler;
 mod record;
 mod ring;
 pub mod server;
+pub mod takeover;
 
 pub use call::{Call, Request, Response, Routed};
 pub use error::{code_for, status_for, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
 pub use handler::Handler;
 pub use server::{serve, Config};
+pub use takeover::{TakeOver, Taken};
 pub use zero_router::Router;
 pub use zero_rt::{Event, StatusSink, Worker, Workers};
 

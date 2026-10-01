@@ -35,6 +35,7 @@ use crate::error::Problem;
 use crate::handler::Handler;
 use crate::record::{Record, RESPONSE_HEAD_CAPACITY};
 use crate::ring::{poll_running, record_at, Entry, Framing, Ring, Split, Stage, CAP};
+use crate::takeover::{TakeOver, Taken};
 
 /// The interim response owed to a `100-continue` expectation.
 const CONTINUE: &[u8] = b"HTTP/1.1 100 Continue\r\n\r\n";
@@ -305,6 +306,10 @@ pub(crate) struct Conn<S, H, Req> {
     retry_read_at: Option<Instant>,
     /// The socket failed; nothing more is written.
     aborted: bool,
+    /// A handler claimed the connection; no further input is parsed or read.
+    taking: bool,
+    /// The claimed request, once its response head is written.
+    taken: Option<Box<Record>>,
 }
 
 impl<S, H, Req> Conn<S, H, Req>
@@ -337,6 +342,8 @@ where
             draining: false,
             retry_read_at: None,
             aborted: false,
+            taking: false,
+            taken: None,
         }
     }
 
@@ -351,20 +358,37 @@ where
         async move {
             loop {
                 conn.tick();
-                if conn.aborted || (conn.close && conn.ring.is_empty() && conn.writing.is_none()) {
+                if conn.taken.is_some()
+                    || conn.aborted
+                    || (conn.close && conn.ring.is_empty() && conn.writing.is_none())
+                {
                     break;
                 }
                 let event = conn.wait().await;
                 conn.apply(event);
             }
+            let leftover = conn.input.tail().to_vec();
             conn.input.clear(conn.shared.pool());
             if let Some(record) = conn.next.take() {
                 conn.shared.give_record(record);
             }
             conn.discard_from(0);
-            if !conn.aborted {
-                conn.linger().await;
+            if conn.aborted {
+                return;
             }
+            if let Some(record) = conn.taken.take() {
+                if let Some(claim) = record.claim {
+                    let taken = Taken::new(
+                        Rc::clone(&conn.stream),
+                        leftover,
+                        record,
+                        conn.shared.worker.clone(),
+                        claim,
+                    );
+                    conn.shared.handler.taken(taken).await;
+                }
+            }
+            conn.linger().await;
         }
     }
 
@@ -392,7 +416,9 @@ where
         let deadline = self.next_deadline(now);
         let want_read = (self.input.is_empty() || self.head_since.is_some())
             && (!self.close || self.ring.body_pending())
-            && self.retry_read_at.is_none();
+            && self.retry_read_at.is_none()
+            && !self.taking
+            && !self.ring.upgrade_pending();
         let watch_shutdown = !self.draining;
         let Conn {
             shared,
@@ -478,6 +504,14 @@ where
         let last = !self.ring.is_empty() && self.ring.position(self.ring.len() - 1) == position;
         let close = record.close || (self.close && last);
         serialize(&self.shared, &mut record, close);
+        if record.claim.is_some() {
+            // The connection ends with the claim: nothing after it is parsed, and
+            // requests pipelined behind it are dropped.
+            self.taking = true;
+            if let Some(index) = self.ring.index_of(position) {
+                self.discard_from(index.saturating_add(1));
+            }
+        }
         self.ring.clear_future(position);
         if let Some(entry) = self.ring.entry_mut(position) {
             entry.record = Some(record);
@@ -522,12 +556,22 @@ where
                 {
                     *continue_pending = false;
                 }
+                if let Some(record) = entry.record.as_mut() {
+                    record.continued = true;
+                }
             }
         }
         let mut closed = false;
         for _ in 0..writing.count {
-            if let Some(entry) = self.ring.pop_front() {
+            if let Some(mut entry) = self.ring.pop_front() {
                 closed |= entry.record.as_ref().is_some_and(|record| record.close);
+                if entry
+                    .record
+                    .as_ref()
+                    .is_some_and(|record| record.claim.is_some())
+                {
+                    self.taken = entry.record.take();
+                }
                 self.release_entry(entry);
             }
         }
@@ -717,6 +761,11 @@ where
                         break;
                     }
                 }
+            }
+            if self.taking || self.ring.upgrade_pending() {
+                // RFC 9110 Section 7.8: what follows an upgrade request may be the
+                // new protocol; it stays unparsed until the handler decides.
+                break;
             }
             if self.close {
                 // RFC 9112 Section 9.6: no further request on this connection is
@@ -1082,15 +1131,43 @@ fn fill_slices<'a>(
 /// closes or an HTTP/1.0 client asked to persist.
 pub(crate) fn serialize<H>(shared: &Shared<H>, record: &mut Record, close: bool) {
     let date = shared.worker.core().date.block();
+    let status = record.status.unwrap_or(StatusCode::OK);
+    let head_request = record.head_request();
+    // A claim holds only for the response it was made for: a handler that changed
+    // the status afterwards, or failed, answers as usual.
+    let kind = match record.claim.map(|claim| claim.kind) {
+        Some(TakeOver::Upgrade) if status == StatusCode::SWITCHING_PROTOCOLS => {
+            Some(TakeOver::Upgrade)
+        }
+        Some(TakeOver::Stream) if body_allowed(head_request, status) => Some(TakeOver::Stream),
+        _ => None,
+    };
+    if kind.is_none() {
+        record.claim = None;
+    }
+    let close = match kind {
+        Some(TakeOver::Upgrade) => false,
+        Some(TakeOver::Stream) => true,
+        None => close,
+    };
     let parts = HeadParts {
-        status: record.status.unwrap_or(StatusCode::OK),
-        head_request: record.head_request(),
+        status,
+        head_request,
         date: &date,
         server: &shared.server,
         body_len: u64::try_from(record.response_body.len()).unwrap_or(u64::MAX),
         close,
         keep_alive_10: !close && record.version() == Version::Http10 && record.keep_alive(),
+        upgrade: kind == Some(TakeOver::Upgrade),
+        stream: kind == Some(TakeOver::Stream),
     };
+    // RFC 9110 Section 7.8: a request with both Upgrade and 100-continue gets the
+    // 100 before the 101.
+    let owed_continue = parts.upgrade
+        && !record.continued
+        && record
+            .parsed
+            .is_some_and(|head| head.expect == Expect::Continue);
     let mut capacity = record.response_head.capacity().max(RESPONSE_HEAD_CAPACITY);
     loop {
         record.response_head.clear();
@@ -1100,6 +1177,9 @@ pub(crate) fn serialize<H>(shared: &Shared<H>, record: &mut Record, close: bool)
             Ok(()) => {
                 let len = writer.len();
                 record.response_head.truncate(len);
+                if owed_continue {
+                    record.response_head.splice(0..0, CONTINUE.iter().copied());
+                }
                 return;
             }
             Err(_) if capacity < MAX_RESPONSE_HEAD => capacity = capacity.saturating_mul(2),
@@ -1110,6 +1190,8 @@ pub(crate) fn serialize<H>(shared: &Shared<H>, record: &mut Record, close: bool)
                 let bare = HeadParts {
                     status: StatusCode::INTERNAL_SERVER_ERROR,
                     body_len: 0,
+                    upgrade: false,
+                    stream: false,
                     ..parts
                 };
                 record.response_head.resize(RESPONSE_HEAD_CAPACITY, 0);
@@ -1132,6 +1214,10 @@ struct HeadParts<'a> {
     body_len: u64,
     close: bool,
     keep_alive_10: bool,
+    /// A `101` that switches protocols: `Connection: upgrade`.
+    upgrade: bool,
+    /// A streamed body: no `Content-Length`.
+    stream: bool,
 }
 
 fn write_head(
@@ -1144,11 +1230,13 @@ fn write_head(
     if !parts.server.is_empty() {
         writer.raw(parts.server)?;
     }
-    if content_length_allowed(parts.status) {
+    if content_length_allowed(parts.status) && !parts.stream {
         writer.content_length(parts.body_len)?;
     }
     writer.raw(fields)?;
-    if parts.close {
+    if parts.upgrade {
+        writer.field_id(HeaderName::Connection, b"upgrade")?;
+    } else if parts.close {
         writer.connection_close()?;
     } else if parts.keep_alive_10 {
         writer.field_id(HeaderName::Connection, b"keep-alive")?;

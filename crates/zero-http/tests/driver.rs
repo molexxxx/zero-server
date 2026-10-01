@@ -6,13 +6,14 @@
 
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use zero_core::Error;
-use zero_http::{serve, Call, Config, Event, Handler, Workers};
+use zero_http::{serve, Call, Config, Event, Handler, TakeOver, Taken, Workers};
 use zero_http_types::{HeaderName, Method, StatusCode};
-use zero_io::seam::{Shutdown, Timer};
+use zero_io::seam::{Leased, Shutdown, Timer};
 use zero_limits::Http1Limits;
 
 /// The test application: routes on the path, logs every start and end.
@@ -76,6 +77,18 @@ impl App {
                     panic!("handler fell over");
                 }
             }
+            "/upgrade" => {
+                call.upgrade(b"echo", 7)?;
+            }
+            "/upgrade-other" => {
+                call.upgrade(b"h2c", 8)?;
+            }
+            "/stream" => {
+                call.response()
+                    .content_type(b"text/plain")?
+                    .body(b"first\n");
+                call.stream(9)?;
+            }
             "/panics" => {
                 let count = call.worker().panics().to_string();
                 call.response().body(count.as_bytes());
@@ -108,6 +121,42 @@ impl Handler for App {
         let outcome = self.route(call, &path).await;
         self.note(format!("end {tag}"));
         outcome
+    }
+
+    fn taken<S: zero_io::seam::Stream + 'static>(
+        &self,
+        mut taken: Taken<S>,
+    ) -> impl std::future::Future<Output = ()> {
+        let log = Arc::clone(&self.log);
+        async move {
+            log.lock()
+                .unwrap()
+                .push(format!("taken {:?} {}", taken.kind(), taken.token()));
+            match taken.kind() {
+                TakeOver::Upgrade => {
+                    let leftover = taken.take_leftover();
+                    if taken.write_all(&leftover).await.is_err() {
+                        return;
+                    }
+                    let pool = Rc::clone(&taken.core().pool);
+                    while let Ok(Leased::Data(buf)) = taken.stream().read_leased(&pool).await {
+                        let sent = taken.write_all(buf.filled()).await;
+                        pool.release(buf);
+                        if sent.is_err() {
+                            return;
+                        }
+                    }
+                }
+                TakeOver::Stream => {
+                    for part in [&b"second\n"[..], b"third\n"] {
+                        taken.core().sleep(Duration::from_millis(5)).await;
+                        if taken.write_all(part).await.is_err() {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn body_limit(&self, method: Option<Method>, path: &[u8]) -> Option<u64> {
@@ -561,6 +610,131 @@ fn a_per_request_body_limit_from_the_handler_refuses_a_declared_content_length_o
             .any(|line| line.starts_with("start POST /echo/small")),
         "a refused request never reaches the handler"
     );
+}
+
+#[test]
+fn an_upgrade_is_answered_101_with_upgrade_and_connection_upgrade_and_the_bytes_after_the_head_reach_the_new_protocol(
+) {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    conn.write_all(
+        b"GET /upgrade HTTP/1.1\r\nHost: t\r\nConnection: keep-alive, Upgrade\r\nUpgrade: h2c, ECHO\r\n\r\nearly bytes",
+    )
+    .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(response.status, 101);
+    assert_eq!(response.header("upgrade"), Some("echo"));
+    assert_eq!(response.header("connection"), Some("upgrade"));
+    assert_eq!(response.header("content-length"), None);
+    let mut echoed = [0u8; 11];
+    conn.read_exact(&mut echoed).unwrap();
+    assert_eq!(
+        &echoed, b"early bytes",
+        "bytes sent with the head are not lost"
+    );
+    conn.write_all(b"GET /hello HTTP/1.1\r\n\r\n").unwrap();
+    let mut raw = [0u8; 23];
+    conn.read_exact(&mut raw).unwrap();
+    assert_eq!(
+        &raw, b"GET /hello HTTP/1.1\r\n\r\n",
+        "after the switch nothing is parsed as HTTP"
+    );
+    conn.shutdown(std::net::Shutdown::Write).unwrap();
+    assert!(closed(&mut conn));
+    let log = server.log();
+    server.stop().unwrap();
+    assert!(log.contains(&"taken Upgrade 7".to_owned()), "{log:?}");
+}
+
+#[test]
+fn an_upgrade_to_a_protocol_the_client_did_not_offer_is_refused_and_http_continues() {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    conn.write_all(
+        b"GET /upgrade-other HTTP/1.1\r\nHost: t\r\nConnection: Upgrade\r\nUpgrade: echo\r\n\r\n",
+    )
+    .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().status, 400);
+    assert_eq!(get(&mut conn, "/hello").text(), "hello");
+
+    conn.write_all(
+        b"GET /hello HTTP/1.1\r\nHost: t\r\nConnection: Upgrade\r\nUpgrade: echo\r\n\r\nGET /status/201 HTTP/1.1\r\nHost: t\r\n\r\n",
+    )
+    .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().status, 200);
+    assert_eq!(
+        read_response(&mut conn).unwrap().status,
+        201,
+        "an upgrade request answered as usual lets the pipeline go on"
+    );
+
+    let mut plain = server.connect();
+    plain
+        .write_all(
+            b"GET /upgrade HTTP/1.0\r\nHost: t\r\nConnection: Upgrade\r\nUpgrade: echo\r\n\r\n",
+        )
+        .unwrap();
+    assert_eq!(
+        read_response(&mut plain).unwrap().status,
+        400,
+        "RFC 9110 Section 7.8: Upgrade on HTTP/1.0 is ignored"
+    );
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_request_with_upgrade_and_100_continue_gets_the_100_before_the_101() {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    conn.write_all(
+        b"GET /upgrade HTTP/1.1\r\nHost: t\r\nConnection: Upgrade\r\nUpgrade: echo\r\nExpect: 100-continue\r\n\r\n",
+    )
+    .unwrap();
+    assert_eq!(read_response(&mut conn).unwrap().status, 100);
+    assert_eq!(read_response(&mut conn).unwrap().status, 101);
+    conn.shutdown(std::net::Shutdown::Write).unwrap();
+    assert!(closed(&mut conn));
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_streamed_body_has_no_content_length_and_ends_when_the_connection_closes() {
+    let server = Server::with_defaults();
+    let mut conn = server.connect();
+    conn.write_all(
+        b"GET /stream HTTP/1.1\r\nHost: t\r\n\r\nGET /hello HTTP/1.1\r\nHost: t\r\n\r\n",
+    )
+    .unwrap();
+    let response = read_response(&mut conn).unwrap();
+    assert_eq!(response.status, 200);
+    assert_eq!(response.header("content-length"), None);
+    assert_eq!(response.header("connection"), Some("close"));
+    assert_eq!(response.header("content-type"), Some("text/plain"));
+    let mut body = Vec::new();
+    conn.read_to_end(&mut body).unwrap();
+    assert_eq!(
+        body, b"first\nsecond\nthird\n",
+        "the body set before the claim, then what the claim wrote; the pipelined request is dropped"
+    );
+
+    let mut head = server.connect();
+    head.write_all(b"HEAD /stream HTTP/1.1\r\nHost: t\r\n\r\n")
+        .unwrap();
+    let mut head_bytes = Vec::new();
+    let mut byte = [0u8; 1];
+    while !head_bytes.ends_with(b"\r\n\r\n") {
+        head.read_exact(&mut byte).unwrap();
+        head_bytes.push(byte[0]);
+    }
+    assert!(
+        head_bytes.starts_with(b"HTTP/1.1 400 "),
+        "a HEAD response has no body to stream: {}",
+        String::from_utf8_lossy(&head_bytes)
+    );
+    assert_eq!(get(&mut head, "/hello").text(), "hello");
+    let log = server.log();
+    server.stop().unwrap();
+    assert!(log.contains(&"taken Stream 9".to_owned()), "{log:?}");
 }
 
 #[test]

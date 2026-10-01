@@ -14,6 +14,7 @@ use zero_router::MAX_PARAMS;
 use zero_rt::Reset;
 
 use crate::error::{Problem, PROBLEM_CONTENT_TYPE};
+use crate::takeover::Claim;
 
 /// The response head capacity a record starts with; grown when a head needs more.
 pub(crate) const RESPONSE_HEAD_CAPACITY: usize = 4_096;
@@ -55,6 +56,10 @@ pub struct Record {
     pub(crate) response_head: Vec<u8>,
     /// Whether this response ends the connection.
     pub(crate) close: bool,
+    /// The handler claimed the connection after this response.
+    pub(crate) claim: Option<Claim>,
+    /// A `100 Continue` was written for this request.
+    pub(crate) continued: bool,
 }
 
 impl Record {
@@ -109,6 +114,7 @@ impl Record {
         self.response_fields.clear();
         self.response_body.clear();
         self.response_head.clear();
+        self.claim = None;
     }
 
     /// Replace whatever the handler wrote with a problem details response.
@@ -134,6 +140,7 @@ impl Reset for Record {
         self.clear_response();
         self.response_body.shrink_to(BODY_KEEP);
         self.close = false;
+        self.continued = false;
     }
 }
 

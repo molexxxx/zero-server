@@ -24,6 +24,7 @@ use zero_uri::{percent_decode, split_query};
 
 use crate::error::Problem;
 use crate::record::Record;
+use crate::takeover::{Claim, TakeOver};
 
 /// Field names the driver writes itself; a handler setting one is refused.
 const RESERVED: [HeaderName; 4] = [
@@ -75,6 +76,72 @@ impl<'a> Call<'a> {
     #[must_use]
     pub const fn worker(&self) -> &Worker {
         self.worker
+    }
+
+    /// Switch the connection to another protocol after this response: `101
+    /// Switching Protocols` with `Upgrade: <protocol>` and the `upgrade` connection
+    /// option, then [`Handler::taken`](crate::Handler::taken) serves the connection.
+    ///
+    /// # Arguments
+    ///
+    /// * `protocol` - the protocol switched to; it must be one the request's
+    ///   `Upgrade` field lists, compared ASCII case-insensitively (RFC 9110 Section
+    ///   7.8).
+    /// * `token` - a value handed back with the connection, to tell claims apart.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Protocol`] when the request did not ask to upgrade (an HTTP/1.1
+    /// request with an `Upgrade` field and the `upgrade` connection option) or did
+    /// not offer `protocol`; nothing is set then.
+    pub fn upgrade(&mut self, protocol: &[u8], token: u64) -> Result<(), Error> {
+        let asked = self.record.parsed.is_some_and(|head| head.upgrade);
+        let offered = asked
+            && self.request().headers().any(|(name, value)| {
+                name.eq_ignore_ascii_case(b"upgrade")
+                    && value
+                        .split(|&byte| byte == b',')
+                        .any(|element| element.trim_ascii().eq_ignore_ascii_case(protocol))
+            });
+        if !offered {
+            return Err(Error::Protocol(format!(
+                "the request did not offer to upgrade to {}",
+                String::from_utf8_lossy(protocol)
+            )));
+        }
+        self.response()
+            .status(StatusCode::SWITCHING_PROTOCOLS)
+            .header_id(HeaderName::Upgrade, protocol)?;
+        self.record.claim = Some(Claim {
+            kind: TakeOver::Upgrade,
+            token,
+        });
+        Ok(())
+    }
+
+    /// Stream the response body: the head goes out without `Content-Length` and with
+    /// `Connection: close`, the body set so far follows it, and
+    /// [`Handler::taken`](crate::Handler::taken) writes the rest until it closes the
+    /// connection (RFC 9112 Section 6.3, item 8).
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - a value handed back with the connection, to tell claims apart.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Protocol`] for a HEAD request, whose response carries no body.
+    pub fn stream(&mut self, token: u64) -> Result<(), Error> {
+        if self.record.head_request() {
+            return Err(Error::Protocol(
+                "a response to HEAD carries no body to stream".to_owned(),
+            ));
+        }
+        self.record.claim = Some(Claim {
+            kind: TakeOver::Stream,
+            token,
+        });
+        Ok(())
     }
 
     /// The request side.

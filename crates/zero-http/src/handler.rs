@@ -5,8 +5,10 @@ use std::future::Future;
 
 use zero_core::Error;
 use zero_http_types::Method;
+use zero_io::seam::Stream;
 
 use crate::call::Call;
+use crate::takeover::Taken;
 
 /// A tier 4 handler: one instance per core, called for every request on that core.
 ///
@@ -55,5 +57,24 @@ pub trait Handler: 'static {
     fn body_limit(&self, method: Option<Method>, path: &[u8]) -> Option<u64> {
         let _ = (method, path);
         None
+    }
+
+    /// Serve a connection this handler claimed with [`Call::upgrade`] or
+    /// [`Call::stream`], once the response head is written.
+    ///
+    /// The future owns the connection until it completes; the connection closes
+    /// then. The default closes it at once.
+    ///
+    /// # Arguments
+    ///
+    /// * `taken` - the connection, the request that claimed it, and the bytes that
+    ///   arrived after that request's head.
+    ///
+    /// # Returns
+    ///
+    /// Nothing; the connection closes when the future completes.
+    fn taken<S: Stream + 'static>(&self, taken: Taken<S>) -> impl Future<Output = ()> {
+        drop(taken);
+        async {}
     }
 }
