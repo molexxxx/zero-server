@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use zero_core::Error;
 use zero_http::{
-    serve, serve_with, Accept, Call, Config, Event, Handler, TakeOver, Taken, Workers,
+    serve, serve_with, Accept, Call, Config, Event, Handler, Prepared, TakeOver, Taken, Workers,
 };
 use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_io::seam::{Leased, Shutdown, Timer};
@@ -788,15 +788,22 @@ impl Accept for Gate {
         self.paused.load(Ordering::SeqCst)
     }
 
-    async fn accept(
-        &self,
+    fn accept(
+        self: Rc<Self>,
         stream: zero_io::rt::TcpStream,
         _peer: SocketAddr,
-    ) -> io::Result<zero_io::rt::TcpStream> {
-        if self.refuse.load(Ordering::SeqCst) {
-            return Err(io::Error::from(io::ErrorKind::PermissionDenied));
+    ) -> impl std::future::Future<Output = io::Result<Prepared<zero_io::rt::TcpStream>>> + 'static
+    {
+        let refused = self.refuse.load(Ordering::SeqCst);
+        async move {
+            if refused {
+                return Err(io::Error::from(io::ErrorKind::PermissionDenied));
+            }
+            Ok(Prepared {
+                stream,
+                authorities: Some(Arc::from(vec![Box::from("t"), Box::from("[::1]")])),
+            })
         }
-        Ok(stream)
     }
 }
 
@@ -840,6 +847,27 @@ fn a_prepared_listener_reports_secure_connections_drops_refused_ones_and_pauses_
 
     let mut conn = connect();
     assert_eq!(get(&mut conn, "/secure").text(), "secure");
+    for host in ["T:8443", "t.", "[::1]:443"] {
+        conn.write_all(format!("GET /secure HTTP/1.1\r\nHost: {host}\r\n\r\n").as_bytes())
+            .unwrap();
+        assert_eq!(read_response(&mut conn).unwrap().text(), "secure", "{host}");
+    }
+    conn.write_all(b"GET /secure HTTP/1.1\r\nHost: other.test\r\n\r\n")
+        .unwrap();
+    let misdirected = read_response(&mut conn).unwrap();
+    assert_eq!(
+        misdirected.status, 421,
+        "RFC 9110 Section 7.4: a host the connection does not serve"
+    );
+    assert_eq!(
+        misdirected.header("content-type"),
+        Some("application/problem+json")
+    );
+    assert_eq!(
+        get(&mut conn, "/secure").text(),
+        "secure",
+        "the connection goes on"
+    );
 
     refuse.store(true, Ordering::SeqCst);
     let mut refused = connect();

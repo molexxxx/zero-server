@@ -11,6 +11,7 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
 use zero_http_types::field::validate_field_value;
@@ -43,6 +44,11 @@ pub trait Accept: 'static {
 
     /// Prepare one connection.
     ///
+    /// The call itself runs on the accept loop, before the next connection is
+    /// accepted, so whatever it counts (such as a handshake in progress) is counted
+    /// before [`saturated`](Self::saturated) is asked again; the work runs in the
+    /// returned future, on the connection's own task.
+    ///
     /// # Arguments
     ///
     /// * `stream` - the accepted connection.
@@ -50,16 +56,43 @@ pub trait Accept: 'static {
     ///
     /// # Returns
     ///
-    /// The stream to serve.
+    /// The stream to serve and the hosts it may serve.
     ///
     /// # Errors
     ///
     /// Any error ends the connection without a response.
     fn accept(
-        &self,
+        self: Rc<Self>,
         stream: TcpStream,
         peer: SocketAddr,
-    ) -> impl Future<Output = io::Result<Self::Stream>>;
+    ) -> impl Future<Output = io::Result<Prepared<Self::Stream>>> + 'static;
+}
+
+/// A connection an [`Accept`] prepared.
+#[derive(Debug)]
+pub struct Prepared<S> {
+    /// The stream the driver serves.
+    pub stream: S,
+    /// The hosts the connection may serve, such as the names the TLS certificate
+    /// that secured it covers: lowercase, without a port or a trailing dot. A
+    /// request for another host is answered `421 Misdirected Request` (RFC 9110
+    /// Section 7.4). `None` serves any host.
+    pub authorities: Option<Arc<[Box<str>]>>,
+}
+
+impl<S> Prepared<S> {
+    /// A connection that serves any host.
+    ///
+    /// # Arguments
+    ///
+    /// * `stream` - the stream the driver serves.
+    #[must_use]
+    pub const fn any_host(stream: S) -> Self {
+        Prepared {
+            stream,
+            authorities: None,
+        }
+    }
 }
 
 /// How long a core waits after running out of descriptors before accepting again.
@@ -191,10 +224,11 @@ where
             move || gate.saturated(),
             move |stream, peer| {
                 let shared = Rc::clone(&shared);
-                let accept = Rc::clone(&accept);
+                let preparing = Rc::clone(&accept).accept(stream, peer);
                 spawner.spawn(async move {
-                    if let Ok(prepared) = accept.accept(stream, peer).await {
-                        Conn::new(shared, Rc::new(prepared), peer, request_task::<H>)
+                    if let Ok(prepared) = preparing.await {
+                        Conn::new(shared, Rc::new(prepared.stream), peer, request_task::<H>)
+                            .serving(prepared.authorities)
                             .run()
                             .await;
                     }

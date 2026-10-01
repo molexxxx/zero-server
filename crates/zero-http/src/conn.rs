@@ -16,6 +16,7 @@ use std::io::{self, IoSlice};
 use std::net::SocketAddr;
 use std::pin::pin;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::task::Poll;
 use std::time::{Duration, Instant};
 
@@ -146,6 +147,15 @@ pub(crate) async fn request_task<H: Handler>(
     shared: Rc<Shared<H>>,
     mut record: Box<Record>,
 ) -> Box<Record> {
+    if record.misdirected {
+        // RFC 9110 Section 7.4: the connection's certificate does not cover the
+        // target's origin, so the request is rejected without reaching the handler.
+        record.problem(&Problem::new(
+            StatusCode::MISDIRECTED_REQUEST,
+            "misdirected",
+        ));
+        return record;
+    }
     let outcome = {
         let mut call = Call::new(&mut record, &shared.worker);
         contain(shared.handler.handle(&mut call)).await
@@ -314,6 +324,8 @@ pub(crate) struct Conn<S, H, Req> {
     taking: bool,
     /// The claimed request, once its response head is written.
     taken: Option<Box<Record>>,
+    /// The hosts this connection may serve; `None` serves any.
+    authorities: Option<Arc<[Box<str>]>>,
 }
 
 impl<S, H, Req> Conn<S, H, Req>
@@ -348,7 +360,36 @@ where
             aborted: false,
             taking: false,
             taken: None,
+            authorities: None,
         }
+    }
+
+    /// Limit the hosts this connection serves, such as to the names its TLS
+    /// certificate covers.
+    pub(crate) fn serving(mut self, authorities: Option<Arc<[Box<str>]>>) -> Self {
+        self.authorities = authorities;
+        self
+    }
+
+    /// Whether the request's target host is one this connection serves. A request
+    /// without an authority (HTTP/1.0 without `Host`) targets the server's default
+    /// name, which the connection serves.
+    fn serves(&self, record: &Record, head: &Head) -> bool {
+        let Some(names) = &self.authorities else {
+            return true;
+        };
+        let Some(authority) = head.authority else {
+            return true;
+        };
+        let host = host_of(
+            record
+                .head
+                .get(authority.start..authority.end)
+                .unwrap_or(&[]),
+        );
+        names
+            .iter()
+            .any(|name| name.as_bytes().eq_ignore_ascii_case(host))
     }
 
     /// Serve the connection until it closes.
@@ -920,6 +961,7 @@ where
         record.parsed = Some(head);
         record.peer = Some(self.peer);
         record.secure = self.shared.secure;
+        record.misdirected = !self.serves(&record, &head);
         self.input.consume(head.len);
         let last = self.requests >= limits.max_requests_per_connection;
         if !head.keep_alive || last {
@@ -1074,6 +1116,30 @@ where
         };
         let _ = core.timeout(LINGER, drain).await;
     }
+}
+
+/// The host of an authority: without its port and without one trailing dot; an
+/// IPv6 literal keeps its brackets.
+fn host_of(authority: &[u8]) -> &[u8] {
+    let host = if authority.first() == Some(&b'[') {
+        let end = authority
+            .iter()
+            .position(|&byte| byte == b']')
+            .map_or(authority.len(), |at| at + 1);
+        authority.get(..end).unwrap_or(authority)
+    } else {
+        match authority.iter().rposition(|&byte| byte == b':') {
+            Some(colon)
+                if authority
+                    .get(colon + 1..)
+                    .is_some_and(|port| port.iter().all(u8::is_ascii_digit)) =>
+            {
+                authority.get(..colon).unwrap_or(authority)
+            }
+            _ => authority,
+        }
+    };
+    host.strip_suffix(b".").unwrap_or(host)
 }
 
 /// The bytes a done response puts on the wire.

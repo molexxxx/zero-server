@@ -28,7 +28,7 @@ pub mod takeover;
 pub use call::{Call, Request, Response, Routed};
 pub use error::{code_for, status_for, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
 pub use handler::Handler;
-pub use server::{serve, serve_with, Accept, Config};
+pub use server::{serve, serve_with, Accept, Config, Prepared};
 pub use takeover::{TakeOver, Taken};
 pub use zero_router::Router;
 pub use zero_rt::{Event, StatusSink, Worker, Workers};

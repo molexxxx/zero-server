@@ -40,6 +40,8 @@ pub struct Record {
     pub(crate) peer: Option<SocketAddr>,
     /// The request arrived over a secure connection, such as TLS.
     pub(crate) secure: bool,
+    /// The request's host is not one its connection serves, so it is answered 421.
+    pub(crate) misdirected: bool,
     /// Working space for path normalization.
     pub(crate) scratch: Vec<u8>,
     /// The normalized path the route matched, which the parameter ranges index.
@@ -140,6 +142,7 @@ impl Reset for Record {
         self.trailers.clear();
         self.peer = None;
         self.secure = false;
+        self.misdirected = false;
         self.scratch.clear();
         self.route_path.clear();
         self.param_count = 0;
