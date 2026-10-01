@@ -2307,7 +2307,11 @@ dependencies = [
 name = "zero-ws"
 version = "0.1.0"
 dependencies = [
+ "zero-base64",
  "zero-core",
+ "zero-http-types",
+ "zero-limits",
+ "zero-server-crypto",
  "zero-simd",
 ]
 

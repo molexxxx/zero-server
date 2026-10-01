@@ -15,7 +15,13 @@ authors.workspace = true
 # targets. Turn it off (`default-features = false`) to build for a `no_std`
 # target, where the crate relies only on `core` and `alloc`.
 default = ["std"]
-std = ["zero-core/std", "zero-simd/std"]
+std = [
+    "zero-core/std",
+    "zero-simd/std",
+    "zero-base64/std",
+    "zero-http-types/std",
+    "zero-limits/std",
+]
 
 [dependencies]
 # This crate is `no_std`, so it takes its dependencies without their default `std`
@@ -23,6 +29,14 @@ std = ["zero-core/std", "zero-simd/std"]
 # `default-features` cannot be overridden through workspace inheritance.
 zero-core = { path = "../zero-core", version = "0.1.0", default-features = false }
 zero-simd = { path = "../zero-simd", version = "0.1.0", default-features = false }
+zero-base64 = { path = "../zero-base64", version = "0.1.0", default-features = false }
+zero-http-types = { path = "../zero-http-types", version = "0.1.0", default-features = false }
+zero-limits = { path = "../zero-limits", version = "0.1.0", default-features = false }
+
+[dev-dependencies]
+# The SHA-1 the accept value is checked through; it wraps C code, so the test that
+# calls it is skipped under Miri.
+zero-server-crypto.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"
