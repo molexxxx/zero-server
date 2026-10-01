@@ -265,11 +265,18 @@ and a drain deadline). `tests/echo.rs` holds the step's echo test: one worker
 per CPU, every connection echoed, and an idle connection holding no buffer
 by the pool's own count. The Windows and macOS paths of both crates are
 compile-checked by clippy for those targets and have run on no such machine
-yet; CI's new `seam` job runs the two crates' tests on the three runners. Not
-yet in `zero-io`: the `Datagram` implementation over `recvmsg` and `sendmsg`
-with packet information, ECN and segment size (the trait is fixed; the
-readiness implementation is the next commit), and the `io-compio` backend
-(step 8).
+yet; CI's new `seam` job runs the two crates' tests on the three runners.
+`tokio_rt::UdpSocket` implements `Datagram`: batches received and sent on
+readiness through `zero-sys`'s `recvmsg` and `sendmsg` inside tokio's
+`try_io`, with the destination address, the ECN codepoint and the GRO
+segment size read from the control messages (`zero_sys::packet`, typed over
+the libc layouts) and the source address, the per-datagram ECN and the GSO
+segment size written into them (ECN per datagram and segmentation are
+Linux; Apple platforms get packet information and the received type of
+service; Windows carries the peer alone until `WSARecvMsg` arrives with the
+completion backend). `tests/datagram.rs` passes batches over loopback and,
+on Linux, ECN codepoints and an 1,800-byte buffer segmented at 600. Not yet
+in `zero-io`: the `io-compio` backend (step 8).
 
 ## Next, in order
 

@@ -210,6 +210,8 @@ pub struct DatagramMeta {
     /// at, so the buffer holds several; on send, the size to split the buffer at, so one
     /// buffer becomes several datagrams. `None` for one datagram per buffer.
     pub segment_size: Option<u16>,
+    /// On receive: the datagram was longer than the buffer and the rest is gone.
+    pub truncated: bool,
 }
 
 /// A datagram socket that receives and sends in batches.

@@ -16,10 +16,12 @@ mod listen;
 mod shutdown;
 mod tcp;
 mod time;
+mod udp;
 mod worker;
 
 pub use listen::{Acceptor, ListenConfig};
 pub use shutdown::ShutdownHandle;
 pub use tcp::TcpStream;
 pub use time::{sleep, timeout};
+pub use udp::{DatagramConfig, UdpSocket};
 pub use worker::{serve, Config, Core, Workers};

@@ -20,6 +20,8 @@ pub mod cmsg;
 pub mod error;
 #[cfg(unix)]
 pub mod msg;
+#[cfg(unix)]
+pub mod packet;
 pub mod sockopt;
 
 /// A socket the wrappers can borrow for one call.
