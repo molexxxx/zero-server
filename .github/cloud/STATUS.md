@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-09-30. A session that changes the position updates this file in
+Updated 2026-10-01. A session that changes the position updates this file in
 the same commit.
 
 ## Position
@@ -19,9 +19,8 @@ the same commit.
   published to any registry.
 - The repository is `molexxxx/zero-server`; the earlier Node SDK lives in
   `molexxxx/zero-server-node` and is out of scope for sessions working here.
-- The brand work landed (`BRAND-REPORT.md`). The mark is the loop: a ring
-  with one lit segment between two slots that laps the ring every 3 s in the
-  animated files and parks at twelve o'clock under reduced motion. Palette:
+- The brand work landed (`BRAND-REPORT.md`, `docs/brand.md`). The mark is the
+  loop: a ring with one lit segment between two slots. Palette:
   `ink` #16140F, `surface` bone #F4EEE1, `gray-1` graphite #57534A, `gray-2`
   ash #A39E93, `hero` brass #CFAE45, `hero-mid` gilt #8C6A12 (the ring and
   hyphen on light pages only), `hero-deep` bronze #5F470F (text), `accent`
@@ -36,11 +35,18 @@ the same commit.
   outlined Outfit and JetBrains Mono glyphs; never edit them by hand), the site copies
   in `web/assets/`, the generated copies in `docs/assets/`, `docs/brand.md`
   (palette, contrast table, usage) and `web/theme.css` (site tokens). The
-  README opens with the animated lockup in a `<picture>` with a dark source.
-  The molexxxx profile shows a zero-server card with the animated icon and
-  a separate zero-server-node card for the Node line. Still on the old
+  molexxxx profile shows a zero-server card (animated icon on light, bare
+  symbol on dark, described as pre-release) and a separate zero-server-node
+  card for the Node line. Still on the old
   palette: `crates/xtask/src/site/layout.rs` (`THEME_COLOR` and the inlined
   mark) and the pdoc `--logo` URL in `.github/workflows/docs.yml`.
+- The README (159 lines, audited 2026-10-01) opens with the animated lockup,
+  states under the tagline that nothing is published or running yet, words
+  its four rules as what the code is built to do, shows the diagram, one
+  TypeScript sketch labeled as not runnable, a release list, the packages,
+  standards and safety, and how to build. It has no benchmark section and no
+  tables. Keep it that short: internals belong in `SECURITY.md`,
+  `CONTRIBUTING.md` and `docs/`; update its Status list as releases land.
 - The boundary probes under `bench/probes` have Windows and Linux results;
   the design's binding budgets rest on them (`SCAFFOLD-REPORT.md`).
 
@@ -55,9 +61,12 @@ the same commit.
 - Runtime: `io-tokio` by default, `io-compio` built and tested beside it
   from the first release; the custom io_uring reactor is deferred past
   release 3 (`DESIGN.md` section 5.3).
-- The Node facade keeps the `@zero-server/sdk` name at 2.0; host-language
-  handlers are scored against their language's best TechEmpower entry, the
-  Rust tier 4 entry against Drogon (`DESIGN.md` section 13).
+- The Node facade keeps the `@zero-server/sdk` name at 2.0; internally,
+  host-language handlers are scored against their language's best
+  TechEmpower entry and the Rust tier 4 entry against Drogon (`DESIGN.md`
+  section 13). None of that reaches public text: the README, the site,
+  package pages, crate docs and the profile card make no performance claims
+  and name no other project (`RULES.md`, Conventions).
 - The README header is the animated SVG logo; no GIF anywhere; the palette
   has no hue between 170 and 300 degrees (`BRAND-BRIEF.md`).
 - The molexcloud-remake application is the final proof of the rebuild,
