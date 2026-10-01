@@ -137,11 +137,6 @@ does.
   AddressSanitizer and ThreadSanitizer, fuzzing, a reproducible-build check and
   a hardened build of the C ABI.
 
-## Benchmarks
-
-There are no benchmark numbers yet. When the first run exists, its method and
-raw results will be published here together.
-
 ## Building from source
 
 ```sh

@@ -152,6 +152,11 @@ the fmt and clippy job must be green before any publish.
   blobs.
 - Every change that ships or removes a capability audits `web/home.toml`, the
   README and the capability and standards pages in the same commit.
+- Public text (the README, the site, package pages, crate docs, the profile
+  card) makes no performance claims and names no other project as a
+  comparison or a target. Benchmark targets and competitor numbers stay in the
+  plan (`.github/cloud/`). Public text describes only what exists, and states
+  plainly what does not exist yet.
 - Commits: short imperative subject, optional body that states the change and
   its reason, authored as molexxxx, no assistant or AI attribution of any
   kind, no co-author trailers, nothing that names the tooling that produced
