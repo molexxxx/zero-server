@@ -1,9 +1,9 @@
 //! The cryptographic primitives of zero-server.
 //!
-//! SHA-1, SHA-256, HMAC, PBKDF2, random bytes, Ed25519 and the JWT signature
-//! primitives, constant-time comparison, zeroizing secret types, and the std
-//! implementations of the `zero-core` `Digest`, `Mac`, `Kdf` and `Rng` traits over one
-//! crypto provider per build.
+//! SHA-1 and SHA-256, random bytes, constant-time comparison, zeroizing secret types,
+//! and the std implementations of the `zero-core` `Digest` and `Rng` traits over one
+//! crypto provider per build. HMAC, PBKDF2, Ed25519 and the JWT signature primitives
+//! come with the auth stack in a later release.
 //!
 //! [`SystemRng`] is the `Rng` the workspace uses: the operating system's
 //! cryptographically secure generator, read through `zero-sys`. [`Sha1`] and

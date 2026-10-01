@@ -1,6 +1,6 @@
 [package]
 name = "zero-server-crypto"
-description = "SHA-1, SHA-256, HMAC, PBKDF2, random bytes, Ed25519, constant-time comparison, zeroizing secrets, and the std primitive traits for zero-server."
+description = "SHA-1, SHA-256, random bytes, constant-time comparison, zeroizing secrets, and the std primitive traits for zero-server."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "zero-policy"
-description = "The declarative tier 0 rule engine of zero-server: CORS, security headers, request ids, trust proxy, body limits, bearer extraction, rate limiting, and timeouts."
+description = "Request rules for zero-server evaluated in Rust: CORS, security headers, Fetch Metadata, request ids, trust proxy, and body limits."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

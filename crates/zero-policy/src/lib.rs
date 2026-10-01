@@ -1,8 +1,9 @@
-//! The declarative rule engine behind tier 0 of zero-server.
+//! The request rules of zero-server, the rules tier 0 is built from.
 //!
-//! CORS, security headers, request ids, trust proxy, body limits, bearer extraction,
-//! rate limiting with RFC 6585 and draft ratelimit headers, and timeouts. Rules are
-//! data evaluated in Rust, never code crossing the language boundary.
+//! CORS, security headers, Fetch Metadata, request ids, trust proxy and body limits,
+//! each an evaluator a handler calls. Rules are data evaluated in Rust, never code
+//! crossing the language boundary. Bearer extraction, rate limiting and timeouts
+//! come in a later release.
 //!
 //! [`forwarded`] holds the trust-proxy rule over `Forwarded` (RFC 7239) and the
 //! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS

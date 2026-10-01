@@ -13,7 +13,7 @@ group = "server"
 tab = "API"
 eyebrow = "JSON API · router · request policy"
 title = "A request parsed, routed and answered without leaving the core."
-body = "A JSON API answers from the router: the head is parsed off the wire into byte ranges, the path is matched by method and segment, CORS and the security headers are applied from a rule table, and the response is written straight into the connection's buffer. Nothing crosses into the host language unless a route asks it to."
+body = "A JSON API answers from the router: the head is parsed off the wire into byte ranges, the path is matched by method and segment, CORS and the security headers are decided in Rust, and the response is written straight into the connection's buffer. Nothing crosses into the host language unless a route asks it to."
 crates = ["zero-http1", "zero-router", "zero-policy", "zero-json", "zero-http", "zero-http-types"]
 # The figure's opening state before the console runs; a placeholder, not a measurement.
 readings = [
@@ -30,7 +30,7 @@ group = "server"
 tab = "Site"
 eyebrow = "Static files · TLS · validators"
 title = "A site served from disk with the path checked on every segment."
-body = "A static site is served over TLS with a precomputed header block per asset, ETag and Last-Modified validators, byte ranges and a bounded per-core file cache. A symlink cannot escape the root, a dotfile segment is refused, and the media type comes from the file's own table."
+body = "A static site is served over TLS with ETag and Last-Modified validators, byte ranges and a bounded per-core file cache. A symlink cannot escape the root, every path segment is checked before anything is opened, and the media type comes from the file's own table."
 crates = ["zero-static", "zero-tls", "zero-mime", "zero-date"]
 readings = [
   { label = "TLS", value = "1.3", unit = "" },
@@ -127,8 +127,8 @@ key = "tls"
 title = "TLS and HTTP/3"
 lead = "rustls on both runtime drivers today; the QUIC transport when the codecs have their vectors."
 tags = [
-  { text = "TLS 1.3 through rustls, SNI, tickets and a session cache", state = "ships", crate = "zero-tls" },
-  { text = "SHA-1, random bytes and the crypto traits", state = "ships", crate = "zero-server-crypto" },
+  { text = "TLS 1.3 and 1.2 through rustls, SNI, tickets and a session cache", state = "ships", crate = "zero-tls" },
+  { text = "SHA-1, SHA-256, random bytes, constant-time comparison and zeroizing secrets", state = "ships", crate = "zero-server-crypto" },
   { text = "the QPACK static table, prefix and integer coding", state = "ships", crate = "zero-qpack" },
   { text = "HTTP/3 frames, settings and stream types", state = "ships", crate = "zero-h3" },
   { text = "kTLS, OCSP stapling and mTLS with CRLs", state = "next" },
