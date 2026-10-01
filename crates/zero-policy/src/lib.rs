@@ -6,13 +6,16 @@
 //!
 //! [`forwarded`] holds the trust-proxy rule over `Forwarded` (RFC 7239) and the
 //! `X-Forwarded-*` fields; [`cors`] the server side of the Fetch Standard's CORS
-//! protocol; [`security`] the security response headers.
+//! protocol; [`security`] the security response headers; [`fetch_metadata`] the
+//! refusal of cross-site requests that would change state.
 
 pub mod cors;
+pub mod fetch_metadata;
 pub mod forwarded;
 pub mod security;
 
 pub use cors::{AllowOrigin, Cors, Decision};
+pub use fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
 pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
 pub use security::{
     Csp, Directive, EmbedderPolicy, EmbedderValue, FrameOptions, Hsts, Isolation, OpenerPolicy,
@@ -30,6 +33,7 @@ mod tests {
     use zero_server_crypto::SystemRng;
 
     use super::cors::{AllowOrigin, Cors, Decision};
+    use super::fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
     use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
     use super::security::{
         Csp, Directive, EmbedderValue, Hsts, Isolation, OpenerValue, ReferrerPolicy, Rendered,
@@ -870,6 +874,92 @@ mod tests {
             Some(ReferrerPolicy::UnsafeUrl)
         );
         assert_eq!(ReferrerPolicy::parse_header(b"unknown"), None);
+    }
+
+    #[test]
+    fn when_fetch_metadata_mode_is_on_an_unsafe_request_with_sec_fetch_site_cross_site_is_rejected()
+    {
+        // Fetch Metadata Section 2.3; OWASP CSRF, Fetch Metadata headers.
+        let rule = FetchMetadata::default();
+        for method in [Method::Post, Method::Put, Method::Delete] {
+            assert!(matches!(
+                rule.decide(Some(method), Some(b"cross-site")),
+                Verdict::Refused(_)
+            ));
+        }
+        // A method outside the registry's eight, such as PATCH, counts as unsafe.
+        assert!(matches!(
+            rule.decide(None, Some(b"cross-site")),
+            Verdict::Refused(_)
+        ));
+        // Safe methods pass whatever the site, so cross-site links and images work.
+        for method in [Method::Get, Method::Head, Method::Options, Method::Trace] {
+            assert!(matches!(
+                rule.decide(Some(method), Some(b"cross-site")),
+                Verdict::Allowed(_)
+            ));
+        }
+        // Same-origin and user-initiated requests pass; same-site only when trusted.
+        assert!(matches!(
+            rule.decide(Some(Method::Post), Some(b"same-origin")),
+            Verdict::Allowed(_)
+        ));
+        assert!(matches!(
+            rule.decide(Some(Method::Post), Some(b"none")),
+            Verdict::Allowed(_)
+        ));
+        assert!(matches!(
+            rule.decide(Some(Method::Post), Some(b"same-site")),
+            Verdict::Refused(_)
+        ));
+        let siblings = FetchMetadata {
+            allow_same_site: true,
+            ..FetchMetadata::default()
+        };
+        assert!(matches!(
+            siblings.decide(Some(Method::Post), Some(b"same-site")),
+            Verdict::Allowed(_)
+        ));
+        // An invalid value is ignored, like an absent header, and both follow the
+        // rule's setting for clients that send none.
+        assert_eq!(Site::parse(b"Cross-Site"), None);
+        assert!(matches!(
+            rule.decide(Some(Method::Post), Some(b"Cross-Site")),
+            Verdict::Allowed(_)
+        ));
+        assert!(matches!(
+            rule.decide(Some(Method::Post), None),
+            Verdict::Allowed(_)
+        ));
+        let strict = FetchMetadata {
+            missing: Missing::Refuse,
+            ..FetchMetadata::default()
+        };
+        assert!(matches!(
+            strict.decide(Some(Method::Post), None),
+            Verdict::Refused(_)
+        ));
+        assert!(matches!(
+            strict.decide(Some(Method::Get), None),
+            Verdict::Allowed(_)
+        ));
+    }
+
+    #[test]
+    fn responses_whose_handling_depends_on_sec_fetch_headers_send_a_matching_vary() {
+        // Fetch Metadata Section 5.1: the response depends on Sec-Fetch-Site, so it
+        // names it in Vary whether the request ran or not.
+        let rule = FetchMetadata::default();
+        for verdict in [
+            rule.decide(Some(Method::Post), Some(b"cross-site")),
+            rule.decide(Some(Method::Post), Some(b"same-origin")),
+            rule.decide(Some(Method::Get), None),
+        ] {
+            let fields = match verdict {
+                Verdict::Allowed(fields) | Verdict::Refused(fields) => fields,
+            };
+            assert_eq!(field(&fields, b"Vary"), Some(&b"Sec-Fetch-Site"[..]));
+        }
     }
 
     #[test]
