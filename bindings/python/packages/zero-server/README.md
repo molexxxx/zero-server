@@ -1,6 +1,6 @@
 # zero-server
 
-The zero-server framework in one package. Each capability is its own distribution over the compiled core in `zero-server-native`, and this metapackage depends on all of them with exact pins, so one `pip install zero-server` brings the whole framework at one version.
+The zero-server packages for Python in one install: `zero-server-core` and the compiled core in `zero-server-native`, pinned to the same version. Today they report the core's version; there is no server API for Python yet.
 
 ## Install
 

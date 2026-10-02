@@ -3,7 +3,7 @@
 //! Everything a visitor sees first, laid out as the first pages of a datasheet: what zero-server
 //! is and how to install it, the same first example in four languages spliced from the
 //! tests that run it, every capability as a row of one table drawn from the capability
-//! map, nine scenarios played by the consoles in `web/js/consoles.js` as figures, the four
+//! map, the scenarios played by the consoles in `web/js/consoles.js` as figures, the four
 //! languages, where the project is going, and how backing will open. The copy that is not derived from the code lives in `web/home.toml`, and the checks
 //! here keep it honest: a scenario must name library crates and have a console to play
 //! it, a roadmap tag that names a crate must agree with the workspace about whether that
@@ -126,7 +126,7 @@ struct Offer {
     state: String,
 }
 
-/// One rung of the ladder a message climbs, in the order the ladder tries them.
+/// One place a request can be answered, in the order they are tried, cheapest first.
 struct Rung {
     name: String,
     cost: String,
@@ -475,10 +475,10 @@ impl Home {
         let stage = self.scenarios.first();
         let stage_key = stage
             .map(|scenario| scenario.key.as_str())
-            .unwrap_or("farm");
-        let stage_name = stage
-            .map(|scenario| scenario.tab.to_lowercase())
-            .unwrap_or_else(|| "farm".to_owned());
+            .unwrap_or_default();
+        let stage_title = stage
+            .map(|scenario| format!("{} ", escape(&scenario.title)))
+            .unwrap_or_default();
         let stage_still = stage.map(still).unwrap_or_default();
         let orders: String = LANGUAGES
             .iter()
@@ -503,7 +503,7 @@ impl Home {
              <figure class=\"fig fig-lead\" id=\"figure-1\">\n\
              <div class=\"diorama\" data-diorama=\"{stage_key}\">{stage_still}</div>\n\
              <p class=\"fig-note\">Scripted illustration</p>\n\
-             <figcaption><b>Figure 1.</b> Typical application: a {stage_name} node. The readings are scripted, not measured. <a href=\"{base}dashboard/\">Open the dashboard demo</a></figcaption>\n\
+             <figcaption><b>Figure 1.</b> {stage_title}The figure is scripted, not measured.</figcaption>\n\
              </figure>\n\
              <div class=\"tbl\" id=\"table-1\">\n\
              <p class=\"tbl-caption\"><b>Table 1.</b> Ordering information. The language pin sets every listing on this site.</p>\n\
@@ -558,7 +558,7 @@ impl Home {
         let mut out = String::from(
             "<section class=\"sec sec-runs\" id=\"runs\" aria-labelledby=\"runs-title\">\n\
              <h2 id=\"runs-title\"><span class=\"num\">5</span>Typical applications</h2>\n\
-             <p class=\"sec-lead\">Each figure is a scripted illustration of a node doing its job: the readings are drawn in the browser, not measured, and none of the nine is a deployment. Six are field nodes; three are robots. What the crates behind them actually do is in the guides, where every example runs in CI.</p>\n\
+             <p class=\"sec-lead\">Each figure is a scripted illustration of the core at work: what it shows is drawn in the browser, not measured, and none of it is a deployment or a benchmark. What the crates behind each one do is in the guides and the API reference.</p>\n\
              <div class=\"stage-tabs\" role=\"tablist\" aria-label=\"Scenario\">\n",
         );
         for (index, scenario) in self.scenarios.iter().enumerate() {
@@ -617,7 +617,7 @@ impl Home {
         let mut out = String::from(
             "<section class=\"sec sec-turn\" id=\"roadmap\" aria-labelledby=\"roadmap-title\">\n\
              <h2 id=\"roadmap-title\"><span class=\"num\">6</span>Direction</h2>\n\
-             <p class=\"sec-lead\">Not a sensor library: a platform for physical things. Each track runs from what ships today, across the line at today, to what is committed next and what comes after it.</p>\n\
+             <p class=\"sec-lead\">One memory-safe HTTP server core in Rust, for TypeScript, Python and C# through one C ABI. Each track runs from what ships today, across the line at today, to what is committed next and what comes after it.</p>\n\
              <div class=\"tbl\" id=\"table-6-1\">\n\
              <p class=\"tbl-caption\"><b>Table 6-1.</b> Each track from what ships to what is committed. A filled mark ships today, an open mark is committed next, and a light mark comes later.</p>\n\
              <table class=\"lanes\">\n\
@@ -707,7 +707,7 @@ impl Home {
              </div>\n\
              <figure class=\"fig fig-ladder\" id=\"figure-7-1\">\n\
              <ol class=\"ladder\">\n{rungs}</ol>\n\
-             <figcaption><b>Figure 7-1.</b> The ladder a message climbs, cheapest rung first. A rung is reached only when every rung under it is gone, which is what keeps the dear ones rare.</figcaption>\n\
+             <figcaption><b>Figure 7-1.</b> Where a request is answered, cheapest at the foot. A request reaches the host language only when nothing in Rust can answer it, and then in a batch with others, which is what keeps the boundary crossings rare.</figcaption>\n\
              </figure>\n\
              </div>\n\
              </section>\n",
@@ -750,7 +750,7 @@ fn quickstart(root: &Path) -> Result<String, String> {
     Ok(format!(
         "<section class=\"sec quick\" id=\"quick\" aria-labelledby=\"quick-title\">\n\
          <h2 id=\"quick-title\"><span class=\"num\">3</span>Quickstart</h2>\n\
-         <p class=\"sec-lead\">The same program in the language you already work in: a reading taken off a wire on a field node, sent over a link, and checked on the gateway that receives it, with nothing plugged in and nothing running.</p>\n\
+         <p class=\"sec-lead\">The same program in the language you already work in, each spliced from the file CI runs.</p>\n\
          <div class=\"langs\">\n<div class=\"lang-tabs\" role=\"tablist\" aria-label=\"Language\">\n{tabs}</div>\n{panels}</div>\n\
          </section>\n"
     ))
@@ -857,16 +857,21 @@ fn covers(catalog: &Catalog, descriptions: &BTreeMap<String, String>, base: &str
     format!(
         "<section class=\"sec\" id=\"covers\" aria-labelledby=\"covers-title\">\n\
          <h2 id=\"covers-title\"><span class=\"num\">4</span>Capabilities</h2>\n\
-         <p class=\"sec-lead\">Every capability is a crate in Rust and a package in each binding, behind the traits in <code>zero-core</code>. On a microcontroller you bring in two crates and nothing else.</p>\n\
+         <p class=\"sec-lead\">Every capability is a crate in Rust and a package in each binding, over one C ABI. The codecs and parsers are <code>no_std</code>, so a target without an operating system can take the HTTP/1.1 codec or the router alone.</p>\n\
          <div class=\"tbl\" id=\"table-4-1\">\n\
-         <p class=\"tbl-caption\"><b>Table 4-1.</b> The four bindings over the engine, {} capabilities under {} headings, and the dashboard. A heading that holds more than one is also one thing to install.</p>\n\
+         <p class=\"tbl-caption\"><b>Table 4-1.</b> The four bindings over the engine, {} capabilities under {} headings{}. A heading that holds more than one is also one thing to install.</p>\n\
          <div class=\"bindings\">\n<p class=\"bindings-label\">Bindings</p>\n<ul class=\"bindings-list\">\n{bindings}</ul>\n</div>\n\
          <div class=\"chapters\">\n{cells}</div>\n\
          </div>\n\
          <p class=\"sec-note\">Every capability, with its package on crates.io, npm, PyPI, and NuGet and its API pages in all four languages, is on the <a href=\"docs/reference/index.html\">reference</a>. How a call reaches a crate, from a binding down through the engine, is drawn on the <a href=\"docs/about/architecture.html\">architecture</a> page.</p>\n\
          </section>\n",
         catalog.capabilities.len(),
-        catalog.chapters.len()
+        catalog.chapters.len(),
+        if catalog.dashboard.is_some() {
+            ", and the dashboard"
+        } else {
+            ""
+        }
     )
 }
 
@@ -1201,6 +1206,10 @@ detail = "With partners."
             abi: None,
             dashboard: None,
             bundle: None,
+            tooling: Vec::new(),
+            crate_releases: BTreeMap::new(),
+            package_releases: BTreeMap::new(),
+            current_release: 1,
         }
     }
 

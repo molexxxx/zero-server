@@ -1,9 +1,11 @@
-//! The packages of the Node binding, rendered from the capability map: a manifest, a
-//! TypeScript project, and a README for `@zero-server/core` and for each `@zero-server/<key>`
-//! capability package, the `zero-server` bundle that depends on all of them, the README of
-//! `@zero-server/native`, and the workspace's project references. A package's dependencies
-//! are derived from its own imports, so a facade that starts using another package
-//! declares it on the next `cargo xtask docs`.
+//! The packages of the three bindings, rendered from the capability map: for each binding
+//! the core package, the bundle that depends on every package the binding publishes, the
+//! README of the compiled engine's package, and each capability and domain package once
+//! the release that ships it is the one being built or an earlier one. For Node that is a
+//! manifest, a TypeScript project, and a README per package, plus the workspace's project
+//! references; for Python a `pyproject.toml` and a README; for .NET a project file and a
+//! README. A package's dependencies are derived from its own imports, so a facade that
+//! starts using another package declares it on the next `cargo xtask docs`.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -12,12 +14,60 @@ use std::process::ExitCode;
 
 use crate::catalog::{
     dotnet_name, dotnet_reference_url, node_package, node_reference_url, python_reference_url,
-    Capability, Catalog, Chapter, SITE,
+    Capability, Catalog, Chapter, NODE_BUNDLE, PYTHON_BUNDLE, SITE,
 };
 use crate::regions;
 
 /// The repository URL every manifest points at.
 const REPOSITORY: &str = "git+https://github.com/molexxxx/zero-server.git";
+
+/// The page the core and bundle packages of every binding name as their home, the one
+/// `bindings/dotnet/Directory.Build.props` gives every NuGet package. A registry keeps
+/// the metadata a version was published with, and the documentation site may still
+/// move to a custom domain, so the packages every release publishes name the
+/// repository; a capability or domain package names its guide on the site.
+const PROJECT_URL: &str = "https://github.com/molexxxx/zero-server";
+
+/// How far the npm publishing of this core has come at a version, which decides what a
+/// README tells a reader to install. It follows the gate in `release-node.yml`: the
+/// `@zero-server/*` names on npm carry the 1.x line of the earlier JavaScript framework,
+/// so this core publishes from major version 2, a pre-release under the `next` dist-tag
+/// and a final version under `latest`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Publish {
+    /// Below major version 2: nothing is published from this repository.
+    Unpublished,
+    /// A pre-release from major version 2.
+    PreRelease,
+    /// A final version from major version 2.
+    Final,
+}
+
+impl Publish {
+    /// The stage a version is at.
+    ///
+    /// # Arguments
+    ///
+    /// * `version` - the workspace version, in SemVer.
+    ///
+    /// # Returns
+    ///
+    /// The stage; a version whose major part does not parse counts as unpublished.
+    fn of(version: &str) -> Publish {
+        let major = version
+            .split('.')
+            .next()
+            .and_then(|major| major.parse::<u64>().ok())
+            .unwrap_or(0);
+        if major < 2 {
+            Publish::Unpublished
+        } else if version.contains('-') {
+            Publish::PreRelease
+        } else {
+            Publish::Final
+        }
+    }
+}
 
 /// Run `cargo xtask packages [--check]`: render every binding package's manifest and
 /// README from the capability map, or verify the committed ones are current.
@@ -36,7 +86,7 @@ pub fn run(args: &[String]) -> ExitCode {
         let version = crate::version::current()?;
         let mut files = render_node(&root, &catalog, &version)?;
         files.extend(render_python(&root, &catalog, &version)?);
-        files.extend(render_dotnet(&root, &catalog)?);
+        files.extend(render_dotnet(&root, &catalog, &version)?);
         Ok(files)
     });
     match rendered {
@@ -155,7 +205,19 @@ impl Json {
     }
 }
 
-/// Render every generated file of the Node workspace as (path, contents).
+/// Render every generated file of the Node workspace as (path, contents): the core
+/// package, the `@zero-server/sdk` bundle, the README of `@zero-server/native`, the
+/// capability and domain packages the current release ships, and the project references.
+///
+/// # Arguments
+///
+/// * `root` - the repository root.
+/// * `catalog` - the capability map the packages are rendered from.
+/// * `version` - the workspace version.
+///
+/// # Returns
+///
+/// Every generated file as (path, contents).
 ///
 /// # Errors
 ///
@@ -172,24 +234,25 @@ pub fn render_node(
     files.extend(package_files(
         "core",
         &core_deps,
-        &manifest(
-            "core",
+        &manifest(&Manifest {
+            key: "core",
             version,
-            "The zero-server engine's surface for Node: the runtime version and the transport every link shares, the counterpart of the zero-core crate.",
-            &format!("{SITE}/"),
-            &["zero-server", "iot", "robotics", "core"],
-            &core_deps,
-            &["transport"],
-        ),
-        core_readme(),
+            private: false,
+            description: "The zero-server core's surface for Node: the runtime version of the compiled core, the counterpart of the zero-core crate.",
+            homepage: PROJECT_URL,
+            keywords: &["zero-server", "http", "server", "core"],
+            deps: &core_deps,
+            subpaths: &[],
+        }),
+        core_readme(version),
     ));
 
-    // A capability that lives in another capability's package (a trait-level guide in
-    // the core package, or the rules over the kit's trigger) renders no package of its own.
+    // A capability that lives in another capability's package renders no package of its
+    // own, and a package whose release is still ahead renders nothing yet.
     let mut keys: Vec<&str> = Vec::new();
     for capability in &catalog.capabilities {
         let key = capability.node.as_str();
-        if key == "core" || key != capability.key {
+        if key == "core" || key != capability.key || !catalog.package_ships("node", key) {
             continue;
         }
         keys.push(key);
@@ -198,20 +261,26 @@ pub fn render_node(
         files.extend(package_files(
             key,
             &deps,
-            &manifest(
+            &manifest(&Manifest {
                 key,
                 version,
-                &format!("{}.", capability.summary),
-                &homepage(capability),
-                &["zero-server", "iot", "robotics", key],
-                &deps,
-                &[],
-            ),
+                private: false,
+                description: &format!("{}.", capability.summary),
+                homepage: &homepage(capability),
+                keywords: &["zero-server", "http", "server", key],
+                deps: &deps,
+                subpaths: &[],
+            }),
             capability_readme(root, catalog, &deps, capability, key)?,
         ));
     }
 
+    let mut domains: Vec<&str> = Vec::new();
     for (chapter, members) in catalog.domains() {
+        if !catalog.package_ships("node", &chapter.key) {
+            continue;
+        }
+        domains.push(&chapter.key);
         let deps: BTreeSet<String> = members
             .iter()
             .map(|capability| capability.node.clone())
@@ -219,15 +288,16 @@ pub fn render_node(
         files.extend(package_files(
             &chapter.key,
             &deps,
-            &manifest(
-                &chapter.key,
+            &manifest(&Manifest {
+                key: &chapter.key,
                 version,
-                &format!("{}: {}", chapter.title, chapter.intent),
-                &format!("{SITE}/install.html"),
-                &["zero-server", "iot", "robotics", &chapter.key],
-                &deps,
-                &[],
-            ),
+                private: false,
+                description: &format!("{}: {}", chapter.title, chapter.intent),
+                homepage: &format!("{SITE}/install.html"),
+                keywords: &["zero-server", "http", "server", &chapter.key],
+                deps: &deps,
+                subpaths: &[],
+            }),
             domain_readme(chapter, &members),
         ));
         files.push((
@@ -241,19 +311,21 @@ pub fn render_node(
         .map(|key| (*key).to_owned())
         .chain(["core".to_owned(), NATIVE.to_owned()])
         .collect();
+    let private = !catalog.packages_ship("node");
     files.extend(package_files(
-        "zero-server",
+        NODE_BUNDLE,
         &all,
-        &manifest(
-            "zero-server",
+        &manifest(&Manifest {
+            key: NODE_BUNDLE,
             version,
-            "The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic TypeScript facade, for IoT, robotics, and drones.",
-            &format!("{SITE}/"),
-            &["zero-server", "iot", "robotics", "drones", "mqtt", "embedded"],
-            &all,
-            &[],
-        ),
-        bundle_readme(catalog),
+            private,
+            description: "The zero-server framework over the Rust core: the TypeScript facade every application imports, re-exporting @zero-server/core.",
+            homepage: PROJECT_URL,
+            keywords: &["zero-server", "http", "server", "framework", "web"],
+            deps: &all,
+            subpaths: &[],
+        }),
+        bundle_readme(catalog, &keys, private),
     ));
 
     files.push((
@@ -264,12 +336,11 @@ pub fn render_node(
     let mut references = vec![reference("packages/core")];
     references.extend(keys.iter().map(|key| reference(&format!("packages/{key}"))));
     references.extend(
-        catalog
-            .domains()
+        domains
             .iter()
-            .map(|(chapter, _)| reference(&format!("packages/{}", chapter.key))),
+            .map(|key| reference(&format!("packages/{key}"))),
     );
-    references.push(reference("packages/zero-server"));
+    references.push(reference(&format!("packages/{NODE_BUNDLE}")));
     files.push((
         "bindings/node/tsconfig.json".to_owned(),
         pretty(&Json::object(vec![
@@ -301,31 +372,52 @@ fn package_files(
     ]
 }
 
-/// A package manifest. The bundle is the bare `zero-server`; every other package is scoped.
-/// `subpaths` are the extra entry points a package exports beside its root, each a
-/// module of the same name under `dist/`.
-fn manifest(
-    key: &str,
-    version: &str,
-    description: &str,
-    homepage: &str,
-    keywords: &[&str],
-    deps: &BTreeSet<String>,
-    subpaths: &[&str],
-) -> Json {
-    let name = if key == "zero-server" {
-        "zero-server".to_owned()
-    } else {
-        format!("@zero-server/{key}")
-    };
+/// What one npm package's manifest says.
+struct Manifest<'a> {
+    /// The directory under `bindings/node/packages`, which is also the name after the
+    /// `@zero-server/` scope.
+    key: &'a str,
+    /// The version every package of the workspace carries.
+    version: &'a str,
+    /// Whether npm must refuse to publish it.
+    private: bool,
+    /// The one-line description the registry shows.
+    description: &'a str,
+    /// The page the registry links as the package's home.
+    homepage: &'a str,
+    /// The registry keywords.
+    keywords: &'a [&'a str],
+    /// The `@zero-server/<name>` packages it depends on, each pinned to `version`.
+    deps: &'a BTreeSet<String>,
+    /// The extra entry points it exports beside its root, each a module of the same name
+    /// under `dist/`.
+    subpaths: &'a [&'a str],
+}
+
+/// A package manifest, its fields in the order npm writes them. Every package is under
+/// the `@zero-server` scope, the bundle `@zero-server/sdk` included.
+///
+/// # Arguments
+///
+/// * `package` - what the manifest says.
+///
+/// # Returns
+///
+/// The manifest as JSON.
+fn manifest(package: &Manifest) -> Json {
     let mut exports = vec![(".".to_owned(), entry("index"))];
-    for subpath in subpaths {
+    for subpath in package.subpaths {
         exports.push((format!("./{subpath}"), entry(subpath)));
     }
-    Json::object(vec![
-        ("name", Json::str(name)),
-        ("version", Json::str(version)),
-        ("description", Json::str(description)),
+    let mut fields = vec![
+        ("name", Json::str(format!("@zero-server/{}", package.key))),
+        ("version", Json::str(package.version)),
+    ];
+    if package.private {
+        fields.push(("private", Json::Bool(true)));
+    }
+    fields.extend([
+        ("description", Json::str(package.description)),
         ("license", Json::str("Apache-2.0")),
         (
             "publishConfig",
@@ -338,19 +430,20 @@ fn manifest(
                 ("url", Json::str(REPOSITORY)),
                 (
                     "directory",
-                    Json::str(format!("bindings/node/packages/{key}")),
+                    Json::str(format!("bindings/node/packages/{}", package.key)),
                 ),
             ]),
         ),
-        ("homepage", Json::str(homepage)),
-        ("keywords", Json::strings(keywords.iter().copied())),
+        ("homepage", Json::str(package.homepage)),
+        ("keywords", Json::strings(package.keywords.iter().copied())),
         ("main", Json::str("dist/index.js")),
         ("types", Json::str("dist/index.d.ts")),
         ("exports", Json::Object(exports)),
         ("files", Json::strings(["dist/", "LICENSE"])),
         ("engines", Json::object(vec![("node", Json::str(">= 16"))])),
-        ("dependencies", pins(deps, version)),
-    ])
+        ("dependencies", pins(package.deps, package.version)),
+    ]);
+    Json::object(fields)
 }
 
 /// One `exports` entry: the declaration first, so TypeScript matches it before `default`.
@@ -477,7 +570,7 @@ fn distinct<'a>(names: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
 /// The README of a domain package.
 fn domain_readme(chapter: &Chapter, members: &[&Capability]) -> String {
     let mut out = format!(
-        "# @zero-server/{}\n\n{}\n\nOne install for the {} capabilities of this domain. Each is also its own package, and\n`zero-server` is the whole framework in one.\n\n```sh\nnpm install @zero-server/{}\n```\n\n| Capability | Package | What it covers |\n| --- | --- | --- |\n",
+        "# @zero-server/{}\n\n{}\n\nOne install for the {} capabilities of this domain. Each is also its own package, and\n`@zero-server/sdk` is the whole framework in one.\n\n```sh\nnpm install @zero-server/{}\n```\n\n| Capability | Package | What it covers |\n| --- | --- | --- |\n",
         chapter.key,
         chapter.intent,
         members.len(),
@@ -490,7 +583,7 @@ fn domain_readme(chapter: &Chapter, members: &[&Capability]) -> String {
         ));
     }
     out.push_str(&format!(
-        "\nThe guides, with a worked TypeScript example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nMIT\n"
+        "\nThe guides, with a worked TypeScript example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nApache-2.0\n"
     ));
     out
 }
@@ -524,8 +617,8 @@ fn capability_readme(
         "# @zero-server/{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\nnpm install @zero-server/{key}\n```\n\n\
-         This pulls in `@zero-server/native`, the compiled engine{}. \
-         `npm install zero-server` is the whole framework in one package.\n",
+         This pulls in `@zero-server/native`, the compiled core{}. \
+         `npm install @zero-server/{NODE_BUNDLE}` is the whole framework in one package.\n",
         capability.summary,
         doc_buttons(capability, &reference),
         siblings(deps, NATIVE, |dep| format!("`@zero-server/{dep}`"))
@@ -558,7 +651,7 @@ fn capability_readme(
     }
     out.push_str(&format!(
         "- [Every capability]({SITE}/), and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n"
+         ## License\n\nApache-2.0\n"
     ));
     Ok(out)
 }
@@ -583,40 +676,52 @@ fn doc_buttons(capability: &Capability, reference: &str) -> String {
     row.join(" | ")
 }
 
-// The same row for a page that covers a whole binding rather than one capability.
-//
-// # Arguments
-//
-// * `reference` - the URL of that binding's generated reference.
-fn site_buttons(reference: &str) -> String {
-    format!(
-        "{} | {}",
-        badge("Documentation", &format!("{SITE}/")),
-        badge("API reference", reference)
-    )
-}
-
 // One link in the row.
 fn badge(alt: &str, href: &str) -> String {
     format!("[{alt}]({href})")
 }
 
-/// The README of the `zero-server` bundle.
-fn bundle_readme(catalog: &Catalog) -> String {
+/// The README of the `@zero-server/sdk` bundle. While the bundle is private it says why
+/// and how the npm tags move until it is published; once published it lists the packages
+/// it depends on.
+///
+/// # Arguments
+///
+/// * `catalog` - the capability map.
+/// * `keys` - the capability packages the current release ships.
+/// * `private` - whether the bundle is still private.
+///
+/// # Returns
+///
+/// The README.
+fn bundle_readme(catalog: &Catalog, keys: &[&str], private: bool) -> String {
     let mut out = String::from(
-        "# zero-server\n\n\
-         The whole zero-server framework in one package: every capability of one memory-safe Rust \
-         core, behind an idiomatic TypeScript facade, for IoT, robotics, and drones. Each \
-         capability is also its own package, so an application that needs one thing can depend \
-         on `@zero-server/mqtt` alone; this package depends on all of them and re-exports them.\n\n",
+        "# @zero-server/sdk\n\n\
+         The zero-server framework over the Rust core: the TypeScript facade every application \
+         imports. It re-exports `@zero-server/core` and, as the facade grows, the routing, ORM, \
+         auth and real-time surfaces of the framework.\n",
     );
-    out.push_str(&site_buttons(&format!("{SITE}/reference/node/index.html")));
-    out.push_str(
-        "\n\n## Install\n\n```sh\nnpm install zero-server\n```\n\n\
+    if private {
+        out.push_str(
+            "\nThe package is private at this version. It becomes publishable when the facade \
+             reaches parity with the Node SDK it replaces, at which point it takes over the \
+             `@zero-server/sdk` name from the 1.x line. Until then npm's `latest` tag for \
+             `@zero-server/sdk` stays on the 1.x line. `@zero-server/core` publishes its \
+             pre-releases under the `next` tag, so its `latest` tag also stays on the 1.x line \
+             until the first final release of this core.\n",
+        );
+        return out;
+    }
+    out.push_str(&format!(
+        "\n## Install\n\n```sh\nnpm install @zero-server/{NODE_BUNDLE}\n```\n\n\
          ## What it bundles\n\nEach package name opens its reference.\n\n\
-         | Package | What it covers |\n| --- | --- |\n",
-    );
-    for capability in catalog.ordered() {
+         | Package | What it covers |\n| --- | --- |\n"
+    ));
+    for capability in catalog
+        .ordered()
+        .into_iter()
+        .filter(|capability| keys.contains(&capability.node.as_str()))
+    {
         out.push_str(&format!(
             "| [`@zero-server/{}`]({}) | {} |\n",
             capability.node,
@@ -625,66 +730,93 @@ fn bundle_readme(catalog: &Catalog) -> String {
         ));
     }
     out.push_str(&format!(
-        "\nAll of them run on `@zero-server/native`, the compiled engine, which is one binary \
-         whichever packages you install.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/), one page per capability with the same example in Rust, TypeScript, Python, and C#.\n\
-         - [The TypeScript reference]({SITE}/reference/node/index.html), generated from every package.\n\n\
-         ## License\n\nMIT\n"
+        "\nAll of them run on `@zero-server/native`, the compiled core, which is one binary \
+         whichever packages you install. The guides are at [{SITE}]({SITE}/).\n"
     ));
     out
 }
 
-/// The README of `@zero-server/core`.
-fn core_readme() -> String {
+/// The README of `@zero-server/core`. Below major version 2 it says the package is not
+/// published from this repository, since the 1.x versions on npm are the earlier
+/// framework; a pre-release installs from the `next` dist-tag, and a final version from
+/// `latest`.
+///
+/// # Arguments
+///
+/// * `version` - the workspace version, in SemVer.
+///
+/// # Returns
+///
+/// The README.
+fn core_readme(version: &str) -> String {
+    let install = match Publish::of(version) {
+        Publish::Unpublished => {
+            "This package is not published from this repository yet. The 1.x versions of \
+             `@zero-server/core` on npm are the earlier JavaScript framework, a different code \
+             base.\n"
+        }
+        Publish::PreRelease => {
+            "## Install\n\nPre-releases are published under npm's `next` tag:\n\n\
+             ```sh\nnpm install @zero-server/core@next\n```\n\n\
+             A plain `npm install @zero-server/core` installs the `latest` tag, which is the 1.x \
+             line of the earlier JavaScript framework until the first final release of this \
+             core.\n"
+        }
+        Publish::Final => "## Install\n\n```sh\nnpm install @zero-server/core\n```\n",
+    };
     format!(
         "# @zero-server/core\n\n\
-         The zero-server engine's surface for Node: the runtime version and the transport every \
-         link shares. This is the counterpart of the `zero-core` crate, and like it, it is \
-         small; the compiled engine lives in `@zero-server/native`, which this package depends on.\n\n{}\n\n\
-         ## Install\n\n```sh\nnpm install @zero-server/core\n```\n\n\
-         Each capability is its own package (`@zero-server/mqtt`, `@zero-server/security`, and so on) \
-         and `npm install zero-server` is the whole framework in one package.\n\n\
-         ## Documentation\n\n\
-         - [The reference for this package]({}), generated from its source.\n\
-         - [The guides]({SITE}/) and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n",
-        site_buttons(&node_reference_url("core")),
-        node_reference_url("core")
+         The zero-server core's surface for Node: the runtime version of the compiled core. This \
+         is the counterpart of the `zero-core` crate, and like it, it is small. The compiled \
+         core it loads is `@zero-server/native`. It has no server API yet.\n\n\
+         {install}\n\
+         ## Use\n\n```ts\nimport {{ version }} from '@zero-server/core'\n\nconsole.log(version())\n```\n",
     )
 }
 
 /// The README of `@zero-server/native`.
 fn native_readme() -> String {
-    format!(
+    String::from(
         "# @zero-server/native\n\n\
-         The compiled zero-server engine for Node, prebuilt for Linux (x64, arm64), macOS (x64, \
-         arm64), and Windows (x64), and the generated napi-rs contract every `@zero-server` package \
-         builds on. It is one binary that carries every capability; the capability packages are \
-         facades over it, so picking packages narrows the API you depend on, not the size of \
-         the engine.\n\n\
-         You do not install this package directly. Every `@zero-server/<capability>` package and the \
-         `zero-server` bundle depend on it. `index.d.ts` types the contract for anything a facade \
-         does not cover.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/) and the [TypeScript reference]({SITE}/reference/node/index.html).\n\n\
-         ## License\n\nMIT\n"
+         The compiled zero-server core for Node and the generated napi-rs contract every \
+         `@zero-server` package builds on. It is installed as a dependency of \
+         `@zero-server/core`, not directly.\n\n\
+         The package holds the loader `index.js` and the contract `index.d.ts`, both generated \
+         by `napi build` from `bindings/node/src` and drift-checked in CI. The platform binaries \
+         ship as `@zero-server/native-<platform>` packages selected by `os`, `cpu` and `libc`.\n",
     )
 }
 
 /// Render every generated file of the Python packages as (path, contents): a
-/// `pyproject.toml`, a README, and a `py.typed` marker for `zero-core` and each
-/// `zero-<key>` capability package, the `zero-server` metapackage that depends on all of
-/// them, and the README of `zero-server-native`, the maturin project under `packages/native`.
+/// `pyproject.toml`, a README, and a `py.typed` marker for `zero-server-core` and for each
+/// `zero-server-<key>` capability and domain distribution the current release ships, the
+/// `zero-server` metapackage that depends on all of them, and the README of
+/// `zero-server-native`, the maturin project under `packages/native`.
+///
+/// The manifests carry the version in its normalized PEP 440 spelling, the form
+/// `cargo xtask version` writes and checks in every Python manifest.
+///
+/// # Arguments
+///
+/// * `root` - the repository root.
+/// * `catalog` - the capability map the packages are rendered from.
+/// * `version` - the workspace version, in SemVer.
+///
+/// # Returns
+///
+/// Every generated file as (path, contents).
 ///
 /// # Errors
 ///
-/// Returns the reason when a package's source cannot be read.
+/// Returns the reason when a package's source cannot be read, or when `version` has
+/// no PEP 440 spelling.
 pub fn render_python(
     root: &Path,
     catalog: &Catalog,
     version: &str,
 ) -> Result<Vec<(String, String)>, String> {
+    let python = crate::version::pep440(version)?;
+    let version = python.as_str();
     let packages = root.join("bindings/python/packages");
     let mut files = Vec::new();
 
@@ -692,34 +824,37 @@ pub fn render_python(
     files.extend(python_package_files(
         "core",
         version,
-        "The zero-server engine's surface for Python: the runtime version, the error every native call raises, and the transport every link shares, the counterpart of the zero-core crate.",
-        &format!("{SITE}/"),
-        &["zero-server", "iot", "robotics", "core"],
+        "The zero-server core's surface for Python: the runtime version of the compiled core, the counterpart of the zero-core crate.",
+        None,
+        &["zero-server", "http", "server", "core"],
         &core_deps,
         python_core_readme(),
     ));
 
+    // A package whose release is still ahead renders nothing yet.
     let mut keys: Vec<&str> = Vec::new();
     for capability in catalog.ordered() {
         let key = capability.python.as_str();
-        if key == "core" || key != capability.key {
+        if key == "core" || key != capability.key || !catalog.package_ships("python", key) {
             continue;
         }
         keys.push(key);
-        let deps = python_package_imports(&packages.join(key).join("zero-server").join(key), key)?;
+        let deps = python_package_imports(&packages.join(key).join("zero_server").join(key), key)?;
         files.extend(python_package_files(
             key,
             version,
             &format!("{}.", capability.summary),
-            &homepage(capability),
-            &["zero-server", "iot", "robotics", key],
+            Some(&homepage(capability)),
+            &["zero-server", "http", "server", key],
             &deps,
             python_capability_readme(root, catalog, &deps, capability, key)?,
         ));
     }
 
     for (chapter, members) in catalog.domains() {
-        files.extend(python_domain_files(chapter, &members, version));
+        if catalog.package_ships("python", &chapter.key) {
+            files.extend(python_domain_files(chapter, &members, version));
+        }
     }
 
     let all: BTreeSet<String> = keys
@@ -727,21 +862,27 @@ pub fn render_python(
         .map(|key| (*key).to_owned())
         .chain(["core".to_owned(), NATIVE.to_owned()])
         .collect();
+    let facade = catalog.packages_ship("python");
+    let description = if facade {
+        "The zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic Python facade."
+    } else {
+        "The zero-server packages for Python in one install: zero-server-core and the compiled core in zero-server-native, pinned to the same version."
+    };
     files.push((
-        "bindings/python/packages/zero_server/pyproject.toml".to_owned(),
+        format!("bindings/python/packages/{PYTHON_BUNDLE}/pyproject.toml"),
         pyproject(
-            "zero-server",
+            PYTHON_BUNDLE,
             version,
-            "The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic Python facade, for IoT, robotics, and drones.",
-            &format!("{SITE}/"),
-            &["zero-server", "iot", "robotics", "drones", "mqtt", "embedded"],
+            description,
+            None,
+            &["zero-server", "http", "server", "web", "framework"],
             &all,
             true,
         ),
     ));
     files.push((
-        "bindings/python/packages/zero_server/README.md".to_owned(),
-        python_bundle_readme(catalog),
+        format!("bindings/python/packages/{PYTHON_BUNDLE}/README.md"),
+        python_bundle_readme(catalog, &keys, facade),
     ));
     files.push((
         "bindings/python/packages/native/README.md".to_owned(),
@@ -756,7 +897,7 @@ fn python_package_files(
     key: &str,
     version: &str,
     description: &str,
-    homepage: &str,
+    homepage: Option<&str>,
     keywords: &[&str],
     deps: &BTreeSet<String>,
     readme: String,
@@ -775,18 +916,19 @@ fn python_package_files(
 }
 
 /// A pure Python project manifest built by hatchling. A capability package ships its
-/// `zero_server/<key>` namespace portion; the metapackage ships nothing and only depends.
+/// portion of the `zero_server` import namespace; the metapackage ships nothing and only
+/// depends. `homepage`, when given, is the documentation URL beside the repository.
 fn pyproject(
     key: &str,
     version: &str,
     description: &str,
-    homepage: &str,
+    homepage: Option<&str>,
     keywords: &[&str],
     deps: &BTreeSet<String>,
     metapackage: bool,
 ) -> String {
-    let name = if key == "zero-server" {
-        "zero-server".to_owned()
+    let name = if key == PYTHON_BUNDLE {
+        PYTHON_BUNDLE.to_owned()
     } else {
         format!("zero-server-{key}")
     };
@@ -795,10 +937,13 @@ fn pyproject(
         .iter()
         .map(|dep| format!("    \"zero-server-{dep}=={version}\","))
         .collect();
+    let documentation = homepage
+        .map(|homepage| format!("Documentation = \"{homepage}\"\n"))
+        .unwrap_or_default();
     let build = if metapackage {
         "[tool.hatch.build.targets.wheel]\nbypass-selection = true\n"
     } else {
-        "[tool.hatch.build.targets.wheel]\npackages = [\"zero-server\"]\n"
+        "[tool.hatch.build.targets.wheel]\npackages = [\"zero_server\"]\n"
     };
     format!(
         "[build-system]\n\
@@ -822,8 +967,8 @@ fn pyproject(
          ]\n\
          dependencies = [\n{}\n]\n\n\
          [project.urls]\n\
-         Repository = \"https://github.com/molexxxx/zero-server\"\n\
-         Documentation = \"{homepage}\"\n\n\
+         Repository = \"{PROJECT_URL}\"\n\
+         {documentation}\n\
          {build}",
         keywords.join(", "),
         dependencies.join("\n"),
@@ -899,7 +1044,7 @@ fn python_capability_readme(
         "# zero-server-{key}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\npip install zero-server-{key}\n```\n\n```python\nfrom zero_server import {key}\n```\n\n\
-         This pulls in `zero-server-native`, the compiled engine{}. \
+         This pulls in `zero-server-native`, the compiled core{}. \
          `pip install zero-server` is the whole framework in one package.\n",
         capability.summary,
         doc_buttons(capability, &reference),
@@ -933,29 +1078,47 @@ fn python_capability_readme(
     }
     out.push_str(&format!(
         "- [Every capability]({SITE}/), and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n"
+         ## License\n\nApache-2.0\n"
     ));
     Ok(out)
 }
 
-/// The README of the `zero-server` metapackage.
-fn python_bundle_readme(catalog: &Catalog) -> String {
-    let mut out = String::from(
+/// The README of the `zero-server` metapackage. Until the Python facade ships it names
+/// the two distributions it pins and says there is no server API yet; from then on it
+/// lists the capability distributions it installs.
+///
+/// # Arguments
+///
+/// * `catalog` - the capability map.
+/// * `keys` - the capability distributions the current release ships.
+/// * `facade` - whether the Python facade ships in the current release.
+///
+/// # Returns
+///
+/// The README.
+fn python_bundle_readme(catalog: &Catalog, keys: &[&str], facade: bool) -> String {
+    let install = "## Install\n\n```sh\npip install zero-server\n```\n";
+    if !facade {
+        return format!(
+            "# zero-server\n\n\
+             The zero-server packages for Python in one install: `zero-server-core` and the \
+             compiled core in `zero-server-native`, pinned to the same version. Today they \
+             report the core's version; there is no server API for Python yet.\n\n{install}"
+        );
+    }
+    let mut out = format!(
         "# zero-server\n\n\
-         The whole zero-server framework in one package: every capability of one memory-safe Rust \
-         core, behind an idiomatic Python facade, for IoT, robotics, and drones. Each \
-         capability is also its own distribution, so an application that needs one thing can \
-         depend on `zero-mqtt` alone; this package depends on all of them.\n\n",
-    );
-    out.push_str(&site_buttons(&format!(
-        "{SITE}/reference/python/zero_server.html"
-    )));
-    out.push_str(
-        "\n\n## Install\n\n```sh\npip install zero-server\n```\n\n```python\nfrom zero_server import mqtt, security\n```\n\n\
+         The zero-server framework for Python in one install: every capability distribution \
+         below, `zero-server-core`, and the compiled core in `zero-server-native`, pinned to \
+         the same version.\n\n{install}\n\
          ## What it installs\n\nEach module name opens its reference.\n\n\
-         | Distribution | Module | What it covers |\n| --- | --- | --- |\n",
+         | Distribution | Module | What it covers |\n| --- | --- | --- |\n"
     );
-    for capability in &catalog.capabilities {
+    for capability in catalog
+        .ordered()
+        .into_iter()
+        .filter(|capability| keys.contains(&capability.python.as_str()))
+    {
         out.push_str(&format!(
             "| `zero-server-{0}` | [`zero_server.{0}`]({1}) | {2} |\n",
             capability.python,
@@ -964,98 +1127,102 @@ fn python_bundle_readme(catalog: &Catalog) -> String {
         ));
     }
     out.push_str(&format!(
-        "\nAll of them run on `zero-server-native`, the compiled engine, which is one extension \
-         whichever distributions you install.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/), one page per capability with the same example in Rust, TypeScript, Python, and C#.\n\
-         - [The Python reference]({SITE}/reference/python/zero_server.html), generated from every module.\n\n\
-         ## License\n\nMIT\n"
+        "\nAll of them run on `zero-server-native`, the compiled core, which is one extension \
+         whichever distributions you install. The guides are at [{SITE}]({SITE}/).\n"
     ));
     out
 }
 
-/// The README of `zero-core`.
+/// The README of `zero-server-core`.
 fn python_core_readme() -> String {
-    format!(
-        "# zero-core\n\n\
-         The zero-server engine's surface for Python: the runtime version, the error every native \
-         call raises, and the transport every link shares. This is the counterpart of the \
-         `zero-core` crate, and like it, it is small; the compiled engine is `zero-server-native`, \
-         which this package depends on.\n\n{}\n\n\
-         ## Install\n\n```sh\npip install zero-server-core\n```\n\n```python\nfrom zero_server.core import version, ZeroServerError, Transport\n```\n\n\
-         Each capability is its own distribution (`zero-server-mqtt` gives `zero_server.mqtt`, and so on) \
-         and `pip install zero-server` is the whole framework in one package.\n\n\
-         ## Documentation\n\n\
-         - [The reference for `zero_server.core`]({SITE}/reference/python/zero_server/core.html), generated from its source.\n\
-         - [The guides]({SITE}/) and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n",
-        site_buttons(&python_reference_url("core"))
+    String::from(
+        "# zero-server-core\n\n\
+         The zero-server core's surface for Python: the runtime version of the compiled core. \
+         This is the counterpart of the `zero-core` crate, and like it, it is small. The \
+         compiled core it loads is `zero-server-native`. It has no server API yet.\n\n\
+         ## Install\n\n```sh\npip install zero-server-core\n```\n\n\
+         ## Use\n\n```python\nfrom zero_server.core import version\n\nprint(version())\n```\n",
     )
 }
 
-/// The README of `zero-server-native`, the maturin project at the binding's root.
+/// The README of `zero-server-native`, the maturin project under `packages/native`.
 fn python_native_readme() -> String {
-    format!(
+    String::from(
         "# zero-server-native\n\n\
-         The compiled zero-server engine for Python, built with PyO3 and maturin, with wheels for \
-         Linux (x64, arm64), macOS (x64, arm64), and Windows (x64), and the generated contract \
-         every `zero-server` package builds on. It is one extension module, `zero_server._native`, that \
-         carries every capability; the capability distributions are facades over it, so \
-         picking distributions narrows the API you depend on, not the size of the engine.\n\n\
-         You do not install this distribution directly. Every `zero-<capability>` \
-         distribution and the `zero-server` metapackage depend on it. `zero_server.raw` re-exports the \
-         contract for anything a facade does not cover, and `zero_server/_native/__init__.pyi` types it.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/) and the [Python reference]({SITE}/reference/python/zero_server.html).\n\n\
-         ## License\n\nMIT\n"
+         The compiled zero-server core for Python and the generated contract every \
+         `zero-server` package builds on. It is installed as a dependency of \
+         `zero-server-core` and of the `zero-server` metapackage, not directly.\n\n\
+         The extension is imported as `zero_server._native` and re-exported verbatim at \
+         `zero_server.raw`. Its type stub `zero_server/_native/__init__.pyi` is written by the \
+         `stub_gen` binary from the Rust source and drift-checked in CI.\n",
     )
 }
 
 /// Render every generated file of the .NET packages as (path, contents): a project
-/// file and a README for `ZeroServer.Core` and each `ZeroServer.<Name>` capability package,
-/// the `ZeroServer` metapackage that depends on all of them, and the README of
-/// `ZeroServer.Native`, whose project file carries the native runtimes and is hand-written.
+/// file and a README for `ZeroServer.Core` and for each `ZeroServer.<Name>` capability and
+/// domain package the current release ships, the `ZeroServer` metapackage that depends on
+/// all of them, and the README of `ZeroServer.Native`, whose project file carries the
+/// native runtimes and is hand-written.
+///
+/// # Arguments
+///
+/// * `root` - the repository root.
+/// * `catalog` - the capability map the packages are rendered from.
+/// * `version` - the workspace version, which decides whether an install line asks for
+///   a pre-release.
+///
+/// # Returns
+///
+/// Every generated file as (path, contents).
 ///
 /// # Errors
 ///
 /// Returns the reason when a package's sources cannot be read.
-pub fn render_dotnet(root: &Path, catalog: &Catalog) -> Result<Vec<(String, String)>, String> {
+pub fn render_dotnet(
+    root: &Path,
+    catalog: &Catalog,
+    version: &str,
+) -> Result<Vec<(String, String)>, String> {
     let src = root.join("bindings/dotnet/src");
     let mut files = Vec::new();
+    let install = dotnet_install_flag(version);
 
     let core_deps = dotnet_package_usings(&src.join("ZeroServer.Core"), "Core")?;
     files.push((
         "bindings/dotnet/src/ZeroServer.Core/ZeroServer.Core.csproj".to_owned(),
         csproj(
             "Core",
-            "The zero-server engine's surface for .NET: the runtime version and the transport every link implements, the counterpart of the zero-core crate.",
-            &format!("{SITE}/"),
-            &["zero-server", "iot", "robotics", "core"],
+            "The zero-server core's surface for .NET: the runtime version of the compiled core, the counterpart of the zero-core crate.",
+            None,
+            &["zero-server", "http", "server", "core"],
             &core_deps,
             false,
         ),
     ));
     files.push((
         "bindings/dotnet/src/ZeroServer.Core/README.md".to_owned(),
-        dotnet_core_readme(),
+        dotnet_core_readme(install),
     ));
 
-    // A capability that lives in another capability's package (a trait-level guide in
-    // the core package, or the rules over the kit's trigger) has no project of its own.
+    // A capability that lives in another capability's package has no project of its own,
+    // and a package whose release is still ahead renders nothing yet.
     let mut names: Vec<String> = Vec::new();
     for capability in &catalog.capabilities {
         if capability.dotnet_package() == "ZeroServer.Core" || capability.node != capability.key {
             continue;
         }
         let name = dotnet_name(&capability.key);
+        if !catalog.package_ships("dotnet", &name) {
+            continue;
+        }
         let deps = dotnet_package_usings(&src.join(format!("ZeroServer.{name}")), &name)?;
         files.push((
             format!("bindings/dotnet/src/ZeroServer.{name}/ZeroServer.{name}.csproj"),
             csproj(
                 &name,
                 &format!("{}.", capability.summary),
-                &homepage(capability),
-                &["zero-server", "iot", "robotics", &capability.key],
+                Some(&homepage(capability)),
+                &["zero-server", "http", "server", &capability.key],
                 &deps,
                 false,
             ),
@@ -1068,7 +1235,9 @@ pub fn render_dotnet(root: &Path, catalog: &Catalog) -> Result<Vec<(String, Stri
     }
 
     for (chapter, members) in catalog.domains() {
-        files.extend(dotnet_domain_files(chapter, &members));
+        if catalog.package_ships("dotnet", &pascal(&chapter.key)) {
+            files.extend(dotnet_domain_files(chapter, &members));
+        }
     }
 
     let all: BTreeSet<String> = names
@@ -1076,20 +1245,26 @@ pub fn render_dotnet(root: &Path, catalog: &Catalog) -> Result<Vec<(String, Stri
         .cloned()
         .chain(["Core".to_owned(), "Native".to_owned()])
         .collect();
+    let facade = catalog.packages_ship("dotnet");
+    let description = if facade {
+        "The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic C# facade."
+    } else {
+        "The zero-server packages for .NET in one reference: ZeroServer.Core and the compiled core in ZeroServer.Native, at one version."
+    };
     files.push((
         "bindings/dotnet/src/ZeroServer/ZeroServer.csproj".to_owned(),
         csproj(
             "",
-            "The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic C# facade, for IoT, robotics, and drones.",
-            &format!("{SITE}/"),
-            &["zero-server", "iot", "robotics", "drones", "mqtt", "embedded"],
+            description,
+            None,
+            &["zero-server", "http", "server", "web", "framework"],
             &all,
             true,
         ),
     ));
     files.push((
         "bindings/dotnet/src/ZeroServer/README.md".to_owned(),
-        dotnet_bundle_readme(catalog),
+        dotnet_bundle_readme(catalog, &names, facade, install),
     ));
     files.push((
         "bindings/dotnet/src/ZeroServer.Native/README.md".to_owned(),
@@ -1100,11 +1275,12 @@ pub fn render_dotnet(root: &Path, catalog: &Catalog) -> Result<Vec<(String, Stri
 }
 
 /// A project file. `name` is the part after `ZeroServer.`, or empty for the metapackage,
-/// which ships no assembly and only depends.
+/// which ships no assembly and only depends. Without a `homepage` the project keeps the
+/// `PackageProjectUrl` of `Directory.Build.props`.
 fn csproj(
     name: &str,
     description: &str,
-    homepage: &str,
+    homepage: Option<&str>,
     tags: &[&str],
     deps: &BTreeSet<String>,
     metapackage: bool,
@@ -1114,13 +1290,16 @@ fn csproj(
     } else {
         format!("ZeroServer.{name}")
     };
+    let project_url = homepage
+        .map(|homepage| format!("    <PackageProjectUrl>{homepage}</PackageProjectUrl>\n"))
+        .unwrap_or_default();
     let mut properties = format!(
         "    <PackageId>{id}</PackageId>\n\
          \x20   <AssemblyName>{id}</AssemblyName>\n\
          \x20   <RootNamespace>{id}</RootNamespace>\n\
          \x20   <Description>{description}</Description>\n\
          \x20   <PackageTags>{}</PackageTags>\n\
-         \x20   <PackageProjectUrl>{homepage}</PackageProjectUrl>\n\
+         {project_url}\
          \x20   <PackageReadmeFile>README.md</PackageReadmeFile>\n",
         tags.join(";")
     );
@@ -1198,7 +1377,7 @@ fn dotnet_capability_readme(
         "# ZeroServer.{name}\n\n{}. One capability of [zero-server](https://github.com/molexxxx/zero-server), \
          one memory-safe Rust core with bindings for TypeScript, Python, and C#.\n\n{}\n\n\
          ## Install\n\n```sh\ndotnet add package ZeroServer.{name}\n```\n\n```csharp\nusing ZeroServer.{name};\n```\n\n\
-         This pulls in `ZeroServer.Native`, the compiled engine{}. \
+         This pulls in `ZeroServer.Native`, the compiled core{}. \
          `dotnet add package ZeroServer` is the whole framework in one package.\n",
         capability.summary,
         doc_buttons(capability, &reference),
@@ -1235,7 +1414,7 @@ fn dotnet_capability_readme(
     }
     out.push_str(&format!(
         "- [Every capability]({SITE}/), and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n"
+         ## License\n\nApache-2.0\n"
     ));
     Ok(out)
 }
@@ -1265,25 +1444,64 @@ fn siblings(deps: &BTreeSet<String>, engine: &str, render: impl Fn(&str) -> Stri
     }
 }
 
-/// The README of the `ZeroServer` metapackage.
-fn dotnet_bundle_readme(catalog: &Catalog) -> String {
-    let mut out = String::from(
+/// The `dotnet add package` flag an install line carries at a version. `dotnet add
+/// package` leaves pre-releases out unless asked, so the line asks for one until the
+/// first final release from major version 2, the first a plain install finds.
+///
+/// # Arguments
+///
+/// * `version` - the workspace version, in SemVer.
+///
+/// # Returns
+///
+/// ` --prerelease`, or nothing for a final version from major version 2.
+fn dotnet_install_flag(version: &str) -> &'static str {
+    match Publish::of(version) {
+        Publish::Final => "",
+        Publish::Unpublished | Publish::PreRelease => " --prerelease",
+    }
+}
+
+/// The README of the `ZeroServer` metapackage. Until the C# facade ships it names the
+/// two packages it references and says there is no server API yet; from then on it
+/// lists the capability packages it installs.
+///
+/// # Arguments
+///
+/// * `catalog` - the capability map.
+/// * `names` - the capability packages the current release ships, after `ZeroServer.`.
+/// * `facade` - whether the C# facade ships in the current release.
+/// * `flag` - the flag the install line carries, from [`dotnet_install_flag`].
+///
+/// # Returns
+///
+/// The README.
+fn dotnet_bundle_readme(catalog: &Catalog, names: &[String], facade: bool, flag: &str) -> String {
+    let install = format!("## Install\n\n```sh\ndotnet add package ZeroServer{flag}\n```\n");
+    if !facade {
+        return format!(
+            "# ZeroServer\n\n\
+             The zero-server packages for .NET in one reference: `ZeroServer.Core` and the \
+             compiled core in `ZeroServer.Native`, at one version. Today they report the core's \
+             version; there is no server API for .NET yet.\n\n{install}"
+        );
+    }
+    let mut out = format!(
         "# ZeroServer\n\n\
-         The whole zero-server framework in one package: every capability of one memory-safe Rust \
-         core, behind an idiomatic C# facade, for IoT, robotics, and drones. Each capability \
-         is also its own package, so an application that needs one thing can depend on \
-         `ZeroServer.Mqtt` alone; this package depends on all of them.\n\n",
-    );
-    out.push_str(&site_buttons(&format!(
-        "{SITE}/reference/dotnet/index.html"
-    )));
-    out.push_str(
-        "\n\n## Install\n\n```sh\ndotnet add package ZeroServer\n```\n\n\
+         The zero-server framework for .NET in one reference: every capability package below, \
+         `ZeroServer.Core`, and the compiled core in `ZeroServer.Native`, at one version.\n\n\
+         {install}\n\
          ## What it installs\n\nEach package name opens its reference.\n\n\
-         | Package | What it covers |\n| --- | --- |\n",
+         | Package | What it covers |\n| --- | --- |\n"
     );
     for capability in catalog.ordered() {
         let package = capability.dotnet_package();
+        let shipped = package
+            .strip_prefix("ZeroServer.")
+            .is_some_and(|name| names.iter().any(|shipped| shipped == name));
+        if !shipped {
+            continue;
+        }
         out.push_str(&format!(
             "| [`{package}`]({}) | {} |\n",
             dotnet_reference_url(&package),
@@ -1291,55 +1509,42 @@ fn dotnet_bundle_readme(catalog: &Catalog) -> String {
         ));
     }
     out.push_str(&format!(
-        "\nAll of them run on `ZeroServer.Native`, the compiled engine, which is one library \
-         whichever packages you install.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/), one page per capability with the same example in Rust, TypeScript, Python, and C#.\n\
-         - [The C# reference]({SITE}/reference/dotnet/index.html), generated from every package.\n\n\
-         ## License\n\nMIT\n"
+        "\nAll of them run on `ZeroServer.Native`, the compiled core, which is one library \
+         whichever packages you install. The guides are at [{SITE}]({SITE}/).\n"
     ));
     out
 }
 
 /// The README of `ZeroServer.Core`.
-fn dotnet_core_readme() -> String {
+///
+/// # Arguments
+///
+/// * `flag` - the flag the install line carries, from [`dotnet_install_flag`].
+///
+/// # Returns
+///
+/// The README.
+fn dotnet_core_readme(flag: &str) -> String {
     format!(
         "# ZeroServer.Core\n\n\
-         The zero-server engine's surface for .NET: the runtime version and the transport every \
-         link implements. This is the counterpart of the `zero-core` crate, and like it, it \
-         is small. It is a capability like the others rather than a foundation: only the \
-         transport packages depend on it, because they are the ones that return a transport. \
-         The compiled engine, which every package depends on, is `ZeroServer.Native`.\n\n{}\n\n\
-         ## Install\n\n```sh\ndotnet add package ZeroServer.Core\n```\n\n```csharp\nusing ZeroServer.Core;\n```\n\n\
-         Each capability is its own package (`ZeroServer.Mqtt`, `ZeroServer.Security`, and so on) and \
-         `dotnet add package ZeroServer` is the whole framework in one package.\n\n\
-         ## Documentation\n\n\
-         - [The reference for `ZeroServer.Core`]({SITE}/reference/dotnet/api/ZeroServer.Core.html), generated from its source.\n\
-         - [The guides]({SITE}/) and the [install page]({SITE}/install.html).\n\n\
-         ## License\n\nMIT\n",
-        site_buttons(&dotnet_reference_url("ZeroServer.Core"))
+         The zero-server core's surface for .NET: the runtime version of the compiled core. This \
+         is the counterpart of the `zero-core` crate, and like it, it is small. The compiled core \
+         it loads is `ZeroServer.Native`. It has no server API yet.\n\n\
+         ## Install\n\n```sh\ndotnet add package ZeroServer.Core{flag}\n```\n\n\
+         ## Use\n\n```csharp\nusing ZeroServer.Core;\n\nConsole.WriteLine(ZeroServerCore.Version);\n```\n"
     )
 }
 
 /// The README of `ZeroServer.Native`.
 fn dotnet_native_readme() -> String {
-    format!(
+    String::from(
         "# ZeroServer.Native\n\n\
-         The compiled zero-server engine for .NET, bundled for `win-x64`, `linux-x64`, `linux-arm64`, \
-         `osx-x64`, and `osx-arm64`, and the P/Invoke contract every `ZeroServer` package builds on: \
-         `ZeroServer.Native.Interop.NativeMethods` mirrors the generated C header one-to-one. It also \
-         carries the marshalling a facade needs to use that contract: the safe handle type, the \
-         status helpers, owned strings, and `ZeroServerException`, which every failed native call \
-         raises and which sits in the root `ZeroServer` namespace so a facade sees it without a \
-         using. It is one library that carries every capability; the capability packages are \
-         facades over it, so picking packages narrows the API you depend on, not the size of \
-         the engine.\n\n\
-         You do not install this package directly. Every `ZeroServer.<Capability>` package and the \
-         `ZeroServer` metapackage depend on it. The interop layer stays available for anything a \
-         facade does not cover.\n\n\
-         ## Documentation\n\n\
-         - [The guides]({SITE}/) and the [C# reference]({SITE}/reference/dotnet/index.html).\n\n\
-         ## License\n\nMIT\n"
+         The compiled zero-server core for .NET and the P/Invoke contract every `ZeroServer` \
+         package builds on. It is installed as a dependency of `ZeroServer.Core`, not \
+         directly.\n\n\
+         `Interop/NativeMethods.cs` declares the exports of `crates/zero-ffi/include/zero.h`, and \
+         the package carries the `zero_ffi` cdylib under `runtimes/<rid>/native/` for each \
+         published runtime identifier.\n",
     )
 }
 
@@ -1389,7 +1594,7 @@ fn python_domain_files(
         ));
     }
     readme.push_str(&format!(
-        "\nThe guides, with a worked Python example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nMIT\n"
+        "\nThe guides, with a worked Python example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nApache-2.0\n"
     ));
 
     vec![
@@ -1399,8 +1604,8 @@ fn python_domain_files(
                 &chapter.key,
                 version,
                 &format!("{}: {}", chapter.title, chapter.intent),
-                &format!("{SITE}/install.html"),
-                &["zero-server", "iot", "robotics", &chapter.key],
+                Some(&format!("{SITE}/install.html")),
+                &["zero-server", "http", "server", &chapter.key],
                 &deps,
                 false,
             ),
@@ -1439,7 +1644,7 @@ fn dotnet_domain_files(chapter: &Chapter, members: &[&Capability]) -> Vec<(Strin
         ));
     }
     let csproj = format!(
-        "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <PackageId>ZeroServer.{name}</PackageId>\n    <Description>{}: {}</Description>\n    <PackageTags>zero-server;iot;robotics;{}</PackageTags>\n    <PackageProjectUrl>{SITE}/install.html</PackageProjectUrl>\n    <PackageReadmeFile>README.md</PackageReadmeFile>\n    <IncludeBuildOutput>false</IncludeBuildOutput>\n    <GenerateDocumentationFile>false</GenerateDocumentationFile>\n    <NoWarn>$(NoWarn);NU5128</NoWarn>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <None Include=\"README.md\" Pack=\"true\" PackagePath=\"\\\" />\n  </ItemGroup>\n\n  <ItemGroup>\n{references}  </ItemGroup>\n\n</Project>\n",
+        "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n    <PackageId>ZeroServer.{name}</PackageId>\n    <Description>{}: {}</Description>\n    <PackageTags>zero-server;http;server;{}</PackageTags>\n    <PackageProjectUrl>{SITE}/install.html</PackageProjectUrl>\n    <PackageReadmeFile>README.md</PackageReadmeFile>\n    <IncludeBuildOutput>false</IncludeBuildOutput>\n    <GenerateDocumentationFile>false</GenerateDocumentationFile>\n    <NoWarn>$(NoWarn);NU5128</NoWarn>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <None Include=\"README.md\" Pack=\"true\" PackagePath=\"\\\" />\n  </ItemGroup>\n\n  <ItemGroup>\n{references}  </ItemGroup>\n\n</Project>\n",
         chapter.title, chapter.intent, chapter.key
     );
 
@@ -1458,7 +1663,7 @@ fn dotnet_domain_files(chapter: &Chapter, members: &[&Capability]) -> Vec<(Strin
         ));
     }
     readme.push_str(&format!(
-        "\nThe guides, with a worked C# example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nMIT\n"
+        "\nThe guides, with a worked C# example for each, are at [{SITE}]({SITE}/).\n\n## License\n\nApache-2.0\n"
     ));
 
     vec![
@@ -1515,24 +1720,205 @@ mod tests {
     }
 
     #[test]
-    fn the_bundle_is_the_bare_name_and_the_rest_are_scoped() {
+    fn every_package_is_scoped_and_a_private_one_says_so_after_its_version() {
         let deps = BTreeSet::new();
-        let bundle = pretty(&manifest("zero-server", "0.2.0", "d", "h", &[], &deps, &[]));
-        assert!(bundle.starts_with("{\n  \"name\": \"zero-server\",\n  \"version\": \"0.2.0\","));
-        assert!(!bundle.contains("./transport"));
-        let core = pretty(&manifest(
-            "core",
-            "0.2.0",
-            "d",
-            "h",
-            &[],
-            &deps,
-            &["transport"],
+        let bundle = pretty(&manifest(&Manifest {
+            key: NODE_BUNDLE,
+            version: "0.2.0",
+            private: true,
+            description: "d",
+            homepage: "h",
+            keywords: &[],
+            deps: &deps,
+            subpaths: &[],
+        }));
+        assert!(bundle.starts_with(
+            "{\n  \"name\": \"@zero-server/sdk\",\n  \"version\": \"0.2.0\",\n  \"private\": true,\n  \"description\": \"d\","
         ));
+        assert!(!bundle.contains("./transport"));
+        let core = pretty(&manifest(&Manifest {
+            key: "core",
+            version: "0.2.0",
+            private: false,
+            description: "d",
+            homepage: "h",
+            keywords: &[],
+            deps: &deps,
+            subpaths: &["transport"],
+        }));
         assert!(core.contains("\"name\": \"@zero-server/core\""));
+        assert!(!core.contains("\"private\""));
         assert!(core.contains(
             "\"./transport\": {\n      \"types\": \"./dist/transport.d.ts\",\n      \"default\": \"./dist/transport.js\"\n    }"
         ));
+    }
+
+    #[test]
+    fn pyproject_version_python_manifests_are_rendered_in_the_normalized_spelling() {
+        let root = crate::docs::repo_root();
+        let catalog = Catalog::load(&root).unwrap();
+        let files = render_python(&root, &catalog, "2.0.0-alpha.1").unwrap();
+        let manifests: Vec<&String> = files
+            .iter()
+            .filter(|(path, _)| path.ends_with("pyproject.toml"))
+            .map(|(_, text)| text)
+            .collect();
+        assert!(!manifests.is_empty());
+        for text in manifests {
+            assert!(text.contains("version = \"2.0.0a1\"\n"), "{text}");
+            assert!(!text.contains("2.0.0-alpha.1"), "{text}");
+        }
+    }
+
+    #[test]
+    fn core_readme_a_version_below_major_2_is_not_published_from_this_repository() {
+        let readme = core_readme("0.1.0");
+        assert!(readme.contains("This package is not published from this repository yet."));
+        assert!(!readme.contains("npm install"), "{readme}");
+        assert_eq!(Publish::of("1.4.0-rc.1"), Publish::Unpublished);
+    }
+
+    #[test]
+    fn core_readme_a_pre_release_installs_from_the_next_dist_tag() {
+        let readme = core_readme("2.0.0-alpha.1");
+        assert!(readme.contains("```sh\nnpm install @zero-server/core@next\n```"));
+        assert!(
+            readme.contains("A plain `npm install @zero-server/core` installs the `latest` tag")
+        );
+        assert!(!readme.contains("not published"), "{readme}");
+    }
+
+    #[test]
+    fn core_readme_a_final_version_installs_from_latest() {
+        let readme = core_readme("2.0.0");
+        assert!(readme.contains("```sh\nnpm install @zero-server/core\n```"));
+        assert!(!readme.contains("@next"), "{readme}");
+    }
+
+    // npm sets `latest` on the first version of a new package whatever tag it is
+    // published under, so only a package npm already carries keeps `latest` off a
+    // pre-release, and the README promises that for `@zero-server/core` alone.
+    #[test]
+    fn bundle_readme_a_private_bundle_promises_latest_off_a_pre_release_only_for_core() {
+        let root = crate::docs::repo_root();
+        let catalog = Catalog::load(&root).unwrap();
+        let readme = bundle_readme(&catalog, &[], true);
+        assert!(
+            readme.contains("`@zero-server/core` publishes its pre-releases under the `next` tag"),
+            "{readme}"
+        );
+        assert!(!readme.contains("`@zero-server/*`"), "{readme}");
+    }
+
+    #[test]
+    fn dotnet_install_asks_for_a_pre_release_until_the_first_final_release_from_major_2() {
+        assert_eq!(dotnet_install_flag("0.1.0"), " --prerelease");
+        assert_eq!(dotnet_install_flag("2.0.0-beta.3"), " --prerelease");
+        assert_eq!(dotnet_install_flag("2.0.0"), "");
+        assert!(dotnet_core_readme(dotnet_install_flag("2.0.0-rc.1"))
+            .contains("dotnet add package ZeroServer.Core --prerelease\n"));
+    }
+
+    // Every file the three renderers write for the repository at `version`, held to
+    // release 1, before any binding ships its capability packages.
+    fn rendered(version: &str) -> Vec<(String, String)> {
+        let root = crate::docs::repo_root();
+        let mut catalog = Catalog::load(&root).unwrap();
+        catalog.current_release = 1;
+        let mut files = render_node(&root, &catalog, version).unwrap();
+        files.extend(render_python(&root, &catalog, version).unwrap());
+        files.extend(render_dotnet(&root, &catalog, version).unwrap());
+        files
+    }
+
+    // The words of the project this generator was first written for, and its license.
+    const FOREIGN: [&str; 7] = ["IoT", "iot", "robotics", "drones", "mqtt", "Mqtt", "MIT"];
+
+    #[test]
+    fn no_generated_package_file_names_another_product_or_license() {
+        for version in ["0.1.0", "2.0.0-alpha.1", "2.0.0"] {
+            for (path, text) in rendered(version) {
+                for word in FOREIGN {
+                    assert!(!text.contains(word), "{path} at {version} names {word}");
+                }
+            }
+        }
+
+        let catalog = Catalog::parse(concat!(
+            "[[chapter]]\nkey = \"realtime\"\ntitle = \"Real time\"\nintent = \"Open connections.\"\n\n",
+            "[[capability]]\nkey = \"websocket\"\nchapter = \"realtime\"\ntitle = \"WebSocket\"\nsummary = \"Frames\"\ncrates = [\"zero-ws\"]\nnode = \"websocket\"\npython = \"websocket\"\ndotnet = []\n\n",
+            "[[capability]]\nkey = \"sse\"\nchapter = \"realtime\"\ntitle = \"Server-sent events\"\nsummary = \"Events\"\ncrates = [\"zero-sse\"]\nnode = \"sse\"\npython = \"sse\"\ndotnet = []\n",
+        ))
+        .unwrap();
+        let (chapter, members) = catalog.domains().remove(0);
+        let mut domain = vec![domain_readme(chapter, &members)];
+        domain.extend(
+            python_domain_files(chapter, &members, "2.0.0")
+                .into_iter()
+                .map(|(_, text)| text),
+        );
+        domain.extend(
+            dotnet_domain_files(chapter, &members)
+                .into_iter()
+                .map(|(_, text)| text),
+        );
+        for text in &domain {
+            for word in FOREIGN {
+                assert!(
+                    !text.contains(word),
+                    "a domain package names {word}: {text}"
+                );
+            }
+        }
+        assert!(domain[0].contains("## License\n\nApache-2.0\n"));
+        assert!(domain[0].contains("`@zero-server/sdk` is the whole framework"));
+    }
+
+    #[test]
+    fn the_python_metapackage_lives_in_the_directory_named_as_its_distribution() {
+        let files = rendered("0.1.0");
+        let text = |path: &str| {
+            files
+                .iter()
+                .find(|(name, _)| name == path)
+                .map(|(_, text)| text.clone())
+                .unwrap_or_else(|| panic!("{path} is not rendered"))
+        };
+        assert!(text("bindings/python/packages/zero-server/pyproject.toml")
+            .contains("name = \"zero-server\"\n"));
+        assert!(
+            text("bindings/python/packages/zero-server/README.md").starts_with("# zero-server\n")
+        );
+        assert!(text("bindings/python/packages/core/pyproject.toml")
+            .contains("[tool.hatch.build.targets.wheel]\npackages = [\"zero_server\"]\n"));
+        assert!(!files
+            .iter()
+            .any(|(name, _)| name.starts_with("bindings/python/packages/zero_server/")));
+    }
+
+    #[test]
+    fn a_package_whose_release_is_still_ahead_renders_nothing_yet() {
+        let files = rendered("0.1.0");
+        let names: Vec<&str> = files.iter().map(|(name, _)| name.as_str()).collect();
+        for later in [
+            "bindings/node/packages/http/",
+            "bindings/node/packages/realtime/",
+            "bindings/python/packages/middleware/",
+            "bindings/python/packages/http3/",
+            "bindings/dotnet/src/ZeroServer.Http/",
+            "bindings/dotnet/src/ZeroServer.Realtime/",
+        ] {
+            assert!(
+                !names.iter().any(|name| name.starts_with(later)),
+                "{later} is rendered"
+            );
+        }
+        let sdk = files
+            .iter()
+            .find(|(name, _)| name == "bindings/node/packages/sdk/package.json")
+            .map(|(_, text)| text.as_str())
+            .unwrap();
+        assert!(sdk.contains("\"private\": true,"));
     }
 
     #[test]

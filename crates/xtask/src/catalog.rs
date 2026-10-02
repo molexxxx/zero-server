@@ -2,12 +2,35 @@
 //! what each capability covers in every language, and the checks that keep the map
 //! honest against the crates, the binding exports, and the .NET types. The map
 //! renders the tables in the READMEs and the site through [`Catalog::render`].
+//!
+//! The map is release-aware the way the standards register is. A capability ships in
+//! the latest release its crates' `[[crate]]` rows name, and its binding packages and
+//! .NET types ship no earlier than the release `[packages]` names for the binding.
+//! [`Catalog::check`] holds the repository to everything at or below the current
+//! release, the `current_release` of `docs/standards.toml`, and [`Catalog::pending`]
+//! lists the rest, so the map can describe the whole framework while each release is
+//! held only to what it ships.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
 use toml_edit::{DocumentMut, Item};
+
+use crate::standards::RELEASES;
+
+/// The directory of the Node bundle under `bindings/node/packages`: `@zero-server/sdk`,
+/// the facade every application imports, which depends on every other package.
+pub const NODE_BUNDLE: &str = "sdk";
+
+/// The directory of the Python metapackage under `bindings/python/packages`, named as
+/// its distribution, `zero-server`. It ships no module of its own, so it is not named
+/// as the `zero_server` import namespace the other distributions share.
+pub const PYTHON_BUNDLE: &str = "zero-server";
+
+/// The binding keys `[packages]` may name, as the reference pages and the binding
+/// directories name them.
+const BINDINGS: [&str; 3] = ["node", "python", "dotnet"];
 
 /// Where the site is published (`layout::HOST` under `layout::DEFAULT_BASE`); the tables
 /// link into it with absolute URLs so the registry pages, which do not resolve relative
@@ -60,8 +83,9 @@ impl Capability {
 }
 
 /// The whole map: chapters in order, capabilities in order, the engine crates and which
-/// of them are the C ABI and the dashboard, and the crate that bundles every capability
-/// behind a feature each.
+/// of them are the C ABI and the dashboard, the crate that bundles every capability
+/// behind a feature each, and the releases that ship each crate and each binding's
+/// packages.
 pub struct Catalog {
     pub chapters: Vec<Chapter>,
     pub capabilities: Vec<Capability>,
@@ -69,26 +93,77 @@ pub struct Catalog {
     pub abi: Option<String>,
     pub dashboard: Option<String>,
     pub bundle: Option<String>,
+    /// The unpublished crates `[tooling]` names. They are claimed without being a
+    /// capability, and get no generated README since no registry shows them.
+    pub tooling: Vec<String>,
+    /// The release each crate first ships in, from its `[[crate]]` row.
+    pub crate_releases: BTreeMap<String, u32>,
+    /// The release each binding first ships the packages the map names for its
+    /// capabilities and chapters, and for .NET the types each capability lists, from
+    /// `[packages]`. A binding the table leaves out ships them with the capability.
+    pub package_releases: BTreeMap<String, u32>,
+    /// The release being built. [`Catalog::load`] reads it from `docs/standards.toml`; a
+    /// map parsed from its text alone is read as of the last release, when everything it
+    /// names has shipped.
+    pub current_release: u32,
+}
+
+/// Something the map names that ships after the current release, and so is reported
+/// rather than required.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Pending {
+    /// The release that first ships it.
+    pub release: u32,
+    /// What it is: a package, the .NET types of a capability, or a guide.
+    pub what: String,
+}
+
+/// A package the map names in one binding: the capabilities and chapters that live in
+/// it, and the first release any of them ships there.
+struct Wanted {
+    key: String,
+    needed_by: Vec<String>,
+    release: u32,
 }
 
 impl Catalog {
-    /// Read `docs/capabilities.toml` under `root`.
+    /// Read `docs/capabilities.toml` under `root`, and the release being built from
+    /// `docs/standards.toml`.
+    ///
+    /// # Arguments
+    ///
+    /// * `root` - the repository root.
+    ///
+    /// # Returns
+    ///
+    /// The map, held to the current release.
     ///
     /// # Errors
     ///
-    /// Returns the reason when the file is missing or malformed.
+    /// Returns the reason when either file is missing or malformed.
     pub fn load(root: &Path) -> Result<Catalog, String> {
         let path = root.join("docs/capabilities.toml");
         let text = fs::read_to_string(&path)
             .map_err(|err| format!("reading {}: {err}", path.display()))?;
-        Catalog::parse(&text)
+        let mut catalog = Catalog::parse(&text)?;
+        catalog.current_release = crate::standards::current_release(root)?;
+        Ok(catalog)
     }
 
-    /// Parse the map from its TOML text.
+    /// Parse the map from its TOML text, read as of the last release.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - the contents of `docs/capabilities.toml`.
+    ///
+    /// # Returns
+    ///
+    /// The map.
     ///
     /// # Errors
     ///
-    /// Returns the reason when a required field is missing or has the wrong type.
+    /// Returns the reason when a required field is missing or has the wrong type, or a
+    /// release is not one of the releases the standards register knows.
     pub fn parse(text: &str) -> Result<Catalog, String> {
         let doc: DocumentMut = text
             .parse()
@@ -155,6 +230,42 @@ impl Catalog {
             .map(|bundle| string(bundle, "crate", "bundle"))
             .transpose()?;
 
+        let tooling = doc
+            .get("tooling")
+            .and_then(Item::as_table_like)
+            .map(|tooling| strings_of(tooling, "crates", "tooling"))
+            .transpose()?
+            .unwrap_or_default();
+
+        let mut crate_releases = BTreeMap::new();
+        for table in tables(&doc, "crate")? {
+            let name = string(table, "name", "crate")?;
+            let release = table
+                .get("release")
+                .and_then(release_number)
+                .ok_or_else(|| format!("crate {name}: `release` must be one of {RELEASES:?}"))?;
+            if crate_releases.insert(name.clone(), release).is_some() {
+                return Err(format!("[[crate]] {name} is declared twice"));
+            }
+        }
+
+        let mut package_releases = BTreeMap::new();
+        if let Some(packages) = doc.get("packages") {
+            let packages = packages
+                .as_table_like()
+                .ok_or("[packages] must be a table")?;
+            for (binding, value) in packages.iter() {
+                if !BINDINGS.contains(&binding) {
+                    return Err(format!(
+                        "[packages] names {binding}, which is not one of {BINDINGS:?}"
+                    ));
+                }
+                let release = release_number(value)
+                    .ok_or_else(|| format!("[packages] {binding} must be one of {RELEASES:?}"))?;
+                package_releases.insert(binding.to_owned(), release);
+            }
+        }
+
         Ok(Catalog {
             chapters,
             capabilities,
@@ -162,7 +273,213 @@ impl Catalog {
             abi,
             dashboard,
             bundle,
+            tooling,
+            crate_releases,
+            package_releases,
+            current_release: *RELEASES.end(),
         })
+    }
+
+    /// The release a capability ships in: the latest release among its crates, or the
+    /// release of the crate its Rust items live in when it has none. A crate without a
+    /// `[[crate]]` row counts as the first release, so it is held to the strictest one,
+    /// and [`Catalog::check`] reports the missing row.
+    ///
+    /// # Arguments
+    ///
+    /// * `capability` - the capability.
+    ///
+    /// # Returns
+    ///
+    /// The release that ships it.
+    pub fn release_of(&self, capability: &Capability) -> u32 {
+        let first = *RELEASES.start();
+        let home = [capability.rust_crate.as_deref().unwrap_or("zero-core")];
+        let crates: Vec<&str> = if capability.crates.is_empty() {
+            home.to_vec()
+        } else {
+            capability.crates.iter().map(String::as_str).collect()
+        };
+        crates
+            .iter()
+            .map(|krate| self.crate_releases.get(*krate).copied().unwrap_or(first))
+            .max()
+            .unwrap_or(first)
+    }
+
+    /// The release a capability ships in one binding: the later of its own release and
+    /// the release `[packages]` names for the binding.
+    ///
+    /// # Arguments
+    ///
+    /// * `capability` - the capability.
+    /// * `binding` - `node`, `python` or `dotnet`.
+    ///
+    /// # Returns
+    ///
+    /// The release that ships its package, module or types in that binding.
+    pub fn binding_release(&self, capability: &Capability, binding: &str) -> u32 {
+        let packages = self
+            .package_releases
+            .get(binding)
+            .copied()
+            .unwrap_or(*RELEASES.start());
+        self.release_of(capability).max(packages)
+    }
+
+    /// Whether something that first ships in `release` is part of the release being built.
+    ///
+    /// # Arguments
+    ///
+    /// * `release` - the release that ships it.
+    ///
+    /// # Returns
+    ///
+    /// True at or below the current release.
+    pub fn ships(&self, release: u32) -> bool {
+        release <= self.current_release
+    }
+
+    /// Whether a binding package the map names ships in the current release.
+    ///
+    /// # Arguments
+    ///
+    /// * `binding` - `node`, `python` or `dotnet`.
+    /// * `key` - the package's key: a capability's `node` or `python` value, or a
+    ///   chapter key for a domain package; for `dotnet`, the name after `ZeroServer.`.
+    ///
+    /// # Returns
+    ///
+    /// True when some capability or chapter that lives in it ships there by now.
+    pub fn package_ships(&self, binding: &str, key: &str) -> bool {
+        self.wanted(binding)
+            .iter()
+            .any(|wanted| wanted.key == key && self.ships(wanted.release))
+    }
+
+    /// Whether a binding publishes its capability and domain packages in the current
+    /// release: whether the release `[packages]` names for it has come.
+    ///
+    /// # Arguments
+    ///
+    /// * `binding` - `node`, `python` or `dotnet`.
+    ///
+    /// # Returns
+    ///
+    /// True at or after that release, and for a binding the table leaves out.
+    pub fn packages_ship(&self, binding: &str) -> bool {
+        let release = self
+            .package_releases
+            .get(binding)
+            .copied()
+            .unwrap_or(*RELEASES.start());
+        self.ships(release)
+    }
+
+    // The packages one binding needs beyond its core, native and bundle packages: one per
+    // capability key that is not `core`, and one per domain, each with the first release
+    // that needs it. A .NET package is named as its directory is, after `ZeroServer.`.
+    fn wanted(&self, binding: &str) -> Vec<Wanted> {
+        let mut wanted: Vec<Wanted> = Vec::new();
+        let mut add = |key: String, needed_by: String, release: u32| match wanted
+            .iter_mut()
+            .find(|wanted| wanted.key == key)
+        {
+            Some(found) => {
+                found.needed_by.push(needed_by);
+                found.release = found.release.min(release);
+            }
+            None => wanted.push(Wanted {
+                key,
+                needed_by: vec![needed_by],
+                release,
+            }),
+        };
+        for capability in &self.capabilities {
+            let key = match binding {
+                "python" => capability.python.as_str(),
+                _ => capability.node.as_str(),
+            };
+            if key == "core" {
+                continue;
+            }
+            let key = match binding {
+                "dotnet" => dotnet_name(key),
+                _ => key.to_owned(),
+            };
+            add(
+                key,
+                capability.key.clone(),
+                self.binding_release(capability, binding),
+            );
+        }
+        for (chapter, members) in self.domains() {
+            let release = members
+                .iter()
+                .map(|member| self.binding_release(member, binding))
+                .min()
+                .unwrap_or(*RELEASES.start());
+            let key = match binding {
+                "dotnet" => chapter
+                    .key
+                    .split('-')
+                    .map(dotnet_name)
+                    .collect::<Vec<_>>()
+                    .concat(),
+                _ => chapter.key.clone(),
+            };
+            add(key, format!("chapter {}", chapter.key), release);
+        }
+        wanted
+    }
+
+    /// Everything the map names that ships after the current release: each binding's
+    /// packages, the .NET types of each capability, and the guides of capabilities that
+    /// are not part of this release.
+    ///
+    /// # Returns
+    ///
+    /// The pending entries, ordered by release and then by name.
+    pub fn pending(&self) -> Vec<Pending> {
+        let mut pending = Vec::new();
+        for binding in BINDINGS {
+            for wanted in self.wanted(binding) {
+                if self.ships(wanted.release) {
+                    continue;
+                }
+                let package = match binding {
+                    "node" => format!("@zero-server/{}", wanted.key),
+                    "python" => format!("zero-server-{}", wanted.key),
+                    _ => format!("ZeroServer.{}", wanted.key),
+                };
+                pending.push(Pending {
+                    release: wanted.release,
+                    what: format!("{package} ({})", wanted.needed_by.join(", ")),
+                });
+            }
+        }
+        for capability in &self.capabilities {
+            let release = self.binding_release(capability, "dotnet");
+            if !capability.dotnet.is_empty() && !self.ships(release) {
+                pending.push(Pending {
+                    release,
+                    what: format!(
+                        "C# types {} ({})",
+                        capability.dotnet.join(", "),
+                        capability.key
+                    ),
+                });
+            }
+            let release = self.release_of(capability);
+            if !self.ships(release) {
+                pending.push(Pending {
+                    release,
+                    what: format!("the {} guide ({})", capability.title, capability.key),
+                });
+            }
+        }
+        pending.sort();
+        pending
     }
 
     /// The engine crates that are the engine itself: every crate `[engine]` lists except
@@ -390,7 +707,10 @@ impl Catalog {
     /// The same capability in the other three languages: where to install it from and
     /// where its reference is. Every capability page in every registry carries this, so a
     /// reader who arrives on the crates.io page can reach the npm one without going back
-    /// through the site.
+    /// through the site. A language whose package for the capability ships after the
+    /// current release gets no row, since a registry page is fixed once published and
+    /// must not link a package that does not exist yet; a sentence under the table names
+    /// those languages instead.
     ///
     /// # Arguments
     ///
@@ -398,10 +718,16 @@ impl Catalog {
     ///
     /// # Returns
     ///
-    /// A Markdown table, without a trailing newline.
+    /// A Markdown table, and the sentence when a language is left out, without a
+    /// trailing newline.
     pub fn cross_language(&self, capability: &Capability) -> String {
         let mut out = String::from("| Language | Package | Reference |\n| --- | --- | --- |\n");
         let [rust_lang, node, python, dotnet] = &LANGUAGES;
+        let later: Vec<&str> = [node, python, dotnet]
+            .iter()
+            .filter(|lang| !self.ships(self.binding_release(capability, lang.key)))
+            .map(|lang| lang.name)
+            .collect();
         let rust = if capability.crates.is_empty() {
             format!(
                 "| Rust | [`zero-core`](https://crates.io/crates/zero-core) | [reference]({}), [docs.rs](https://docs.rs/zero-core), [install]({}) |\n",
@@ -422,31 +748,65 @@ impl Catalog {
                 .collect()
         };
         out.push_str(&rust);
-        out.push_str(&format!(
-            "| TypeScript | [`{0}`](https://www.npmjs.com/package/{0}) | [reference]({1}), [install]({2}) |\n",
-            node_package(capability),
-            node_reference_url(&capability.node),
-            node.row_url(capability)
-        ));
-        out.push_str(&format!(
-            "| Python | [`zero-server-{0}`](https://pypi.org/project/zero-server-{0}/) | [reference]({1}), [install]({2}) |\n",
-            capability.python,
-            python_reference_url(&capability.python),
-            python.row_url(capability)
-        ));
-        let package = capability.dotnet_package();
-        out.push_str(&format!(
-            "| C# | [`{package}`](https://www.nuget.org/packages/{package}) | [reference]({}), [install]({}) |\n",
-            dotnet_reference_url(&package),
-            dotnet.row_url(capability)
-        ));
-        out.trim_end().to_owned()
+        if !later.contains(&node.name) {
+            out.push_str(&format!(
+                "| TypeScript | [`{0}`](https://www.npmjs.com/package/{0}) | [reference]({1}), [install]({2}) |\n",
+                node_package(capability),
+                node_reference_url(&capability.node),
+                node.row_url(capability)
+            ));
+        }
+        if !later.contains(&python.name) {
+            out.push_str(&format!(
+                "| Python | [`zero-server-{0}`](https://pypi.org/project/zero-server-{0}/) | [reference]({1}), [install]({2}) |\n",
+                capability.python,
+                python_reference_url(&capability.python),
+                python.row_url(capability)
+            ));
+        }
+        if !later.contains(&dotnet.name) {
+            let package = capability.dotnet_package();
+            out.push_str(&format!(
+                "| C# | [`{package}`](https://www.nuget.org/packages/{package}) | [reference]({}), [install]({}) |\n",
+                dotnet_reference_url(&package),
+                dotnet.row_url(capability)
+            ));
+        }
+        let mut out = out.trim_end().to_owned();
+        if let Some((last, rest)) = later.split_last() {
+            let named = match rest {
+                [] => (*last).to_owned(),
+                _ => format!("{} and {last}", rest.join(", ")),
+            };
+            let packages = if later.len() == 1 {
+                "package"
+            } else {
+                "packages"
+            };
+            out.push_str(&format!(
+                "\n\nThe {named} {packages} of this capability ship in a later release."
+            ));
+        }
+        out
     }
 
-    /// Check the map against the repository: every library crate claimed once, the
-    /// node keys matching the packages, the python keys matching the modules, every dotnet
-    /// name declared, and every guide present. With `require_guides`, a capability
-    /// without a guide is an error too.
+    /// Check the map against the repository: every library crate claimed once and given
+    /// a release, and, for what ships by the current release, the node keys matching the
+    /// packages, the python keys matching the modules, every dotnet name declared, every
+    /// guide present, and the bundle crate turning on every capability crate. With
+    /// `require_guides`, a capability of the current release without a guide is an error
+    /// too. What ships later is left to [`Catalog::pending`]; a package that exists early
+    /// is accepted, one that no capability claims is not.
+    ///
+    /// # Arguments
+    ///
+    /// * `root` - the repository root.
+    /// * `lib_crates` - the workspace library crates.
+    /// * `require_guides` - whether a capability must have a guide.
+    ///
+    /// # Returns
+    ///
+    /// Nothing when the repository holds everything the current release ships.
     ///
     /// # Errors
     ///
@@ -458,6 +818,14 @@ impl Catalog {
         require_guides: bool,
     ) -> Result<(), String> {
         let mut problems = Vec::new();
+
+        for krate in lib_crates {
+            if !self.crate_releases.contains_key(krate) {
+                problems.push(format!(
+                    "crate {krate} has no [[crate]] row, so no release says when it ships"
+                ));
+            }
+        }
 
         let mut chapter_keys = BTreeSet::new();
         for chapter in &self.chapters {
@@ -490,6 +858,9 @@ impl Catalog {
         for krate in &self.engine {
             claimed.entry(krate.as_str()).or_default().push("engine");
         }
+        for krate in &self.tooling {
+            claimed.entry(krate.as_str()).or_default().push("tooling");
+        }
         for (role, named) in [("abi", &self.abi), ("dashboard", &self.dashboard)] {
             if let Some(krate) = named.as_ref().filter(|krate| !self.engine.contains(*krate)) {
                 problems.push(format!(
@@ -504,7 +875,7 @@ impl Catalog {
         for krate in lib_crates {
             match claimed.get(krate.as_str()) {
                 None => problems.push(format!(
-                    "crate {krate} is claimed by no capability and is not in [engine]"
+                    "crate {krate} is claimed by no capability and is not in [engine] or [tooling]"
                 )),
                 Some(owners) if owners.len() > 1 => problems.push(format!(
                     "crate {krate} is claimed more than once: {}",
@@ -513,76 +884,63 @@ impl Catalog {
                 Some(_) => {}
             }
         }
-        for krate in claimed.keys() {
-            if !lib_crates.iter().any(|known| known == krate) {
+        for (krate, owners) in &claimed {
+            if lib_crates.iter().any(|known| known == krate) {
+                continue;
+            }
+            // A tooling crate may be a binary alone, such as the task runner.
+            let tooling_member = owners.as_slice() == ["tooling"]
+                && root.join("crates").join(krate).join("Cargo.toml").is_file();
+            if !tooling_member {
                 problems.push(format!("{krate} is claimed but is not a library crate"));
             }
         }
 
-        // A domain has a package of its own in each binding, alongside the capabilities.
-        let domain_keys: BTreeSet<&str> = self
-            .domains()
-            .into_iter()
-            .map(|(chapter, _)| chapter.key.as_str())
-            .collect();
-
-        match node_packages(root) {
-            Ok(packages) => {
-                let keys: BTreeSet<&str> = self
-                    .capabilities
-                    .iter()
-                    .map(|capability| capability.node.as_str())
-                    .filter(|key| *key != "core")
-                    .chain(domain_keys.iter().copied())
-                    .collect();
-                for package in &packages {
-                    if !keys.contains(package.as_str()) {
-                        problems.push(format!(
-                            "bindings/node/packages/{package} exists, which no capability claims"
-                        ));
-                    }
+        // A domain has a package of its own in each binding, alongside the capabilities;
+        // each is required once the first capability or chapter that lives in it ships.
+        for (binding, found, place) in [
+            ("node", node_packages(root), "bindings/node/packages"),
+            ("python", python_packages(root), "bindings/python/packages"),
+            ("dotnet", dotnet_packages(root), "bindings/dotnet/src"),
+        ] {
+            let found = match found {
+                Ok(found) => found,
+                Err(err) => {
+                    problems.push(err);
+                    continue;
                 }
-                for key in &keys {
-                    if !packages.contains(*key) {
-                        problems.push(format!(
-                            "node = \"{key}\" has no package under bindings/node/packages"
-                        ));
-                    }
+            };
+            let wanted = self.wanted(binding);
+            let prefix = if binding == "dotnet" {
+                "ZeroServer."
+            } else {
+                ""
+            };
+            for package in &found {
+                if !wanted.iter().any(|wanted| wanted.key == *package) {
+                    problems.push(format!(
+                        "{place}/{prefix}{package} exists, which no capability claims"
+                    ));
                 }
             }
-            Err(err) => problems.push(err),
-        }
-
-        match python_packages(root) {
-            Ok(packages) => {
-                let keys: BTreeSet<&str> = self
-                    .capabilities
-                    .iter()
-                    .map(|capability| capability.python.as_str())
-                    .filter(|key| *key != "core")
-                    .chain(domain_keys.iter().copied())
-                    .collect();
-                for package in &packages {
-                    if !keys.contains(package.as_str()) {
-                        problems.push(format!(
-                            "bindings/python/packages/{package} exists, which no capability claims"
-                        ));
-                    }
-                }
-                for key in &keys {
-                    if !packages.contains(*key) {
-                        problems.push(format!(
-                            "python = \"{key}\" has no package under bindings/python/packages"
-                        ));
-                    }
+            for wanted in wanted.iter().filter(|wanted| self.ships(wanted.release)) {
+                if !found.contains(&wanted.key) {
+                    problems.push(format!(
+                        "{binding} package {prefix}{} ({}) ships in release {} and has no directory under {place}",
+                        wanted.key,
+                        wanted.needed_by.join(", "),
+                        wanted.release
+                    ));
                 }
             }
-            Err(err) => problems.push(err),
         }
 
         match dotnet_types(root) {
             Ok(types) => {
                 for capability in &self.capabilities {
+                    if !self.ships(self.binding_release(capability, "dotnet")) {
+                        continue;
+                    }
                     for name in &capability.dotnet {
                         if !types.contains(name) {
                             problems.push(format!(
@@ -596,36 +954,10 @@ impl Catalog {
             Err(err) => problems.push(err),
         }
 
-        match dotnet_packages(root) {
-            Ok(packages) => {
-                let names: BTreeSet<String> =
-                    self.capabilities
-                        .iter()
-                        .filter(|capability| capability.node != "core")
-                        .map(|capability| dotnet_name(&capability.node))
-                        .chain(domain_keys.iter().map(|key| {
-                            key.split('-').map(dotnet_name).collect::<Vec<_>>().concat()
-                        }))
-                        .collect();
-                for package in &packages {
-                    if !names.contains(package) {
-                        problems.push(format!(
-                            "bindings/dotnet/src/ZeroServer.{package} exists, which no capability claims"
-                        ));
-                    }
-                }
-                for name in &names {
-                    if !packages.contains(name) {
-                        problems.push(format!(
-                            "capability package ZeroServer.{name} has no project under bindings/dotnet/src"
-                        ));
-                    }
-                }
-            }
-            Err(err) => problems.push(err),
-        }
-
         for capability in &self.capabilities {
+            if !self.ships(self.release_of(capability)) {
+                continue;
+            }
             for (page, _) in &capability.guides {
                 if !root.join("docs").join(page).is_file() {
                     problems.push(format!(
@@ -639,9 +971,11 @@ impl Catalog {
                     "capability {}: docs/{guide} does not exist",
                     capability.key
                 )),
-                None if require_guides => {
-                    problems.push(format!("capability {} has no guide", capability.key))
-                }
+                None if require_guides => problems.push(format!(
+                    "capability {} ships in release {} and has no guide",
+                    capability.key,
+                    self.release_of(capability)
+                )),
                 _ => {}
             }
         }
@@ -656,140 +990,25 @@ impl Catalog {
         }
     }
 
-    // The bundle crate against the map: one feature per capability, named by the capability
-    // key, enabling that capability's crates and no crate another capability claims, and in
-    // the default set; and in its source, each of those crates re-exported and each feature
-    // in the table of features.
+    // The bundle crate against the capabilities of the current release and the ones
+    // before it; see the free function `bundle_problems` for the rule.
     fn bundle_problems(&self, root: &Path, name: &str) -> Vec<String> {
         let path = root.join("crates").join(name).join("Cargo.toml");
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
             Err(err) => return vec![format!("reading {}: {err}", path.display())],
         };
-        let doc: DocumentMut = match text.parse() {
-            Ok(doc) => doc,
-            Err(err) => return vec![format!("{} is not valid TOML: {err}", path.display())],
-        };
-        let Some(features) = doc.get("features").and_then(Item::as_table_like) else {
-            return vec![format!("crates/{name}/Cargo.toml has no [features] table")];
-        };
-        let feature = |key: &str| -> Option<Vec<String>> {
-            features.get(key).and_then(Item::as_array).map(|values| {
-                values
-                    .iter()
-                    .filter_map(|value| value.as_str())
-                    .map(str::to_owned)
-                    .collect()
-            })
-        };
-        let default = feature("default").unwrap_or_default();
-
-        // The crates another capability claims: a feature may pull in a shared engine crate,
-        // but never one this map attributes to a different capability.
-        let claimed_elsewhere = |key: &str| -> BTreeSet<&str> {
-            self.capabilities
-                .iter()
-                .filter(|other| other.key != key)
-                .flat_map(|other| other.crates.iter().map(String::as_str))
-                .collect()
-        };
-
-        let mut problems = Vec::new();
-
-        // A chapter with more than one capability gets a feature of its own, so a build can
-        // name a domain instead of listing its parts.
-        for chapter in &self.chapters {
-            let members: Vec<&str> = self
-                .in_chapter(&chapter.key)
-                .filter(|capability| !capability.crates.is_empty())
-                .map(|capability| capability.key.as_str())
-                .collect();
-            if members.len() < 2 {
-                continue;
-            }
-            match feature(&chapter.key) {
-                None => problems.push(format!(
-                    "crates/{name}/Cargo.toml has no `{}` feature for the chapter of the same name",
-                    chapter.key
-                )),
-                Some(enabled) => {
-                    let listed: BTreeSet<&str> = enabled.iter().map(String::as_str).collect();
-                    let expected: BTreeSet<&str> = members.iter().copied().collect();
-                    for missing in expected.difference(&listed) {
-                        problems.push(format!(
-                            "crates/{name}/Cargo.toml: feature `{}` does not enable `{missing}`",
-                            chapter.key
-                        ));
-                    }
-                    for extra in listed.difference(&expected) {
-                        problems.push(format!(
-                            "crates/{name}/Cargo.toml: feature `{}` enables `{extra}`, which is not in that chapter",
-                            chapter.key
-                        ));
-                    }
-                }
-            }
-        }
-
-        for capability in &self.capabilities {
-            if capability.crates.is_empty() {
-                continue;
-            }
-            let key = &capability.key;
-            match feature(key) {
-                None => problems.push(format!("crates/{name}/Cargo.toml has no `{key}` feature")),
-                Some(enabled) => {
-                    for krate in &capability.crates {
-                        let dep = format!("dep:{krate}");
-                        if !enabled.contains(&dep) {
-                            problems.push(format!(
-                                "crates/{name}/Cargo.toml: feature `{key}` does not enable {dep}"
-                            ));
-                        }
-                    }
-                    let others = claimed_elsewhere(key);
-                    for entry in &enabled {
-                        let Some(krate) = entry.strip_prefix("dep:") else {
-                            continue;
-                        };
-                        if others.contains(krate) {
-                            problems.push(format!(
-                                "crates/{name}/Cargo.toml: feature `{key}` also enables {entry}, which another capability claims"
-                            ));
-                        }
-                    }
-                }
-            }
-            if !default.contains(key) {
-                problems.push(format!(
-                    "crates/{name}/Cargo.toml: `{key}` is not in the default feature set"
-                ));
-            }
-        }
-
         let lib = root.join("crates").join(name).join("src").join("lib.rs");
-        match fs::read_to_string(&lib) {
-            Err(err) => problems.push(format!("reading {}: {err}", lib.display())),
-            Ok(source) => {
-                for capability in self.capabilities.iter().filter(|c| !c.crates.is_empty()) {
-                    let key = &capability.key;
-                    for krate in &capability.crates {
-                        let reexport = format!("pub use {} as ", krate.replace('-', "_"));
-                        if !source.contains(&reexport) {
-                            problems.push(format!(
-                                "crates/{name}/src/lib.rs does not re-export {krate}, so feature `{key}` builds a crate no one can reach"
-                            ));
-                        }
-                    }
-                    if !source.contains(&format!("//! | `{key}`")) {
-                        problems.push(format!(
-                            "crates/{name}/src/lib.rs: the table of features has no row for `{key}`"
-                        ));
-                    }
-                }
-            }
-        }
-        problems
+        let source = match fs::read_to_string(&lib) {
+            Ok(source) => source,
+            Err(err) => return vec![format!("reading {}: {err}", lib.display())],
+        };
+        let shipped: Vec<&Capability> = self
+            .capabilities
+            .iter()
+            .filter(|capability| self.ships(self.release_of(capability)))
+            .collect();
+        bundle_problems(&text, &source, name, &self.chapters, &shipped)
     }
 
     /// Render one generated table for a `<!-- table: <kind> [arg] -->` region.
@@ -1199,6 +1418,178 @@ impl Catalog {
             .map(|chapter| chapter.title.clone())
             .unwrap_or_default()
     }
+}
+
+/// The bundle crate against the capabilities that ship. As its crate doc states, every
+/// crate those capabilities claim has a feature named as the crate without its prefix,
+/// which turns the crate on and sits in the default set, and lib.rs re-exports the
+/// crate. And a chapter with more than one of those capabilities has a feature named
+/// for the chapter that turns on, directly or through the features it names, every
+/// crate of the chapter, so a build can name a chapter instead of listing its crates.
+///
+/// # Arguments
+///
+/// * `manifest` - the bundle's `Cargo.toml`.
+/// * `source` - the bundle's `src/lib.rs`.
+/// * `name` - the bundle crate, for the messages.
+/// * `chapters` - every chapter of the map.
+/// * `shipped` - the capabilities of the current release and the ones before it.
+///
+/// # Returns
+///
+/// One line per disagreement; empty when the bundle follows the rule.
+fn bundle_problems(
+    manifest: &str,
+    source: &str,
+    name: &str,
+    chapters: &[Chapter],
+    shipped: &[&Capability],
+) -> Vec<String> {
+    let doc: DocumentMut = match manifest.parse() {
+        Ok(doc) => doc,
+        Err(err) => return vec![format!("crates/{name}/Cargo.toml is not valid TOML: {err}")],
+    };
+    let Some(table) = doc.get("features").and_then(Item::as_table_like) else {
+        return vec![format!("crates/{name}/Cargo.toml has no [features] table")];
+    };
+    let features: BTreeMap<String, Vec<String>> = table
+        .iter()
+        .map(|(key, value)| {
+            let enabled = value
+                .as_array()
+                .map(|values| {
+                    values
+                        .iter()
+                        .filter_map(|value| value.as_str())
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default();
+            (key.to_owned(), enabled)
+        })
+        .collect();
+    let default = features.get("default").cloned().unwrap_or_default();
+
+    let mut problems = Vec::new();
+    let mut seen = BTreeSet::new();
+    for capability in shipped {
+        for krate in &capability.crates {
+            if !seen.insert(krate.as_str()) {
+                continue;
+            }
+            let feature = bundle_feature(krate);
+            let dep = format!("dep:{krate}");
+            match features.get(&feature) {
+                None => problems.push(format!(
+                    "crates/{name}/Cargo.toml has no `{feature}` feature for {krate} ({})",
+                    capability.key
+                )),
+                Some(enabled) if !enabled.contains(&dep) => problems.push(format!(
+                    "crates/{name}/Cargo.toml: feature `{feature}` does not enable {dep}"
+                )),
+                Some(_) => {}
+            }
+            if !default.contains(&feature) {
+                problems.push(format!(
+                    "crates/{name}/Cargo.toml: `{feature}` is not in the default feature set"
+                ));
+            }
+            let reexport = format!("pub use {} as ", krate.replace('-', "_"));
+            if !source.contains(&reexport) {
+                problems.push(format!(
+                    "crates/{name}/src/lib.rs does not re-export {krate}, so feature `{feature}` builds a crate no one can reach"
+                ));
+            }
+        }
+    }
+
+    for chapter in chapters {
+        let members: Vec<&Capability> = shipped
+            .iter()
+            .copied()
+            .filter(|capability| capability.chapter == chapter.key)
+            .filter(|capability| !capability.crates.is_empty())
+            .collect();
+        if members.len() < 2 {
+            continue;
+        }
+        if !features.contains_key(&chapter.key) {
+            problems.push(format!(
+                "crates/{name}/Cargo.toml has no `{}` feature for the chapter of the same name",
+                chapter.key
+            ));
+            continue;
+        }
+        let reached = turned_on(&features, &chapter.key);
+        let missing: Vec<&str> = members
+            .iter()
+            .flat_map(|capability| capability.crates.iter())
+            .map(String::as_str)
+            .filter(|krate| !reached.contains(*krate))
+            .collect();
+        if !missing.is_empty() {
+            problems.push(format!(
+                "crates/{name}/Cargo.toml: feature `{}` does not turn on {} of the {} chapter",
+                chapter.key,
+                missing.join(", "),
+                chapter.key
+            ));
+        }
+    }
+    problems
+}
+
+/// The bundle feature that turns a capability crate on: the crate's name without its
+/// prefix, `zero-server-` for the crates whose short name another registry holds and
+/// `zero-` for the rest.
+///
+/// # Arguments
+///
+/// * `krate` - the crate's name.
+///
+/// # Returns
+///
+/// The feature name.
+fn bundle_feature(krate: &str) -> String {
+    krate
+        .strip_prefix("zero-server-")
+        .or_else(|| krate.strip_prefix("zero-"))
+        .unwrap_or(krate)
+        .to_owned()
+}
+
+/// Every optional dependency a feature turns on, through the features it names as well
+/// as its own `dep:` entries and `crate/feature` entries.
+///
+/// # Arguments
+///
+/// * `features` - the `[features]` table, each feature with what it enables.
+/// * `start` - the feature to follow.
+///
+/// # Returns
+///
+/// The names of the dependencies turned on.
+fn turned_on(features: &BTreeMap<String, Vec<String>>, start: &str) -> BTreeSet<String> {
+    let mut crates = BTreeSet::new();
+    let mut visited = BTreeSet::new();
+    let mut queue = vec![start.to_owned()];
+    while let Some(feature) = queue.pop() {
+        if !visited.insert(feature.clone()) {
+            continue;
+        }
+        for entry in features.get(&feature).into_iter().flatten() {
+            if let Some(krate) = entry.strip_prefix("dep:") {
+                crates.insert(krate.to_owned());
+            } else if let Some((krate, _)) = entry.split_once('/') {
+                if !krate.ends_with('?') {
+                    crates.insert(krate.to_owned());
+                }
+            } else {
+                queue.push(entry.clone());
+            }
+        }
+    }
+    crates
 }
 
 /// One language's packaging: how a capability is named and installed there, and which
@@ -1677,6 +2068,14 @@ fn strings(
     strings_of(table, key, context)
 }
 
+// A release as the map writes it: a whole number that is one of the releases the
+// standards register knows.
+fn release_number(item: &Item) -> Option<u32> {
+    item.as_integer()
+        .and_then(|value| u32::try_from(value).ok())
+        .filter(|value| RELEASES.contains(value))
+}
+
 // An array of strings that may be left out, which reads as empty.
 fn optional_strings(
     table: &dyn toml_edit::TableLike,
@@ -1736,7 +2135,9 @@ fn strings_of(
         .collect()
 }
 
-/// The subpath exports of the Node package, without `.` and `./raw`.
+/// The capability and domain packages of the Node binding: every directory under
+/// `bindings/node/packages` with a TypeScript entry point, other than the core, the
+/// compiled engine and the bundle.
 fn node_packages(root: &Path) -> Result<BTreeSet<String>, String> {
     let dir = root.join("bindings/node/packages");
     let entries = fs::read_dir(&dir).map_err(|err| format!("reading {}: {err}", dir.display()))?;
@@ -1744,7 +2145,7 @@ fn node_packages(root: &Path) -> Result<BTreeSet<String>, String> {
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
         .filter(|path| path.join("src/index.ts").is_file())
         .filter_map(|path| path.file_name()?.to_str().map(str::to_owned))
-        .filter(|name| name != "core" && name != "native" && name != "zero-server")
+        .filter(|name| name != "core" && name != "native" && name != NODE_BUNDLE)
         .collect())
 }
 
@@ -1759,7 +2160,9 @@ pub fn node_package(capability: &Capability) -> String {
     format!("@zero-server/{}", capability.node)
 }
 
-/// The facade modules of the Python package, without `__init__` and `raw`.
+/// The capability and domain distributions of the Python binding: every directory under
+/// `bindings/python/packages` that ships a `zero_server.<module>` namespace portion,
+/// other than the core and the metapackage.
 fn python_packages(root: &Path) -> Result<BTreeSet<String>, String> {
     let dir = root.join("bindings/python/packages");
     let entries = fs::read_dir(&dir).map_err(|err| format!("reading {}: {err}", dir.display()))?;
@@ -1770,13 +2173,13 @@ fn python_packages(root: &Path) -> Result<BTreeSet<String>, String> {
             // A domain's directory keeps the map's key, `field-io`, while its module is the
             // identifier `field_io`, since a hyphen cannot appear in a Python module name.
             let module = name.replace('-', "_");
-            path.join("zero-server")
+            path.join("zero_server")
                 .join(&module)
                 .join("__init__.py")
                 .is_file()
                 .then_some(name)
         })
-        .filter(|name| name != "core" && name != "zero-server")
+        .filter(|name| name != "core" && name != PYTHON_BUNDLE)
         .collect())
 }
 
@@ -2120,5 +2523,218 @@ crate = "zero-server"
     fn finds_declared_dotnet_types() {
         let source = "public sealed class Modbus : IDisposable { }\npublic readonly record struct Pose(double X);\npublic enum Qos { AtMostOnce }\ninternal interface IHandle<T> { }";
         assert_eq!(declared_types(source), ["Modbus", "Pose", "Qos", "IHandle"]);
+    }
+
+    /// A map whose one capability lives in a crate that first ships in release 2.
+    const RELEASED: &str = r#"
+[[chapter]]
+key = "http"
+title = "HTTP"
+intent = "Requests."
+
+[[capability]]
+key = "router"
+chapter = "http"
+title = "Routing"
+summary = "Method dispatch"
+crates = ["zero-router"]
+node = "router"
+python = "router"
+dotnet = ["Router"]
+
+[engine]
+crates = ["zero-core"]
+
+[[crate]]
+name = "zero-core"
+release = 1
+
+[[crate]]
+name = "zero-router"
+release = 2
+"#;
+
+    /// The crates of [`RELEASED`].
+    fn released_crates() -> Vec<String> {
+        vec!["zero-core".to_owned(), "zero-router".to_owned()]
+    }
+
+    /// A repository with nothing in it but the three binding package roots and the
+    /// guides directory, under the system temp directory in a directory of its own.
+    fn empty_tree(name: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(name);
+        fs::remove_dir_all(&root).ok();
+        for dir in [
+            "bindings/node/packages",
+            "bindings/python/packages",
+            "bindings/dotnet/src",
+            "docs/guides",
+        ] {
+            fs::create_dir_all(root.join(dir)).unwrap();
+        }
+        root
+    }
+
+    #[test]
+    fn docs_check_an_entry_for_a_later_release_than_the_current_one_is_pending_and_does_not_fail() {
+        let root = empty_tree("zero-catalog-later-release");
+        let mut catalog = Catalog::parse(RELEASED).unwrap();
+        catalog.current_release = 1;
+        let checked = catalog.check(&root, &released_crates(), true);
+        let pending = catalog.pending();
+        fs::remove_dir_all(&root).ok();
+
+        checked.unwrap();
+        let whats: Vec<&str> = pending.iter().map(|entry| entry.what.as_str()).collect();
+        assert_eq!(
+            whats,
+            [
+                "@zero-server/router (router)",
+                "C# types Router (router)",
+                "ZeroServer.Router (router)",
+                "the Routing guide (router)",
+                "zero-server-router (router)",
+            ]
+        );
+        assert!(pending.iter().all(|entry| entry.release == 2));
+    }
+
+    #[test]
+    fn docs_check_an_entry_at_or_below_the_current_release_still_fails() {
+        let root = empty_tree("zero-catalog-current-release");
+        let mut catalog = Catalog::parse(RELEASED).unwrap();
+        catalog.current_release = 2;
+        let checked = catalog.check(&root, &released_crates(), true);
+        let pending = catalog.pending();
+        fs::remove_dir_all(&root).ok();
+
+        let err = checked.unwrap_err();
+        for expected in [
+            "capability router ships in release 2 and has no guide",
+            "node package router (router) ships in release 2 and has no directory under bindings/node/packages",
+            "python package router (router) ships in release 2 and has no directory under bindings/python/packages",
+            "dotnet package ZeroServer.Router (router) ships in release 2 and has no directory under bindings/dotnet/src",
+            "capability router: Router is not a type declared under bindings/dotnet/src",
+        ] {
+            assert!(err.contains(expected), "{expected} missing from {err}");
+        }
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn docs_check_a_binding_package_ships_no_earlier_than_the_release_packages_names_for_it() {
+        let root = empty_tree("zero-catalog-package-release");
+        fs::write(root.join("docs/guides/router.md"), "# Routing\n").unwrap();
+        let text = RELEASED
+            .replace(
+                "dotnet = [\"Router\"]\n",
+                "dotnet = [\"Router\"]\nguide = \"guides/router.md\"\n",
+            )
+            .replace(
+                "name = \"zero-router\"\nrelease = 2",
+                "name = \"zero-router\"\nrelease = 1",
+            )
+            + "\n[packages]\nnode = 2\n";
+        let mut catalog = Catalog::parse(&text).unwrap();
+        catalog.current_release = 1;
+        let checked = catalog.check(&root, &released_crates(), true);
+        let pending = catalog.pending();
+        fs::remove_dir_all(&root).ok();
+
+        let err = checked.unwrap_err();
+        assert!(!err.contains("node package"), "{err}");
+        assert!(!err.contains("guide"), "{err}");
+        assert!(err.contains("python package router (router) ships in release 1"));
+        assert!(err.contains("dotnet package ZeroServer.Router (router) ships in release 1"));
+        assert_eq!(
+            pending,
+            [Pending {
+                release: 2,
+                what: "@zero-server/router (router)".to_owned(),
+            }]
+        );
+        assert!(!catalog.packages_ship("node"));
+        assert!(catalog.packages_ship("python"));
+    }
+
+    #[test]
+    fn docs_check_every_crate_names_the_release_that_first_ships_it() {
+        let root = empty_tree("zero-catalog-crate-release");
+        let mut catalog = Catalog::parse(RELEASED).unwrap();
+        catalog.current_release = 1;
+        let mut crates = released_crates();
+        crates.push("zero-extra".to_owned());
+        let checked = catalog.check(&root, &crates, true);
+        fs::remove_dir_all(&root).ok();
+        let err = checked.unwrap_err();
+        assert!(
+            err.contains("crate zero-extra has no [[crate]] row, so no release says when it ships"),
+            "{err}"
+        );
+
+        let unknown = RELEASED.replace("release = 2", "release = 4");
+        let err = Catalog::parse(&unknown).err().unwrap();
+        assert!(
+            err.contains("crate zero-router: `release` must be one of"),
+            "{err}"
+        );
+        let binding = format!("{RELEASED}\n[packages]\nruby = 2\n");
+        let err = Catalog::parse(&binding).err().unwrap();
+        assert!(err.contains("[packages] names ruby"), "{err}");
+    }
+
+    #[test]
+    fn a_map_parsed_from_its_text_alone_is_read_as_of_the_last_release() {
+        let catalog = Catalog::parse(RELEASED).unwrap();
+        assert_eq!(catalog.current_release, *RELEASES.end());
+        assert!(catalog.pending().is_empty());
+    }
+
+    #[test]
+    fn the_bundle_turns_on_each_shipped_crate_by_its_own_feature_and_each_chapter_by_one() {
+        let text = format!(
+            "{SAMPLE}\n[[capability]]\nkey = \"can\"\nchapter = \"field-io\"\ntitle = \"CAN\"\nsummary = \"CAN frames\"\ncrates = [\"zero-server-can\"]\nnode = \"can\"\npython = \"can\"\ndotnet = [\"Can\"]\n"
+        );
+        let catalog = Catalog::parse(&text).unwrap();
+        let shipped: Vec<&Capability> = catalog.capabilities.iter().collect();
+        let manifest = "[features]\ndefault = [\"modbus\", \"can\"]\nmodbus = [\"dep:zero-modbus\"]\ncan = [\"dep:zero-server-can\"]\nfield-io = [\"modbus\", \"can\"]\n";
+        let source = "#[cfg(feature = \"modbus\")]\npub use zero_modbus as modbus;\n#[cfg(feature = \"can\")]\npub use zero_server_can as can;\n";
+        assert_eq!(
+            bundle_problems(manifest, source, "zero-server", &catalog.chapters, &shipped),
+            Vec::<String>::new()
+        );
+
+        let partial = manifest.replace(
+            "field-io = [\"modbus\", \"can\"]",
+            "field-io = [\"modbus\"]",
+        );
+        assert_eq!(
+            bundle_problems(&partial, source, "zero-server", &catalog.chapters, &shipped),
+            ["crates/zero-server/Cargo.toml: feature `field-io` does not turn on zero-server-can of the field-io chapter"]
+        );
+
+        let chapterless = manifest.replace("field-io = [\"modbus\", \"can\"]\n", "");
+        let off_default =
+            chapterless.replace("default = [\"modbus\", \"can\"]", "default = [\"modbus\"]");
+        let unexported = source.replace("pub use zero_server_can as can;\n", "");
+        assert_eq!(
+            bundle_problems(&off_default, &unexported, "zero-server", &catalog.chapters, &shipped),
+            [
+                "crates/zero-server/Cargo.toml: `can` is not in the default feature set",
+                "crates/zero-server/src/lib.rs does not re-export zero-server-can, so feature `can` builds a crate no one can reach",
+                "crates/zero-server/Cargo.toml has no `field-io` feature for the chapter of the same name",
+            ]
+        );
+
+        // A chapter left with one shipped capability needs no feature of its own.
+        let one: Vec<&Capability> = shipped
+            .iter()
+            .copied()
+            .filter(|capability| capability.key != "can")
+            .collect();
+        assert_eq!(
+            bundle_problems(&chapterless, source, "zero-server", &catalog.chapters, &one),
+            Vec::<String>::new()
+        );
     }
 }

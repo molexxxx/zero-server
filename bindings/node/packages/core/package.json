@@ -11,7 +11,7 @@
     "url": "git+https://github.com/molexxxx/zero-server.git",
     "directory": "bindings/node/packages/core"
   },
-  "homepage": "https://z-server.dev",
+  "homepage": "https://github.com/molexxxx/zero-server",
   "keywords": [
     "zero-server",
     "http",

@@ -4,7 +4,9 @@
 # library crate must be claimed exactly once, the node keys must match the
 # packages under bindings/node/packages (or be "core" for a surface the engine
 # carries itself), the python keys must match the package exports and modules,
-# and every dotnet name must be a declared type.
+# and every dotnet name must be a declared type. The check is held to the
+# `current_release` of docs/standards.toml: what the [[crate]] rows and the
+# [packages] table place in a later release is reported as pending.
 #
 # Every crate in the workspace also has a [[crate]] row naming the lint table its
 # manifest copies (docs/lints/<lint>.toml, diffed by `cargo xtask lints --check`),
@@ -182,7 +184,8 @@ abi = "zero-ffi"
 # The crate that bundles every capability behind a feature each, all on by
 # default, so `cargo add zero-server` is the whole framework. Its manifest is
 # checked against the capabilities above: one feature per capability crate, in
-# the default set.
+# the default set, and one feature per chapter of more than one capability that
+# turns on every crate of the chapter.
 [bundle]
 crate = "zero-server"
 
@@ -190,6 +193,19 @@ crate = "zero-server"
 # examples with the conformance vector generator, and the task runner.
 [tooling]
 crates = ["zero-serve", "zero-bench", "zero-examples", "xtask"]
+
+# The release each binding first ships the packages this map names for the
+# capabilities and chapters (and, for .NET, the types each capability lists).
+# Until then a binding publishes only its core, native and bundle packages. The
+# Python and C# facades ship in release 2. The npm capability packages ship in
+# release 3, when @zero-server/sdk is made public as the bundle over them; until
+# then the Node facade lives in @zero-server/sdk. `cargo xtask docs --check`
+# reports what a later release ships as pending and holds the repository to the
+# rest.
+[packages]
+node = 3
+python = 2
+dotnet = 2
 
 # The no_std crates that take a digest, a MAC, a KDF or random bytes through
 # the zero-core traits instead of depending on zero-server-crypto. A crate

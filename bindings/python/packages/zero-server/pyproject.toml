@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "zero-server"
 version = "0.1.0"
-description = "The zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic Python facade."
+description = "The zero-server packages for Python in one install: zero-server-core and the compiled core in zero-server-native, pinned to the same version."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 license-files = ["LICENSE"]

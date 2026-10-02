@@ -1,9 +1,9 @@
 # ZeroServer
 
-The whole zero-server framework in one package. Each capability is its own package over the compiled core in `ZeroServer.Native`, and this metapackage references all of them at one version, so one `dotnet add package ZeroServer` brings the whole framework.
+The zero-server packages for .NET in one reference: `ZeroServer.Core` and the compiled core in `ZeroServer.Native`, at one version. Today they report the core's version; there is no server API for .NET yet.
 
 ## Install
 
 ```sh
-dotnet add package ZeroServer
+dotnet add package ZeroServer --prerelease
 ```

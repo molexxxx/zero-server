@@ -21,7 +21,7 @@ use std::process::ExitCode;
 use quote::ToTokens;
 use syn::{Fields, ImplItem, Item, TraitItem, Visibility};
 
-use crate::catalog::{Catalog, SITE};
+use crate::catalog::{Catalog, NODE_BUNDLE, SITE};
 use crate::{builds, licenses, packages, regions, version};
 
 /// Run the `docs` task: regenerate every derived file, or `--check` to verify they are in sync.
@@ -77,11 +77,26 @@ pub(crate) fn crate_description(krate: &str) -> Option<String> {
 }
 
 // The crates that also ship language bindings, with their package id on (npm, PyPI, NuGet),
-// so the README links the registries that actually have the crate.
-fn bindings(krate: &str) -> Option<(&'static str, &'static str, &'static str)> {
+// so the README links the registries that actually have the crate. The bundle's npm
+// counterpart, `@zero-server/sdk`, stays private until the npm capability packages ship, so
+// until then the bundle crate links no npm page.
+fn bindings(
+    krate: &str,
+    catalog: &Catalog,
+) -> Option<(Option<String>, &'static str, &'static str)> {
     match krate {
-        "zero-server" => Some(("zero-server", "zero-server", "ZeroServer")),
-        "zero-core" => Some(("@zero-server/core", "zero-server-core", "ZeroServer.Core")),
+        "zero-server" => Some((
+            catalog
+                .packages_ship("node")
+                .then(|| format!("@zero-server/{NODE_BUNDLE}")),
+            "zero-server",
+            "ZeroServer",
+        )),
+        "zero-core" => Some((
+            Some("@zero-server/core".to_owned()),
+            "zero-server-core",
+            "ZeroServer.Core",
+        )),
         _ => None,
     }
 }
@@ -125,11 +140,13 @@ fn crate_readme(krate: &str, catalog: &Catalog, overview: &str, items: &str) -> 
         "crates.io",
     ));
     buttons.push(button(&format!("https://docs.rs/{krate}"), "docs.rs"));
-    if let Some((npm, pypi, nuget)) = bindings(krate) {
-        buttons.push(button(
-            &format!("https://www.npmjs.com/package/{npm}"),
-            "npm",
-        ));
+    if let Some((npm, pypi, nuget)) = bindings(krate, catalog) {
+        if let Some(npm) = npm {
+            buttons.push(button(
+                &format!("https://www.npmjs.com/package/{npm}"),
+                "npm",
+            ));
+        }
         buttons.push(button(&format!("https://pypi.org/project/{pypi}/"), "PyPI"));
         buttons.push(button(
             &format!("https://www.nuget.org/packages/{nuget}"),
@@ -156,7 +173,7 @@ fn crate_readme(krate: &str, catalog: &Catalog, overview: &str, items: &str) -> 
         out.push_str("\n\n");
     }
     out.push_str(items);
-    out.push_str("## License\n\nApache-2.0 - part of the [zero-server](https://github.com/molexxxx/zero-server) workspace: one memory-safe Rust core with bindings for every language.\n");
+    out.push_str("## License\n\nApache-2.0 - part of the [zero-server](https://github.com/molexxxx/zero-server) workspace: one memory-safe HTTP server core in Rust, with bindings for TypeScript, Python and C#.\n");
     out
 }
 
@@ -190,8 +207,10 @@ fn render_all() -> Result<Vec<(String, String)>, String> {
     let crates_root = root.join("crates");
     let crates = lib_crates()?;
     let catalog = Catalog::load(&root)?;
-    // Every capability has a guide now, so a page going missing is a failure rather
-    // than a capability quietly dropping out of the navigation.
+    report_pending(&catalog);
+    // A capability of the current release needs its guide, so a page going missing is a
+    // failure rather than a capability quietly dropping out of the navigation. What a
+    // later release ships is reported above and not required.
     catalog.check(&root, &crates, true)?;
 
     // The standards register names the document behind every implementation and the test
@@ -201,7 +220,11 @@ fn render_all() -> Result<Vec<(String, String)>, String> {
     standards.check(&catalog)?;
 
     let mut files = Vec::new();
-    for krate in &crates {
+    // A tooling crate is never published, so it has no registry page to generate.
+    for krate in crates
+        .iter()
+        .filter(|krate| !catalog.tooling.contains(krate))
+    {
         let lib = fs::read_to_string(crates_root.join(krate).join("src/lib.rs"))
             .map_err(|e| format!("reading {krate}/lib.rs: {e}"))?;
         let lib_parsed =
@@ -260,8 +283,23 @@ fn render_all() -> Result<Vec<(String, String)>, String> {
     let version = version::current()?;
     files.extend(packages::render_node(&root, &catalog, &version)?);
     files.extend(packages::render_python(&root, &catalog, &version)?);
-    files.extend(packages::render_dotnet(&root, &catalog)?);
+    files.extend(packages::render_dotnet(&root, &catalog, &version)?);
     Ok(files)
+}
+
+// Lists what the capability map names for a release after the one being built, which the
+// check reports rather than requires, the way `cargo xtask standards` lists its pending
+// rows.
+fn report_pending(catalog: &Catalog) {
+    let pending = catalog.pending();
+    for entry in &pending {
+        println!("  pending  release {}  {}", entry.release, entry.what);
+    }
+    println!(
+        "docs: the capability map is held to release {}, {} entries pending for a later release",
+        catalog.current_release,
+        pending.len()
+    );
 }
 
 // The hand-written Markdown files that may hold generated regions: the root README, every
@@ -732,6 +770,22 @@ mod tests {
             Some("see the trait and `X`".to_owned())
         );
         assert_eq!(without_intra_doc_links("[`Reading`]: crate::Reading"), None);
+    }
+
+    #[test]
+    fn the_bundle_crate_links_no_npm_page_while_its_npm_counterpart_is_private() {
+        let map = "[[chapter]]\nkey = \"http\"\ntitle = \"HTTP\"\nintent = \"Requests.\"\n\n[packages]\nnode = 3\n";
+        let mut catalog = Catalog::parse(map).unwrap();
+        catalog.current_release = 1;
+        let readme = crate_readme("zero-server", &catalog, "", "");
+        assert!(!readme.contains("npmjs.com"), "{readme}");
+        assert!(readme.contains("[PyPI](https://pypi.org/project/zero-server/)"));
+        assert!(crate_readme("zero-core", &catalog, "", "")
+            .contains("[npm](https://www.npmjs.com/package/@zero-server/core)"));
+
+        catalog.current_release = 3;
+        assert!(crate_readme("zero-server", &catalog, "", "")
+            .contains("[npm](https://www.npmjs.com/package/@zero-server/sdk)"));
     }
 
     #[test]

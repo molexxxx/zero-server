@@ -23,7 +23,48 @@ use crate::catalog::{escape, optional, string, tables, Catalog};
 const REPO: &str = "https://github.com/molexxxx/zero-server";
 
 /// The releases a row may name.
-const RELEASES: std::ops::RangeInclusive<u32> = 1..=3;
+pub(crate) const RELEASES: std::ops::RangeInclusive<u32> = 1..=3;
+
+/// The release being built: the top-level `current_release` of `docs/standards.toml`,
+/// which the capability map reads too, so the register and the map agree on what is
+/// pending.
+///
+/// # Arguments
+///
+/// * `root` - the repository root.
+///
+/// # Returns
+///
+/// The current release, one of [`RELEASES`].
+///
+/// # Errors
+///
+/// When the file cannot be read or parsed, or `current_release` is missing or not one
+/// of [`RELEASES`].
+pub fn current_release(root: &Path) -> Result<u32, String> {
+    let path = root.join("docs/standards.toml");
+    let text =
+        fs::read_to_string(&path).map_err(|err| format!("reading {}: {err}", path.display()))?;
+    let doc: DocumentMut = text
+        .parse()
+        .map_err(|err| format!("standards.toml is not valid TOML: {err}"))?;
+    current_release_of(&doc)
+}
+
+// The `current_release` a parsed register names.
+fn current_release_of(doc: &DocumentMut) -> Result<u32, String> {
+    let current_release = doc
+        .get("current_release")
+        .and_then(Item::as_integer)
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or("standards.toml has no top-level current_release, the release being built")?;
+    if !RELEASES.contains(&current_release) {
+        return Err(format!(
+            "standards.toml: current_release is {current_release}, not one of {RELEASES:?}"
+        ));
+    }
+    Ok(current_release)
+}
 
 /// Run `cargo xtask standards [--check]`.
 ///
@@ -175,16 +216,7 @@ impl Standards {
             .parse()
             .map_err(|err| format!("standards.toml is not valid TOML: {err}"))?;
 
-        let current_release = doc
-            .get("current_release")
-            .and_then(Item::as_integer)
-            .and_then(|value| u32::try_from(value).ok())
-            .ok_or("standards.toml has no top-level current_release, the release being built")?;
-        if !RELEASES.contains(&current_release) {
-            return Err(format!(
-                "standards.toml: current_release is {current_release}, not one of {RELEASES:?}"
-            ));
-        }
+        let current_release = current_release_of(&doc)?;
 
         let mut groups = Vec::new();
         for table in tables(&doc, "group")? {

@@ -4,7 +4,7 @@
     <PackageId>ZeroServer</PackageId>
     <AssemblyName>ZeroServer</AssemblyName>
     <RootNamespace>ZeroServer</RootNamespace>
-    <Description>The whole zero-server framework in one package: every capability of one memory-safe Rust core, behind an idiomatic C# facade.</Description>
+    <Description>The zero-server packages for .NET in one reference: ZeroServer.Core and the compiled core in ZeroServer.Native, at one version.</Description>
     <PackageTags>zero-server;http;server;web;framework</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeBuildOutput>false</IncludeBuildOutput>

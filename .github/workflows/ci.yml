@@ -141,9 +141,10 @@ jobs:
           check users /users/42 42
 
       # Each crate's README is generated from its rustdoc and the capability catalog needs
-      # a guide and a package per language for every capability. While the current release
-      # is being built this step reports what is missing without failing the run; the
-      # release preflight runs the same check as a blocking step before a tag publishes.
+      # a guide and a package per language for every capability at or below the current
+      # release; what a later release ships is reported as pending. While the current
+      # release is being built this step reports what is missing without failing the run;
+      # the release preflight runs the same check as a blocking step before a tag publishes.
       - name: Crate READMEs and the capability catalog in sync
         run: cargo run -p xtask -- docs --check
         continue-on-error: true
