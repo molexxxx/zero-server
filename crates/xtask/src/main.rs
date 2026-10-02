@@ -31,7 +31,7 @@ const TASKS: &[(&str, &str)] = &[
     ),
     (
         "version",
-        "set or check the version every manifest carries (version [<x.y.z>|--check [expected]])",
+        "set or check the version every manifest carries (version [<x.y.z>[-alpha.N|-beta.N|-rc.N]|--check [expected]])",
     ),
     (
         "builds",
