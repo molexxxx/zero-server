@@ -2198,9 +2198,11 @@ name = "zero-examples"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "zero-h3",
  "zero-http-types",
  "zero-http1",
  "zero-limits",
+ "zero-qpack",
  "zero-router",
  "zero-server",
 ]

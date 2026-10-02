@@ -34,6 +34,11 @@ version and are released together, so one entry covers all of them.
 - The codecs: JSON, URIs, query strings, media types, base64 and HTTP dates,
   and in `zero-server-crypto` SHA-1, SHA-256, constant-time comparison and
   zeroizing secrets.
+- The QPACK codec in `zero-qpack` and the HTTP/3 frame codec in `zero-h3`, both
+  `no_std` with no I/O: the RFC 9204 static table, a static-only encoder and
+  decoder, and the encoder and decoder stream instructions; the RFC 9114
+  frames, settings, unidirectional stream types and GOAWAY over RFC 9000
+  variable-length integers; and RFC 9297 capsules and HTTP datagrams.
 - `docs/capabilities.toml`, the capability map that claims every crate once
   with its lint table and release.
 - `conformance/api-surface.json`, the export contract generated from the JSDoc

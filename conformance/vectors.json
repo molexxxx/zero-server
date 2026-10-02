@@ -1,4 +1,2086 @@
 {
+  "h3Frames": {
+    "capsules": {
+      "cases": [
+        {
+          "encoded": "000368656c",
+          "events": [
+            {
+              "datagram": "68656c"
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "DATAGRAM capsule",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 3.5"
+        },
+        {
+          "encoded": "0000",
+          "events": [
+            {
+              "datagram": ""
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "empty DATAGRAM capsule",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 3.5"
+        },
+        {
+          "encoded": "1702abcd000101",
+          "events": [
+            {
+              "skipped": {
+                "length": "2",
+                "type": "23"
+              }
+            },
+            {
+              "datagram": "01"
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "reserved type 0x17 skipped",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 3.2"
+        },
+        {
+          "encoded": "1700000101",
+          "events": [
+            {
+              "skipped": {
+                "length": "0",
+                "type": "23"
+              }
+            },
+            {
+              "datagram": "01"
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "zero-length reserved capsule skipped",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 3.2"
+        },
+        {
+          "encoded": "40004001ff",
+          "events": [
+            {
+              "datagram": "ff"
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "non-minimal type and length",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 1.1"
+        },
+        {
+          "encoded": "0003010203",
+          "events": [
+            {
+              "skipped": {
+                "length": "3",
+                "type": "0"
+              }
+            }
+          ],
+          "fin": true,
+          "maxDatagram": "2",
+          "name": "oversized DATAGRAM discarded",
+          "outcome": "ok",
+          "section": "RFC 9297 Section 3.5"
+        },
+        {
+          "encoded": "000568",
+          "events": [],
+          "fin": true,
+          "maxDatagram": "1200",
+          "name": "truncated at FIN",
+          "outcome": {
+            "error": {
+              "code": 270,
+              "connection": false,
+              "kind": "capsuleTruncated",
+              "name": "H3_MESSAGE_ERROR"
+            }
+          },
+          "section": "RFC 9297 Section 3.3"
+        },
+        {
+          "encoded": "000568",
+          "events": [],
+          "fin": false,
+          "maxDatagram": "1200",
+          "name": "input ending inside a capsule",
+          "outcome": "needMore",
+          "section": "RFC 9297 Section 3.2"
+        }
+      ]
+    },
+    "datagrams": {
+      "cases": [
+        {
+          "encoded": "01abcd",
+          "expect": {
+            "payload": "abcd",
+            "quarterStreamId": "1",
+            "streamId": "4"
+          },
+          "name": "stream 4",
+          "section": "RFC 9297 Section 2.1"
+        },
+        {
+          "encoded": "00",
+          "expect": {
+            "payload": "",
+            "quarterStreamId": "0",
+            "streamId": "0"
+          },
+          "name": "empty payload",
+          "section": "RFC 9297 Section 2.1"
+        },
+        {
+          "encoded": "cfffffffffffffff",
+          "expect": {
+            "payload": "",
+            "quarterStreamId": "1152921504606846975",
+            "streamId": "4611686018427387900"
+          },
+          "name": "largest Quarter Stream ID",
+          "section": "RFC 9297 Section 2.1"
+        },
+        {
+          "encoded": "4001ab",
+          "expect": {
+            "payload": "ab",
+            "quarterStreamId": "1",
+            "streamId": "4"
+          },
+          "name": "non-minimal Quarter Stream ID",
+          "section": "RFC 9297 Section 1.1"
+        },
+        {
+          "encoded": "d000000000000000",
+          "expect": {
+            "error": {
+              "code": 51,
+              "connection": true,
+              "kind": "quarterStreamIdTooLarge",
+              "name": "H3_DATAGRAM_ERROR"
+            }
+          },
+          "name": "Quarter Stream ID 2^60",
+          "section": "RFC 9297 Section 2.1"
+        },
+        {
+          "encoded": "",
+          "expect": {
+            "error": {
+              "code": 51,
+              "connection": true,
+              "kind": "datagramTooShort",
+              "name": "H3_DATAGRAM_ERROR"
+            }
+          },
+          "name": "empty",
+          "section": "RFC 9297 Section 2.1"
+        },
+        {
+          "encoded": "40",
+          "expect": {
+            "error": {
+              "code": 51,
+              "connection": true,
+              "kind": "datagramTooShort",
+              "name": "H3_DATAGRAM_ERROR"
+            }
+          },
+          "name": "truncated varint",
+          "section": "RFC 9297 Section 2.1"
+        }
+      ]
+    },
+    "errorCodes": {
+      "onReceipt": [
+        {
+          "treatedAs": 256,
+          "value": "33"
+        },
+        {
+          "treatedAs": 256,
+          "value": "4096"
+        },
+        {
+          "treatedAs": 261,
+          "value": "261"
+        }
+      ],
+      "registered": [
+        {
+          "name": "H3_DATAGRAM_ERROR",
+          "value": 51
+        },
+        {
+          "name": "H3_NO_ERROR",
+          "value": 256
+        },
+        {
+          "name": "H3_GENERAL_PROTOCOL_ERROR",
+          "value": 257
+        },
+        {
+          "name": "H3_INTERNAL_ERROR",
+          "value": 258
+        },
+        {
+          "name": "H3_STREAM_CREATION_ERROR",
+          "value": 259
+        },
+        {
+          "name": "H3_CLOSED_CRITICAL_STREAM",
+          "value": 260
+        },
+        {
+          "name": "H3_FRAME_UNEXPECTED",
+          "value": 261
+        },
+        {
+          "name": "H3_FRAME_ERROR",
+          "value": 262
+        },
+        {
+          "name": "H3_EXCESSIVE_LOAD",
+          "value": 263
+        },
+        {
+          "name": "H3_ID_ERROR",
+          "value": 264
+        },
+        {
+          "name": "H3_SETTINGS_ERROR",
+          "value": 265
+        },
+        {
+          "name": "H3_MISSING_SETTINGS",
+          "value": 266
+        },
+        {
+          "name": "H3_REQUEST_REJECTED",
+          "value": 267
+        },
+        {
+          "name": "H3_REQUEST_CANCELLED",
+          "value": 268
+        },
+        {
+          "name": "H3_REQUEST_INCOMPLETE",
+          "value": 269
+        },
+        {
+          "name": "H3_MESSAGE_ERROR",
+          "value": 270
+        },
+        {
+          "name": "H3_CONNECT_ERROR",
+          "value": 271
+        },
+        {
+          "name": "H3_VERSION_FALLBACK",
+          "value": 272
+        },
+        {
+          "name": "QPACK_DECOMPRESSION_FAILED",
+          "value": 512
+        },
+        {
+          "name": "QPACK_ENCODER_STREAM_ERROR",
+          "value": 513
+        },
+        {
+          "name": "QPACK_DECODER_STREAM_ERROR",
+          "value": 514
+        }
+      ]
+    },
+    "frames": {
+      "cases": [
+        {
+          "encoded": "0409010006800080000700",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": "32768",
+                "qpackBlockedStreams": "0",
+                "qpackMaxTableCapacity": "0"
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "server control stream",
+          "outcome": "ok",
+          "role": "client",
+          "section": "RFC 9114 Section 6.2.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c1000568656c6c6f0000010d00002f00f2b26c19a82d9f0131",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "data": "68656c6c6f"
+            },
+            {
+              "data": ""
+            },
+            {
+              "headers": "00002f00f2b26c19a82d9f0131"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "request with content and trailers",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0506000000d1d7c101030000d900026f6b",
+          "events": [
+            {
+              "pushPromise": {
+                "fieldSection": "0000d1d7c1",
+                "pushId": "0"
+              }
+            },
+            {
+              "headers": "0000d9"
+            },
+            {
+              "data": "6f6b"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "response after a push promise",
+          "outcome": "ok",
+          "role": "client",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "2102abcd01050000d1d7c1",
+          "events": [
+            {
+              "skipped": {
+                "length": "2",
+                "type": "33"
+              }
+            },
+            {
+              "headers": "0000d1d7c1"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "grease frame skipped",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.8",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "210001050000d1d7c1",
+          "events": [
+            {
+              "skipped": {
+                "length": "0",
+                "type": "33"
+              }
+            },
+            {
+              "headers": "0000d1d7c1"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "zero-length grease frame skipped",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.8",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c1400003616263",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "data": "616263"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "frame type 0x4000 is DATA",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9000 Section 16",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0400800f07000400753d31",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            },
+            {
+              "skipped": {
+                "length": "4",
+                "type": "984832"
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "PRIORITY_UPDATE is skipped",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 9",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000708fffffffffffffffc",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            },
+            {
+              "goaway": "4611686018427387900"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "graceful GOAWAY",
+          "outcome": "ok",
+          "role": "client",
+          "section": "RFC 9114 Section 5.2",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000d01080d0108",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            },
+            {
+              "maxPushId": "8"
+            },
+            {
+              "maxPushId": "8"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "repeated MAX_PUSH_ID",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.7",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "040007020400",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "GOAWAY payload with an octet after its integer",
+          "outcome": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "payloadTrailing",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 7.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0400070140",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "GOAWAY payload ending inside its integer",
+          "outcome": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "payloadTruncated",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 7.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c100056865",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "data": "6865"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "stream ended inside a DATA payload",
+          "outcome": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "streamEndedInFrame",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c100056865",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "data": "6865"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "input ending inside a DATA payload",
+          "outcome": "needMore",
+          "role": "server",
+          "section": "RFC 9114 Section 7.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04020680",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "SETTINGS Length ending inside a value",
+          "outcome": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "payloadTruncated",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 10.8",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000000",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "DATA on the control stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "040001050000d1d7c1",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HEADERS on the control stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.2",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "030100",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "CANCEL_PUSH on a request stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.3",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0400030100",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "CANCEL_PUSH above the maximum push ID",
+          "outcome": {
+            "error": {
+              "code": 264,
+              "connection": true,
+              "kind": "pushIdAboveMaximum",
+              "name": "H3_ID_ERROR"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.3",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000d0108030104",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            },
+            {
+              "maxPushId": "8"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "CANCEL_PUSH for a push never promised",
+          "outcome": {
+            "error": {
+              "code": 264,
+              "connection": true,
+              "kind": "pushIdNotPromised",
+              "name": "H3_ID_ERROR"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.3",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000400",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "second SETTINGS",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "secondSettings",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.4",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0400",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "SETTINGS on a request stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.4",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "070100",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "control stream starting with GOAWAY",
+          "outcome": {
+            "error": {
+              "code": 266,
+              "connection": true,
+              "kind": "missingSettings",
+              "name": "H3_MISSING_SETTINGS"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 6.2.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "2100",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "control stream starting with a reserved frame type",
+          "outcome": {
+            "error": {
+              "code": 266,
+              "connection": true,
+              "kind": "missingSettings",
+              "name": "H3_MISSING_SETTINGS"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 6.2.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0506000000d1d7c1",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "PUSH_PROMISE received by a server",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongRole",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.5",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000506000000d1d7c1",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "PUSH_PROMISE on the control stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 7.2.5",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0506000000d1d7c1",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "PUSH_PROMISE on a push stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "push",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "070100",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "GOAWAY on a request stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.6",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0d0100",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "MAX_PUSH_ID on a request stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongStream",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.7",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000d0100",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "MAX_PUSH_ID received by a client",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "wrongRole",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 7.2.7",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000d01080d0104",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            },
+            {
+              "maxPushId": "8"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "MAX_PUSH_ID smaller than before",
+          "outcome": {
+            "error": {
+              "code": 264,
+              "connection": true,
+              "kind": "maxPushIdDecreased",
+              "name": "H3_ID_ERROR"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.7",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0200",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HTTP/2 PRIORITY type on a request stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "reservedFrameType",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.8",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "04000600",
+          "events": [
+            {
+              "settings": {
+                "enableConnectProtocol": null,
+                "h3Datagram": null,
+                "maxFieldSectionSize": null,
+                "qpackBlockedStreams": null,
+                "qpackMaxTableCapacity": null
+              }
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HTTP/2 PING type on the control stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "reservedFrameType",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.8",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0800",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HTTP/2 WINDOW_UPDATE type first on the control stream",
+          "outcome": {
+            "error": {
+              "code": 266,
+              "connection": true,
+              "kind": "missingSettings",
+              "name": "H3_MISSING_SETTINGS"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 6.2.1",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0900",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HTTP/2 CONTINUATION type on a push stream",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "reservedFrameType",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "client",
+          "section": "RFC 9114 Section 7.2.8",
+          "stream": "push",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "0000",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "DATA before HEADERS",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "outOfSequence",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c1010d00002f00f2b26c19a82d9f013101050000d1d7c1",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "headers": "00002f00f2b26c19a82d9f0131"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HEADERS after the trailers",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "outOfSequence",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c1000178010d00002f00f2b26c19a82d9f01310000",
+          "events": [
+            {
+              "headers": "0000d1d7c1"
+            },
+            {
+              "data": "78"
+            },
+            {
+              "headers": "00002f00f2b26c19a82d9f0131"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "DATA after the trailers",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "outOfSequence",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01100000cf508b2f91d35d055c87a6e34d33000178010d00002f00f2b26c19a82d9f0131",
+          "events": [
+            {
+              "headers": "0000cf508b2f91d35d055c87a6e34d33"
+            },
+            {
+              "data": "78"
+            }
+          ],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "HEADERS after a CONNECT completed",
+          "outcome": {
+            "error": {
+              "code": 261,
+              "connection": true,
+              "kind": "outOfSequence",
+              "name": "H3_FRAME_UNEXPECTED"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 4.4",
+          "stream": "request",
+          "tunnelAfterHeaders": true
+        },
+        {
+          "encoded": "01100000cf508b2f91d35d055c87a6e34d3300017840400100000179",
+          "events": [
+            {
+              "headers": "0000cf508b2f91d35d055c87a6e34d33"
+            },
+            {
+              "data": "78"
+            },
+            {
+              "skipped": {
+                "length": "1",
+                "type": "64"
+              }
+            },
+            {
+              "data": "79"
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "DATA and unknown frames after a CONNECT completed",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 4.4",
+          "stream": "request",
+          "tunnelAfterHeaders": true
+        },
+        {
+          "encoded": "404000",
+          "events": [
+            {
+              "skipped": {
+                "length": "0",
+                "type": "64"
+              }
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "request stream ended before HEADERS",
+          "outcome": {
+            "error": {
+              "code": 269,
+              "connection": false,
+              "kind": "requestIncomplete",
+              "name": "H3_REQUEST_INCOMPLETE"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 4.1",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "045001",
+          "events": [],
+          "fin": false,
+          "limits": {
+            "fieldSection": "131092",
+            "settings": "4096"
+          },
+          "name": "SETTINGS above the local limit",
+          "outcome": {
+            "error": {
+              "code": 263,
+              "connection": true,
+              "kind": "excessiveLoad",
+              "name": "H3_EXCESSIVE_LOAD"
+            }
+          },
+          "role": "server",
+          "section": "RFC 9114 Section 10.5",
+          "stream": "control",
+          "tunnelAfterHeaders": false
+        },
+        {
+          "encoded": "01050000d1d7c1",
+          "events": [
+            {
+              "oversized": {
+                "length": "5",
+                "type": "1"
+              }
+            }
+          ],
+          "fin": true,
+          "limits": {
+            "fieldSection": "4",
+            "settings": "4096"
+          },
+          "name": "HEADERS above the field section limit",
+          "outcome": "ok",
+          "role": "server",
+          "section": "RFC 9114 Section 4.2.2",
+          "stream": "request",
+          "tunnelAfterHeaders": false
+        }
+      ]
+    },
+    "goaway": {
+      "cases": [
+        {
+          "expect": [
+            "ok",
+            "ok",
+            "ok"
+          ],
+          "name": "client receives decreasing stream IDs",
+          "received": [
+            "8",
+            "4",
+            "4"
+          ],
+          "role": "client",
+          "section": "RFC 9114 Section 5.2"
+        },
+        {
+          "expect": [
+            "ok",
+            {
+              "error": {
+                "code": 264,
+                "connection": true,
+                "kind": "goawayIncreased",
+                "name": "H3_ID_ERROR"
+              }
+            }
+          ],
+          "name": "client receives a larger stream ID",
+          "received": [
+            "4",
+            "8"
+          ],
+          "role": "client",
+          "section": "RFC 9114 Section 5.2"
+        },
+        {
+          "expect": [
+            {
+              "error": {
+                "code": 264,
+                "connection": true,
+                "kind": "goawayStreamType",
+                "name": "H3_ID_ERROR"
+              }
+            }
+          ],
+          "name": "client receives a unidirectional stream ID",
+          "received": [
+            "2"
+          ],
+          "role": "client",
+          "section": "RFC 9114 Section 7.2.6"
+        },
+        {
+          "expect": [
+            "ok"
+          ],
+          "name": "server receives any push ID",
+          "received": [
+            "3"
+          ],
+          "role": "server",
+          "section": "RFC 9114 Section 7.2.6"
+        },
+        {
+          "expect": [
+            "ok",
+            {
+              "error": {
+                "code": 264,
+                "connection": true,
+                "kind": "goawayIncreased",
+                "name": "H3_ID_ERROR"
+              }
+            }
+          ],
+          "name": "server receives a larger push ID",
+          "received": [
+            "3",
+            "5"
+          ],
+          "role": "server",
+          "section": "RFC 9114 Section 5.2"
+        }
+      ],
+      "gracefulClient": "4611686018427387903",
+      "gracefulServer": "4611686018427387900"
+    },
+    "reservedValues": {
+      "first": [
+        "33",
+        "64",
+        "95",
+        "126",
+        "157",
+        "188"
+      ],
+      "last": "4611686018427387902",
+      "notReserved": [
+        "0",
+        "1",
+        "32",
+        "34",
+        "63",
+        "4611686018427387903"
+      ],
+      "section": "RFC 9114 Section 7.2.8"
+    },
+    "serverControlStream": {
+      "encoded": "000409010006800080000700",
+      "section": "RFC 9114 Sections 6.2.1 and 7.2.4.1",
+      "settings": {
+        "enableConnectProtocol": null,
+        "h3Datagram": null,
+        "maxFieldSectionSize": "32768",
+        "qpackBlockedStreams": "0",
+        "qpackMaxTableCapacity": "0"
+      },
+      "withReserved": {
+        "encoded": "00040b0100068000800007002100",
+        "n": "0",
+        "value": "0"
+      }
+    },
+    "settings": {
+      "cases": [
+        {
+          "expect": {
+            "settings": {
+              "enableConnectProtocol": null,
+              "h3Datagram": null,
+              "maxFieldSectionSize": null,
+              "qpackBlockedStreams": null,
+              "qpackMaxTableCapacity": null
+            }
+          },
+          "name": "empty",
+          "payload": "",
+          "section": "RFC 9114 Section 7.2.4"
+        },
+        {
+          "expect": {
+            "settings": {
+              "enableConnectProtocol": null,
+              "h3Datagram": null,
+              "maxFieldSectionSize": "32768",
+              "qpackBlockedStreams": "0",
+              "qpackMaxTableCapacity": "0"
+            }
+          },
+          "name": "server settings",
+          "payload": "010006800080000700",
+          "section": "RFC 9114 Section 7.2.4.1"
+        },
+        {
+          "expect": {
+            "settings": {
+              "enableConnectProtocol": null,
+              "h3Datagram": null,
+              "maxFieldSectionSize": null,
+              "qpackBlockedStreams": null,
+              "qpackMaxTableCapacity": null
+            }
+          },
+          "name": "unknown and reserved identifiers ignored",
+          "payload": "210080004d4400",
+          "section": "RFC 9114 Section 7.2.4"
+        },
+        {
+          "expect": {
+            "settings": {
+              "enableConnectProtocol": null,
+              "h3Datagram": null,
+              "maxFieldSectionSize": null,
+              "qpackBlockedStreams": null,
+              "qpackMaxTableCapacity": null
+            }
+          },
+          "name": "0x00 ignored",
+          "payload": "0000",
+          "section": "RFC 9114 Section 7.2.4"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "reservedSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "reserved 0x02",
+          "payload": "0200",
+          "section": "RFC 9114 Section 7.2.4.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "reservedSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "reserved 0x03",
+          "payload": "0300",
+          "section": "RFC 9114 Section 7.2.4.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "reservedSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "reserved 0x04",
+          "payload": "0400",
+          "section": "RFC 9114 Section 7.2.4.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "reservedSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "reserved 0x05",
+          "payload": "0500",
+          "section": "RFC 9114 Section 7.2.4.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "duplicateSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "duplicate 0x06",
+          "payload": "06000600",
+          "section": "RFC 9114 Section 7.2.4"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "duplicateSetting",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "duplicate reserved identifier",
+          "payload": "21002101",
+          "section": "RFC 9114 Section 7.2.4"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "settingValue",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "SETTINGS_H3_DATAGRAM 2",
+          "payload": "3302",
+          "section": "RFC 9297 Section 2.1.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 265,
+              "connection": true,
+              "kind": "settingValue",
+              "name": "H3_SETTINGS_ERROR"
+            }
+          },
+          "name": "SETTINGS_ENABLE_CONNECT_PROTOCOL 2",
+          "payload": "0802",
+          "section": "RFC 9220 Section 3"
+        },
+        {
+          "expect": {
+            "settings": {
+              "enableConnectProtocol": true,
+              "h3Datagram": true,
+              "maxFieldSectionSize": null,
+              "qpackBlockedStreams": null,
+              "qpackMaxTableCapacity": null
+            }
+          },
+          "name": "Extended CONNECT and datagrams enabled",
+          "payload": "08013301",
+          "section": "RFC 9297 Section 2.1.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "payloadTruncated",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "name": "a dangling identifier",
+          "payload": "06",
+          "section": "RFC 9114 Section 7.1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 262,
+              "connection": true,
+              "kind": "payloadTruncated",
+              "name": "H3_FRAME_ERROR"
+            }
+          },
+          "name": "a value ending inside its integer",
+          "payload": "068000",
+          "section": "RFC 9114 Section 7.1"
+        }
+      ]
+    },
+    "streamTypes": {
+      "cases": [
+        {
+          "encoded": "00",
+          "name": "control",
+          "section": "RFC 9114 Section 6.2.1",
+          "type": "control",
+          "value": "0"
+        },
+        {
+          "encoded": "01",
+          "name": "push",
+          "section": "RFC 9114 Section 6.2.2",
+          "type": "push",
+          "value": "1"
+        },
+        {
+          "encoded": "02",
+          "name": "QPACK encoder",
+          "section": "RFC 9204 Section 4.2",
+          "type": "qpackEncoder",
+          "value": "2"
+        },
+        {
+          "encoded": "03",
+          "name": "QPACK decoder",
+          "section": "RFC 9204 Section 4.2",
+          "type": "qpackDecoder",
+          "value": "3"
+        },
+        {
+          "encoded": "21",
+          "name": "reserved 0x21",
+          "section": "RFC 9114 Section 6.2.3",
+          "type": "reserved",
+          "value": "33"
+        },
+        {
+          "encoded": "04",
+          "name": "unknown 0x04",
+          "section": "RFC 9114 Section 6.2",
+          "type": "unknown",
+          "value": "4"
+        },
+        {
+          "encoded": "4000",
+          "name": "non-minimal control",
+          "section": "RFC 9000 Section 16",
+          "type": "control",
+          "value": "0"
+        },
+        {
+          "encoded": "40",
+          "name": "stream ended inside its type",
+          "section": "RFC 9114 Section 6.2",
+          "type": "needMore",
+          "value": null
+        }
+      ]
+    },
+    "uniStreams": {
+      "cases": [
+        {
+          "expect": [
+            "control",
+            "qpackEncoder",
+            "qpackDecoder",
+            "discard",
+            "discard"
+          ],
+          "name": "one of each critical stream",
+          "opened": [
+            "0",
+            "2",
+            "3",
+            "33",
+            "4"
+          ],
+          "role": "server",
+          "section": "RFC 9204 Section 4.2"
+        },
+        {
+          "expect": [
+            "control",
+            {
+              "error": {
+                "code": 259,
+                "connection": true,
+                "kind": "secondCriticalStream",
+                "name": "H3_STREAM_CREATION_ERROR"
+              }
+            }
+          ],
+          "name": "second control stream",
+          "opened": [
+            "0",
+            "0"
+          ],
+          "role": "server",
+          "section": "RFC 9114 Section 6.2.1"
+        },
+        {
+          "expect": [
+            "qpackEncoder",
+            {
+              "error": {
+                "code": 259,
+                "connection": true,
+                "kind": "secondCriticalStream",
+                "name": "H3_STREAM_CREATION_ERROR"
+              }
+            }
+          ],
+          "name": "second encoder stream",
+          "opened": [
+            "2",
+            "2"
+          ],
+          "role": "server",
+          "section": "RFC 9204 Section 4.2"
+        },
+        {
+          "expect": [
+            "qpackDecoder",
+            {
+              "error": {
+                "code": 259,
+                "connection": true,
+                "kind": "secondCriticalStream",
+                "name": "H3_STREAM_CREATION_ERROR"
+              }
+            }
+          ],
+          "name": "second decoder stream",
+          "opened": [
+            "3",
+            "3"
+          ],
+          "role": "server",
+          "section": "RFC 9204 Section 4.2"
+        },
+        {
+          "expect": [
+            {
+              "error": {
+                "code": 259,
+                "connection": true,
+                "kind": "pushStreamFromClient",
+                "name": "H3_STREAM_CREATION_ERROR"
+              }
+            }
+          ],
+          "name": "push stream at a server",
+          "opened": [
+            "1"
+          ],
+          "role": "server",
+          "section": "RFC 9114 Section 6.2.2"
+        },
+        {
+          "expect": [
+            "push"
+          ],
+          "name": "push stream at a client",
+          "opened": [
+            "1"
+          ],
+          "role": "client",
+          "section": "RFC 9114 Section 6.2.2"
+        }
+      ],
+      "closed": [
+        {
+          "expect": {
+            "error": {
+              "code": 260,
+              "connection": true,
+              "kind": "criticalStreamClosed",
+              "name": "H3_CLOSED_CRITICAL_STREAM"
+            }
+          },
+          "type": "0"
+        },
+        {
+          "expect": "ok",
+          "type": "1"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 260,
+              "connection": true,
+              "kind": "criticalStreamClosed",
+              "name": "H3_CLOSED_CRITICAL_STREAM"
+            }
+          },
+          "type": "2"
+        },
+        {
+          "expect": {
+            "error": {
+              "code": 260,
+              "connection": true,
+              "kind": "criticalStreamClosed",
+              "name": "H3_CLOSED_CRITICAL_STREAM"
+            }
+          },
+          "type": "3"
+        },
+        {
+          "expect": "ok",
+          "type": "33"
+        }
+      ]
+    },
+    "varints": {
+      "cases": [
+        {
+          "encoded": "c2197c5eff14e88c",
+          "name": "eight-octet example",
+          "section": "RFC 9000 Appendix A.1",
+          "shortest": true,
+          "value": "151288809941952652"
+        },
+        {
+          "encoded": "9d7f3e7d",
+          "name": "four-octet example",
+          "section": "RFC 9000 Appendix A.1",
+          "shortest": true,
+          "value": "494878333"
+        },
+        {
+          "encoded": "7bbd",
+          "name": "two-octet example",
+          "section": "RFC 9000 Appendix A.1",
+          "shortest": true,
+          "value": "15293"
+        },
+        {
+          "encoded": "25",
+          "name": "one-octet example",
+          "section": "RFC 9000 Appendix A.1",
+          "shortest": true,
+          "value": "37"
+        },
+        {
+          "encoded": "4025",
+          "name": "non-minimal 37",
+          "section": "RFC 9000 Appendix A.1",
+          "shortest": false,
+          "value": "37"
+        },
+        {
+          "encoded": "3f",
+          "name": "63",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "63"
+        },
+        {
+          "encoded": "4040",
+          "name": "64",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "64"
+        },
+        {
+          "encoded": "7fff",
+          "name": "16383",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "16383"
+        },
+        {
+          "encoded": "80004000",
+          "name": "16384",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "16384"
+        },
+        {
+          "encoded": "bfffffff",
+          "name": "1073741823",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "1073741823"
+        },
+        {
+          "encoded": "c000000040000000",
+          "name": "1073741824",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "1073741824"
+        },
+        {
+          "encoded": "ffffffffffffffff",
+          "name": "4611686018427387903",
+          "section": "RFC 9000 Section 16",
+          "shortest": true,
+          "value": "4611686018427387903"
+        }
+      ],
+      "refused": [
+        "4611686018427387904",
+        "18446744073709551615"
+      ]
+    }
+  },
   "http1Parser": {
     "cases": [
       {
@@ -397,6 +2479,1454 @@
     ]
   },
   "note": "Generated by `cargo run -p zero-examples --example conformance_vectors`. Do not edit by hand.",
+  "qpack": {
+    "base": {
+      "cases": [
+        {
+          "deltaBase": "2",
+          "expect": "6",
+          "name": "Section 4.5.1.2 example",
+          "requiredInsertCount": "9",
+          "section": "RFC 9204 Section 4.5.1.2",
+          "sign": true
+        },
+        {
+          "deltaBase": "1",
+          "expect": "0",
+          "name": "Appendix B.2 stream 4",
+          "requiredInsertCount": "2",
+          "section": "RFC 9204 Appendix B.2",
+          "sign": true
+        },
+        {
+          "deltaBase": "0",
+          "expect": "4",
+          "name": "Appendix B.4 stream 8",
+          "requiredInsertCount": "4",
+          "section": "RFC 9204 Appendix B.4",
+          "sign": false
+        },
+        {
+          "deltaBase": "0",
+          "expect": {
+            "error": "negativeBase"
+          },
+          "name": "Sign 1 at Required Insert Count 0",
+          "requiredInsertCount": "0",
+          "section": "RFC 9204 Section 4.5.1.2",
+          "sign": true
+        },
+        {
+          "deltaBase": "9",
+          "expect": {
+            "error": "negativeBase"
+          },
+          "name": "Sign 1 with Delta Base equal to the count",
+          "requiredInsertCount": "9",
+          "section": "RFC 9204 Section 4.5.1.2",
+          "sign": true
+        }
+      ]
+    },
+    "decoderStream": {
+      "cases": [
+        {
+          "atStaticEncoder": {
+            "error": {
+              "code": 514,
+              "connection": true,
+              "kind": "unexpectedAcknowledgment",
+              "name": "QPACK_DECODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "84",
+          "instructions": [
+            {
+              "sectionAcknowledgment": "4"
+            }
+          ],
+          "name": "Appendix B.2",
+          "section": "RFC 9204 Appendix B.2"
+        },
+        {
+          "atStaticEncoder": {
+            "error": {
+              "code": 514,
+              "connection": true,
+              "kind": "invalidIncrement",
+              "name": "QPACK_DECODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "01",
+          "instructions": [
+            {
+              "insertCountIncrement": "1"
+            }
+          ],
+          "name": "Appendix B.3",
+          "section": "RFC 9204 Appendix B.3"
+        },
+        {
+          "atStaticEncoder": "accepted",
+          "encoded": "48",
+          "instructions": [
+            {
+              "streamCancellation": "8"
+            }
+          ],
+          "name": "Appendix B.4",
+          "section": "RFC 9204 Appendix B.4"
+        },
+        {
+          "atStaticEncoder": {
+            "error": {
+              "code": 514,
+              "connection": true,
+              "kind": "invalidIncrement",
+              "name": "QPACK_DECODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "00",
+          "instructions": [
+            {
+              "insertCountIncrement": "0"
+            }
+          ],
+          "name": "increment zero",
+          "section": "RFC 9204 Section 4.4.3"
+        },
+        {
+          "atStaticEncoder": "accepted",
+          "encoded": "7fc0ffffffffffffff3f",
+          "instructions": [
+            {
+              "streamCancellation": "4611686018427387903"
+            }
+          ],
+          "name": "stream ID 2^62-1",
+          "section": "RFC 9204 Section 4.1.1"
+        },
+        {
+          "atStaticEncoder": {
+            "error": {
+              "code": 514,
+              "connection": true,
+              "kind": "invalidIncrement",
+              "name": "QPACK_DECODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "3fc0ffffffffffffff3f",
+          "instructions": [
+            {
+              "insertCountIncrement": "4611686018427387903"
+            }
+          ],
+          "name": "increment 2^62-1",
+          "section": "RFC 9204 Section 4.1.1"
+        },
+        {
+          "atStaticEncoder": {
+            "error": {
+              "code": 514,
+              "connection": true,
+              "kind": "tooLarge",
+              "name": "QPACK_DECODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "ff81ffffffffffffff3f",
+          "instructions": null,
+          "name": "stream ID beyond 62 bits",
+          "section": "RFC 9204 Section 7.4"
+        }
+      ]
+    },
+    "encoderStream": {
+      "cases": [
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "capacityExceeded",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "3fbd01c00f7777772e6578616d706c652e636f6dc10c2f73616d706c652f70617468",
+          "headOnly": null,
+          "instructions": [
+            {
+              "setDynamicTableCapacity": "220"
+            },
+            {
+              "insertWithNameReference": {
+                "huffman": false,
+                "index": "0",
+                "static": true,
+                "value": "www.example.com"
+              }
+            },
+            {
+              "insertWithNameReference": {
+                "huffman": false,
+                "index": "1",
+                "static": true,
+                "value": "/sample/path"
+              }
+            }
+          ],
+          "name": "Appendix B.2",
+          "section": "RFC 9204 Appendix B.2"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "entryTooLarge",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "4a637573746f6d2d6b65790c637573746f6d2d76616c7565",
+          "headOnly": null,
+          "instructions": [
+            {
+              "insertWithLiteralName": {
+                "name": "custom-key",
+                "nameHuffman": false,
+                "value": "custom-value",
+                "valueHuffman": false
+              }
+            }
+          ],
+          "name": "Appendix B.3",
+          "section": "RFC 9204 Appendix B.3"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "instructionAtCapacityZero",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "02",
+          "headOnly": null,
+          "instructions": [
+            {
+              "duplicate": "2"
+            }
+          ],
+          "name": "Appendix B.4",
+          "section": "RFC 9204 Appendix B.4"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "entryTooLarge",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "810d637573746f6d2d76616c756532",
+          "headOnly": null,
+          "instructions": [
+            {
+              "insertWithNameReference": {
+                "huffman": false,
+                "index": "1",
+                "static": false,
+                "value": "custom-value2"
+              }
+            }
+          ],
+          "name": "Appendix B.5",
+          "section": "RFC 9204 Appendix B.5"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "instructionAtCapacityZero",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "20",
+          "headOnly": null,
+          "instructions": [
+            {
+              "setDynamicTableCapacity": "0"
+            }
+          ],
+          "name": "capacity zero",
+          "section": "RFC 9204 Section 3.2.3"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "capacityExceeded",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "3fe0ffffffffffffff3f",
+          "headOnly": null,
+          "instructions": [
+            {
+              "setDynamicTableCapacity": "4611686018427387903"
+            }
+          ],
+          "name": "capacity 2^62-1",
+          "section": "RFC 9204 Section 4.1.1"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "invalidStaticIndex",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "ff2400",
+          "headOnly": null,
+          "instructions": [
+            {
+              "insertWithNameReference": {
+                "huffman": false,
+                "index": "99",
+                "static": true,
+                "value": ""
+              }
+            }
+          ],
+          "name": "static index 99 on the encoder stream",
+          "section": "RFC 9204 Section 3.1"
+        },
+        {
+          "atCapacityZero": {
+            "error": {
+              "code": 513,
+              "connection": true,
+              "kind": "entryTooLarge",
+              "name": "QPACK_ENCODER_STREAM_ERROR"
+            }
+          },
+          "encoded": "5fe1ffffff03",
+          "headOnly": {
+            "insertWithLiteralName": {
+              "huffman": false,
+              "nameLength": "1073741824"
+            }
+          },
+          "instructions": null,
+          "name": "insert refused at its head",
+          "section": "RFC 9204 Section 2.1.3"
+        }
+      ]
+    },
+    "encodings": {
+      "cases": [
+        {
+          "encoded": "0000510b2f696e6465782e68746d6c",
+          "huffman": "never",
+          "lines": [
+            {
+              "name": ":path",
+              "neverIndexed": false,
+              "value": "/index.html"
+            }
+          ],
+          "name": "Appendix B.1 without Huffman",
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "1",
+                "neverIndexed": false,
+                "static": true,
+                "value": "/index.html"
+              }
+            }
+          ],
+          "section": "RFC 9204 Appendix B.1"
+        },
+        {
+          "encoded": "0000d1d7c1",
+          "huffman": "shorter",
+          "lines": [
+            {
+              "name": ":method",
+              "neverIndexed": false,
+              "value": "GET"
+            },
+            {
+              "name": ":scheme",
+              "neverIndexed": false,
+              "value": "https"
+            },
+            {
+              "name": ":path",
+              "neverIndexed": false,
+              "value": "/"
+            }
+          ],
+          "name": "exact static matches",
+          "representations": [
+            {
+              "indexed": {
+                "index": "17",
+                "static": true
+              }
+            },
+            {
+              "indexed": {
+                "index": "23",
+                "static": true
+              }
+            },
+            {
+              "indexed": {
+                "index": "1",
+                "static": true
+              }
+            }
+          ],
+          "section": "RFC 9204 Section 4.5.2"
+        },
+        {
+          "encoded": "00007f4500",
+          "huffman": "never",
+          "lines": [
+            {
+              "name": "authorization",
+              "neverIndexed": true,
+              "value": ""
+            }
+          ],
+          "name": "never-indexed exact static match",
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "84",
+                "neverIndexed": true,
+                "static": true,
+                "value": ""
+              }
+            }
+          ],
+          "section": "RFC 9204 Section 4.5.4"
+        },
+        {
+          "encoded": "000075007e03613d62",
+          "huffman": "never",
+          "lines": [
+            {
+              "name": "cookie",
+              "neverIndexed": false,
+              "value": ""
+            },
+            {
+              "name": "set-cookie",
+              "neverIndexed": false,
+              "value": "a=b"
+            }
+          ],
+          "name": "sensitive names get the N bit",
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "5",
+                "neverIndexed": true,
+                "static": true,
+                "value": ""
+              }
+            },
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "14",
+                "neverIndexed": true,
+                "static": true,
+                "value": "a=b"
+              }
+            }
+          ],
+          "section": "RFC 9204 Section 7.1.3"
+        },
+        {
+          "encoded": "00002701782d637573746f6d0576616c7565",
+          "huffman": "never",
+          "lines": [
+            {
+              "name": "x-custom",
+              "neverIndexed": false,
+              "value": "value"
+            }
+          ],
+          "name": "literal name",
+          "representations": [
+            {
+              "literalName": {
+                "name": "x-custom",
+                "nameHuffman": false,
+                "neverIndexed": false,
+                "value": "value",
+                "valueHuffman": false
+              }
+            }
+          ],
+          "section": "RFC 9204 Section 4.5.6"
+        },
+        {
+          "encoded": "0000518860d5485f2bce9a68",
+          "huffman": "always",
+          "lines": [
+            {
+              "name": ":path",
+              "neverIndexed": false,
+              "value": "/index.html"
+            }
+          ],
+          "name": "Huffman always",
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": true,
+                "index": "1",
+                "neverIndexed": false,
+                "static": true,
+                "value": "/index.html"
+              }
+            }
+          ],
+          "section": "RFC 9204 Section 4.1.2"
+        }
+      ]
+    },
+    "fieldSections": {
+      "cases": [
+        {
+          "encoded": "0000510b2f696e6465782e68746d6c",
+          "expect": {
+            "lines": [
+              {
+                "name": ":path",
+                "neverIndexed": false,
+                "value": "/index.html"
+              }
+            ]
+          },
+          "name": "Appendix B.1 literal with a static name reference",
+          "representations": null,
+          "section": "RFC 9204 Appendix B.1"
+        },
+        {
+          "encoded": "03811011",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "requiredInsertCount",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "Appendix B.2 stream 4",
+          "representations": [
+            {
+              "indexedPostBase": "0"
+            },
+            {
+              "indexedPostBase": "1"
+            }
+          ],
+          "section": "RFC 9204 Appendix B.2"
+        },
+        {
+          "encoded": "050080c181",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "requiredInsertCount",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "Appendix B.4 stream 8",
+          "representations": [
+            {
+              "indexed": {
+                "index": "0",
+                "static": false
+              }
+            },
+            {
+              "indexed": {
+                "index": "1",
+                "static": true
+              }
+            },
+            {
+              "indexed": {
+                "index": "1",
+                "static": false
+              }
+            }
+          ],
+          "section": "RFC 9204 Appendix B.4"
+        },
+        {
+          "encoded": "000080",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "dynamicReference",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "dynamic indexed line with Required Insert Count 0",
+          "representations": null,
+          "section": "RFC 9204 Section 2.2.3"
+        },
+        {
+          "encoded": "000010",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "dynamicReference",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "post-Base indexed line",
+          "representations": null,
+          "section": "RFC 9204 Section 2.2.3"
+        },
+        {
+          "encoded": "0000400161",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "dynamicReference",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "dynamic name reference",
+          "representations": null,
+          "section": "RFC 9204 Section 2.2.3"
+        },
+        {
+          "encoded": "0000000161",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "dynamicReference",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "post-Base name reference",
+          "representations": null,
+          "section": "RFC 9204 Section 2.2.3"
+        },
+        {
+          "encoded": "0000ff24",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "invalidStaticIndex",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "static index 99",
+          "representations": null,
+          "section": "RFC 9204 Section 3.1"
+        },
+        {
+          "encoded": "0000ffc1ffffff07",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "invalidStaticIndex",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "static index 2^31",
+          "representations": null,
+          "section": "RFC 9204 Section 3.1"
+        },
+        {
+          "encoded": "00005f5400",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "invalidStaticIndex",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "literal with static name index 99",
+          "representations": null,
+          "section": "RFC 9204 Section 3.1"
+        },
+        {
+          "encoded": "ff81feffff0700",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "requiredInsertCount",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "Required Insert Count 2^31 at capacity zero",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5.1.1"
+        },
+        {
+          "encoded": "007f81ffffff07",
+          "expect": {
+            "lines": []
+          },
+          "name": "Delta Base 2^31 with Sign 0",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5.1.2"
+        },
+        {
+          "encoded": "0000517f81ffffff0778",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "truncated",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "string length 2^31 past the section end",
+          "representations": null,
+          "section": "RFC 9204 Section 7.4"
+        },
+        {
+          "encoded": "0000ffc1ffffffffffffff3f",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": false,
+              "kind": "tooLarge",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "an index beyond 62 bits",
+          "representations": null,
+          "section": "RFC 9204 Section 7.4"
+        },
+        {
+          "encoded": "0080",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "negativeBase",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "Sign 1 with Required Insert Count 0",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5.1.2"
+        },
+        {
+          "encoded": "0000",
+          "expect": {
+            "lines": []
+          },
+          "name": "empty section",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5"
+        },
+        {
+          "encoded": "0000508cf1e3c2e5f23a6ba0ab90f4ff",
+          "expect": {
+            "lines": [
+              {
+                "name": ":authority",
+                "neverIndexed": false,
+                "value": "www.example.com"
+              }
+            ]
+          },
+          "name": "Huffman value www.example.com",
+          "representations": null,
+          "section": "RFC 9204 Section 4.1.2"
+        },
+        {
+          "encoded": "000050811e",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "paddingNotEos",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "Huffman padding that is not an EOS prefix",
+          "representations": null,
+          "section": "RFC 7541 Section 5.2"
+        },
+        {
+          "encoded": "00007f450a42656172657220616263",
+          "expect": {
+            "lines": [
+              {
+                "name": "authorization",
+                "neverIndexed": true,
+                "value": "Bearer abc"
+              }
+            ]
+          },
+          "name": "never-indexed authorization",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5.4"
+        },
+        {
+          "encoded": "0000510b2f69",
+          "expect": {
+            "error": {
+              "code": 512,
+              "connection": true,
+              "kind": "truncated",
+              "name": "QPACK_DECOMPRESSION_FAILED"
+            }
+          },
+          "name": "truncated value",
+          "representations": null,
+          "section": "RFC 9204 Section 4.5.4"
+        }
+      ]
+    },
+    "huffman": {
+      "cases": [
+        {
+          "encoded": "f1e3c2e5f23a6ba0ab90f4ff",
+          "name": "www.example.com",
+          "section": "RFC 7541 Appendix C.4.1",
+          "text": "www.example.com"
+        },
+        {
+          "encoded": "a8eb10649cbf",
+          "name": "no-cache",
+          "section": "RFC 7541 Appendix C.4.2",
+          "text": "no-cache"
+        },
+        {
+          "encoded": "25a849e95ba97d7f",
+          "name": "custom-key",
+          "section": "RFC 7541 Appendix C.4.3",
+          "text": "custom-key"
+        },
+        {
+          "encoded": "25a849e95bb8e8b4bf",
+          "name": "custom-value",
+          "section": "RFC 7541 Appendix C.4.3",
+          "text": "custom-value"
+        },
+        {
+          "encoded": "6402",
+          "name": "302",
+          "section": "RFC 7541 Appendix C.6.1",
+          "text": "302"
+        },
+        {
+          "encoded": "aec3771a4b",
+          "name": "private",
+          "section": "RFC 7541 Appendix C.6.1",
+          "text": "private"
+        },
+        {
+          "encoded": "d07abe941054d444a8200595040b8166e082a62d1bff",
+          "name": "Mon, 21 Oct 2013 20:13:21 GMT",
+          "section": "RFC 7541 Appendix C.6.1",
+          "text": "Mon, 21 Oct 2013 20:13:21 GMT"
+        },
+        {
+          "encoded": "9d29ad171863c78f0b97c8e9ae82ae43d3",
+          "name": "https://www.example.com",
+          "section": "RFC 7541 Appendix C.6.1",
+          "text": "https://www.example.com"
+        },
+        {
+          "encoded": "640eff",
+          "name": "307",
+          "section": "RFC 7541 Appendix C.6.2",
+          "text": "307"
+        },
+        {
+          "encoded": "d07abe941054d444a8200595040b8166e084a62d1bff",
+          "name": "Mon, 21 Oct 2013 20:13:22 GMT",
+          "section": "RFC 7541 Appendix C.6.3",
+          "text": "Mon, 21 Oct 2013 20:13:22 GMT"
+        },
+        {
+          "encoded": "9bd9ab",
+          "name": "gzip",
+          "section": "RFC 7541 Appendix C.6.3",
+          "text": "gzip"
+        },
+        {
+          "encoded": "94e7821dd7f2e6c7b335dfdfcd5b3960d5af27087f3672c1ab270fb5291f9587316065c003ed4ee5b1063d5007",
+          "name": "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1",
+          "section": "RFC 7541 Appendix C.6.3",
+          "text": "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1"
+        }
+      ]
+    },
+    "huffmanErrors": {
+      "cases": [
+        {
+          "encoded": "ffffffff",
+          "error": "eos",
+          "name": "EOS in the data",
+          "section": "RFC 7541 Section 5.2"
+        },
+        {
+          "encoded": "f8ff",
+          "error": "padding",
+          "name": "eight bits of padding",
+          "section": "RFC 7541 Section 5.2"
+        },
+        {
+          "encoded": "1e",
+          "error": "paddingNotEos",
+          "name": "padding that is not an EOS prefix",
+          "section": "RFC 7541 Section 5.2"
+        }
+      ]
+    },
+    "integerErrors": {
+      "cases": [
+        {
+          "cap": "4611686018427387903",
+          "encoded": "1f80808080808080808000",
+          "error": "tooLong",
+          "name": "ten continuation octets",
+          "prefixBits": 5,
+          "section": "RFC 7541 Section 5.1"
+        },
+        {
+          "cap": "4611686018427387903",
+          "encoded": "1fe1ffffffffffffff3f",
+          "error": "tooLarge",
+          "name": "2^62 with a 5-bit prefix",
+          "prefixBits": 5,
+          "section": "RFC 7541 Section 5.1"
+        },
+        {
+          "cap": "1073741824",
+          "encoded": "7f82ffffff03",
+          "error": "tooLarge",
+          "name": "a length above QPACK_INTEGER_CAP",
+          "prefixBits": 7,
+          "section": "RFC 9204 Section 7.4"
+        }
+      ]
+    },
+    "integers": {
+      "cases": [
+        {
+          "encoded": "0a",
+          "name": "10 with a 5-bit prefix",
+          "prefixBits": 5,
+          "section": "RFC 7541 Appendix C.1.1",
+          "value": "10"
+        },
+        {
+          "encoded": "ea",
+          "name": "10 with a 5-bit prefix and flag bits set",
+          "prefixBits": 5,
+          "section": "RFC 7541 Appendix C.1.1",
+          "value": "10"
+        },
+        {
+          "encoded": "1f9a0a",
+          "name": "1337 with a 5-bit prefix",
+          "prefixBits": 5,
+          "section": "RFC 7541 Appendix C.1.2",
+          "value": "1337"
+        },
+        {
+          "encoded": "2a",
+          "name": "42 with an 8-bit prefix",
+          "prefixBits": 8,
+          "section": "RFC 7541 Appendix C.1.3",
+          "value": "42"
+        },
+        {
+          "encoded": "07f8ffffffffffffff3f",
+          "name": "2^62-1 with a 3-bit prefix",
+          "prefixBits": 3,
+          "section": "RFC 9204 Section 4.1.1",
+          "value": "4611686018427387903"
+        }
+      ]
+    },
+    "requiredInsertCount": {
+      "cases": [
+        {
+          "encodedInsertCount": "4",
+          "expect": "9",
+          "maxEntries": "3",
+          "name": "Section 4.5.1.1 example",
+          "section": "RFC 9204 Section 4.5.1.1",
+          "totalInserts": "10"
+        },
+        {
+          "encodedInsertCount": "3",
+          "expect": "2",
+          "maxEntries": "6",
+          "name": "Appendix B.2 stream 4",
+          "section": "RFC 9204 Appendix B.2",
+          "totalInserts": "2"
+        },
+        {
+          "encodedInsertCount": "5",
+          "expect": "4",
+          "maxEntries": "6",
+          "name": "Appendix B.4 stream 8",
+          "section": "RFC 9204 Appendix B.4",
+          "totalInserts": "3"
+        },
+        {
+          "encodedInsertCount": "1",
+          "expect": {
+            "error": "requiredInsertCount"
+          },
+          "maxEntries": "0",
+          "name": "capacity zero",
+          "section": "RFC 9204 Section 4.5.1.1",
+          "totalInserts": "0"
+        },
+        {
+          "encodedInsertCount": "13",
+          "expect": {
+            "error": "requiredInsertCount"
+          },
+          "maxEntries": "6",
+          "name": "above FullRange",
+          "section": "RFC 9204 Section 4.5.1.1",
+          "totalInserts": "0"
+        }
+      ]
+    },
+    "staticTable": {
+      "entries": [
+        [
+          ":authority",
+          ""
+        ],
+        [
+          ":path",
+          "/"
+        ],
+        [
+          "age",
+          "0"
+        ],
+        [
+          "content-disposition",
+          ""
+        ],
+        [
+          "content-length",
+          "0"
+        ],
+        [
+          "cookie",
+          ""
+        ],
+        [
+          "date",
+          ""
+        ],
+        [
+          "etag",
+          ""
+        ],
+        [
+          "if-modified-since",
+          ""
+        ],
+        [
+          "if-none-match",
+          ""
+        ],
+        [
+          "last-modified",
+          ""
+        ],
+        [
+          "link",
+          ""
+        ],
+        [
+          "location",
+          ""
+        ],
+        [
+          "referer",
+          ""
+        ],
+        [
+          "set-cookie",
+          ""
+        ],
+        [
+          ":method",
+          "CONNECT"
+        ],
+        [
+          ":method",
+          "DELETE"
+        ],
+        [
+          ":method",
+          "GET"
+        ],
+        [
+          ":method",
+          "HEAD"
+        ],
+        [
+          ":method",
+          "OPTIONS"
+        ],
+        [
+          ":method",
+          "POST"
+        ],
+        [
+          ":method",
+          "PUT"
+        ],
+        [
+          ":scheme",
+          "http"
+        ],
+        [
+          ":scheme",
+          "https"
+        ],
+        [
+          ":status",
+          "103"
+        ],
+        [
+          ":status",
+          "200"
+        ],
+        [
+          ":status",
+          "304"
+        ],
+        [
+          ":status",
+          "404"
+        ],
+        [
+          ":status",
+          "503"
+        ],
+        [
+          "accept",
+          "*/*"
+        ],
+        [
+          "accept",
+          "application/dns-message"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate, br"
+        ],
+        [
+          "accept-ranges",
+          "bytes"
+        ],
+        [
+          "access-control-allow-headers",
+          "cache-control"
+        ],
+        [
+          "access-control-allow-headers",
+          "content-type"
+        ],
+        [
+          "access-control-allow-origin",
+          "*"
+        ],
+        [
+          "cache-control",
+          "max-age=0"
+        ],
+        [
+          "cache-control",
+          "max-age=2592000"
+        ],
+        [
+          "cache-control",
+          "max-age=604800"
+        ],
+        [
+          "cache-control",
+          "no-cache"
+        ],
+        [
+          "cache-control",
+          "no-store"
+        ],
+        [
+          "cache-control",
+          "public, max-age=31536000"
+        ],
+        [
+          "content-encoding",
+          "br"
+        ],
+        [
+          "content-encoding",
+          "gzip"
+        ],
+        [
+          "content-type",
+          "application/dns-message"
+        ],
+        [
+          "content-type",
+          "application/javascript"
+        ],
+        [
+          "content-type",
+          "application/json"
+        ],
+        [
+          "content-type",
+          "application/x-www-form-urlencoded"
+        ],
+        [
+          "content-type",
+          "image/gif"
+        ],
+        [
+          "content-type",
+          "image/jpeg"
+        ],
+        [
+          "content-type",
+          "image/png"
+        ],
+        [
+          "content-type",
+          "text/css"
+        ],
+        [
+          "content-type",
+          "text/html; charset=utf-8"
+        ],
+        [
+          "content-type",
+          "text/plain"
+        ],
+        [
+          "content-type",
+          "text/plain;charset=utf-8"
+        ],
+        [
+          "range",
+          "bytes=0-"
+        ],
+        [
+          "strict-transport-security",
+          "max-age=31536000"
+        ],
+        [
+          "strict-transport-security",
+          "max-age=31536000; includesubdomains"
+        ],
+        [
+          "strict-transport-security",
+          "max-age=31536000; includesubdomains; preload"
+        ],
+        [
+          "vary",
+          "accept-encoding"
+        ],
+        [
+          "vary",
+          "origin"
+        ],
+        [
+          "x-content-type-options",
+          "nosniff"
+        ],
+        [
+          "x-xss-protection",
+          "1; mode=block"
+        ],
+        [
+          ":status",
+          "100"
+        ],
+        [
+          ":status",
+          "204"
+        ],
+        [
+          ":status",
+          "206"
+        ],
+        [
+          ":status",
+          "302"
+        ],
+        [
+          ":status",
+          "400"
+        ],
+        [
+          ":status",
+          "403"
+        ],
+        [
+          ":status",
+          "421"
+        ],
+        [
+          ":status",
+          "425"
+        ],
+        [
+          ":status",
+          "500"
+        ],
+        [
+          "accept-language",
+          ""
+        ],
+        [
+          "access-control-allow-credentials",
+          "FALSE"
+        ],
+        [
+          "access-control-allow-credentials",
+          "TRUE"
+        ],
+        [
+          "access-control-allow-headers",
+          "*"
+        ],
+        [
+          "access-control-allow-methods",
+          "get"
+        ],
+        [
+          "access-control-allow-methods",
+          "get, post, options"
+        ],
+        [
+          "access-control-allow-methods",
+          "options"
+        ],
+        [
+          "access-control-expose-headers",
+          "content-length"
+        ],
+        [
+          "access-control-request-headers",
+          "content-type"
+        ],
+        [
+          "access-control-request-method",
+          "get"
+        ],
+        [
+          "access-control-request-method",
+          "post"
+        ],
+        [
+          "alt-svc",
+          "clear"
+        ],
+        [
+          "authorization",
+          ""
+        ],
+        [
+          "content-security-policy",
+          "script-src 'none'; object-src 'none'; base-uri 'none'"
+        ],
+        [
+          "early-data",
+          "1"
+        ],
+        [
+          "expect-ct",
+          ""
+        ],
+        [
+          "forwarded",
+          ""
+        ],
+        [
+          "if-range",
+          ""
+        ],
+        [
+          "origin",
+          ""
+        ],
+        [
+          "purpose",
+          "prefetch"
+        ],
+        [
+          "server",
+          ""
+        ],
+        [
+          "timing-allow-origin",
+          "*"
+        ],
+        [
+          "upgrade-insecure-requests",
+          "1"
+        ],
+        [
+          "user-agent",
+          ""
+        ],
+        [
+          "x-forwarded-for",
+          ""
+        ],
+        [
+          "x-frame-options",
+          "deny"
+        ],
+        [
+          "x-frame-options",
+          "sameorigin"
+        ]
+      ],
+      "section": "RFC 9204 Appendix A"
+    }
+  },
   "responseSplitting": {
     "cases": [
       {

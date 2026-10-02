@@ -1219,6 +1219,1182 @@ release = 1
 note = "RFC 9110 Section 7.4; RFC 9846 Section 4.2.4 for HelloRetryRequest"
 
 
+# QPACK
+
+[[entry]]
+key = "qpack-01"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The static table holds the 99 entries of Appendix A exactly as published, indexed from 0, with entry 73 `FALSE` and 74 `TRUE`"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#appendix-A"
+evidence = "crates/zero-qpack/src/table.rs"
+at = "fn the_static_table_holds_the_99_appendix_a_entries_indexed_from_zero"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 3.1 and Appendix A; erratum 7277 is Held for Document Update, so the published table stands"
+
+[[entry]]
+key = "qpack-02"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "Prefixed integers encode and decode as the Appendix C.1 examples: 10 and 1337 with a 5-bit prefix and 42 with an 8-bit prefix, whatever the bits before the prefix"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#appendix-C.1"
+evidence = "crates/zero-qpack/src/integer.rs"
+at = "fn prefixed_integers_match_the_rfc_7541_appendix_c_1_examples"
+anchor = "vector"
+release = 1
+note = "RFC 7541 Section 5.1 and Appendix C.1, used unmodified by RFC 9204 Section 4.1.1"
+
+[[entry]]
+key = "qpack-03"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "QPACK implementations MUST be able to decode integers up to and including 62 bits long, at every prefix size from 1 to 8 and wherever an integer other than a string length appears"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.1.1"
+evidence = "crates/zero-qpack/src/lib.rs"
+at = "fn integers_up_to_and_including_62_bits_long_decode_at_every_prefix_size_and_every_use"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.1.1; string literal lengths have their own limit under Section 7.4"
+
+[[entry]]
+key = "qpack-04"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "An integer encoding that exceeds the implementation's limits in value or in octet length is a decoding error: more than 9 continuation octets, a value above 2^62-1, or a string literal length above the configured limit"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#section-5.1"
+evidence = "crates/zero-qpack/src/integer.rs"
+at = "fn integer_encodings_that_exceed_the_limits_in_value_or_octet_length_are_decoding_errors"
+anchor = "rule"
+release = 1
+note = "RFC 7541 Section 5.1; RFC 9204 Sections 4.1.1 and 7.4; the string literal limit is zero-limits QPACK_INTEGER_CAP"
+
+[[entry]]
+key = "qpack-05"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "If an implementation encounters a value larger than it is able to decode, this MUST be treated as a stream error of type QPACK_DECOMPRESSION_FAILED if on a request stream or a connection error of the appropriate type if on the encoder or decoder stream"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-7.4"
+evidence = "crates/zero-qpack/src/lib.rs"
+at = "fn a_value_larger_than_the_decoder_accepts_is_a_stream_error_on_a_request_stream"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 7.4; the values are an integer beyond 62 bits or 9 continuation octets and a string literal present in full but longer than QPACK_INTEGER_CAP; a string length that runs past the end of a field section is Truncated, a connection error, whatever its value"
+
+[[entry]]
+key = "qpack-06"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "The Huffman code of Appendix B decodes every Huffman string literal of Appendix C.4 and C.6 and encodes the text back to the same octets, padded with the most significant bits of EOS"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#appendix-B"
+evidence = "crates/zero-qpack/src/huffman.rs"
+at = "fn huffman_literals_of_appendix_c_4_and_c_6_decode_and_encode_to_the_published_octets"
+anchor = "vector"
+release = 1
+note = "RFC 7541 Section 5.2, Appendix B, Appendix C.4.1 to C.4.3 and C.6.1 to C.6.3"
+
+[[entry]]
+key = "qpack-07"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "A padding strictly longer than 7 bits MUST be treated as a decoding error"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2"
+evidence = "crates/zero-qpack/src/huffman.rs"
+at = "fn huffman_padding_strictly_longer_than_7_bits_is_a_decoding_error"
+anchor = "rule"
+release = 1
+note = "RFC 7541 Section 5.2; QPACK uses the code unmodified per RFC 9204 Section 4.1.2"
+
+[[entry]]
+key = "qpack-08"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "A padding not corresponding to the most significant bits of the code for the EOS symbol MUST be treated as a decoding error"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2"
+evidence = "crates/zero-qpack/src/huffman.rs"
+at = "fn huffman_padding_not_corresponding_to_the_eos_prefix_is_a_decoding_error"
+anchor = "rule"
+release = 1
+note = "RFC 7541 Section 5.2; RFC 9204 Section 4.1.2"
+
+[[entry]]
+key = "qpack-09"
+chapter = "http3"
+designation = "RFC 7541"
+body = "IETF"
+subject = "A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error"
+url = "https://www.rfc-editor.org/rfc/rfc7541.html#section-5.2"
+evidence = "crates/zero-qpack/src/huffman.rs"
+at = "fn a_huffman_encoded_string_containing_the_eos_symbol_is_a_decoding_error"
+anchor = "rule"
+release = 1
+note = "RFC 7541 Section 5.2; RFC 9204 Section 4.1.2"
+
+[[entry]]
+key = "qpack-10"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An N-bit prefix string literal carries the Huffman flag as its first bit and the encoded length as an (N-1)-bit prefix integer, for the 8-, 6- and 4-bit literals QPACK uses"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.1.2"
+evidence = "crates/zero-qpack/src/string.rs"
+at = "fn an_n_bit_prefix_string_literal_carries_h_and_an_n_minus_1_bit_length"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.1.2; RFC 7541 Section 5.2"
+
+[[entry]]
+key = "qpack-11"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The Appendix B.1 field section decodes to `:path: /index.html`, and the static encoder without Huffman coding produces its 15 octets"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#appendix-B.1"
+evidence = "crates/zero-qpack/src/lib.rs"
+at = "fn the_appendix_b_1_field_section_decodes_and_encodes_to_the_published_octets"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Appendix B.1 and Section 4.5.4"
+
+[[entry]]
+key = "qpack-12"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "With a maximum table capacity of zero the encoder inserts nothing into the dynamic table: every field section it writes has Required Insert Count 0 and only static or literal representations"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-3.2.3"
+evidence = "crates/zero-qpack/src/encoder.rs"
+at = "fn with_capacity_zero_every_encoded_section_has_required_insert_count_zero_and_no_dynamic_reference"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Sections 3.2.3, 2.1.2 and 4.5.1.2; the encoder has no encoder stream output, so the rule that it MUST NOT send any encoder instructions holds by construction and is not what this test observes"
+
+[[entry]]
+key = "qpack-13"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "SETTINGS_QPACK_MAX_TABLE_CAPACITY (0x01) and SETTINGS_QPACK_BLOCKED_STREAMS (0x07) default to zero, and the decoder advertises zero for both and refuses any other value"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-5"
+evidence = "crates/zero-qpack/src/decoder.rs"
+at = "fn qpack_settings_default_to_zero_and_the_decoder_uses_zero_for_both"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 5; zero-limits QPACK_MAX_TABLE_CAPACITY and QPACK_BLOCKED_STREAMS"
+
+[[entry]]
+key = "qpack-14"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The Required Insert Count is reconstructed as in the Section 4.5.1.1 example, where a 100-byte table with 10 inserts reads an encoded 4 as 9, and as in the Appendix B.2 and B.4 prefixes"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.1.1"
+evidence = "crates/zero-qpack/src/prefix.rs"
+at = "fn the_required_insert_count_is_reconstructed_as_in_the_section_4_5_1_1_example"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Section 4.5.1.1 and Appendix B"
+
+[[entry]]
+key = "qpack-15"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An EncodedInsertCount that no conformant encoder could produce, which at capacity zero is every non-zero value, is a connection error of type QPACK_DECOMPRESSION_FAILED"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.1.1"
+evidence = "crates/zero-qpack/src/prefix.rs"
+at = "fn an_encoded_insert_count_no_conformant_encoder_could_produce_is_decompression_failed"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.5.1.1; at capacity zero FullRange is 0, so the algorithm's first Error branch takes every non-zero value up to 2^62-1"
+
+[[entry]]
+key = "qpack-16"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "A field section with a Sign bit of 1 is invalid when the Required Insert Count is less than or equal to Delta Base; Required Insert Count 9 with Sign 1 and Delta Base 2 gives Base 6"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.1.2"
+evidence = "crates/zero-qpack/src/prefix.rs"
+at = "fn a_sign_bit_of_1_with_required_insert_count_at_most_delta_base_is_invalid"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Section 4.5.1.2; the error code QPACK_DECOMPRESSION_FAILED is not named there and follows the Section 6 definition"
+
+[[entry]]
+key = "qpack-17"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "A field line that references a dynamic table entry at or beyond the Required Insert Count is a connection error of type QPACK_DECOMPRESSION_FAILED, which with Required Insert Count 0 is every dynamic reference"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.3"
+evidence = "crates/zero-qpack/src/decoder.rs"
+at = "fn a_dynamic_reference_at_or_beyond_the_required_insert_count_is_decompression_failed"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 2.2.3; Sections 4.5.2 to 4.5.5"
+
+[[entry]]
+key = "qpack-18"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An invalid static table index is a connection error of type QPACK_DECOMPRESSION_FAILED in a field line representation and QPACK_ENCODER_STREAM_ERROR on the encoder stream"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-3.1"
+evidence = "crates/zero-qpack/src/lib.rs"
+at = "fn an_invalid_static_index_is_decompression_failed_or_an_encoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 3.1; field line representations with T = 1 are the indexed line of Section 4.5.2 and the literal with name reference of Section 4.5.4"
+
+[[entry]]
+key = "qpack-19"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The decoder MUST emit field lines in the order their representations appear in the encoded field section"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2"
+evidence = "crates/zero-qpack/src/decoder.rs"
+at = "fn the_decoder_emits_field_lines_in_the_order_of_their_representations"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 2.2"
+
+[[entry]]
+key = "qpack-20"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An encoder MUST emit field representations in the order they appear in the input field section"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-2.1"
+evidence = "crates/zero-qpack/src/encoder.rs"
+at = "fn the_encoder_emits_representations_in_the_order_of_the_input_field_lines"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 2.1"
+
+[[entry]]
+key = "qpack-21"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "When the 'N' bit is set, the field line is always encoded with a literal representation, even when the static table holds the exact field line"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.4"
+evidence = "crates/zero-qpack/src/encoder.rs"
+at = "fn a_field_line_with_the_n_bit_is_always_encoded_with_a_literal_representation"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.5.4; Sections 4.5.5 and 4.5.6"
+
+[[entry]]
+key = "qpack-22"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An intermediary re-encoding with QPACK a value it received as a literal with the 'N' bit set uses a literal representation with the 'N' bit set"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-7.1.3"
+evidence = "crates/zero-qpack/src/lib.rs"
+at = "fn re_encoding_a_never_indexed_literal_keeps_a_literal_with_the_n_bit_set"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 7.1.3"
+
+[[entry]]
+key = "qpack-23"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The decoder MUST treat a new dynamic table capacity value that exceeds the limit set by SETTINGS_QPACK_MAX_TABLE_CAPACITY as a connection error of type QPACK_ENCODER_STREAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.3.1"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn a_dynamic_table_capacity_above_the_advertised_maximum_is_an_encoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Sections 4.3.1 and 3.2.3"
+
+[[entry]]
+key = "qpack-24"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "It is an error if the encoder attempts to add an entry that is larger than the dynamic table capacity; the decoder MUST treat this as a connection error of type QPACK_ENCODER_STREAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-3.2.2"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn an_insert_larger_than_the_dynamic_table_capacity_is_an_encoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 3.2.2. Derived: at capacity zero every Insert with Name Reference and Insert with Literal Name adds an entry of at least 32 octets (Section 3.2.1), so each is one; the verdict is given at the instruction head, before string octets arrive"
+
+[[entry]]
+key = "qpack-25"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The encoder stream octets of Appendix B.2 to B.5 parse to the annotated instructions and encode back to the same octets"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#appendix-B.2"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn the_appendix_b_encoder_stream_octets_parse_to_the_annotated_instructions"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Appendix B.2 to B.5 and Section 4.3"
+
+[[entry]]
+key = "qpack-26"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The decoder stream octets of Appendix B.2, B.3 and B.4 parse as Section Acknowledgment for stream 4, Insert Count Increment 1 and Stream Cancellation for stream 8"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#appendix-B.2"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn the_appendix_b_decoder_stream_octets_parse_to_the_annotated_instructions"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Appendix B and Section 4.4"
+
+[[entry]]
+key = "qpack-27"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "A Section Acknowledgment for a stream with no unacknowledged field section of non-zero Required Insert Count is a connection error of type QPACK_DECODER_STREAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn a_section_acknowledgment_with_nothing_unacknowledged_is_a_decoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.4.1"
+
+[[entry]]
+key = "qpack-28"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "An Insert Count Increment of zero, or one beyond the inserts the encoder sent, is a connection error of type QPACK_DECODER_STREAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.3"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn an_insert_count_increment_of_zero_or_beyond_the_inserts_sent_is_a_decoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.4.3"
+
+[[entry]]
+key = "qpack-29"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The Appendix B.2 and B.4 field sections, which reference the dynamic table, parse as annotated and are QPACK_DECOMPRESSION_FAILED for a decoder at capacity zero"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#appendix-B.4"
+evidence = "crates/zero-qpack/src/decoder.rs"
+at = "fn the_appendix_b_dynamic_field_sections_are_decompression_failed_at_capacity_zero"
+anchor = "vector"
+release = 1
+note = "RFC 9204 Appendix B.2, B.4 and Section 4.5.1.1"
+
+[[entry]]
+key = "qpack-30"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "QPACK failures carry QPACK_DECOMPRESSION_FAILED (0x0200), QPACK_ENCODER_STREAM_ERROR (0x0201) or QPACK_DECODER_STREAM_ERROR (0x0202) by the stream they happen on"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-6"
+evidence = "crates/zero-qpack/src/error.rs"
+at = "fn qpack_error_codes_carry_the_section_6_values_by_stream"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Sections 6 and 8.3"
+
+[[entry]]
+key = "qpack-31"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "When the maximum table capacity is zero, the encoder MUST NOT insert entries into the dynamic table and MUST NOT send any encoder instructions on the encoder stream"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-3.2.3"
+evidence = "crates/zero-qpack/src/instruction.rs"
+at = "fn with_a_maximum_table_capacity_of_zero_any_encoder_instruction_is_an_encoder_stream_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 3.2.3. The section names no error; a decoder that advertised zero treats every encoder instruction as a connection error of type QPACK_ENCODER_STREAM_ERROR, the Section 6 code for an encoder instruction it cannot process, reporting Set Dynamic Table Capacity 0 and Duplicate under this rule and the others under Sections 4.3.1, 3.1 and 3.2.2"
+
+[[entry]]
+key = "qpack-32"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "Authorization, Cookie and Set-Cookie are emitted as literals with the 'N' bit set, so an intermediary re-encoding them never indexes them"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-7.1.3"
+evidence = "crates/zero-qpack/src/encoder.rs"
+at = "fn authorization_cookie_and_set_cookie_are_emitted_as_literals_with_the_n_bit_set"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Sections 7.1.3 and 4.5.4; the same policy as h2-12 for HPACK"
+
+
+# HTTP/3 framing
+
+[[entry]]
+key = "h3-01"
+chapter = "http3"
+designation = "RFC 9000"
+body = "IETF"
+subject = "Variable-length integers decode as the Appendix A.1 examples, including 0x4025 for 37"
+url = "https://www.rfc-editor.org/rfc/rfc9000.html#section-a.1"
+evidence = "crates/zero-h3/src/varint.rs"
+at = "fn varints_decode_as_the_rfc_9000_appendix_a_1_examples"
+anchor = "vector"
+release = 1
+note = "RFC 9000 Appendix A.1 and Section 16"
+
+[[entry]]
+key = "h3-02"
+chapter = "http3"
+designation = "RFC 9000"
+body = "IETF"
+subject = "Integers are encoded on 1, 2, 4 or 8 bytes for 6-, 14-, 30- or 62-bit values; the encoder writes the shortest form and refuses values above 2^62-1"
+url = "https://www.rfc-editor.org/rfc/rfc9000.html#section-16"
+evidence = "crates/zero-h3/src/varint.rs"
+at = "fn varints_use_1_2_4_or_8_bytes_for_6_14_30_or_62_bit_values"
+anchor = "rule"
+release = 1
+note = "RFC 9000 Section 16, Table 4"
+
+[[entry]]
+key = "h3-03"
+chapter = "http3"
+designation = "RFC 9000"
+body = "IETF"
+subject = "Values need not use the minimum number of bytes, and the shortest-encoding exception covers QUIC frame types only, so an HTTP/3 frame type encoded as 0x4000 is DATA"
+url = "https://www.rfc-editor.org/rfc/rfc9000.html#section-16"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn non_minimal_varints_are_accepted_in_http_3_frame_types_and_lengths"
+anchor = "rule"
+release = 1
+note = "RFC 9000 Sections 16 and 12.4; RFC 9114 has no minimal-encoding rule for its integers"
+
+[[entry]]
+key = "h3-04"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A frame payload with bytes after its fields, or ending before them, is a connection error of type H3_FRAME_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_frame_payload_with_extra_bytes_or_ending_before_its_fields_is_h3_frame_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.1; CANCEL_PUSH, GOAWAY and MAX_PUSH_ID carry exactly one varint"
+
+[[entry]]
+key = "h3-05"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A stream that terminates cleanly inside a frame is a connection error of type H3_FRAME_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_stream_that_ends_cleanly_inside_a_frame_is_h3_frame_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.1"
+
+[[entry]]
+key = "h3-06"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "The length of a frame exactly matches the length of the fields it contains, including the varint lengths nested inside it"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-10.8"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn the_frame_length_exactly_matches_the_length_of_the_fields_it_contains"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 10.8 and 7.1"
+
+[[entry]]
+key = "h3-07"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A DATA frame received on a control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_data_frame_on_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.1; Table 1 of Section 7"
+
+[[entry]]
+key = "h3-08"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A HEADERS frame received on a control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.2"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_headers_frame_on_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.2; Table 1 of Section 7"
+
+[[entry]]
+key = "h3-09"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A CANCEL_PUSH frame received on a stream other than the control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.3"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_cancel_push_frame_off_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.3"
+
+[[entry]]
+key = "h3-10"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A CANCEL_PUSH frame that references a push ID greater than currently allowed on the connection is a connection error of type H3_ID_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.3"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn a_cancel_push_above_the_maximum_push_id_is_h3_id_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.3; the allowed maximum is the last MAX_PUSH_ID received (server) or sent (client), Section 7.2.7"
+
+[[entry]]
+key = "h3-11"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A server receiving a CANCEL_PUSH frame for a push ID not yet mentioned by a PUSH_PROMISE frame, which for this server is every push ID, treats it as a connection error of type H3_ID_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.3"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn a_server_receiving_cancel_push_for_a_push_never_promised_is_h3_id_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.3; the server never sends PUSH_PROMISE"
+
+[[entry]]
+key = "h3-12"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A second SETTINGS frame on the control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_second_settings_frame_on_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.4"
+
+[[entry]]
+key = "h3-13"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A SETTINGS frame received on a stream other than the control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_settings_frame_off_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.4"
+
+[[entry]]
+key = "h3-14"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A control stream whose first frame is any type other than SETTINGS, unknown types included, is a connection error of type H3_MISSING_SETTINGS"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_control_stream_whose_first_frame_is_not_settings_is_h3_missing_settings"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 6.2.1 and 9"
+
+[[entry]]
+key = "h3-15"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "An implementation MUST ignore any parameter with an identifier it does not understand, reserved 0x1f * N + 0x21 identifiers and 0x00 included"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn settings_with_unknown_or_reserved_identifiers_are_ignored"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 7.2.4 and 7.2.4.1; 0x00 is listed as Reserved in Table 3 of Section 11.2.2 but was never defined in HTTP/2 (RFC 9113 Section 6.5.2), so the error rule for HTTP/2 identifiers does not reach it; reported erratum 8999 reads it otherwise"
+
+[[entry]]
+key = "h3-16"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Setting identifiers that were defined in HTTP/2 where there is no corresponding HTTP/3 setting, 0x02 to 0x05, MUST NOT be sent, and their receipt MUST be treated as a connection error of type H3_SETTINGS_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4.1"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn the_reserved_http_2_setting_identifiers_are_h3_settings_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.4.1 and Appendix A.3"
+
+[[entry]]
+key = "h3-17"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "The same setting identifier occurring more than once in a SETTINGS frame is treated as a connection error of type H3_SETTINGS_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn a_duplicate_setting_identifier_is_h3_settings_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.4; the receiver MAY treat it so and this one does"
+
+[[entry]]
+key = "h3-18"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "The server's control stream starts with its SETTINGS frame, which sends SETTINGS_MAX_FIELD_SECTION_SIZE (0x06) as 32,768 and SETTINGS_QPACK_MAX_TABLE_CAPACITY (0x01) and SETTINGS_QPACK_BLOCKED_STREAMS (0x07) as 0"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4.1"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn the_server_settings_frame_sends_max_field_section_size_32768_and_qpack_zeros"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 4.2.2, 6.2.1 and 7.2.4.1; RFC 9204 Section 5; zero-limits H3_MAX_FIELD_SECTION_SIZE, QPACK_MAX_TABLE_CAPACITY and QPACK_BLOCKED_STREAMS"
+
+[[entry]]
+key = "h3-19"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "A SETTINGS frame that omits 0x01 and 0x07 leaves both at their default of zero, and one that omits 0x06 leaves the field section size unlimited"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-5"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn omitted_settings_take_their_defaults_qpack_zero_and_field_section_unlimited"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 5; RFC 9114 Sections 7.2.4.1 and 7.2.4.2"
+
+[[entry]]
+key = "h3-20"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A SETTINGS frame the codec writes includes one reserved setting identifier of the form 0x1f * N + 0x21 when the caller supplies N, as endpoints SHOULD"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.4.1"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn the_settings_frame_includes_one_reserved_setting_identifier"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.4.1"
+
+[[entry]]
+key = "h3-21"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A server receiving a PUSH_PROMISE frame treats it as a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.5"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_server_receiving_a_push_promise_frame_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.5"
+
+[[entry]]
+key = "h3-22"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A client receiving a PUSH_PROMISE frame on the control stream responds with a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.5"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_client_receiving_push_promise_on_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.5"
+
+[[entry]]
+key = "h3-23"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A PUSH_PROMISE frame on a push stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-4.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_push_promise_frame_on_a_push_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 4.1"
+
+[[entry]]
+key = "h3-24"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "An endpoint treats a GOAWAY frame on a stream other than the control stream as a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.6"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_goaway_frame_off_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.6 as corrected by verified erratum 7780"
+
+[[entry]]
+key = "h3-25"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A client receiving a GOAWAY frame whose stream ID is not client-initiated bidirectional treats it as a connection error of type H3_ID_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.6"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn a_client_receiving_goaway_with_a_stream_id_not_client_bidirectional_is_h3_id_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.6; RFC 9000 Section 2.1"
+
+[[entry]]
+key = "h3-26"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Receiving a GOAWAY with a larger identifier than previously received is a connection error of type H3_ID_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-5.2"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn a_goaway_with_a_larger_identifier_than_before_is_h3_id_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 5.2"
+
+[[entry]]
+key = "h3-27"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "The identifier of each GOAWAY sent is never greater than in any previous one, and a server's graceful shutdown starts at 2^62-4"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-5.2"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn goaway_identifiers_sent_never_increase_and_the_graceful_server_value_is_2_62_minus_4"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 5.2"
+
+[[entry]]
+key = "h3-28"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A MAX_PUSH_ID frame received on a stream other than the control stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.7"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_max_push_id_frame_off_the_control_stream_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.7"
+
+[[entry]]
+key = "h3-29"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A client receiving a MAX_PUSH_ID frame treats it as a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.7"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_client_receiving_a_max_push_id_frame_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.7"
+
+[[entry]]
+key = "h3-30"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A MAX_PUSH_ID frame with a smaller value than previously received is a connection error of type H3_ID_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.7"
+evidence = "crates/zero-h3/src/control.rs"
+at = "fn a_max_push_id_smaller_than_previously_received_is_h3_id_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 7.2.7; an equal value is accepted"
+
+[[entry]]
+key = "h3-31"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Receipt of a frame type reserved from HTTP/2 (0x02, 0x06, 0x08, 0x09) is a connection error of type H3_FRAME_UNEXPECTED on every stream, except as the first frame of the control stream, where H3_MISSING_SETTINGS applies"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.8"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn the_http_2_reserved_frame_types_are_h3_frame_unexpected_except_as_the_first_control_frame"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 7.2.8 and 11.2.1, Appendix A.2.5; Section 6.2.1 is checked first when both apply (h3-14)"
+
+[[entry]]
+key = "h3-32"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Unknown frame types, the reserved 0x1f * N + 0x21 types among them, are ignored and their payload skipped by Length on every stream, except as the first frame of the control stream, where H3_MISSING_SETTINGS applies"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-9"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn unknown_and_reserved_frame_types_are_skipped_except_as_the_first_control_frame"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 9, 7.2.8, 4.1 and 6.2.1; Section 9: an unknown frame type does not satisfy the SETTINGS requirement"
+
+[[entry]]
+key = "h3-33"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "On a request or push stream a DATA frame before any HEADERS frame, or a HEADERS or DATA frame after the trailing HEADERS frame, is a connection error of type H3_FRAME_UNEXPECTED; a server takes its second HEADERS frame as the trailer section, and a client, which also reads interim responses, takes as the trailer section a HEADERS frame after DATA, or the HEADERS frame after the one the caller marks as the final response"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-4.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn data_before_headers_or_headers_or_data_after_trailers_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 4.1; an interim HEADERS differs from the final one only in its decoded :status, which zero-h3 does not see, so for the client role the trailing HEADERS rule binds after DATA or once FrameDecoder::final_response is called, and whether a final response arrived is the caller's to check"
+
+[[entry]]
+key = "h3-34"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Once a CONNECT has completed, any known frame type other than DATA on its stream is a connection error of type H3_FRAME_UNEXPECTED"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-4.4"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn after_connect_completes_a_known_frame_other_than_data_is_h3_frame_unexpected"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 4.4"
+
+[[entry]]
+key = "h3-35"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A request stream that terminates cleanly before its HEADERS frame is answered with H3_REQUEST_INCOMPLETE"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-4.1"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_request_stream_that_ends_before_its_headers_is_h3_request_incomplete"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 4.1 (SHOULD)"
+
+[[entry]]
+key = "h3-36"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A second stream claiming to be a control stream is a connection error of type H3_STREAM_CREATION_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2.1"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn a_second_control_stream_is_h3_stream_creation_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 6.2.1"
+
+[[entry]]
+key = "h3-37"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Closure of a control stream is a connection error of type H3_CLOSED_CRITICAL_STREAM"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2.1"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn closing_the_control_stream_is_h3_closed_critical_stream"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 6.2.1"
+
+[[entry]]
+key = "h3-38"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A server receiving a client-initiated push stream treats it as a connection error of type H3_STREAM_CREATION_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn a_server_receiving_a_push_stream_is_h3_stream_creation_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 6.2.2"
+
+[[entry]]
+key = "h3-39"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A unidirectional stream of an unknown or reserved type is discarded, and never treated as a connection error"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn unknown_and_reserved_stream_types_are_discarded_and_never_a_connection_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 6.2, 6.2.3 and 9"
+
+[[entry]]
+key = "h3-40"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Unidirectional stream types 0x00 control, 0x01 push, 0x02 QPACK encoder and 0x03 QPACK decoder are classified by their registered values"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn unidirectional_stream_types_0x00_to_0x03_are_classified_by_their_registered_values"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 6.2.1 and 6.2.2; RFC 9204 Section 4.2"
+
+[[entry]]
+key = "h3-41"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "Receipt of a second QPACK encoder or decoder stream is a connection error of type H3_STREAM_CREATION_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn a_second_qpack_encoder_or_decoder_stream_is_h3_stream_creation_error"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.2"
+
+[[entry]]
+key = "h3-42"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "Closure of a QPACK encoder or decoder stream is a connection error of type H3_CLOSED_CRITICAL_STREAM"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn closing_a_qpack_encoder_or_decoder_stream_is_h3_closed_critical_stream"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.2"
+
+[[entry]]
+key = "h3-43"
+chapter = "http3"
+designation = "RFC 9204"
+body = "IETF"
+subject = "The peer may create an encoder stream and a decoder stream even when the connection's settings, capacity zero here, prevent their use"
+url = "https://www.rfc-editor.org/rfc/rfc9204.html#section-4.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn the_peer_may_open_qpack_encoder_and_decoder_streams_even_at_capacity_zero"
+anchor = "rule"
+release = 1
+note = "RFC 9204 Section 4.2: an endpoint MUST allow it; instructions on the encoder stream are then refused by zero-qpack (qpack-31), the stream itself is not"
+
+[[entry]]
+key = "h3-44"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Receipt of an unknown or reserved error code is treated as equivalent to H3_NO_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-8"
+evidence = "crates/zero-h3/src/error.rs"
+at = "fn an_unknown_or_reserved_error_code_is_treated_as_h3_no_error"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 8 and 8.1"
+
+[[entry]]
+key = "h3-45"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "The error codes carry the registered values: 0x0100 to 0x0110 from Section 8.1, H3_DATAGRAM_ERROR 0x33 and the QPACK codes 0x0200 to 0x0202, none in the reserved space"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-8.1"
+evidence = "crates/zero-h3/src/error.rs"
+at = "fn http_3_error_codes_carry_the_registered_values"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 8.1; RFC 9297 Section 5.2; RFC 9204 Section 6"
+
+[[entry]]
+key = "h3-46"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "Reserved frame types, settings, error codes and stream types are the values 0x1f * N + 0x21, from 0x21 through 0x3ffffffffffffffe"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-7.2.8"
+evidence = "crates/zero-h3/src/reserved.rs"
+at = "fn reserved_values_are_0x1f_times_n_plus_0x21_through_0x3ffffffffffffffe"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 6.2.3, 7.2.4.1, 7.2.8, 8.1 and 11.2"
+
+[[entry]]
+key = "h3-47"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A SETTINGS frame longer than the local limit is a connection error of type H3_EXCESSIVE_LOAD"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-10.5"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_settings_frame_beyond_the_local_limit_is_h3_excessive_load"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 10.5; the 4,096-octet limit is local"
+
+[[entry]]
+key = "h3-48"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A HEADERS frame longer than the hold limit, which is the longest encoding of a field section within the advertised SETTINGS_MAX_FIELD_SECTION_SIZE capped by the stream's flow-control window, is skipped without buffering and reported, so a server can answer 431"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-4.2.2"
+evidence = "crates/zero-h3/src/decoder.rs"
+at = "fn a_headers_frame_beyond_the_field_section_bound_is_skipped_and_reported"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Sections 4.2.2 and 10.5.1; the window cap can refuse a section within the advertised size, which rests on Section 4.2.2, an implementation MAY impose a limit on the maximum size of the message header it will accept, and on Section 10.5.1, the setting is only advisory"
+
+[[entry]]
+key = "h3-49"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "An HTTP/3 datagram whose Quarter Stream ID exceeds 2^60-1 is a connection error of type H3_DATAGRAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-2.1"
+evidence = "crates/zero-h3/src/datagram.rs"
+at = "fn a_quarter_stream_id_above_2_60_minus_1_is_h3_datagram_error"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 2.1"
+
+[[entry]]
+key = "h3-50"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "A QUIC DATAGRAM payload too short to parse the Quarter Stream ID is a connection error of type H3_DATAGRAM_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-2.1"
+evidence = "crates/zero-h3/src/datagram.rs"
+at = "fn a_datagram_too_short_for_its_quarter_stream_id_is_h3_datagram_error"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 2.1"
+
+[[entry]]
+key = "h3-51"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "SETTINGS_H3_DATAGRAM received with a value other than 0 or 1 terminates the connection with H3_SETTINGS_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-2.1.1"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn settings_h3_datagram_other_than_0_or_1_is_h3_settings_error"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 2.1.1"
+
+[[entry]]
+key = "h3-52"
+chapter = "http3"
+designation = "RFC 9220"
+body = "IETF"
+subject = "SETTINGS_ENABLE_CONNECT_PROTOCOL received with a value other than 0 or 1 is a connection error of type H3_SETTINGS_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9220.html#section-3"
+evidence = "crates/zero-h3/src/settings.rs"
+at = "fn settings_enable_connect_protocol_other_than_0_or_1_is_h3_settings_error"
+anchor = "rule"
+release = 1
+note = "RFC 8441 Section 3 says the value MUST be 0 or 1 and RFC 9220 Section 3 makes the HTTP/3 setting's semantics identical; neither names an error code, and H3_SETTINGS_ERROR follows RFC 9114 Section 8.1"
+
+[[entry]]
+key = "h3-53"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "A capsule with an unknown capsule type, reserved 0x29 * N + 0x17 types included, is silently dropped and the next capsule parsed"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-3.2"
+evidence = "crates/zero-h3/src/capsule.rs"
+at = "fn a_capsule_of_unknown_type_is_dropped_and_the_next_capsule_parsed"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Sections 3.2 and 5.4"
+
+[[entry]]
+key = "h3-54"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "A stream carrying capsules that terminates cleanly inside a capsule is a malformed message, a stream error of type H3_MESSAGE_ERROR"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-3.3"
+evidence = "crates/zero-h3/src/capsule.rs"
+at = "fn a_capsule_truncated_at_a_clean_end_of_stream_is_a_malformed_message"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 3.3; RFC 9114 Section 4.1.2"
+
+[[entry]]
+key = "h3-55"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "The DATAGRAM capsule (type 0x00) carries the HTTP Datagram Payload as its whole value, which may be empty"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-3.5"
+evidence = "crates/zero-h3/src/capsule.rs"
+at = "fn the_datagram_capsule_carries_the_whole_value_as_its_payload_even_when_empty"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Sections 3.5 and 3.2"
+
+[[entry]]
+key = "h3-56"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "A DATAGRAM capsule longer than the usable limit is discarded without buffering its contents"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-3.5"
+evidence = "crates/zero-h3/src/capsule.rs"
+at = "fn a_datagram_capsule_too_large_to_use_is_discarded_without_buffering"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 3.5 (SHOULD)"
+
+[[entry]]
+key = "h3-57"
+chapter = "http3"
+designation = "RFC 9297"
+body = "IETF"
+subject = "Capsule types, capsule lengths and Quarter Stream IDs are accepted in non-minimal encodings"
+url = "https://www.rfc-editor.org/rfc/rfc9297.html#section-1.1"
+evidence = "crates/zero-h3/src/capsule.rs"
+at = "fn capsule_and_datagram_integers_need_not_use_the_minimum_number_of_bytes"
+anchor = "rule"
+release = 1
+note = "RFC 9297 Section 1.1"
+
+[[entry]]
+key = "h3-58"
+chapter = "http3"
+designation = "RFC 9114"
+body = "IETF"
+subject = "A receiver tolerates a unidirectional stream closed or reset before its stream type arrives: an empty or partial type varint is incomplete, never an error, and leaves the peer's stream bookkeeping unchanged"
+url = "https://www.rfc-editor.org/rfc/rfc9114.html#section-6.2"
+evidence = "crates/zero-h3/src/stream.rs"
+at = "fn a_unidirectional_stream_closed_before_its_type_is_tolerated"
+anchor = "rule"
+release = 1
+note = "RFC 9114 Section 6.2"
+
+
 # Error responses
 
 [[entry]]

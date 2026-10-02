@@ -20,7 +20,9 @@ The shape is one JSON object with sorted keys:
   `h2Frames`, `ws`, `sse`, `pgProto`, `mysqlProto`, `bson`, `resp`, `sdp`,
   `stun` and `proto` as their crates arrive). Inside a section, byte fields are
   lowercase hex strings, numbers are JSON numbers with `f32` widened to `f64`,
-  and a list of cases is an array of objects with the same fields in each.
+  integers that can exceed 2^53-1 (the 62-bit QUIC and QPACK values) are
+  decimal strings, and a list of cases is an array of objects with the same
+  fields in each.
 
 Every case is built with library calls in the generator, never pasted as a byte
 blob, and the published vectors of a specification are preferred where they
