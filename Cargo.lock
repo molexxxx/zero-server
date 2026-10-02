@@ -2353,13 +2353,16 @@ dependencies = [
 name = "zero-serve"
 version = "0.1.0"
 dependencies = [
+ "rustls",
  "zero-core",
  "zero-http",
+ "zero-http-types",
  "zero-io",
  "zero-policy",
  "zero-realtime",
  "zero-rt",
  "zero-static",
+ "zero-sys",
  "zero-tls",
 ]
 
