@@ -69,7 +69,7 @@ intent = "Metrics exposition, trace context and health reporting."
 [[group]]
 chapter = "runtime"
 title = "Runtime"
-intent = "Shutdown, timeouts and configuration."
+intent = "Shutdown, timeouts, configuration and the host boundary."
 
 [[group]]
 chapter = "webrtc"
@@ -442,6 +442,58 @@ at = "fn an_unrecognized_status_code_is_treated_as_the_x00_code_of_its_class"
 anchor = "rule"
 release = 1
 note = "RFC 9110 Section 15"
+
+[[entry]]
+key = "routing-29"
+chapter = "http"
+designation = "RFC 5789"
+body = "IETF"
+subject = "PATCH is a recognized method with its own route slot, neither safe nor idempotent"
+url = "https://www.rfc-editor.org/rfc/rfc5789.html#section-2"
+evidence = "crates/zero-http-types/src/method.rs"
+at = "fn patch_is_a_recognized_method_that_is_neither_safe_nor_idempotent"
+anchor = "rule"
+release = 1
+note = "RFC 5789 Section 2, The PATCH Method: PATCH is neither safe nor idempotent"
+
+[[entry]]
+key = "routing-30"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A host cannot set a status outside 100 to 599 or an informational status: 100 comes from the driver and 101 only from an accepted upgrade"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-15.2"
+evidence = "crates/zero-host/tests/access.rs"
+at = "fn a_host_cannot_set_an_out_of_range_or_informational_status"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 15, All valid status codes are within the range of 100 to 599, inclusive, and 15.2, Informational 1xx"
+
+[[entry]]
+key = "routing-31"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "Set-Cookie values appended by a host leave as separate field lines"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.3"
+evidence = "crates/zero-host/tests/access.rs"
+at = "fn appended_set_cookie_values_leave_as_separate_field_lines"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 5.3, Field Order: Set-Cookie often appears in a response message across multiple field lines and does not use the list syntax"
+
+[[entry]]
+key = "routing-32"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A host field value with CR, LF or NUL is refused at the boundary in the Node binding"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5"
+evidence = "bindings/node/test/conformance/response-splitting.test.mjs"
+at = "a host field value with CR, LF or NUL is refused in the Node binding"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 5.5, Field Values: Field values containing CR, LF, or NUL characters are invalid and dangerous"
 
 [[entry]]
 key = "html-01"
@@ -5286,6 +5338,84 @@ anchor = "rule"
 release = 1
 note = "HTML Section 9.2.3"
 
+[[entry]]
+key = "realtime-34"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "A host close refuses 1004, 1005, 1006, 1010 and 1015, the unassigned codes below 3000, and codes outside 1000 to 4999"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn a_host_close_refuses_reserved_and_unassigned_close_codes"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Sections 7.4.1, Defined Status Codes, and 7.4.2, Reserved Status Code Ranges"
+
+[[entry]]
+key = "realtime-35"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "A host ping payload and a close code with its reason are limited to 125 octets"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn a_host_ping_and_close_are_limited_to_125_octets_of_payload"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Section 5.5, Control Frames: All control frames MUST have a payload length of 125 bytes or less"
+
+[[entry]]
+key = "realtime-36"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "The accepted subprotocol is one the client offered, and an empty choice sends no Sec-WebSocket-Protocol"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.2"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn the_accepted_subprotocol_is_one_the_client_offered"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Section 4.2.2, Sending the Server's Opening Handshake, /subprotocol/"
+
+[[entry]]
+key = "realtime-37"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "A host that declines an upgrade answers with an HTTP error status and no upgrade happens"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.2"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn a_declined_upgrade_is_answered_with_an_http_error_status"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Section 4.2.2, Sending the Server's Opening Handshake: If the server does not wish to accept this connection, it MUST return an appropriate HTTP error code"
+
+[[entry]]
+key = "realtime-38"
+chapter = "realtime"
+designation = "HTML Standard, server-sent events"
+body = "WHATWG"
+subject = "A host SSE call with CR or LF in event or id, or NUL in id, is refused and writes nothing"
+url = "https://html.spec.whatwg.org/multipage/server-sent-events.html"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn a_host_sse_call_with_cr_lf_or_nul_in_event_or_id_is_refused"
+anchor = "rule"
+release = 1
+note = "HTML Sections 9.2.5, Parsing an event stream, and 9.2.6, Interpreting an event stream"
+
+[[entry]]
+key = "realtime-39"
+chapter = "realtime"
+designation = "HTML Standard, server-sent events"
+body = "WHATWG"
+subject = "Host comment and data text is split at CR, LF and CRLF so every line stays one field"
+url = "https://html.spec.whatwg.org/multipage/server-sent-events.html"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn host_comment_and_data_text_is_split_so_every_line_stays_one_field"
+anchor = "rule"
+release = 1
+note = "HTML Section 9.2.5, Parsing an event stream"
+
 
 # gRPC and Protocol Buffers
 
@@ -6187,7 +6317,7 @@ body = "Node.js"
 subject = "Installing SIGTERM and SIGINT listeners replaces the default exit, so the lifecycle module must exit explicitly after draining"
 url = "https://nodejs.org/api/process.html"
 evidence = "bindings/node/test/lifecycle.test.js"
-at = "installing SIGTERM and SIGINT listeners replaces the default exit"
+at = "installing SIGTERM and SIGINT listeners replaces the default exit, so the lifecycle exits explicitly after draining"
 anchor = "interop"
 release = 1
 note = "Node.js process, Signal events"
@@ -6265,7 +6395,7 @@ body = "Node.js"
 subject = "Work in the process 'exit' handler is synchronous only"
 url = "https://nodejs.org/api/process.html"
 evidence = "bindings/node/test/lifecycle.test.js"
-at = "work in the process 'exit' handler is synchronous only"
+at = "work in the process exit handler is synchronous only"
 anchor = "interop"
 release = 1
 note = "Node.js process, Event 'exit'"
@@ -6438,6 +6568,230 @@ at = "fn decompression_of_request_bodies_sets_maxoutputlength_or_an_equivalent_s
 anchor = "interop"
 release = 3
 note = "Node.js zlib, maxOutputLength"
+
+
+# The host boundary: the C ABI, host dispatch, and the language bindings
+
+[[entry]]
+key = "ffi-01"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-NOPANIC"
+body = "ANSSI"
+subject = "Every C export catches a panic and returns ZeroStatus_Panic, and the next call on that thread works"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-NOPANIC"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn every_export_returns_panic_instead_of_unwinding"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Panics with foreign code, Recommendation FFI-NOPANIC: Handle `panic!` correctly in FFI"
+
+[[entry]]
+key = "ffi-02"
+chapter = "runtime"
+designation = "The Rust Reference"
+body = "Rust Project"
+subject = "No Rust panic reaches a non-unwinding extern \"C\" boundary, where it would abort the host process"
+url = "https://doc.rust-lang.org/reference/items/functions.html#unwinding"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn a_panic_never_crosses_an_extern_c_boundary"
+anchor = "rule"
+release = 1
+note = "Functions, Unwinding: items.fn.extern.unwind.behavior and items.fn.extern.abort"
+
+[[entry]]
+key = "ffi-03"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-CTYPE and FFI-CAPI"
+body = "ANSSI"
+subject = "The generated header declares only C-compatible types and is the only exported API"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-CTYPE"
+evidence = "crates/zero-ffi/tests/header.rs"
+at = "fn the_generated_header_declares_only_c_compatible_types"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Typing, Data layout, Rule FFI-CTYPE: Use only C-compatible types in FFI; Binding a Rust library in another language, Rule FFI-CAPI: Expose dedicated C-compatible API only"
+
+[[entry]]
+key = "ffi-04"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-NOENUM"
+body = "ANSSI"
+subject = "Closed-set inputs arrive as integers and an undeclared value returns InvalidArgument"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-NOENUM"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn closed_set_inputs_out_of_range_return_invalid_argument"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Typing, Enumerations, Rule FFI-NOENUM: Do not use incoming Rust `enum` at FFI boundary"
+
+[[entry]]
+key = "ffi-05"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-CK-PTR-VALID"
+body = "ANSSI"
+subject = "Null and misaligned pointers return InvalidArgument and nothing is written"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-CK-PTR-VALID"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn null_and_misaligned_pointers_are_refused_and_nothing_is_written"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Typing, References and pointers, Rule FFI-CK-PTR-VALID: Check foreign pointers"
+
+[[entry]]
+key = "ffi-06"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-MEM-OWNER"
+body = "ANSSI"
+subject = "An owned string or buffer is released only by its free function, and freeing NULL is a no-op"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-MEM-OWNER"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn every_owned_handle_is_released_only_by_its_free_function"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Memory and resource management, Rule FFI-MEM-OWNER: Ensure clear data ownership in FFI"
+
+[[entry]]
+key = "ffi-07"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-MARKEDFUNPTR and FFI-CKFUNPTR"
+body = "ANSSI"
+subject = "Plugin vtable entries are optional unsafe extern \"C\" pointers, and a null handler or a foreign ABI version is refused"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-CKFUNPTR"
+evidence = "crates/zero-ffi/tests/plugin.rs"
+at = "fn a_vtable_with_a_null_handler_or_a_foreign_abi_version_is_refused"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Typing, Function pointers, Rule FFI-MARKEDFUNPTR: Mark function pointer types in FFI as `extern` and `unsafe`, and Rule FFI-CKFUNPTR: Check foreign function pointers"
+
+[[entry]]
+key = "ffi-08"
+chapter = "runtime"
+designation = "ANSSI Secure Rust Guidelines, FFI-CK-REF-MODEL"
+body = "ANSSI"
+subject = "A request view is handed only to a thread that pins the slot or is inside the delivering batch, and the memory it points to is not written while it is valid"
+url = "https://anssi-fr.github.io/rust-guide/unsafe/ffi.html#FFI-CK-REF-MODEL"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn a_view_is_refused_without_a_pin_outside_its_batch_window"
+anchor = "rule"
+release = 1
+note = "Foreign Function Interface (FFI), Typing, Preserving Rust memory model, Rule FFI-CK-REF-MODEL: Preservation of Rust's memory model when transferring indirections at its boundary"
+
+[[entry]]
+key = "runtime-21"
+chapter = "runtime"
+designation = "RFC 9110"
+body = "IETF"
+subject = "Past the per-core bound of queued host batches, a tier 3 request is answered 503 with Retry-After in delay-seconds"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4"
+evidence = "crates/zero-host/tests/dispatch.rs"
+at = "fn past_the_queued_batch_bound_a_host_request_is_answered_503_with_retry_after"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 15.6.4, The server MAY send a Retry-After header field, and 10.2.3, delay-seconds"
+
+[[entry]]
+key = "runtime-22"
+chapter = "runtime"
+designation = "Node.js v22.23.3 Node-API"
+body = "Node.js"
+subject = "A value is queued only when the call returns napi_ok, so a batch refused as full stays queued on the worker and is posted after the next acknowledgment"
+url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_call_threadsafe_function"
+evidence = "crates/zero-host/tests/dispatch.rs"
+at = "fn a_full_target_keeps_the_batch_queued_and_posts_it_after_an_acknowledgment"
+anchor = "interop"
+release = 1
+note = "Node.js Node-API, napi_call_threadsafe_function: The value is only added to the queue if the API returns napi_ok"
+
+[[entry]]
+key = "runtime-23"
+chapter = "runtime"
+designation = "Node.js v22.23.3 Node-API"
+body = "Node.js"
+subject = "Closing the server releases the dispatch function, so the isolate's event loop can exit"
+url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_release_threadsafe_function"
+evidence = "bindings/node/test/native/lifecycle.test.mjs"
+at = "closing the server releases the dispatch function so the isolate exits"
+anchor = "interop"
+release = 1
+note = "Node.js Node-API, napi_release_threadsafe_function, and Deciding whether to keep the process running: a referenced thread-safe function keeps the event loop alive until it is destroyed"
+
+[[entry]]
+key = "runtime-24"
+chapter = "runtime"
+designation = "Node.js v22.23.3 Node-API"
+body = "Node.js"
+subject = "A terminated worker isolate detaches its target, its leased requests are answered, and tier 0 keeps serving"
+url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_add_env_cleanup_hook"
+evidence = "bindings/node/test/native/isolates.test.mjs"
+at = "a terminated isolate detaches its target and tier 0 keeps serving"
+anchor = "interop"
+release = 1
+note = "Node.js Node-API, napi_add_env_cleanup_hook: the hook runs once the current Node.js environment exits"
+
+[[entry]]
+key = "runtime-25"
+chapter = "runtime"
+designation = "Node.js v22.23.3 Node-API"
+body = "Node.js"
+subject = "A request body handed to JavaScript is a copy, so changing it changes nothing in the core"
+url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_create_buffer_copy"
+evidence = "bindings/node/test/native/body.test.mjs"
+at = "a request body buffer is a copy that survives completion unchanged"
+anchor = "interop"
+release = 1
+note = "Node.js Node-API, napi_create_buffer_copy: initializes the Buffer with data copied from the passed-in buffer"
+
+[[entry]]
+key = "runtime-26"
+chapter = "runtime"
+designation = "Node.js v22.23.3 Node-API"
+body = "Node.js"
+subject = "A staged response body is detached at send, so no JavaScript view can read or change it and the wire carries the bytes written before send"
+url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_detach_arraybuffer"
+evidence = "bindings/node/test/native/staging.test.mjs"
+at = "a staged body is detached at send and the wire bytes do not change"
+anchor = "interop"
+release = 1
+note = "Node.js Node-API, napi_detach_arraybuffer: V8 requires that the ArrayBuffer be external"
+
+[[entry]]
+key = "runtime-27"
+chapter = "runtime"
+designation = "Node.js v22.23.3 worker_threads"
+body = "Node.js"
+subject = "Process signals are wired on the main thread only, because workers do not receive them"
+url = "https://nodejs.org/docs/latest-v22.x/api/worker_threads.html"
+evidence = "bindings/node/test/facade/pool.test.mjs"
+at = "process signals are wired on the main thread only"
+anchor = "interop"
+release = 1
+note = "Node.js Worker threads, class Worker, notable differences inside a Worker environment: Signals are not delivered through process.on('...')"
+
+[[entry]]
+key = "runtime-28"
+chapter = "runtime"
+designation = "Node.js v22.23.3 addons"
+body = "Node.js"
+subject = "The addon loads in every per-core worker_threads isolate and each isolate registers its own target"
+url = "https://nodejs.org/docs/latest-v22.x/api/addons.html"
+evidence = "bindings/node/test/native/isolates.test.mjs"
+at = "the addon loads in each per-core isolate and registers its own target"
+anchor = "interop"
+release = 1
+note = "Node.js C++ addons, Worker support: an addon loaded from several Node.js environments is a Node-API addon or context-aware"
+
+[[entry]]
+key = "runtime-29"
+chapter = "runtime"
+designation = "Python 3.11 ctypes"
+body = "Python Software Foundation"
+subject = "A CDLL call releases the global interpreter lock, so a handler thread blocks in zero_target_poll without holding it"
+url = "https://docs.python.org/3.11/library/ctypes.html"
+evidence = "bindings/python/tests/test_serve.py"
+at = "def test_a_pull_target_serves_while_the_interpreter_runs_other_threads"
+anchor = "interop"
+release = 1
+note = "Python 3.11 ctypes, Loading shared libraries: The Python global interpreter lock is released before calling any function exported by these libraries, and reacquired afterwards"
 
 
 # WebRTC signaling, STUN, TURN, and media servers
