@@ -1,0 +1,10 @@
+# Full prefixes, continuation octets and string literal flags (libFuzzer
+# dictionaries accept only \\, \" and \xHH escapes).
+full5="\x1f"
+full8="\xff"
+cont="\x80"
+last="\x7f"
+c1_1337="\x1f\x9a\x0a"
+h8="\x80"
+h6="\x20"
+h4="\x08"

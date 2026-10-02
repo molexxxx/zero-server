@@ -1,0 +1,13 @@
+# SETTINGS identifiers and values (libFuzzer dictionaries accept only \\, \"
+# and \xHH escapes).
+reserved_00="\x00"
+capacity="\x01"
+reserved_02="\x02"
+reserved_05="\x05"
+field_section="\x06"
+blocked="\x07"
+connect="\x08"
+datagram="\x33"
+grease="\x21"
+metadata="\x80\x00\x4d\x44"
+size_32768="\x80\x00\x80\x00"

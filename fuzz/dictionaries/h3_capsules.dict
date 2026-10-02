@@ -1,0 +1,8 @@
+# Capsule types, lengths and Quarter Stream IDs (libFuzzer dictionaries
+# accept only \\, \" and \xHH escapes).
+datagram="\x00"
+reserved_17="\x17"
+reserved_40="\x40\x40"
+qsid_max="\xcf\xff\xff\xff\xff\xff\xff\xff"
+qsid_over="\xd0\x00\x00\x00\x00\x00\x00\x00"
+len_two="\x40\x02"

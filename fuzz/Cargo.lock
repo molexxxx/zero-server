@@ -115,6 +115,14 @@ name = "zero-date"
 version = "0.1.0"
 
 [[package]]
+name = "zero-h3"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+ "zero-limits",
+]
+
+[[package]]
 name = "zero-http-types"
 version = "0.1.0"
 dependencies = [
@@ -144,6 +152,14 @@ name = "zero-limits"
 version = "0.1.0"
 
 [[package]]
+name = "zero-qpack"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+ "zero-limits",
+]
+
+[[package]]
 name = "zero-qs"
 version = "0.1.0"
 dependencies = [
@@ -165,10 +181,12 @@ version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "zero-core",
+ "zero-h3",
  "zero-http-types",
  "zero-http1",
  "zero-json",
  "zero-limits",
+ "zero-qpack",
  "zero-qs",
  "zero-router",
  "zero-simd",

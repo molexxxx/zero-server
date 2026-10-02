@@ -27,6 +27,8 @@ zero-json = { path = "../crates/zero-json" }
 zero-router = { path = "../crates/zero-router" }
 zero-core = { path = "../crates/zero-core" }
 zero-http-types = { path = "../crates/zero-http-types" }
+zero-qpack = { path = "../crates/zero-qpack" }
+zero-h3 = { path = "../crates/zero-h3" }
 
 [[bin]]
 name = "cmsg_decode"
@@ -87,6 +89,62 @@ bench = false
 [[bin]]
 name = "router_resolve"
 path = "fuzz_targets/router_resolve.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "qpack_field_section"
+path = "fuzz_targets/qpack_field_section.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "qpack_instructions"
+path = "fuzz_targets/qpack_instructions.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "qpack_huffman"
+path = "fuzz_targets/qpack_huffman.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "qpack_primitives"
+path = "fuzz_targets/qpack_primitives.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "h3_frames"
+path = "fuzz_targets/h3_frames.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "h3_settings"
+path = "fuzz_targets/h3_settings.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "h3_streams"
+path = "fuzz_targets/h3_streams.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "h3_capsules"
+path = "fuzz_targets/h3_capsules.rs"
 test = false
 doc = false
 bench = false

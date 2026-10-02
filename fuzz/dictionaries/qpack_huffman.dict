@@ -1,0 +1,9 @@
+# Huffman codes, EOS bits and RFC 7541 Appendix C strings (libFuzzer
+# dictionaries accept only \\, \" and \xHH escapes).
+ones="\xff"
+eos="\xff\xff\xff\xff"
+amp="\xf8"
+www="\xf1\xe3\xc2\xe5\xf2\x3a\x6b\xa0\xab\x90\xf4\xff"
+no_cache="\xa8\xeb\x10\x64\x9c\xbf"
+gzip="\x9b\xd9\xab"
+long_code="\xff\xff\xfe"

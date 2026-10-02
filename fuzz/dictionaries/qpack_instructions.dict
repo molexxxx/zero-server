@@ -1,0 +1,13 @@
+# Encoder and decoder stream instruction heads; the first input octet picks
+# the stream (libFuzzer dictionaries accept only \\, \" and \xHH escapes).
+set_capacity="\x3f\xbd\x01"
+capacity_zero="\x20"
+insert_static="\xc0"
+insert_dynamic="\x81"
+insert_literal="\x4a"
+duplicate="\x02"
+section_ack="\x84"
+increment="\x01"
+cancel="\x48"
+value_len="\x0f"
+name="custom-key"

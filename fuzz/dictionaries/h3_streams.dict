@@ -1,0 +1,9 @@
+# Unidirectional stream types and GOAWAY identifiers (libFuzzer dictionaries
+# accept only \\, \" and \xHH escapes).
+control="\x00"
+push="\x01"
+encoder="\x02"
+decoder="\x03"
+grease="\x21"
+grease_two="\x40\x40"
+graceful="\xff\xff\xff\xff\xff\xff\xff\xfc"
