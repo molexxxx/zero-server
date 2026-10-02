@@ -10,9 +10,9 @@
 //! bytes.
 //!
 //! Sources, read 2026-10-01: getrandom(2) of the Linux man-pages project
-//! (https://man7.org/linux/man-pages/man2/getrandom.2.html), the macOS getentropy(2)
+//! (<https://man7.org/linux/man-pages/man2/getrandom.2.html>), the macOS getentropy(2)
 //! page, and the Microsoft reference for BCryptGenRandom
-//! (https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom).
+//! (<https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom>).
 
 use std::io;
 

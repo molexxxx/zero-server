@@ -2,8 +2,9 @@
 //! workspace makes.
 //!
 //! Safe, bounds-checked wrappers over socket options ([`sockopt`]), `sendmsg` and
-//! `recvmsg` with control-message construction and parsing ([`msg`], [`cmsg`]), and
-//! thread affinity ([`affinity`]), the open that refuses a symbolic link ([`fs`]), and the operating system's random number generator ([`random`]). Every other crate stays at `unsafe_code = "forbid"`
+//! `recvmsg` with control-message construction and parsing (the Unix-only `msg` and
+//! `cmsg` modules), and
+//! thread affinity ([`affinity`]), the open that refuses a symbolic link and never waits for the writer of a FIFO ([`fs`]), the operating system's random number generator ([`random`]), and the stop signals routed to a waiting thread instead of a handler ([`signal`]). Every other crate stays at `unsafe_code = "forbid"`
 //! because the raw calls live here; each `unsafe` block carries the reason it is sound.
 //! Where socket2 already exposes an option as a safe method, the wrapper delegates to it
 //! and adds nothing. The [`alloc`] module holds the counting wrapper over the system
@@ -24,6 +25,7 @@ pub mod msg;
 #[cfg(unix)]
 pub mod packet;
 pub mod random;
+pub mod signal;
 pub mod sockopt;
 
 /// A socket the wrappers can borrow for one call.

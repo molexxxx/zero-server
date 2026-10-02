@@ -1,6 +1,6 @@
 [package]
 name = "zero-sys"
-description = "Audited wrappers over every raw operating-system call the zero-server workspace makes: socket options, control messages, thread affinity, and random bytes."
+description = "Audited wrappers over every raw operating-system call the zero-server workspace makes: socket options, control messages, thread affinity, random bytes, and stop signals."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -27,6 +27,7 @@ windows-sys = { version = "0.61.2", default-features = false, features = [
   "Win32_Foundation",
   "Win32_Networking_WinSock",
   "Win32_Security_Cryptography",
+  "Win32_System_Console",
   "Win32_System_Threading",
 ] }
 
