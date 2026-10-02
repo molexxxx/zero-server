@@ -1,29 +1,41 @@
-"""Draws the architecture diagram the README shows, in four files from one source.
+"""Draws the README's two diagrams, the engine and the bindings, from one source.
 
-The picture follows one request: it arrives from the network at a core, runs
-along the five handler tiers cheapest first, and stops at the first tier that
-answers; only tier 3 crosses the C ABI, as one batch, to the host runtime, and
-the response leaves on the same connection. A second path shows the application
-in the host language declaring the rules, files and routes of tiers 0 to 2 once
-at startup, which the core then answers in Rust. Every color is a palette token from
-docs/brand.md, and every glyph is outlined from Outfit and JetBrains Mono (SIL
-Open Font License 1.1), so the image renders the same on every system.
+The engine diagram shows the cores as the brand mark repeated side by side. The
+kernel hands each core's own listener its connections, each core owns its
+buffers and caches, and nothing joins one core to another. Below them, the loop
+every core runs is the same ring opened into a track: a request enters at read,
+passes the stations of the core, leaves at write on the same connection, and
+the track returns to the next connection with work ready.
+
+The bindings diagram keeps the same row of cores inside the application's
+process. The application declares its routes, rules and static files once at
+startup across the C ABI; two cores answer in Rust with no crossing, and two
+hand a batch to their paired host thread and write the responses themselves.
+
+Every color is a palette token from docs/brand.md, and every glyph is outlined
+from Outfit and JetBrains Mono (SIL Open Font License 1.1) and defined once per
+file, so the images render the same on every system and reference no font.
 
     python scripts/architecture.py [--out assets]
 
-Writes architecture.svg and architecture-dark.svg (960 wide) and
-architecture-narrow.svg and architecture-narrow-dark.svg (400 wide). The fonts
-are downloaded once into target/fonts from pinned google/fonts commits and
-checked by SHA-256. Requires fontTools.
+Writes runtime.svg, runtime-dark.svg, bindings.svg and bindings-dark.svg (960
+wide, one palette each) and runtime-narrow.svg and bindings-narrow.svg (400
+wide). The README selects the narrow file by width alone, because GitHub
+rewrites any source that names a color scheme when a viewer picks a single
+theme, so each narrow file carries both palettes and switches them with
+prefers-color-scheme in its own style element. Every file is transparent. The
+fonts are downloaded once into target/fonts from pinned google/fonts commits
+and checked by SHA-256. Requires fontTools.
 """
 
 import argparse
 import hashlib
+import math
 import pathlib
+import sys
 import urllib.request
 
 from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
@@ -52,7 +64,6 @@ PALETTES = {
         "ring": "#8C6A12",
         "lit": "#688D00",
         "accent": "#688D00",
-        "idle": "#57534A",
     },
     "dark": {
         "text": "#F4EEE1",
@@ -62,21 +73,59 @@ PALETTES = {
         "ring": "#CFAE45",
         "lit": "#D9F542",
         "accent": "#D9F542",
-        "idle": "#A39E93",
     },
 }
 
-TITLE = "zero-server architecture"
-DESC = (
-    "A request arrives from the network at one core; there is one core, with its own "
-    "event loop, per CPU core. On the core the request runs along five handler tiers, "
-    "cheapest first, and stops at the first tier that answers: 0 declarative rules, "
-    "1 the core's cache, 2 a data plan the core runs itself, 3 a host-language handler, "
-    "4 a Rust handler. Tiers 0 to 2 are answered in Rust: an application in Node, "
-    "Python or .NET declares their rules, files and routes once at startup, across the "
-    "C ABI. Only tier 3 leaves Rust at request time: it crosses the C ABI with one call "
-    "per batch to the application's runtime paired with the core. The response leaves "
-    "on the same connection."
+PULSE = 52
+SLOT = 12
+
+WIDE = [400, 540, 680, 880]
+NARROW = [86, 167, 248, 356]
+FRAMED = [84, 162, 240, 340]
+ANGLES = [-45, 45, 180, -120]
+READING = {0, 2}
+CROSSING = {0, 2}
+NAMES = ["read", "parse", "route", "answer", "write"]
+
+RUNTIME_TITLE = "zero-server engine: one event loop per CPU core"
+RUNTIME_DESC = (
+    "Four cores drawn side by side as rings, labeled core 0, core 1, core 2 and core n: one "
+    "worker per logical CPU, each a single-threaded event loop pinned to its core. At the top, "
+    "new connections reach the kernel. On Linux the kernel spreads them over one SO_REUSEPORT "
+    "listener per core, drawn as a small square above each ring; on other systems one listener "
+    "hands accepted sockets to the cores. A connection never leaves the core that accepted it. "
+    "Under each core are its own buffer pool, its own Date header cache and its own small-file "
+    "cache. None of these is shared between cores, so the request path takes no locks. A receive "
+    "buffer is leased only while bytes are being read: cores 0 and 2 are reading and each holds "
+    "one lit buffer, while cores 1 and n hold none, because an idle connection holds no buffer. "
+    "The lit segment sits at a different point on each ring because every loop runs on its own; "
+    "core 0 rests at the mark's one-thirty position. Below, the loop each core runs is drawn as "
+    "the ring opened into a track. The request enters at read, into a leased buffer, with TLS on "
+    "the same loop; parse reads the head in place with SIMD scans and no allocation; route looks "
+    "it up in the core's own route table; answer runs a rule, a static file or a handler, and a "
+    "panicking handler is contained to its request; write sends the responses of a pipelined "
+    "burst in order with one vectored write, and the response leaves on the same connection "
+    "from the same core. The track then returns, and the loop goes on to the next connection "
+    "with work ready instead of waiting on one. Each loop runs on tokio by default, or on compio "
+    "over io_uring on Linux, IOCP on Windows or kqueue on macOS."
+)
+
+BINDINGS_TITLE = "zero-server bindings: your language on the same engine"
+BINDINGS_DESC = (
+    "One process holds an application in Node, Python or .NET and the zero-server core, loaded "
+    "as a native library. At the top are the application's threads, one per core: a Node worker "
+    "isolate, the Python handler thread or a .NET thread. A dashed line marks the C ABI between "
+    "the application and the core. At startup the application declares its routes, its rules "
+    "such as CORS, security headers and limits, and its static files once, across the C ABI, "
+    "and the core keeps them as tables on every core. Below the C ABI is the same row of four "
+    "cores as in the engine diagram, one event loop per CPU core. Requests arrive from the "
+    "network at the cores, not at the application, and each response leaves on the same "
+    "connection from the same core. Cores 1 and n answer their requests entirely in Rust, from "
+    "a rule, a static file or a handler written in Rust, with no crossing, and their threads "
+    "stay idle. Cores 0 and 2 hold requests whose handler is the application's own function: "
+    "each sends its paired thread one batch of whatever is ready, up to 256 requests, as one "
+    "call across the C ABI, the thread returns the results, and the core writes the responses. "
+    "Every core takes both kinds; the route decides."
 )
 
 
@@ -106,6 +155,17 @@ def font_file(key):
     return path
 
 
+def num(value):
+    """Formats a coordinate with at most one decimal."""
+    text = f"{value:.1f}".rstrip("0").rstrip(".")
+    return "0" if text == "-0" else text
+
+
+def esc(value):
+    """Escapes text for an XML element body."""
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 class Face:
     """One static instance of a variable font, with glyph outlines and advances."""
 
@@ -121,45 +181,89 @@ class Face:
         scale = size / self.units
         return sum(self.glyphs[self.cmap[ord(c)]].width for c in text) * scale
 
-    def path(self, text, x, y, size):
-        """Returns SVG path data for `text` with its baseline origin at (x, y)."""
-        scale = size / self.units
-        pen = SVGPathPen(self.glyphs, ntos=lambda v: f"{v:.1f}".rstrip("0").rstrip("."))
-        cursor = x
-        for char in text:
-            glyph = self.glyphs[self.cmap[ord(char)]]
-            glyph.draw(TransformPen(pen, (scale, 0, 0, -scale, cursor, y)))
-            cursor += glyph.width * scale
-        return pen.getCommands()
-
 
 class Canvas:
-    """Collects the elements of one diagram and serializes them."""
+    """Collects the elements of one diagram and serializes them.
 
-    def __init__(self, width, height, palette, faces, top=0):
+    With one palette every color is written as an attribute. With two, every
+    colored element also carries a role class, and the style element maps the
+    classes to the first palette by default and to the second under
+    prefers-color-scheme: dark. Each glyph is defined once in font units and
+    placed with `use`, which keeps the files small.
+    """
+
+    def __init__(self, width, height, palettes, faces, title, desc, floor):
         self.width = width
         self.height = height
-        self.top = top
-        self.palette = palette
+        self.palettes = palettes
+        self.palette = palettes[0]
         self.faces = faces
+        self.title = title
+        self.desc = desc
+        self.floor = floor
         self.parts = []
+        self.glyphs = {}
+        self.roles = set()
+        self.boxes = []
+
+    def paint(self, prop, role):
+        """Returns the attributes that color `prop` (fill or stroke) with a palette role."""
+        self.roles.add((prop, role))
+        attrs = f'{prop}="{self.palette[role]}"'
+        if len(self.palettes) > 1:
+            attrs += f' class="{prop[0]}-{role}"'
+        return attrs
+
+    def glyph(self, face, name):
+        """Returns the id and path data of a glyph, defining it on first use."""
+        key = (face, name)
+        if key not in self.glyphs:
+            font = self.faces[face]
+            pen = SVGPathPen(font.glyphs, ntos=lambda v: num(round(v)))
+            font.glyphs[name].draw(pen)
+            self.glyphs[key] = (f"{face[0]}{len(self.glyphs)}", pen.getCommands())
+        return self.glyphs[key]
 
     def text(self, value, x, y, size, face="sans", role="text", anchor="start"):
-        """Adds outlined text; `anchor` is start, middle or end."""
+        """Adds outlined text with its baseline at `y`; `anchor` is start, middle or end.
+        Returns the x coordinate where the text ends."""
+        if size < self.floor:
+            raise ValueError(f"{value!r} at {size} px is below the {self.floor} px floor")
         font = self.faces[face]
         width = font.width(value, size)
         start = {"start": x, "middle": x - width / 2, "end": x - width}[anchor]
-        fill = self.palette[role]
-        self.parts.append(f'<path fill="{fill}" d="{font.path(value, start, y, size)}"/>')
+        uses = []
+        cursor = 0
+        for char in value:
+            name = font.cmap[ord(char)]
+            ident, data = self.glyph(face, name)
+            if data:
+                offset = f' x="{cursor}"' if cursor else ""
+                uses.append(f'<use xlink:href="#{ident}"{offset}/>')
+            cursor += font.glyphs[name].width
+        scale = f"{size / font.units:g}"
+        self.parts.append(
+            f'<g {self.paint("fill", role)} transform="matrix({scale} 0 0 -{scale} {num(start)} {num(y)})">'
+            f'{"".join(uses)}</g>'
+        )
+        self.boxes.append((value, start, y - size * 0.76, start + width, y + size * 0.22))
         return start + width
+
+    def runs(self, segments, x, y, size, anchor="start"):
+        """Adds one line made of (text, face, role) segments; returns where it ends."""
+        widths = [self.faces[f].width(t, size) for t, f, _ in segments]
+        cursor = {"start": x, "middle": x - sum(widths) / 2, "end": x - sum(widths)}[anchor]
+        for (value, face, role), w in zip(segments, widths):
+            self.text(value, cursor, y, size, face=face, role=role)
+            cursor += w
+        return cursor
 
     def line(self, points, role="line", width=3, dash=None):
         """Adds a polyline through `points`."""
-        data = "M" + " L".join(f"{px:g} {py:g}" for px, py in points)
+        data = "M" + "L".join(f"{num(px)} {num(py)}" for px, py in points)
         extra = f' stroke-dasharray="{dash}"' if dash else ""
-        stroke = self.palette[role]
         self.parts.append(
-            f'<path d="{data}" fill="none" stroke="{stroke}" stroke-width="{width}"'
+            f'<path d="{data}" fill="none" {self.paint("stroke", role)} stroke-width="{num(width)}"'
             f' stroke-linecap="round" stroke-linejoin="round"{extra}/>'
         )
 
@@ -169,187 +273,573 @@ class Canvas:
         bx, by = x - dx * size * 1.4, y - dy * size * 1.4
         ax, ay = bx - dy * size * 0.75, by + dx * size * 0.75
         cx, cy = bx + dy * size * 0.75, by - dx * size * 0.75
-        fill = self.palette[role]
-        self.parts.append(f'<path d="M{x:g} {y:g}L{ax:g} {ay:g}L{cx:g} {cy:g}Z" fill="{fill}"/>')
-
-    def circle(self, x, y, r, fill=None, stroke=None, width=3):
-        """Adds a circle filled or stroked with palette roles."""
-        attrs = f'fill="{self.palette[fill]}"' if fill else 'fill="none"'
-        if stroke:
-            attrs += f' stroke="{self.palette[stroke]}" stroke-width="{width}"'
-        self.parts.append(f'<circle cx="{x:g}" cy="{y:g}" r="{r:g}" {attrs}/>')
-
-    def rect(self, x, y, w, h, role):
-        """Adds a small filled square, used for the request slots of a batch."""
         self.parts.append(
-            f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="2" fill="{self.palette[role]}"/>'
+            f'<path d="M{num(x)} {num(y)}L{num(ax)} {num(ay)}L{num(cx)} {num(cy)}Z" {self.paint("fill", role)}/>'
         )
 
-    def ring(self, x, y, r, width):
-        """Adds the brand mark: a ring with one lit segment, the core's event loop."""
-        self.circle(x, y, r, stroke="ring", width=width)
+    def circle(self, x, y, r, role):
+        """Adds a filled dot."""
+        self.parts.append(f'<circle cx="{num(x)}" cy="{num(y)}" r="{num(r)}" {self.paint("fill", role)}/>')
+
+    def square(self, x, y, size, role, filled=True):
+        """Adds a small square, filled or outlined, with its center at (x, y)."""
+        h = size / 2
+        if filled:
+            self.parts.append(
+                f'<rect x="{num(x - h)}" y="{num(y - h)}" width="{num(size)}" height="{num(size)}" rx="2"'
+                f' {self.paint("fill", role)}/>'
+            )
+        else:
+            self.parts.append(
+                f'<rect x="{num(x - h + 1)}" y="{num(y - h + 1)}" width="{num(size - 2)}"'
+                f' height="{num(size - 2)}" rx="1.5" fill="none" {self.paint("stroke", role)} stroke-width="2"/>'
+            )
+
+    def pill(self, cx, cy, w, h, role, width=2.5):
+        """Adds an outlined pill centered at (cx, cy)."""
         self.parts.append(
-            f'<path d="M{x + r * 0.643:.1f} {y - r * 0.766:.1f}A{r} {r} 0 0 1 {x + r * 0.985:.1f} {y - r * 0.174:.1f}"'
-            f' fill="none" stroke="{self.palette["lit"]}" stroke-width="{width}"/>'
+            f'<rect x="{num(cx - w / 2)}" y="{num(cy - h / 2)}" width="{num(w)}" height="{num(h)}"'
+            f' rx="{num(h / 2)}" fill="none" {self.paint("stroke", role)} stroke-width="{num(width)}"/>'
         )
+
+    def frame(self, x0, y0, x1, y1, radius, gap, role="muted", width=1.5):
+        """Adds a rounded outline with an opening in its top edge from gap[0] to gap[1]."""
+        g0, g1 = gap
+        r = radius
+        data = (
+            f"M{num(g1)} {num(y0)}L{num(x1 - r)} {num(y0)}Q{num(x1)} {num(y0)} {num(x1)} {num(y0 + r)}"
+            f"L{num(x1)} {num(y1 - r)}Q{num(x1)} {num(y1)} {num(x1 - r)} {num(y1)}"
+            f"L{num(x0 + r)} {num(y1)}Q{num(x0)} {num(y1)} {num(x0)} {num(y1 - r)}"
+            f"L{num(x0)} {num(y0 + r)}Q{num(x0)} {num(y0)} {num(x0 + r)} {num(y0)}L{num(g0)} {num(y0)}"
+        )
+        self.parts.append(
+            f'<path d="{data}" fill="none" {self.paint("stroke", role)} stroke-width="{num(width)}"'
+            f' stroke-linecap="round" stroke-linejoin="round"/>'
+        )
+
+    def table(self, x0, y0, x1, y1, rows, role="muted", width=1.5):
+        """Adds an outlined table of `rows` equal rows."""
+        step = (y1 - y0) / rows
+        data = f"M{num(x0 + 4)} {num(y0)}H{num(x1 - 4)}Q{num(x1)} {num(y0)} {num(x1)} {num(y0 + 4)}"
+        data += f"V{num(y1 - 4)}Q{num(x1)} {num(y1)} {num(x1 - 4)} {num(y1)}H{num(x0 + 4)}"
+        data += f"Q{num(x0)} {num(y1)} {num(x0)} {num(y1 - 4)}V{num(y0 + 4)}Q{num(x0)} {num(y0)} {num(x0 + 4)} {num(y0)}Z"
+        for k in range(1, rows):
+            data += f"M{num(x0)} {num(y0 + k * step)}H{num(x1)}"
+        self.parts.append(
+            f'<path d="{data}" fill="none" {self.paint("stroke", role)} stroke-width="{num(width)}"/>'
+        )
+
+    @staticmethod
+    def polar(cx, cy, r, deg):
+        """Returns the point at `deg` degrees (screen coordinates) on a circle."""
+        rad = math.radians(deg)
+        return cx + r * math.cos(rad), cy + r * math.sin(rad)
+
+    def arc(self, cx, cy, r, a0, a1):
+        """Returns path data for a clockwise arc from `a0` to `a1` degrees."""
+        x0, y0 = self.polar(cx, cy, r, a0)
+        x1, y1 = self.polar(cx, cy, r, a1)
+        large = 1 if (a1 - a0) % 360 > 180 else 0
+        return f"M{x0:.2f} {y0:.2f}A{num(r)} {num(r)} 0 {large} 1 {x1:.2f} {y1:.2f}"
+
+    def mark(self, cx, cy, r, width, at=-45):
+        """Adds the event loop mark: a ring with a lit segment centered at `at` degrees and
+        a slot on each side of it, as scripts/brand.mjs draws it."""
+        p0, p1 = at - PULSE / 2, at + PULSE / 2
+        ring = self.arc(cx, cy, r, p1 + SLOT, p0 - SLOT + 360)
+        pulse = self.arc(cx, cy, r, p0, p1)
+        self.parts.append(
+            f'<g fill="none" stroke-width="{num(width)}"><path d="{ring}" {self.paint("stroke", "ring")}/>'
+            f'<path d="{pulse}" {self.paint("stroke", "lit")}/></g>'
+        )
+
+    def check(self, name):
+        """Reports text that overlaps other text or leaves the canvas."""
+        for i, (value, x0, y0, x1, y1) in enumerate(self.boxes):
+            if x0 < 0 or y0 < 0 or x1 > self.width or y1 > self.height:
+                print(f"{name}: {value!r} leaves the canvas", file=sys.stderr)
+            for other, a0, b0, a1, b1 in self.boxes[i + 1:]:
+                if x0 < a1 and a0 < x1 and y0 < b1 and b0 < y1:
+                    print(f"{name}: {value!r} overlaps {other!r}", file=sys.stderr)
+
+    def style(self):
+        """Returns the style element that switches the palettes, or nothing for one palette."""
+        if len(self.palettes) == 1:
+            return ""
+
+        def rules(palette):
+            return "".join(f".{prop[0]}-{role}{{{prop}:{palette[role]}}}" for prop, role in sorted(self.roles))
+
+        return f"<style>{rules(self.palettes[0])}@media (prefers-color-scheme: dark){{{rules(self.palettes[1])}}}</style>"
 
     def svg(self):
         """Returns the finished document."""
-        body = "".join(self.parts)
-        visible = self.height - self.top
+        defs = "".join(f'<path id="{ident}" d="{data}"/>' for ident, data in self.glyphs.values() if data)
         return (
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 {self.top} {self.width} {visible}"'
-            f' width="{self.width}" height="{visible}" role="img" aria-labelledby="t d">'
-            f'<title id="t">{TITLE}</title><desc id="d">{DESC}</desc>{body}</svg>\n'
+            f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
+            f' viewBox="0 0 {self.width} {self.height}" width="{self.width}" height="{self.height}"'
+            f' role="img" aria-labelledby="t d"><title id="t">{esc(self.title)}</title>'
+            f'<desc id="d">{esc(self.desc)}</desc>{self.style()}<defs>{defs}</defs>{"".join(self.parts)}</svg>\n'
         )
 
 
-def tier_label(c, number, name, x, y, size, anchor):
-    """Draws a tier as its number in the mono voice followed by its name."""
-    mono = c.faces["mono"]
-    sans = c.faces["sans"]
-    gap = size * 0.4
-    total = mono.width(number, size) + gap + sans.width(name, size)
-    start = {"start": x, "middle": x - total / 2}[anchor]
-    after = c.text(number, start, y, size, face="mono", role="muted")
-    c.text(name, after + gap, y, size)
-
-
-def wide(palette, faces):
-    """The 960-wide variant: the request path read left to right, the application
-    below it."""
-    c = Canvas(960, 372, palette, faces, top=44)
-    track_y = 110
-    ring_x = 140
-    stations = [260, 400, 540, 690, 840]
-    names = ["rules", "cache", "data plan", "host handler", "Rust handler"]
-
-    c.text("response", 16, 74, 18, role="muted")
-    c.line([(98, 88), (28, 88)])
-    c.arrow(18, 88, "left")
-    c.text("request", 16, 156, 18, role="muted")
-    c.line([(16, 132), (86, 132)])
-    c.arrow(96, 132, "right")
-
-    c.ring(ring_x, track_y, 40, 12)
-    c.text("event loop", ring_x, 184, 20, anchor="middle")
-    c.text("one per CPU core", ring_x, 210, 18, role="muted", anchor="middle")
-
-    c.line([(ring_x + 46, track_y), (stations[3], track_y)])
-    c.line([(stations[3], track_y), (stations[4], track_y)], role="idle", width=2, dash="2 8")
-    for x in stations[:4]:
-        c.arrow(x - 16, track_y, "right")
-    for i, x in enumerate(stations):
-        if i == 3:
-            c.circle(x, track_y, 12, fill="accent")
-        elif i == 4:
-            c.circle(x, track_y, 8, stroke="idle", width=2.5)
+def rows(c, x, y, lines, gap):
+    """Draws a stack of label lines, each (text or segments, size, role); returns the next y."""
+    for value, size, role in lines:
+        if isinstance(value, str):
+            c.text(value, x, y, size, role=role)
         else:
-            c.circle(x, track_y, 9, fill="station")
-        tier_label(c, str(i), names[i], x, 80, 20, "middle")
+            c.runs(value, x, y, size)
+        y += gap
+    return y
 
-    c.text("stops at the first tier that answers", 244, 156, 18, role="muted")
 
-    bracket = [(stations[0], 182), (stations[0], 190), (stations[2], 190), (stations[2], 182)]
-    c.line(bracket, role="station", width=2)
-    startup_x = 500
-    c.text("answered in Rust", (stations[0] + startup_x) / 2, 216, 18, anchor="middle")
+def ellipsis(c, centers, cy, step):
+    """Draws the three dots between the last two cores."""
+    gx = (centers[-2] + centers[-1]) / 2
+    for k in (-1, 0, 1):
+        c.circle(gx + k * step, cy, 2.5, "muted")
 
-    abi_y = 268
-    c.line([(150, abi_y), (948, abi_y)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI", 948, abi_y - 12, 18, role="muted", anchor="end")
 
-    c.line([(startup_x, 334), (startup_x, 204)], role="station", width=2.5, dash="6 6")
-    c.arrow(startup_x, 194, "up", role="station")
-    c.text("declared once at startup", startup_x - 16, 304, 18, role="muted", anchor="end")
+def track(c, x0, y0, x1, y1, width, gap):
+    """Adds the loop opened into a horizontal track, clockwise, with the lit segment on its
+    upper right bend at the one-thirty position and an opening in the bottom straight from
+    gap[0] to gap[1] for the label of the return."""
+    r = (y1 - y0) / 2
+    lx, rx, cy = x0 + r, x1 - r, y0 + r
+    p0, p1 = -45 - PULSE / 2, -45 + PULSE / 2
+    sx, sy = c.polar(rx, cy, r, p1 + SLOT)
+    ex, ey = c.polar(rx, cy, r, p0 - SLOT)
+    g0, g1 = gap
+    first = f"M{sx:.2f} {sy:.2f}A{num(r)} {num(r)} 0 0 1 {num(rx)} {num(y1)}L{num(g1)} {num(y1)}"
+    second = (
+        f"M{num(g0)} {num(y1)}L{num(lx)} {num(y1)}A{num(r)} {num(r)} 0 0 1 {num(lx)} {num(y0)}"
+        f"L{num(rx)} {num(y0)}A{num(r)} {num(r)} 0 0 1 {ex:.2f} {ey:.2f}"
+    )
+    c.parts.append(
+        f'<g fill="none" stroke-width="{num(width)}"><path d="{first}{second}" {c.paint("stroke", "ring")}/>'
+        f'<path d="{c.arc(rx, cy, r, p0, p1)}" {c.paint("stroke", "lit")}/></g>'
+    )
 
-    c.line([(682, track_y + 20), (682, 324)], role="accent")
-    c.arrow(682, 334, "down", role="accent")
-    c.line([(698, 326), (698, track_y + 28)], role="accent")
-    c.arrow(698, track_y + 18, "up", role="accent")
-    for i in range(3):
-        c.rect(644 + i * 12, abi_y - 4, 9, 9, "accent")
-    c.text("called once per batch", 716, 304, 18, role="muted")
 
-    c.text("your app in Node, Python or .NET", (startup_x + 690) / 2, 360, 20, anchor="middle")
+def upright_track(c, x0, y0, x1, y1, width):
+    """Adds the loop as an upright track: down the right side, back up the left, lit on the
+    upper right bend at the one-thirty position."""
+    r = (x1 - x0) / 2
+    cx, ty, by = x0 + r, y0 + r, y1 - r
+    p0, p1 = -45 - PULSE / 2, -45 + PULSE / 2
+    sx, sy = c.polar(cx, ty, r, p1 + SLOT)
+    ex, ey = c.polar(cx, ty, r, p0 - SLOT)
+    data = (
+        f"M{sx:.2f} {sy:.2f}A{num(r)} {num(r)} 0 0 1 {num(x1)} {num(ty)}"
+        f"L{num(x1)} {num(by)}A{num(r)} {num(r)} 0 0 1 {num(x0)} {num(by)}"
+        f"L{num(x0)} {num(ty)}A{num(r)} {num(r)} 0 0 1 {ex:.2f} {ey:.2f}"
+    )
+    c.parts.append(
+        f'<g fill="none" stroke-width="{num(width)}"><path d="{data}" {c.paint("stroke", "ring")}/>'
+        f'<path d="{c.arc(cx, ty, r, p0, p1)}" {c.paint("stroke", "lit")}/></g>'
+    )
+
+
+def memory(c, cx, ys, size, step, reading):
+    """Draws one core's own memory, centered under its ring: a buffer pool of five, with one
+    leased (lit) buffer while the core is reading, one cached Date header, and three cached
+    files."""
+    for k in range(5):
+        x = cx + (k - 2) * step
+        if reading and k == 0:
+            c.square(x, ys[0], size, "accent")
+        else:
+            c.square(x, ys[0], size, "station", filled=False)
+    c.square(cx, ys[1], size, "station")
+    for k in range(3):
+        c.square(cx + (k - 1) * step, ys[2], size, "station")
+
+
+def runtime_wide(palettes, faces):
+    """The engine at 960 wide: the cores as columns with labeled rows, the loop below."""
+    c = Canvas(960, 688, palettes, faces, RUNTIME_TITLE, RUNTIME_DESC, 16)
+    left = 16
+    r = 36
+    kernel_y = 64
+    listen_y = 114
+    ring_y = 178
+
+    rows(c, left, 40, [
+        ("new connections", 18, "text"),
+        ("on Linux the kernel spreads them over", 16, "muted"),
+        ([("one ", "sans", "muted"), ("SO_REUSEPORT", "mono", "muted"), (" listener per core;", "sans", "muted")], 16, "muted"),
+        ("elsewhere one listener hands them out", 16, "muted"),
+    ], 22)
+
+    start = WIDE[0] - 64
+    c.text("kernel", start, kernel_y - 12, 16)
+    c.line([(start, kernel_y), (944, kernel_y)], width=2.5)
+    for cx in WIDE:
+        c.circle(cx, kernel_y, 5, "station")
+        c.line([(cx, kernel_y + 7), (cx, listen_y - 16)], width=2.5)
+        c.arrow(cx, listen_y - 8, "down", size=7)
+        c.square(cx, listen_y, 14, "line", filled=False)
+        c.line([(cx, listen_y + 7), (cx, ring_y - r - 6)], width=2.5)
+    c.text("listener", WIDE[0] - 14, listen_y + 5, 16, role="muted", anchor="end")
+
+    for i, (cx, at) in enumerate(zip(WIDE, ANGLES)):
+        c.mark(cx, ring_y, r, 11, at)
+        name = "core n" if i == len(WIDE) - 1 else f"core {i}"
+        c.text(name, cx, ring_y + r + 30, 17, face="mono", anchor="middle")
+    ellipsis(c, WIDE, ring_y, 12)
+    rows(c, left, 172, [
+        ("one event loop per CPU core", 20, "text"),
+        ("a single thread, pinned to its core", 16, "muted"),
+        ("a connection never leaves its core", 16, "muted"),
+    ], 23)
+
+    c.text("no locks on the request path", left, 288, 16)
+    own_y = [314, 344, 374]
+    for y, name in zip(own_y, ["own buffer pool", "own Date header cache", "own small-file cache"]):
+        c.text(name, left, y + 6, 17)
+    for i, cx in enumerate(WIDE):
+        memory(c, cx, own_y, 10, 15, i in READING)
+    c.square(left + 5, 408, 10, "accent")
+    c.text("leased only while bytes are read; an idle connection holds none", left + 19, 414, 16, role="muted")
+
+    head = 472
+    top, bottom = head + 56, head + 156
+    c.mark(26, head - 6, 9, 3.2)
+    c.text("each core runs this loop", 44, head, 18)
+    stations = [150, 318, 486, 654, 822]
+    notes = [
+        ("into a leased buffer", "TLS on the same loop"),
+        ("the head, in place", "SIMD, no allocation"),
+        ("against the core's", "own route table"),
+        ("a rule, file or handler", "a panic is contained"),
+        ("pipelined, in order", "one vectored write"),
+    ]
+    label = "then on to the next connection with work ready"
+    half = faces["sans"].width(label, 17) / 2 + 14
+    track(c, 16, top, 944, bottom, 5, (480 - half, 480 + half))
+    c.text(label, 480, bottom + 6, 17, anchor="middle")
+    for ax in ((480 + half + 894) / 2, (66 + 480 - half) / 2):
+        c.arrow(ax - 6, bottom, "left", role="ring", size=7)
+
+    c.line([(stations[0], head + 18), (stations[0], top - 22)], width=2.5)
+    c.arrow(stations[0], top - 11, "down", size=7)
+    c.text("request", stations[0] + 12, head + 40, 16, role="muted")
+    c.line([(stations[-1], top - 11), (stations[-1], head + 30)], width=2.5)
+    c.arrow(stations[-1], head + 18, "up", size=7)
+    c.text("response, same connection, same core", stations[-1] - 12, head + 40, 16, role="muted", anchor="end")
+
+    for i, (sx, name, (n1, n2)) in enumerate(zip(stations, NAMES, notes)):
+        c.circle(sx, top, 8, "station")
+        if i < len(stations) - 1:
+            c.arrow((sx + stations[i + 1]) / 2 + 8, top, "right", role="station", size=7)
+        c.text(name, sx, top + 34, 18, anchor="middle")
+        c.text(n1, sx, top + 58, 16, role="muted", anchor="middle")
+        c.text(n2, sx, top + 80, 16, role="muted", anchor="middle")
+
+    c.runs([
+        ("Each loop runs on ", "sans", "muted"),
+        ("tokio", "mono", "muted"),
+        (" by default, or on ", "sans", "muted"),
+        ("compio", "mono", "muted"),
+        (" over ", "sans", "muted"),
+        ("io_uring", "mono", "muted"),
+        (" (Linux), IOCP (Windows) or kqueue (macOS).", "sans", "muted"),
+    ], left, bottom + 46, 16)
+    c.height = bottom + 60
+    c.check("runtime")
     return c.svg()
 
 
-def narrow(palette, faces):
-    """The 400-wide variant: the request path read top to bottom, the application
-    below it."""
-    c = Canvas(400, 690, palette, faces)
-    track_x = 120
-    stations = [210, 290, 370, 450, 530]
-    names = ["rules", "cache", "data plan", "host handler", "Rust handler"]
+def runtime_narrow(palettes, faces):
+    """The engine at 400 wide: the same rows stacked, the loop as an upright track."""
+    c = Canvas(400, 900, palettes, faces, RUNTIME_TITLE, RUNTIME_DESC, 15)
+    left = 16
+    r = 24
 
-    c.text("response", 96, 30, 16, role="muted", anchor="end")
-    c.line([(108, 60), (108, 20)])
-    c.arrow(108, 10, "up")
-    c.text("request", 146, 30, 16, role="muted")
-    c.line([(132, 8), (132, 48)])
-    c.arrow(132, 58, "down")
+    rows(c, left, 24, [
+        ("new connections", 16, "text"),
+        ([("one ", "sans", "muted"), ("SO_REUSEPORT", "mono", "muted"), (" listener per core (Linux);", "sans", "muted")], 15, "muted"),
+        ("elsewhere one listener hands them out", 15, "muted"),
+    ], 21)
 
-    c.ring(track_x, 100, 34, 10)
-    c.text("event loop", 172, 98, 18)
-    c.text("one per CPU core", 172, 122, 16, role="muted")
+    kernel_y = 92
+    listen_y = 122
+    ring_y = 160
+    end = c.text("kernel", left, kernel_y + 5, 15)
+    c.line([(end + 8, kernel_y), (384, kernel_y)], width=2)
+    for cx in NARROW:
+        c.circle(cx, kernel_y, 4, "station")
+        c.line([(cx, kernel_y + 6), (cx, listen_y - 13)], width=2)
+        c.arrow(cx, listen_y - 6, "down", size=6)
+        c.square(cx, listen_y, 11, "line", filled=False)
+        c.line([(cx, listen_y + 5.5), (cx, ring_y - r - 4)], width=2)
+    c.text("listener", NARROW[0] - 12, listen_y + 5, 15, role="muted", anchor="end")
 
-    c.line([(track_x, 139), (track_x, stations[3])])
-    c.line([(track_x, stations[3]), (track_x, stations[4])], role="idle", width=2, dash="2 8")
-    for y in stations[:4]:
-        c.arrow(track_x, y - 15, "down")
-    for i, y in enumerate(stations):
-        if i == 3:
-            c.circle(track_x, y, 11, fill="accent")
-        elif i == 4:
-            c.circle(track_x, y, 7, stroke="idle", width=2.5)
+    for i, (cx, at) in enumerate(zip(NARROW, ANGLES)):
+        c.mark(cx, ring_y, r, 8, at)
+        name = "core n" if i == len(NARROW) - 1 else f"core {i}"
+        c.text(name, cx, ring_y + r + 24, 15, face="mono", anchor="middle")
+    ellipsis(c, NARROW, ring_y, 11)
+
+    rows(c, left, 238, [
+        ("one event loop per CPU core", 16, "text"),
+        ("a pinned thread; a connection never leaves it", 15, "muted"),
+    ], 21)
+
+    c.text("no locks on the request path", left, 290, 16)
+    own_y = [310, 331, 352]
+    for y, name in zip(own_y, ["pool", "Date", "files"]):
+        c.text(name, left, y + 5, 15, role="muted")
+    for i, cx in enumerate(NARROW):
+        memory(c, cx, own_y, 9, 12, i in READING)
+    c.square(left + 5, 377, 9, "accent")
+    rows(c, left + 16, 382, [
+        ("a buffer is leased only while bytes are read;", 15, "muted"),
+        ("an idle connection holds none", 15, "muted"),
+    ], 21)
+
+    c.mark(25, 433, 8, 3)
+    c.text("each core runs this loop", 40, 439, 16)
+    top = 456
+    x0, x1 = 16, 72
+    tx = x1 + 26
+    notes = [
+        [("in", "the request, into a leased buffer")],
+        [(None, "the head in place: SIMD, no allocation")],
+        [(None, "against the core's own route table")],
+        [(None, "rule, file or handler; a panic is contained")],
+        [("out", "the response, same connection;"), (None, "a pipelined burst in one vectored write")],
+    ]
+    marks = []
+    sy = top + 38
+    for name, lines in zip(NAMES, notes):
+        marks.append(sy)
+        c.text(name, tx, sy + 5, 16)
+        for k, (flow, line) in enumerate(lines):
+            ly = sy + 26 + k * 21
+            lx = tx
+            if flow == "in":
+                c.line([(tx + 18, ly - 5), (tx + 9, ly - 5)], width=2)
+                c.arrow(tx + 1, ly - 5, "left", size=5.5)
+                lx = tx + 26
+            elif flow == "out":
+                c.line([(tx, ly - 5), (tx + 10, ly - 5)], width=2)
+                c.arrow(tx + 18, ly - 5, "right", size=5.5)
+                lx = tx + 26
+            c.text(line, lx, ly, 15, role="muted")
+        sy += 52 + 21 * (len(lines) - 1)
+    bottom = marks[-1] + 52
+    upright_track(c, x0, top, x1, bottom, 4)
+    for i, my in enumerate(marks):
+        c.circle(x1, my, 7, "station")
+        if i < len(marks) - 1:
+            c.arrow(x1, (my + marks[i + 1]) / 2 + 7, "down", role="station", size=6)
+    c.arrow(x0, (top + bottom) / 2 - 7, "up", role="station", size=6)
+    c.text("then on to the next connection with work ready", left, bottom + 28, 16)
+    y = bottom + 40
+
+    c.runs([
+        ("Each loop runs on ", "sans", "muted"),
+        ("tokio", "mono", "muted"),
+        (" by default, or on", "sans", "muted"),
+    ], left, y + 22, 15)
+    c.runs([
+        ("compio", "mono", "muted"),
+        (" over ", "sans", "muted"),
+        ("io_uring", "mono", "muted"),
+        (" (Linux), IOCP (Windows)", "sans", "muted"),
+    ], left, y + 43, 15)
+    c.text("or kqueue (macOS).", left, y + 64, 15, role="muted")
+    c.height = int(y + 76)
+    c.check("runtime-narrow")
+    return c.svg()
+
+
+def thread_pill(c, cx, cy, w, h, size, busy):
+    """Draws one host thread as a labeled pill, muted while it has nothing to run."""
+    role = "text" if busy else "muted"
+    c.pill(cx, cy, w, h, role)
+    c.text("thread", cx, cy + size * 0.36, size, face="mono", role=role, anchor="middle")
+
+
+def batch(c, cx, top, bottom, abi_y, off, square, pitch, arrow):
+    """Draws a core's batch to its thread: one call up across the C ABI carrying the ready
+    requests, and the results coming back down to the core, which writes the responses."""
+    up, down = cx - off, cx + off
+    c.line([(up, bottom), (up, top + arrow * 1.4)], width=2)
+    c.arrow(up, top, "up", size=arrow)
+    c.line([(down, top), (down, bottom - arrow * 1.4)], width=2)
+    c.arrow(down, bottom, "down", size=arrow)
+    for k in (-1, 0, 1):
+        c.square(up, abi_y + k * pitch, square, "station")
+
+
+def network(c, cx, top, bottom, off, width, size, role):
+    """Draws a request arriving at a core from the network and its response leaving."""
+    c.line([(cx - off, bottom), (cx - off, top + size * 1.3)], role=role, width=width)
+    c.arrow(cx - off, top, "up", role=role, size=size)
+    c.line([(cx + off, top), (cx + off, bottom - size * 1.3)], role=role, width=width)
+    c.arrow(cx + off, bottom, "down", role=role, size=size)
+
+
+def bindings_wide(palettes, faces):
+    """Your language on the engine at 960 wide: the app's threads above the C ABI, the same
+    cores below it, the network meeting only the cores."""
+    c = Canvas(960, 536, palettes, faces, BINDINGS_TITLE, BINDINGS_DESC, 16)
+    r = 36
+    host_y = 108
+    abi_y = 204
+    ring_y = 306
+    box_bottom = 380
+    left = 36
+
+    legend = faces["sans"].width("one process", 16)
+    c.frame(8, 22, 952, box_bottom, 14, (24, 40 + legend + 8))
+    c.text("one process", left, 28, 16, role="muted")
+
+    rows(c, left, 90, [
+        ("your app", 20, "text"),
+        ("in Node, Python or .NET, with", 16, "muted"),
+        ("the core as a native library", 16, "muted"),
+    ], 23)
+    c.text(
+        "one thread per core: a Node worker isolate, the Python handler thread or a .NET thread",
+        944, 64, 16, role="muted", anchor="end",
+    )
+
+    c.line([(24, abi_y), (944, abi_y)], role="muted", width=1.5, dash="5 6")
+    c.text("C ABI", 944, abi_y - 12, 18, anchor="end")
+
+    c.line([(60, 150), (60, 258)], role="station", width=2.5, dash="6 6")
+    c.arrow(60, 268, "down", role="station", size=7)
+    rows(c, 76, 236, [
+        ("declared once, at startup,", 16, "muted"),
+        ("kept as tables on every core", 16, "muted"),
+    ], 21)
+    c.table(44, 270, 292, 354, 3)
+    for k, value in enumerate(["routes", "rules: CORS, headers, limits", "static files"]):
+        c.text(value, 58, 270 + 28 * k + 19, 16)
+
+    for i, (cx, at) in enumerate(zip(WIDE, ANGLES)):
+        crossing = i in CROSSING
+        thread_pill(c, cx, host_y, 88, 34, 16, crossing)
+        c.mark(cx, ring_y, r, 11, at)
+        if crossing:
+            batch(c, cx, host_y + 19, ring_y - r - 8, abi_y, 9, 10, 15, 6)
         else:
-            c.circle(track_x, y, 8, fill="station")
-        label_y = y - 12 if i == 3 else y + 6
-        tier_label(c, str(i), names[i], track_x + 26, label_y, 18, "start")
+            c.text("no crossing", cx, 248, 16, role="muted", anchor="middle")
+        network(c, cx, ring_y + r + 10, 448, 9, 3, 7, "line" if crossing else "accent")
+    ellipsis(c, WIDE, ring_y, 12)
+    rows(c, WIDE[2] + 22, 230, [
+        ("the core writes", 16, "muted"),
+        ("the responses", 16, "muted"),
+    ], 21)
 
-    c.text("stops at", 276, 252, 16, role="muted")
-    c.text("the first tier", 276, 274, 16, role="muted")
-    c.text("that answers", 276, 296, 16, role="muted")
+    rows(c, left, 424, [
+        ("requests", 18, "text"),
+        ("every core takes both kinds; the route decides", 16, "muted"),
+        ("response on the same connection, same core", 16, "muted"),
+    ], 24)
 
-    bracket = [(94, stations[0]), (86, stations[0]), (86, stations[2]), (94, stations[2])]
-    c.line(bracket, role="station", width=2)
-    c.text("answered", 76, 284, 16, anchor="end")
-    c.text("in Rust", 76, 306, 16, anchor="end")
+    key_y = 518
+    c.line([(left + 4, key_y + 4), (left + 4, key_y - 6)], role="accent", width=3)
+    c.arrow(left + 4, key_y - 16, "up", role="accent", size=7)
+    c.text("answered in Rust: rules, static files, Rust handlers", left + 22, key_y, 16)
+    bx = 528
+    c.line([(bx - 18, key_y + 4), (bx - 18, key_y - 6)], role="line", width=3)
+    c.arrow(bx - 18, key_y - 16, "up", role="line", size=7)
+    for k in range(3):
+        c.square(bx + k * 14, key_y - 6, 10, "station")
+    c.text("your own handler: one call per batch of up to 256", bx + 42, key_y, 16)
+    c.check("bindings")
+    return c.svg()
 
-    abi_y = 604
+
+def bindings_narrow(palettes, faces):
+    """Your language on the engine at 400 wide, with a key below the picture."""
+    c = Canvas(400, 700, palettes, faces, BINDINGS_TITLE, BINDINGS_DESC, 15)
+    left = 24
+    r = 24
+    host_y = 156
+    abi_y = 228
+    ring_y = 306
+    box_bottom = 350
+
+    legend = faces["sans"].width("one process", 15)
+    c.frame(8, 16, 392, box_bottom, 12, (22, 36 + legend + 8))
+    c.text("one process", 32, 21, 15, role="muted")
+    rows(c, left, 52, [
+        ("your app in Node, Python or .NET", 16, "text"),
+        ("loads the core as a native library, with", 15, "muted"),
+        ("one thread per core: a Node worker isolate,", 15, "muted"),
+        ("the Python handler thread or a .NET thread", 15, "muted"),
+    ], 21)
+
     c.line([(16, abi_y), (384, abi_y)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI", 384, abi_y - 12, 16, role="muted", anchor="end")
+    c.text("C ABI", (FRAMED[2] + FRAMED[3]) / 2, abi_y - 10, 15, anchor="middle")
 
-    c.line([(86, 646), (86, stations[2] + 14)], role="station", width=2.5, dash="6 6")
-    c.arrow(86, stations[2] + 4, "up", role="station")
-    c.text("declared once", 100, 566, 16, role="muted")
-    c.text("at startup", 100, 586, 16, role="muted")
+    c.line([(28, 128), (28, 278)], role="station", width=2.5, dash="6 6")
+    c.arrow(28, 288, "down", role="station", size=6)
+    c.table(16, 290, 44, 322, 3)
 
-    c.line([(track_x + 16, stations[3]), (300, stations[3]), (300, 636)], role="accent")
-    c.arrow(300, 646, "down", role="accent")
-    c.arrow(track_x + 14, stations[3], "left", role="accent")
-    for i in range(3):
-        c.rect(312 + i * 12, abi_y - 4, 9, 9, "accent")
-    c.text("called once", 312, 516, 16, role="muted")
-    c.text("per batch", 312, 538, 16, role="muted")
+    for i, (cx, at) in enumerate(zip(FRAMED, ANGLES)):
+        crossing = i in CROSSING
+        thread_pill(c, cx, host_y, 68, 28, 15, crossing)
+        c.mark(cx, ring_y, r, 8, at)
+        if crossing:
+            batch(c, cx, host_y + 16, ring_y - r - 6, abi_y, 7, 9, 13, 5.5)
+        network(c, cx, ring_y + r + 8, 420, 7, 2.5, 6, "line" if crossing else "accent")
+    ellipsis(c, FRAMED, ring_y, 11)
+    c.text("no crossing", FRAMED[1], 268, 15, role="muted", anchor="middle")
+    c.text("requests in, responses out on the same connection", 200, 448, 15, role="muted", anchor="middle")
+    c.text("every core takes both kinds; the route decides", 200, 469, 15, role="muted", anchor="middle")
 
-    c.text("your app in Node, Python or .NET", 200, 674, 16, anchor="middle")
+    y = 513
+    key = [
+        ("tables", "routes, rules and static files, declared", "once at startup, kept as tables on every core"),
+        ("accent", "answered in Rust: rules, static files and", "Rust handlers, with no crossing"),
+        ("batch", "your own handler: one call per batch of", "up to 256; the core writes the responses"),
+    ]
+    for kind, l1, l2 in key:
+        gy = y + 4
+        if kind == "tables":
+            c.table(16, gy - 18, 40, gy + 6, 3)
+        elif kind == "batch":
+            c.line([(20, gy + 8), (20, gy - 10)], role="line", width=2.5)
+            c.arrow(20, gy - 18, "up", role="line", size=6)
+            for k in (-1, 0, 1):
+                c.square(36, gy - 6 + k * 13, 9, "station")
+        else:
+            c.line([(28, gy + 8), (28, gy - 10)], role="accent", width=2.5)
+            c.arrow(28, gy - 18, "up", role="accent", size=6)
+        c.text(l1, 52, y, 15)
+        c.text(l2, 52, y + 21, 15, role="muted")
+        y += 62
+    c.height = int(y - 22)
+    c.check("bindings-narrow")
     return c.svg()
 
 
 def main():
-    """Writes the four diagram files into the output directory."""
+    """Writes the six diagram files into the output directory."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=str(ROOT / "assets"))
     out = pathlib.Path(parser.parse_args().out)
     out.mkdir(parents=True, exist_ok=True)
     faces = {"sans": Face("sans", 500), "mono": Face("mono", 600)}
-    for scheme, palette in PALETTES.items():
-        suffix = "" if scheme == "light" else "-dark"
-        (out / f"architecture{suffix}.svg").write_text(wide(palette, faces), encoding="utf-8")
-        (out / f"architecture-narrow{suffix}.svg").write_text(narrow(palette, faces), encoding="utf-8")
-        print(f"wrote architecture{suffix}.svg and architecture-narrow{suffix}.svg")
+    light, dark = PALETTES["light"], PALETTES["dark"]
+    files = {
+        "runtime.svg": runtime_wide([light], faces),
+        "runtime-dark.svg": runtime_wide([dark], faces),
+        "runtime-narrow.svg": runtime_narrow([light, dark], faces),
+        "bindings.svg": bindings_wide([light], faces),
+        "bindings-dark.svg": bindings_wide([dark], faces),
+        "bindings-narrow.svg": bindings_narrow([light, dark], faces),
+    }
+    for name, document in files.items():
+        (out / name).write_text(document, encoding="utf-8")
+        print(f"wrote {name} ({len(document.encode()) // 1024} KB)")
 
 
 if __name__ == "__main__":
