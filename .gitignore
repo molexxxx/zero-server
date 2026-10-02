@@ -57,5 +57,5 @@ bindings/dotnet/docs/api/
 # The catalog of open regressions, kept local until it is empty.
 conformance/regressions.md
 
-# The working plan for remote sessions, kept on the development machine.
-.github/cloud/
+# Inputs libFuzzer writes into the working directory when a target fails.
+/crash-*
