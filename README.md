@@ -43,6 +43,7 @@ Python and C# packages are not published yet.
 ```toml
 [dependencies.zero-server]
 git = "https://github.com/molexxxx/zero-server"
+version = "0.1.0"
 default-features = false
 features = ["http"]
 ```
