@@ -15,13 +15,14 @@ authors.workspace = true
 # targets. Turn it off (`default-features = false`) to build for a `no_std`
 # target, where the crate relies only on `core` and `alloc`.
 default = ["std"]
-std = ["zero-core/std"]
+std = ["zero-core/std", "zero-limits/std"]
 
 [dependencies]
 # This crate is `no_std`, so it takes its dependencies without their default `std`
 # feature. They are declared directly rather than inherited, because
 # `default-features` cannot be overridden through workspace inheritance.
 zero-core = { path = "../zero-core", version = "0.1.0", default-features = false }
+zero-limits = { path = "../zero-limits", version = "0.1.0", default-features = false }
 
 [lints.rust]
 unsafe_code = "forbid"
