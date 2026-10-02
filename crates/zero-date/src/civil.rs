@@ -239,13 +239,35 @@ mod tests {
 
     #[test]
     fn every_day_of_the_range_round_trips_and_advances_by_one() {
-        let mut expected = date(0, 1, 1);
-        for days in MIN_DAYS..=MAX_DAYS {
-            let actual = civil_from_days(days);
-            assert_eq!(actual, Some(expected), "day {days}");
-            assert_eq!(days_from_civil(expected), Some(days), "day {days}");
-            expected = next_day(expected);
+        // Miri interprets every step, so under it the walk covers a year and a half
+        // from each era boundary instead of all 3.65 million days.
+        let walks: &[(CivilDate, usize)] = if cfg!(miri) {
+            &[
+                (date(0, 1, 1), 550),
+                (date(1599, 12, 1), 550),
+                (date(1899, 12, 1), 550),
+                (date(1969, 12, 1), 550),
+                (date(1999, 12, 1), 550),
+                (date(9998, 12, 1), 550),
+            ]
+        } else {
+            &[(date(0, 1, 1), usize::MAX)]
+        };
+        for &(start, count) in walks {
+            let mut expected = start;
+            let mut days = days_from_civil(start);
+            for _ in 0..count {
+                let Some(current) = days.filter(|days| *days <= MAX_DAYS) else {
+                    break;
+                };
+                assert_eq!(civil_from_days(current), Some(expected), "day {current}");
+                assert_eq!(days_from_civil(expected), Some(current), "day {current}");
+                expected = next_day(expected);
+                days = current.checked_add(1);
+            }
+            assert!(days.is_some(), "{start:?}");
         }
+        assert_eq!(days_from_civil(date(0, 1, 1)), Some(MIN_DAYS));
     }
 
     fn next_day(date: CivilDate) -> CivilDate {

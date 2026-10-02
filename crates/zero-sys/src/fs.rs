@@ -50,6 +50,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn a_regular_file_opens_and_reads() {
         let dir = scratch("plain");
         let file = dir.join("a.txt");
@@ -61,6 +62,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn a_symbolic_link_in_the_final_component_is_refused() {
         let dir = scratch("link");
         let target = dir.join("target.txt");

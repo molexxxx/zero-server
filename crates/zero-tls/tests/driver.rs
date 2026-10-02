@@ -659,10 +659,12 @@ fn both_drivers_interoperate_with_curl_and_openssl_s_client() {
             ],
             b"",
         ) {
+            // OpenSSL names the alert in some builds and prints its number,
+            // no_application_protocol(120), in others.
+            let text_lower = text.to_ascii_lowercase();
             assert!(
-                !ok && text
-                    .to_ascii_lowercase()
-                    .contains("no application protocol"),
+                !ok && (text_lower.contains("no application protocol")
+                    || text_lower.contains("alert number 120")),
                 "{driver:?} s_client with ALPN h2: {text}"
             );
         }

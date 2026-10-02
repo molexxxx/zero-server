@@ -12,6 +12,11 @@ env:
 permissions:
   contents: read
 
+# A newer push to the same branch supersedes a run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rust:
     name: rust (fmt, clippy, test)
@@ -337,6 +342,7 @@ jobs:
   miri:
     name: miri (audited and codec crates)
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
 
@@ -352,14 +358,14 @@ jobs:
             target
           key: ${{ runner.os }}-miri-cargo-${{ hashFiles('**/Cargo.toml') }}
 
-      # Strict provenance rejects integer-to-pointer casts, and many seeds vary the
+      # Strict provenance rejects integer-to-pointer casts, and several seeds vary the
       # scheduling and allocation addresses so a data race or an uninitialized read
-      # that one run misses is caught by another. The crypto crate wraps C code Miri
+      # that one run misses is caught by another; four keep the job inside its limit. The crypto crate wraps C code Miri
       # cannot execute, and the tests in zero-sys that make a system call carry
       # `#[cfg_attr(miri, ignore)]`, so the audited set here is the pure-Rust part.
       - name: Miri
         env:
-          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-many-seeds
+          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-many-seeds=0..4
         run: >
           cargo +nightly miri test
           -p zero-simd -p zero-sys -p zero-ffi

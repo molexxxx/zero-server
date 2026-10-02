@@ -1,9 +1,8 @@
 //! The JSON parsing test suite (nst/JSONTestSuite, `test_parsing`): every `y_`
 //! text parses, every `n_` text is refused, and every `i_` text is one or the
-//! other without a panic. The corpus sits in `suite/parsing.json`, read with the
-//! parser under test; the two inputs over two kibibytes are built here.
-
-use std::path::Path;
+//! other without a panic. The corpus sits in `suite/parsing.json`, embedded at
+//! compile time so the test makes no file-system call, and read with the parser
+//! under test; the two inputs over two kibibytes are built here.
 
 use zero_core::Value;
 use zero_json::{parse, ErrorKind};
@@ -21,10 +20,9 @@ fn text<'a>(case: &'a Value, member: &str) -> Option<&'a str> {
 
 #[test]
 fn every_case_of_the_parsing_suite_is_accepted_or_refused_as_its_name_says() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/suite/parsing.json");
-    let corpus = std::fs::read(&path).unwrap_or_default();
-    assert!(!corpus.is_empty(), "the corpus is readable");
-    let document = parse(&corpus).ok();
+    let corpus: &[u8] = include_bytes!("suite/parsing.json");
+    assert!(!corpus.is_empty(), "the corpus is embedded");
+    let document = parse(corpus).ok();
     let cases = document
         .as_ref()
         .and_then(|document| document.get("cases"))
