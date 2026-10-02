@@ -99,6 +99,7 @@ C# packages take the same shape.
 ## How it works
 
 <picture>
+  <source media="(max-width: 600px)" srcset="assets/architecture-narrow-card.svg">
   <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
   <img alt="A request arrives at one core's event loop, one per CPU core, and runs along five handler tiers cheapest first: rules, cache, data plan, host handler, Rust handler. It stops at the first tier that answers. The rules, cache and data plan are answered in Rust: an app in Node, Python or .NET declares them once at startup across the C ABI. Only the host handler tier crosses the C ABI at request time, with one call per batch. The response leaves through the same core." src="assets/architecture.svg" width="960">
 </picture>
