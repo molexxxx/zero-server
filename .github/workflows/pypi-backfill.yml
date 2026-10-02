@@ -53,6 +53,11 @@ jobs:
           if [ -z "$version" ]; then
             version=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
           fi
+          if [ -z "$version" ]; then
+            echo "no release tag exists yet; nothing to backfill"
+            echo "missing=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git checkout --quiet "v$version"
           missing=""
           for pyproject in bindings/python/packages/*/pyproject.toml; do
@@ -64,9 +69,11 @@ jobs:
           missing="${missing# }"
           native=false
           case " $missing " in *" zero-server-native "*) native=true ;; esac
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "missing=$missing" >> "$GITHUB_OUTPUT"
-          echo "native=$native" >> "$GITHUB_OUTPUT"
+          {
+            echo "version=$version"
+            echo "missing=$missing"
+            echo "native=$native"
+          } >> "$GITHUB_OUTPUT"
           if [ -z "$missing" ]; then
             echo "every project is on PyPI at $version; nothing to do"
           else
