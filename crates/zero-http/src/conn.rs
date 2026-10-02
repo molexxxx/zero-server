@@ -8,7 +8,7 @@
 //! write futures borrow nothing the ring owns, so a handler keeps being polled while
 //! the socket is not ready. A receive block is leased only when the socket is readable
 //! and returned as soon as its bytes are consumed, so a waiting connection holds its
-//! record, its ring and its deadline and no buffer (`DESIGN.md` section 5.6).
+//! record, its ring and its deadline and no receive buffer.
 
 use std::cell::{Cell, RefCell};
 use std::future::{poll_fn, Future};

@@ -4,8 +4,7 @@
 //! The registry maps every [`zero_core::Error`] variant to a status code and a
 //! stable code string, so a handler's failure never reaches the wire as its message
 //! (RFC 9457 Section 5: implementation details such as a stack dump are not
-//! exposed). The entries of the Node registry transfer as data in the binding step;
-//! the codes here are the ones the Rust core produces itself.
+//! exposed). The codes here are the ones the Rust core produces itself.
 
 use std::io::Write;
 

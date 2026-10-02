@@ -7,18 +7,19 @@
 //! `!Send` tasks, and a timer list whose next deadline bounds the wait on the driver.
 //! It pins the thread to its CPU where the platform allows and runs the caller's
 //! per-core future on it with a [`Core`] (the pool, the date block, the clock and
-//! the shutdown signal) and an [`Acceptor`]. The listener strategy is the one of
-//! `DESIGN.md` section 5.4, shared with the `io-tokio` backend: a listener per core
-//! on Linux, core 0's listener handing sockets to every core elsewhere.
+//! the shutdown signal) and an [`Acceptor`]. The listener strategy is shared with the
+//! `io-tokio` backend: a listener per core on Linux, core 0's listener handing sockets
+//! to every core elsewhere.
 //!
 //! Every operation hands the kernel an owned buffer and gets it back with the
 //! completion, which is the contract the seam was written for: a read takes the
 //! block's storage out of its [`OwnedBuf`](zero_core::OwnedBuf) by value and puts
 //! it back with the count, so nothing is copied on the way in or out. A connection
 //! waits for readability before it leases a block, so an idle connection holds no
-//! buffer on this backend either (section 5.6). The one copy the seam costs a
-//! completion backend is the vectored write: the slices are staged into one owned
-//! buffer for the send, as section 5.2 states.
+//! buffer on this backend either. The one copy the seam costs a completion backend is
+//! the vectored write: [`Stream::writev`](crate::seam::Stream::writev) takes borrowed
+//! slices, and the kernel needs a buffer it owns for the length of the send, so the
+//! slices are staged into one owned buffer.
 
 mod executor;
 mod listen;

@@ -1,5 +1,5 @@
-//! The five handler tiers of `DESIGN.md` section 7.2, ordered so that everything
-//! expressible as data runs in Rust without a boundary crossing.
+//! The five handler tiers, ordered so that everything expressible as data runs in
+//! Rust without a boundary crossing.
 
 /// Where a route's work runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

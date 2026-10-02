@@ -24,7 +24,7 @@ descriptor of the route that matches, the parameters it captured, or the
 status the request deserves instead (404, 405 with `Allow`, 501 for a method
 token the server does not implement, the automatic answers to HEAD and OPTIONS).
 No closure is stored and nothing runs inside the matcher, so a tier 0 route
-completes inside the caller without a handler frame (`DESIGN.md` section 7.1).
+completes inside the caller without a handler frame.
 
 Patterns are paths whose segments are static, a parameter (`:name`) or, last, a
 catch-all (`*` or `*name`). Paths are normalized before matching with

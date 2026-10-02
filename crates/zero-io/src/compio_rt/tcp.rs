@@ -2,16 +2,16 @@
 //!
 //! A read waits for readability first (a poll operation on Unix, a zero-length
 //! receive on IOCP), leases its block only then, and receives into it at once
-//! without blocking, so a connection that is waiting holds no buffer, the lazy lease
-//! of `DESIGN.md` section 5.6. The readiness operation belongs to the stream, not to
+//! without blocking, so a connection that is waiting holds no buffer. The readiness
+//! operation belongs to the stream, not to
 //! the future that waits on it: a driver that races its read against a write and a
 //! timer each turn drops the wait whenever something else wins, and cancelling an
 //! operation per turn would cost a cancel and two completions each time. The
 //! operation stays in flight until readiness arrives and the next wait takes it.
 //! Nothing is awaited between the receive and its return, so a dropped read never
 //! loses bytes the kernel already handed over. The io_uring driver could take the
-//! block from a provided buffer ring with the completion instead; that path is
-//! recorded in the status file as the follow-up it is.
+//! block from a provided buffer ring with the completion instead; this backend does
+//! not use one.
 //!
 //! A write stages its slices into a buffer the kernel owns for the length of the
 //! send. The send belongs to the stream too: one whose future is dropped stays in

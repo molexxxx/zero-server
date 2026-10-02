@@ -7,7 +7,8 @@
 //! [`Acceptor`]. On Linux every core owns an `SO_REUSEPORT` listener and the kernel
 //! distributes connections; on Windows and macOS core 0 owns the one listener and hands
 //! each accepted socket round-robin to a core over an explicit wake, the only cross-core
-//! traffic there is (`DESIGN.md` sections 5.1 and 5.4).
+//! traffic there is. A connection then stays on the core that received it for its
+//! whole lifetime.
 //!
 //! The readiness model performs each operation when the socket is ready: a read leases
 //! its buffer only after `readable` returns, so an idle connection holds none.

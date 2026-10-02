@@ -1,4 +1,4 @@
-//! The route-miss cost of `DESIGN.md` section 7.1: a table in the shape of an
+//! The route-miss cost: a table in the shape of an
 //! application, `/api/v1/<resource>/:id` under four methods for a hundred
 //! resources, resolved for a target no route matches, timed per resolution.
 //!
@@ -52,7 +52,8 @@ pub fn table(routes: usize) -> Result<Router<u32>, RouteError> {
 ///
 /// # Arguments
 ///
-/// * `routes` - the table size; the design's figure is 400.
+/// * `routes` - the table size; the Node router figure in the module documentation
+///   is for 400.
 /// * `iterations` - resolutions per batch.
 /// * `batches` - batches; the median is taken, so an odd count is best.
 ///

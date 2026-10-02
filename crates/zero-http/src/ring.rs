@@ -1,4 +1,4 @@
-//! The per-connection pipelining ring (`DESIGN.md` section 6.3).
+//! The per-connection pipelining ring.
 //!
 //! Every parsed request takes the next position; responses leave from the head in
 //! request order, which RFC 9112 Section 9.3.2 requires. The ring holds at most

@@ -1,4 +1,4 @@
-//! The counting-allocator criterion of R.3 step 5: on a warm core, a tier 4 request
+//! The counting-allocator check of the request path: on a warm core, a tier 4 request
 //! makes no call to the global allocator on the whole path, from the read through
 //! the parse, the route, the handler, the serializer and the write.
 //!
@@ -9,7 +9,7 @@
 //! On the `io-compio` backend the driver itself allocates one record per
 //! operation it owns (compio-driver's proactor "owns the operations"), so there
 //! the count grows by the same small number on every warm request, which the test
-//! asserts and prints instead of zero; the number is recorded in the status file.
+//! asserts and prints instead of zero.
 
 #![cfg(any(feature = "io-tokio", feature = "io-compio"))]
 

@@ -2,10 +2,10 @@
 //! status callback.
 //!
 //! Every task a worker spawns runs under [`contain`]; a panic counts on the core's
-//! panic counter and reaches the status callback as [`Event::Panic`], and the core
+//! panic counter and reaches the status callback as [`Event::TaskPanic`], and the core
 //! keeps serving. The worker's own loop is contained the same way and fails closed: a
-//! panic outside a task stops that core and reports it, because a core with no worker
-//! is a silent outage (`DESIGN.md` section 10.2).
+//! panic outside a task stops that core and reports it as [`Event::WorkerPanic`],
+//! because a core with no worker is a silent outage.
 
 use std::cell::Cell;
 use std::future::Future;

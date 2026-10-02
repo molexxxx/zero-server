@@ -1,4 +1,4 @@
-//! The per-slot ownership state word and borrow protocol (`DESIGN.md` section 7.3).
+//! The per-slot ownership state word and its borrow protocol.
 //!
 //! One atomic word per slot holds its state, the number of host readers inside the
 //! current lease, the cancel flag, and the generation the slot id must match. The

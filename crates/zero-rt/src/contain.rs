@@ -1,4 +1,4 @@
-//! Panic containment (`DESIGN.md` section 10.2).
+//! Panic containment for the tasks a worker runs.
 //!
 //! tokio's default for a panicking task is to ignore it: the panic goes to the task's
 //! join handle and everything else runs on, so a connection task that panicked with

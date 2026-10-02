@@ -1,4 +1,4 @@
-//! The bytes-per-idle-connection probe of `DESIGN.md` section 5.7: open
+//! The bytes-per-idle-connection probe: open
 //! `connections` keep-alive connections to a server process, send one request on
 //! each so that it has been through the lazy-lease path, leave them idle, and read
 //! the server's resident set before and after from `/proc/<pid>/status`.

@@ -1,6 +1,6 @@
 //! The allocation-free claim of the codec, held by the counting allocator: parsing a
 //! head, decoding a chunked body with its trailers, and serializing a response make no
-//! call to the global allocator (`ROADMAP.md` R.3 step 3).
+//! call to the global allocator once the caller's buffers and tables are in place.
 
 use zero_http_types::{HeaderName, StatusCode};
 use zero_limits::http1::Http1Limits;

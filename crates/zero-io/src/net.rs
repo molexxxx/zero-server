@@ -1,14 +1,13 @@
 //! The socket setup both backends share: the listener strategy per operating
-//! system (`DESIGN.md` section 5.4), the datagram socket options, and the datagram
-//! calls through `zero-sys`.
+//! system, the datagram socket options, and the datagram calls through `zero-sys`.
 //!
 //! Linux: one `SO_REUSEPORT` listener per core, created with socket2, backlog 1,024,
 //! optionally `SO_INCOMING_CPU`, `TCP_DEFER_ACCEPT` and `TCP_FASTOPEN`; the kernel
 //! distributes connections across the group. Windows and macOS: one listener (with
 //! `SO_EXCLUSIVEADDRUSE` on Windows, where `SO_REUSEADDR` is unsafe for servers and
 //! there is no reuse-port group; Apple's `SO_REUSEPORT` does not distribute TCP) whose
-//! accepted sockets core 0 hands round-robin to every core, the explicit wake of
-//! section 5.1.
+//! accepted sockets core 0 hands round-robin to every core over an explicit wake,
+//! the only traffic between cores on the accept path.
 
 use std::io;
 use std::net::SocketAddr;

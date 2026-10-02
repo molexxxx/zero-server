@@ -2,7 +2,7 @@
 //!
 //! Receive buffers are fixed blocks, leased to a connection when it becomes readable
 //! and returned when it goes idle with no partial head and no unread body, so an idle
-//! connection holds its connection record and nothing else (`DESIGN.md` section 5.6).
+//! connection holds its connection record and no receive buffer.
 //! The pool counts the blocks out on lease and refuses a lease that would take the
 //! core past its request-memory budget, which is how the budget pauses accepts rather
 //! than the body limit times the connection count bounding memory. Returned blocks are

@@ -5,8 +5,9 @@
 //! response side takes the status, validated field lines and the body. The driver
 //! owns framing (`Content-Length`, `Connection`, `Transfer-Encoding`) and the `Date`
 //! field, so a handler cannot set those; every other name must be a `token` and
-//! every value a `field-value` (RFC 9110 Section 5.5), checked once here, which is
-//! the response-splitting boundary of `DESIGN.md` section 6.3. [`Call::route`]
+//! every value a `field-value` (RFC 9110 Section 5.5), checked once here, so no
+//! handler can inject a line break into the response framing (response splitting,
+//! RFC 9112 Section 11.1). [`Call::route`]
 //! resolves the request against a `zero-router` table and answers the misses itself:
 //! 404, 405 with `Allow`, 501, the automatic OPTIONS, and 400 for a target that is
 //! not a path.

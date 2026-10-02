@@ -2,15 +2,16 @@
 //!
 //! [`arena`] is the per-worker request arena: chunked, with stable addresses, never
 //! reallocated, addressed by the 53-bit slot ids of `zero-core`. [`slot`] is the
-//! per-slot ownership state word of `DESIGN.md` section 7.3, one atomic per slot that
-//! says who may touch it (`Free`, `Parsing`, `WorkerOwned`, `Leased`, `Completing`,
-//! `Closed`) and counts the host readers inside a lease, so a stale id reads nothing and
-//! a slot with a reader is never recycled. [`tier`] names the five handler tiers of
-//! section 7.2. [`cancel`] is the per-request cancel flag, [`contain`] the panic
-//! containment of section 10.2 (a panicking task answers for itself and the core stays
-//! up), and [`worker`] the per-core workers over the `zero-io` seam with the panic
-//! counter and the status callback. The batch dispatcher, the epoch-based index reuse
-//! and the tier 1 cache shard follow in their own steps.
+//! per-slot ownership state word, one atomic per slot that says who may touch it
+//! (`Free`, `Parsing`, `WorkerOwned`, `Leased`, `Completing`, `Closed`) and counts the
+//! host readers inside a lease, so a stale id reads nothing and a slot with a reader is
+//! never recycled. [`tier`] names the five handler tiers, ordered so that everything
+//! expressible as data runs in Rust without crossing into a host language. [`cancel`]
+//! is the per-request cancel flag, [`contain`](mod@contain) the panic containment (a
+//! panicking task answers for itself and the core stays up), and [`worker`] the
+//! per-core workers over the `zero-io` seam with the panic counter and the status
+//! callback. The crate does not yet provide the batch dispatcher, epoch-based index
+//! reuse or the tier 1 cache shard.
 //!
 //! The crate holds no `unsafe` code: the arena hands out `&mut` through the worker's
 //! exclusive borrow, and the state word is an atomic, which needs none.

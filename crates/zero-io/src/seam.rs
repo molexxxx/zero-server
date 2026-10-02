@@ -85,8 +85,8 @@ pub trait Stream {
     /// The operating system's error.
     fn readable(&self) -> impl Future<Output = io::Result<()>>;
 
-    /// Read into a buffer leased from `pool` only once there is something to read: the
-    /// lazy lease of `DESIGN.md` section 5.6. A readiness backend waits for readiness,
+    /// Read into a buffer leased from `pool` only once there is something to read. A
+    /// readiness backend waits for readiness,
     /// leases, and reads at once, returning the block to the pool when the readiness
     /// was spurious, so a connection that is waiting holds no buffer; the completion
     /// backend does the same over its readiness operation.

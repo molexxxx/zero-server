@@ -3,8 +3,8 @@
 //! and then waits on the driver with the next timer as its deadline.
 //!
 //! A task's waker only pushes the task's index onto the core's queue; from another
-//! thread it also interrupts the driver, which is the one cross-core wake there is
-//! (`DESIGN.md` section 5.1). From the core's own thread, which is where every
+//! thread it also interrupts the driver, which is the one cross-core wake there is.
+//! From the core's own thread, which is where every
 //! completion and every timer fires, the queue is read before the next wait, so no
 //! interrupt is needed.
 

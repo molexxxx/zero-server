@@ -4,14 +4,17 @@
 //! built with `CPU_SET`; an index at or beyond `CPU_SETSIZE` is refused here rather than
 //! written past the set. On Windows `SetThreadAffinityMask` on the current thread takes
 //! a bit mask of the first processor group; an index beyond that group is reported as
-//! unsupported. Apple platforms expose no affinity call the design verified
-//! (`DESIGN.md` section 5.4), so pinning there reports unsupported and the caller runs
-//! unpinned.
+//! unsupported. Apple documents that OS X "does not export interfaces that identify
+//! processors or control thread placement" (its affinity tags are scheduler hints, not
+//! a binding), so pinning on Apple platforms, and on every other platform this crate
+//! binds no call for, reports unsupported and the caller runs unpinned.
 //!
 //! Sources: sched_setaffinity(2) and CPU_SET(3) of the Linux man-pages project and the
 //! pinned libc crate; the Windows binding from the pinned windows-sys crate, with the
 //! return convention (the previous mask, zero on failure) read from Wine's
-//! implementation of the call because the Microsoft reference page was unreachable.
+//! implementation of the call because the Microsoft reference page was unreachable;
+//! Apple's Thread Affinity API release notes,
+//! <https://developer.apple.com/library/archive/releasenotes/Performance/RN-AffinityAPI/index.html>.
 
 use std::io;
 
@@ -160,7 +163,7 @@ pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
 ///
 /// # Returns
 ///
-/// Never: this platform exposes no affinity call the design verified.
+/// Never: this crate binds no affinity call on this platform.
 ///
 /// # Errors
 ///

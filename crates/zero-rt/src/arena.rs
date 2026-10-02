@@ -2,7 +2,7 @@
 //!
 //! Slots live in fixed chunks that are added as the arena grows and never moved, so
 //! an address handed to a host while a slot is leased stays valid however many slots
-//! are allocated after it (`DESIGN.md` section 7.3). Each slot carries its
+//! are allocated after it. Each slot carries its
 //! [`SlotWord`]; a freed index waits on the free list and comes back with the next
 //! generation, which the slot id must match. The worker addresses a slot through its
 //! exclusive borrow of the arena, which is how the crate hands out `&mut` without

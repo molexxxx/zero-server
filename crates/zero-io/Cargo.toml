@@ -23,11 +23,11 @@ zero-sys.workspace = true
 zero-date.workspace = true
 zero-limits.workspace = true
 
-# The only third-party runtime the workspace names, with the feature set DESIGN.md
-# section 5.3 fixes: no macros, no multi-thread scheduler, no file system. crates.io
-# max_stable_version 1.53.1, updated 2026-07-20, read 2026-10-01. socket2 (0.6.5,
-# updated 2026-07-13, read the same day) creates the listening sockets, as section
-# 5.4 says; every option on them is set through zero-sys.
+# The only third-party runtime the workspace names, with the smallest feature set
+# one event loop per core needs: no macros, no multi-thread scheduler, no file
+# system. crates.io max_stable_version 1.53.1, updated 2026-07-20, read 2026-10-01.
+# socket2 (0.6.5, updated 2026-07-13, read the same day) creates the listening
+# sockets; every option on them is set through zero-sys.
 tokio = { version = "1.53.1", default-features = false, features = [
   "rt",
   "net",

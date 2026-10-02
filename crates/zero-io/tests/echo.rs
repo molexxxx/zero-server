@@ -1,4 +1,4 @@
-//! The echo test of R.3 step 4: one worker per core, every core accepts and echoes,
+//! The echo test of the runtime seam: one worker per core, every core accepts and echoes,
 //! and a connection that is idle holds no receive buffer, which the pool's lease count
 //! shows from inside the core.
 

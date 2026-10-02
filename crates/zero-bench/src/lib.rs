@@ -8,8 +8,8 @@
 //! an object instantiated and serialized per request, `application/json`,
 //! `Content-Length`, no gzip, no disk logging, the response composed on the spot.
 //! [`load`] is the pipelined load generator, [`idle`] the bytes-per-idle-connection
-//! probe of `DESIGN.md` section 5.7 and [`miss`] the route-miss timing of section
-//! 7.1; the counting-allocator gate lives in `zero-http`'s `tests/no_alloc.rs`.
+//! probe and [`miss`] the route-miss timing; the counting-allocator gate lives in
+//! `zero-http`'s `tests/no_alloc.rs`.
 
 pub mod args;
 pub mod entries;

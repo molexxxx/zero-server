@@ -6,7 +6,7 @@
 //! status the request deserves instead (404, 405 with `Allow`, 501 for a method
 //! token the server does not implement, the automatic answers to HEAD and OPTIONS).
 //! No closure is stored and nothing runs inside the matcher, so a tier 0 route
-//! completes inside the caller without a handler frame (`DESIGN.md` section 7.1).
+//! completes inside the caller without a handler frame.
 //!
 //! Patterns are paths whose segments are static, a parameter (`:name`) or, last, a
 //! catch-all (`*` or `*name`). Paths are normalized before matching with
@@ -219,7 +219,7 @@ impl<'r> Params<'r> {
 
 /// What a request resolves to.
 // A match carries its parameters by value: built once per request on the stack and
-// read at once, where a box would be the allocation the design forbids.
+// read at once, where a box would add an allocation to every request.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Copy, Debug)]
 pub enum Resolution<'r, T> {
