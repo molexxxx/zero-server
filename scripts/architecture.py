@@ -3,7 +3,9 @@
 The picture follows one request: it arrives from the network at a core, runs
 along the five handler tiers cheapest first, and stops at the first tier that
 answers; only tier 3 crosses the C ABI, as one batch, to the host runtime, and
-the response leaves on the same connection. Every color is a palette token from
+the response leaves on the same connection. A second path shows the application
+in the host language declaring the rules, files and routes of tiers 0 to 2 once
+at startup, which the core then answers in Rust. Every color is a palette token from
 docs/brand.md, and every glyph is outlined from Outfit and JetBrains Mono (SIL
 Open Font License 1.1), so the image renders the same on every system.
 
@@ -70,9 +72,11 @@ DESC = (
     "event loop, per CPU core. On the core the request runs along five handler tiers, "
     "cheapest first, and stops at the first tier that answers: 0 declarative rules, "
     "1 the core's cache, 2 a data plan the core runs itself, 3 a host-language handler, "
-    "4 a Rust handler. Only tier 3 leaves Rust: it crosses the C ABI with one call per "
-    "batch to the Node, Python or .NET runtime paired with the core. The response "
-    "leaves on the same connection."
+    "4 a Rust handler. Tiers 0 to 2 are answered in Rust: an application in Node, "
+    "Python or .NET declares their rules, files and routes once at startup, across the "
+    "C ABI. Only tier 3 leaves Rust at request time: it crosses the C ABI with one call "
+    "per batch to the application's runtime paired with the core. The response leaves "
+    "on the same connection."
 )
 
 
@@ -212,8 +216,9 @@ def tier_label(c, number, name, x, y, size, anchor):
 
 
 def wide(palette, faces):
-    """The 960-wide variant: the request path read left to right."""
-    c = Canvas(960, 312, palette, faces, top=44)
+    """The 960-wide variant: the request path read left to right, the application
+    below it."""
+    c = Canvas(960, 372, palette, faces, top=44)
     track_y = 110
     ring_x = 140
     stations = [260, 400, 540, 690, 840]
@@ -245,21 +250,35 @@ def wide(palette, faces):
 
     c.text("stops at the first tier that answers", 244, 156, 18, role="muted")
 
-    c.line([(612, 236), (948, 236)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI, one call per batch", 948, 222, 18, role="muted", anchor="end")
-    c.line([(682, track_y + 20), (682, 264)], role="accent")
-    c.arrow(682, 274, "down", role="accent")
-    c.line([(698, 266), (698, track_y + 28)], role="accent")
+    bracket = [(stations[0], 182), (stations[0], 190), (stations[2], 190), (stations[2], 182)]
+    c.line(bracket, role="station", width=2)
+    startup_x = 500
+    c.text("answered in Rust", (stations[0] + startup_x) / 2, 216, 18, anchor="middle")
+
+    abi_y = 268
+    c.line([(150, abi_y), (948, abi_y)], role="muted", width=1.5, dash="5 6")
+    c.text("C ABI", 948, abi_y - 12, 18, role="muted", anchor="end")
+
+    c.line([(startup_x, 334), (startup_x, 204)], role="station", width=2.5, dash="6 6")
+    c.arrow(startup_x, 194, "up", role="station")
+    c.text("declared once at startup", startup_x - 16, 304, 18, role="muted", anchor="end")
+
+    c.line([(682, track_y + 20), (682, 324)], role="accent")
+    c.arrow(682, 334, "down", role="accent")
+    c.line([(698, 326), (698, track_y + 28)], role="accent")
     c.arrow(698, track_y + 18, "up", role="accent")
     for i in range(3):
-        c.rect(644 + i * 12, 230, 9, 9, "accent")
-    c.text("Node   Python   .NET", 690, 302, 20, anchor="middle")
+        c.rect(644 + i * 12, abi_y - 4, 9, 9, "accent")
+    c.text("called once per batch", 716, 304, 18, role="muted")
+
+    c.text("your app in Node, Python or .NET", (startup_x + 690) / 2, 360, 20, anchor="middle")
     return c.svg()
 
 
 def narrow(palette, faces):
-    """The 400-wide variant: the request path read top to bottom."""
-    c = Canvas(400, 640, palette, faces)
+    """The 400-wide variant: the request path read top to bottom, the application
+    below it."""
+    c = Canvas(400, 690, palette, faces)
     track_x = 120
     stations = [210, 290, 370, 450, 530]
     names = ["rules", "cache", "data plan", "host handler", "Rust handler"]
@@ -286,20 +305,36 @@ def narrow(palette, faces):
             c.circle(track_x, y, 7, stroke="idle", width=2.5)
         else:
             c.circle(track_x, y, 8, fill="station")
-        tier_label(c, str(i), names[i], track_x + 26, y + 6, 18, "start")
+        label_y = y - 12 if i == 3 else y + 6
+        tier_label(c, str(i), names[i], track_x + 26, label_y, 18, "start")
 
-    c.line([(300, 400), (300, 500)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI", 300, 392, 16, role="muted", anchor="middle")
-    c.line([(track_x + 16, stations[3] + 22), (322, stations[3] + 22)], role="accent")
-    c.arrow(332, stations[3] + 22, "right", role="accent")
+    c.text("stops at", 276, 252, 16, role="muted")
+    c.text("the first tier", 276, 274, 16, role="muted")
+    c.text("that answers", 276, 296, 16, role="muted")
+
+    bracket = [(94, stations[0]), (86, stations[0]), (86, stations[2]), (94, stations[2])]
+    c.line(bracket, role="station", width=2)
+    c.text("answered", 76, 284, 16, anchor="end")
+    c.text("in Rust", 76, 306, 16, anchor="end")
+
+    abi_y = 604
+    c.line([(16, abi_y), (384, abi_y)], role="muted", width=1.5, dash="5 6")
+    c.text("C ABI", 384, abi_y - 12, 16, role="muted", anchor="end")
+
+    c.line([(86, 646), (86, stations[2] + 14)], role="station", width=2.5, dash="6 6")
+    c.arrow(86, stations[2] + 4, "up", role="station")
+    c.text("declared once", 100, 566, 16, role="muted")
+    c.text("at startup", 100, 586, 16, role="muted")
+
+    c.line([(track_x + 16, stations[3]), (300, stations[3]), (300, 636)], role="accent")
+    c.arrow(300, 646, "down", role="accent")
+    c.arrow(track_x + 14, stations[3], "left", role="accent")
     for i in range(3):
-        c.rect(252 + i * 12, stations[3] + 30, 9, 9, "accent")
-    c.text("Node", 344, stations[3] - 18, 16, anchor="start")
-    c.text("Python", 344, stations[3] + 6, 16, anchor="start")
-    c.text(".NET", 344, stations[3] + 30, 16, anchor="start")
+        c.rect(312 + i * 12, abi_y - 4, 9, 9, "accent")
+    c.text("called once", 312, 516, 16, role="muted")
+    c.text("per batch", 312, 538, 16, role="muted")
 
-    c.text("stops at the first tier", 24, 588, 16, role="muted")
-    c.text("that answers", 24, 610, 16, role="muted")
+    c.text("your app in Node, Python or .NET", 200, 674, 16, anchor="middle")
     return c.svg()
 
 

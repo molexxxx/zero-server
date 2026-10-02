@@ -102,7 +102,7 @@ C# packages take the same shape.
   <source media="(prefers-color-scheme: dark) and (max-width: 600px)" srcset="assets/architecture-narrow-dark.svg">
   <source media="(max-width: 600px)" srcset="assets/architecture-narrow.svg">
   <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
-  <img alt="A request arrives at one core's event loop, one per CPU core, and runs along five handler tiers cheapest first: rules, cache, data plan, host handler, Rust handler. It stops at the first tier that answers. Only the host handler tier crosses the C ABI, with one call per batch, to the Node, Python or .NET runtime. The response leaves through the same core." src="assets/architecture.svg" width="960">
+  <img alt="A request arrives at one core's event loop, one per CPU core, and runs along five handler tiers cheapest first: rules, cache, data plan, host handler, Rust handler. It stops at the first tier that answers. The rules, cache and data plan are answered in Rust: an app in Node, Python or .NET declares them once at startup across the C ABI. Only the host handler tier crosses the C ABI at request time, with one call per batch. The response leaves through the same core." src="assets/architecture.svg" width="960">
 </picture>
 
 **One event loop per CPU core.** Each core runs its own non-blocking loop with
@@ -111,9 +111,13 @@ that accepted it, so the request path takes no locks.
 
 **Handler tiers, cheapest first.** A request stops at the first tier that can
 answer it: declarative rules, a per-core cache, a data plan the core runs
-itself, a handler in the host language, or a handler in Rust. Only the
-host-language tier leaves Rust. The rules and Rust handlers work today; the
-cache, data plans and host-language handlers are being built.
+itself, a handler in the host language, or a handler in Rust. An application in
+TypeScript, Python or C# declares its rules, files and routes once at startup,
+and the core answers them in Rust from then on, with the same per-core loops and
+memory a Rust application gets. Only a route whose handler is the application's
+own function reaches its language, called once per batch of requests. The rules
+and Rust handlers work today; the cache, data plans and host-language handlers
+are being built.
 
 **One boundary.** The language packages reach the core through one C ABI,
 `zero-ffi`, whose header is generated on every build. It is designed so that a
