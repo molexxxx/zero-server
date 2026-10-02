@@ -7,11 +7,23 @@ seriously and handled promptly.
 
 ## Supported versions
 
-zero-server is pre-1.0 and all crates share one workspace version. Security fixes
-land on `main` and ship in the next patch release across every registry it
-publishes to (crates.io, PyPI and NuGet; npm from 2.0, while npm carries the
-1.x line of zero-server-node). Only the latest published release is supported;
-if you are on an older version, the fix is to upgrade.
+Every crate and package shares one version, published to crates.io, PyPI, NuGet
+and npm together. The first releases are pre-releases of 2.0.0: 2.0.0-alpha.N,
+then 2.0.0-beta.N (PyPI spells them 2.0.0aN and 2.0.0bN). Pre-releases carry no
+compatibility promise between one another, and a security fix ships in the next
+pre-release rather than as a patch to an earlier one. From 2.0.0 on, security
+fixes land on `main` and ship in the next patch release on every registry.
+
+Only the latest published release, pre-release or final, is supported; if you
+are on an older version, the fix is to upgrade.
+
+On npm, the 1.x versions of `@zero-server/sdk` and `@zero-server/core` are the
+earlier JavaScript framework,
+[zero-server-node](https://github.com/molexxxx/zero-server-node), which
+maintains them; report issues in them there. This core's pre-releases publish
+to npm under the `next` tag. The `latest` tag of `@zero-server/core` moves to
+this core with 2.0.0, while the `latest` tag of `@zero-server/sdk` stays on the
+1.x line until this core's sdk package is made public.
 
 ## Reporting a vulnerability
 
