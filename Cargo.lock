@@ -2219,7 +2219,7 @@ name = "zero-h3"
 version = "0.1.0"
 dependencies = [
  "zero-core",
- "zero-qpack",
+ "zero-limits",
 ]
 
 [[package]]
