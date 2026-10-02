@@ -15,6 +15,10 @@
 #
 #   pypi-upload.sh <dist directory> <version>
 #
+# The version may be given in its SemVer spelling, as the tag carries it, or in its
+# PEP 440 one; it is normalized with packaging, which twine depends on, because the file
+# names and PyPI carry only the normalized form (2.0.0a1 for 2.0.0-alpha.1).
+#
 # PYPI_WAIT_BUDGET is the seconds this pass may spend waiting for the cap, 1800 default.
 #
 # Exits 0 when every distribution is on PyPI or the only ones missing were capped, and 1
@@ -22,15 +26,18 @@
 set -euo pipefail
 
 dist="${1:?dist directory}"
-version="${2:?version}"
+version=$(python -c 'import sys; from packaging.version import Version; print(Version(sys.argv[1]))' "${2:?version}")
 budget="${PYPI_WAIT_BUDGET:-1800}"
 upload="$(dirname "$0")/pypi-upload.py"
 
-# The project a distribution file belongs to, as PyPI names it.
+# The project a distribution file belongs to, as PyPI names it. A wheel or sdist file
+# name escapes every run of -_. in the project name to _ and normalizes the version so it
+# carries no -, so the first - ends the name
+# (packaging.python.org/en/latest/specifications/binary-distribution-format, read 2026-10-01).
 project_of() {
   local file
   file=$(basename "$1")
-  file="${file%%-${version}*}"
+  file="${file%%-*}"
   echo "${file//_/-}"
 }
 
@@ -118,7 +125,7 @@ for file in "$dist"/*; do
 done
 mapfile -t missing < <(printf '%s\n' "${missing[@]}" | sort -u | sed '/^$/d')
 
-total=$(ls "$dist" | sed "s/-${version}.*//" | tr '_' '-' | sort -u | wc -l)
+total=$(for file in "$dist"/*; do project_of "$file"; done | sort -u | wc -l)
 echo "on PyPI at $version: $((total - ${#missing[@]})) of $total projects"
 if [ "${#missing[@]}" -gt 0 ]; then
   printf '  missing: %s\n' "${missing[@]}"

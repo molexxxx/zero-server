@@ -37,12 +37,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A version given by hand may carry its leading v or not, so the tag is rebuilt
+      # from the bare version.
       - name: Assemble the notes
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
         run: |
           set -euo pipefail
+          TAG="v${TAG#v}"
           version="${TAG#v}"
 
           # The section for this version, from its heading to the next one. Matched
@@ -84,8 +87,12 @@ jobs:
             } > notes.md
           fi
 
-          # The pull requests that landed since the previous tag, grouped by label.
-          previous=$(git tag --list 'v*' --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+          # The pull requests that landed since the previous tag, grouped by label. The
+          # previous tag is the one below this one in SemVer order: git's version sort
+          # puts a pre-release above its final release unless versionsort.suffix names
+          # the hyphen (git-config versionsort.suffix).
+          previous=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-version:refname \
+            | awk -v tag="$TAG" 'seen && !done { print; done = 1 } $0 == tag { seen = 1 }')
           {
             echo
             echo "## Pull requests"
@@ -96,12 +103,17 @@ jobs:
               --jq .body | sed '/^#\{1,2\} What.s Changed/d'
           } >> notes.md
 
+      # A pre-release is marked as one, which also keeps it from becoming the
+      # repository's Latest release: GitHub never makes a pre-release Latest.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
         run: |
+          TAG="v${TAG#v}"
           gh release create "$TAG" \
             --verify-tag \
             --title "zero-server ${TAG#v}" \
-            --notes-file notes.md
+            --notes-file notes.md \
+            --prerelease="$PRERELEASE"

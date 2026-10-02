@@ -48,8 +48,10 @@ jobs:
           REQUESTED: ${{ inputs.version }}
         run: |
           version="${REQUESTED#v}"
+          # versionsort.suffix=- sorts a pre-release below its final release, as SemVer
+          # does; without it git puts v2.0.0-rc.1 above v2.0.0.
           if [ -z "$version" ]; then
-            version=$(git tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
+            version=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
           fi
           git checkout --quiet "v$version"
           missing=""

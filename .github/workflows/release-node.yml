@@ -22,17 +22,21 @@ jobs:
 
   # @zero-server/sdk and @zero-server/core 1.x on npm belong to zero-server-node,
   # which stays maintained until this core does everything it does. npm releases
-  # start at 2.0.0, so a 0.x or 1.x release never replaces their latest dist-tag.
+  # start at 2.0.0, so a 0.x or 1.x release never replaces their latest dist-tag,
+  # and a pre-release (2.0.0-alpha.1 and on) publishes under the next dist-tag, so
+  # latest stays on the 1.x line until the first final release.
   gate:
     name: npm release gate
     runs-on: ubuntu-latest
     needs: preflight
     outputs:
       publish: ${{ steps.gate.outputs.publish }}
+      dist-tag: ${{ steps.gate.outputs.dist-tag }}
     steps:
       - id: gate
         env:
           VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
         run: |
           major="${VERSION#v}"
           major="${major%%.*}"
@@ -41,6 +45,11 @@ jobs:
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"
             echo "::notice::npm releases start at 2.0.0; ${VERSION} is not published to npm"
+          fi
+          if [ "$PRERELEASE" = true ]; then
+            echo "dist-tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist-tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -117,7 +126,7 @@ jobs:
 
   publish:
     name: publish to npm
-    needs: build
+    needs: [gate, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -134,7 +143,8 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       # Publishing authenticates with the job's OIDC token through npm trusted
-      # publishing (no long-lived token in the repository), which needs npm 11.5.1
+      # publishing (no long-lived token in the repository outside the first publish
+      # of a new package name, described at the publish step), which needs npm 11.5.1
       # or later and Node 22.14 or later (docs.npmjs.com/trusted-publishers, read
       # 2026-09-30). Each package names this workflow file as its trusted publisher
       # on npmjs.com; provenance is attached automatically.
@@ -163,9 +173,58 @@ jobs:
         run: npm run check:packaging
 
       # pre-publish publishes the @zero-server/native platform packages and pins them in
-      # its manifest; the workspace publish then covers @zero-server/native,
-      # @zero-server/core, every capability package, and the @zero-server/sdk bundle.
+      # its manifest. Each workspace package then publishes in its own npm process,
+      # @zero-server/native first since every other package pins it, and a workspace
+      # marked private, @zero-server/sdk among them, is skipped. A version npm already
+      # has is skipped as well: npm publish --workspaces stops at the first package it
+      # refuses to publish over, and pre-publish already skips a platform package that
+      # is on npm, so a rerun after a partial publish finishes the rest (npm/cli
+      # lib/commands/publish.js at v11.19.0, read 2026-10-02).
+      #
+      # npm 11 refuses to publish a pre-release without an explicit tag, and pre-publish
+      # runs a bare `npm publish` per platform package with this job's environment
+      # (npm/cli lib/commands/publish.js at v11.19.0; napi-rs cli/src/api/pre-publish.ts
+      # at @napi-rs/cli@3.10.5; both read 2026-10-01), so the tag goes in npm_config_tag,
+      # which reaches both. A final version keeps npm's default tag, latest, which npm
+      # refuses to apply implicitly to a version below one already published.
+      #
+      # A trusted publisher can be added only to a package that already exists ("Package
+      # MUST exist", npm registry API, POST /-/package/{package}/trust at
+      # api-docs.npmjs.com, read 2026-10-02), so the first publish of a new name needs a
+      # token. The optional NPM_TOKEN repository secret supplies it through the
+      # NODE_AUTH_TOKEN reference setup-node writes; while the secret is unset the step
+      # runs as before. npm tries the OIDC exchange first for every package and uses the
+      # configured token only when the exchange fails. It keeps each exchanged token,
+      # issued for that one package, in its config for the rest of the process (npm/cli
+      # lib/utils/oidc.js and lib/commands/publish.js at v11.19.0, read 2026-10-02), so
+      # one npm process per package keeps that token from reaching the next package.
       - name: Publish the platform packages, then every workspace package
+        env:
+          DIST_TAG: ${{ needs.gate.outputs.dist-tag }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ "$DIST_TAG" != latest ]; then
+            export npm_config_tag="$DIST_TAG"
+          fi
+          if [ -n "$NPM_TOKEN" ]; then
+            export NODE_AUTH_TOKEN="$NPM_TOKEN"
+            echo "::notice::NPM_TOKEN is set; delete it once every package names release-node.yml as its trusted publisher"
+          fi
+          echo "publishing under the ${DIST_TAG} dist-tag"
           npx napi pre-publish -t npm --package-json-path packages/native/package.json --npm-dir packages/native/npm
-          npm publish --workspaces --access public
+          done_dirs=""
+          for dir in packages/native packages/*; do
+            case " $done_dirs " in *" $dir "*) continue ;; esac
+            done_dirs="$done_dirs $dir"
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if [ "$(node -p "require('./$dir/package.json').private === true")" = true ]; then
+              echo "$name is private; not published"
+              continue
+            fi
+            if [ "$(npm view "$name@$version" version 2>/dev/null)" = "$version" ]; then
+              echo "$name@$version is already on npm"
+              continue
+            fi
+            npm publish --workspace "$dir" --access public
+          done

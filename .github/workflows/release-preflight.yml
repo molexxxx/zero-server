@@ -5,6 +5,8 @@
 # this first and do nothing until it passes, which turns three classes of mistake into a
 # failed job instead of a permanent one: a tag whose version disagrees with the manifests,
 # a tag on a commit that is not on main, and a tag on a commit whose tests never passed.
+# It also tells the callers whether the version is a pre-release, which decides the npm
+# dist-tag and how the GitHub release is marked.
 name: release-preflight
 
 on:
@@ -14,6 +16,10 @@ on:
         description: The version being released, with or without a leading v.
         required: true
         type: string
+    outputs:
+      prerelease:
+        description: true when the version carries a pre-release part (x.y.z-alpha.N, -beta.N or -rc.N), false for a final version.
+        value: ${{ jobs.preflight.outputs.prerelease }}
   workflow_dispatch:
     inputs:
       version:
@@ -28,6 +34,8 @@ jobs:
   preflight:
     name: preflight ${{ inputs.version }}
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.kind.outputs.prerelease }}
     steps:
       # The ancestry check below reads main, so the clone needs its history.
       - uses: actions/checkout@v7
@@ -41,6 +49,20 @@ jobs:
         run: cargo run -p xtask -- version --check "${VERSION#v}"
         env:
           VERSION: ${{ inputs.version }}
+
+      # The check above admits only x.y.z and x.y.z-alpha.N, -beta.N or -rc.N, so a
+      # hyphen is exactly a pre-release.
+      - name: Whether the version is a pre-release
+        id: kind
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          case "${VERSION#v}" in
+            *-*) prerelease=true ;;
+            *) prerelease=false ;;
+          esac
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "${VERSION#v}: prerelease=$prerelease"
 
       # Every standards row at or below the release being tagged names a test that exists.
       # The same check is advisory in ci.yml while the release is built; here it blocks.
