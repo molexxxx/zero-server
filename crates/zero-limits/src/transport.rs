@@ -101,7 +101,8 @@ pub const H3_MAX_FIELD_SECTION_SIZE: u64 = 32_768;
 pub const QPACK_MAX_TABLE_CAPACITY: u64 = 0;
 /// The streams the server lets a QPACK encoder block; zero blocks none.
 pub const QPACK_BLOCKED_STREAMS: u64 = 0;
-/// The largest prefix-coded integer the QPACK decoder accepts.
+/// The longest string literal, in octets, the QPACK decoder accepts; every
+/// other QPACK integer is decoded up to 2^62-1 (RFC 9204 Section 4.1.1).
 pub const QPACK_INTEGER_CAP: u64 = 1_073_741_824;
 /// The stream resets and stop-sending requests a peer may send inside one
 /// window before the connection is closed with excessive load.
