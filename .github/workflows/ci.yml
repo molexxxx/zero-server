@@ -462,8 +462,9 @@ jobs:
             fuzz/target
           key: ${{ runner.os }}-fuzz-cargo-${{ hashFiles('**/Cargo.toml') }}
 
+      # crates.io max_stable_version 0.13.2, released 2026-06-09, read 2026-10-01.
       - name: Install cargo-fuzz
-        run: command -v cargo-fuzz || cargo install cargo-fuzz --locked
+        run: command -v cargo-fuzz || cargo install cargo-fuzz --version 0.13.2 --locked
 
       # Every parser entry point has a libFuzzer target with a checked-in seed set
       # under fuzz/seeds/<target> and a dictionary under fuzz/dictionaries. Each runs
