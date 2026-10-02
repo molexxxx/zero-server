@@ -16,7 +16,7 @@ pub fn has_regions(text: &str) -> bool {
 }
 
 /// Re-render every region in `text`, calling `render` with the directive inside
-/// the opening marker (`table: chapters`, `snippet: path#anchor`).
+/// the opening marker (`table: crates`, `snippet: path#anchor`).
 ///
 /// # Errors
 ///
@@ -168,17 +168,17 @@ mod tests {
 
     #[test]
     fn replaces_the_text_between_the_markers() {
-        let text = "intro\n<!-- table: chapters -->\nstale\nlines\n<!-- end -->\noutro\n";
+        let text = "intro\n<!-- table: crates -->\nstale\nlines\n<!-- end -->\noutro\n";
         let mut seen = Vec::new();
         let processed = process(text, &mut |directive| {
             seen.push(directive.to_owned());
             Ok("fresh\n".to_owned())
         })
         .unwrap();
-        assert_eq!(seen, ["table: chapters"]);
+        assert_eq!(seen, ["table: crates"]);
         assert_eq!(
             processed,
-            "intro\n<!-- table: chapters -->\nfresh\n<!-- end -->\noutro\n"
+            "intro\n<!-- table: crates -->\nfresh\n<!-- end -->\noutro\n"
         );
     }
 

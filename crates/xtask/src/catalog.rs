@@ -515,58 +515,6 @@ impl Catalog {
     /// qualifies when more than one of its capabilities has a crate of its own, and the
     /// engine's own surface comes with the chapter it belongs to, so installing a domain
     /// gives the whole chapter as the guides present it.
-    /// The three grain sizes a project installs at, for the README: everything, one domain,
-    /// or one capability, with how many of each there are.
-    ///
-    /// # Returns
-    ///
-    /// The Markdown table, without a trailing newline.
-    pub fn grains_table(&self) -> String {
-        let domains = self.domains();
-        let packaged = self
-            .capabilities
-            .iter()
-            .filter(|capability| !capability.crates.is_empty())
-            .count();
-        let domain = domains
-            .iter()
-            .map(|(chapter, _)| chapter.key.as_str())
-            .find(|key| *key == "radio")
-            .or_else(|| domains.first().map(|(chapter, _)| chapter.key.as_str()))
-            .unwrap_or_default();
-        let one = self
-            .capabilities
-            .iter()
-            .find(|capability| capability.key == "lora")
-            .or_else(|| {
-                self.capabilities
-                    .iter()
-                    .find(|capability| !capability.crates.is_empty())
-            });
-        let (crate_name, node, python, dotnet) = match one {
-            Some(capability) => (
-                capability.crates.first().cloned().unwrap_or_default(),
-                node_package(capability),
-                format!("zero-server-{}", capability.python.replace('_', "-")),
-                capability.dotnet_package(),
-            ),
-            None => Default::default(),
-        };
-        let dotnet_domain = domain
-            .split('-')
-            .map(dotnet_name)
-            .collect::<Vec<_>>()
-            .concat();
-        format!(
-            "| What you want | Rust | npm | PyPI | NuGet |\n\
-             | --- | --- | --- | --- | --- |\n\
-             | Everything | `zero-server` | `zero-server` | `zero-server` | `ZeroServer` |\n\
-             | A domain, {} of them | `zero-server` with `--no-default-features --features std,{domain}` | `@zero-server/{domain}` | `zero-server-{domain}` | `ZeroServer.{dotnet_domain}` |\n\
-             | One capability, {packaged} of them | `{crate_name}` | `{node}` | `{python}` | `{dotnet}` |",
-            words(domains.len()),
-        )
-    }
-
     pub fn domains(&self) -> Vec<(&Chapter, Vec<&Capability>)> {
         self.chapters
             .iter()
@@ -1013,9 +961,9 @@ impl Catalog {
 
     /// Render one generated table for a `<!-- table: <kind> [arg] -->` region.
     ///
-    /// The Markdown kinds render anywhere, the registries included: `chapters` (the
-    /// capability map by chapter), `crates` (every crate with its reference links, or
-    /// `crates engine` for the engine and the bundle alone), `reference <capability>`
+    /// The Markdown kinds render anywhere, the registries included: `crates` (every
+    /// crate with its reference links, or `crates engine` for the engine and the bundle
+    /// alone), `reference <capability>`
     /// (the per-language reference links of one guide), `binding <node|python|dotnet>`
     /// (the capability table of one binding README), `domains <language>` (the install
     /// line per domain), and `references` (the four languages with their reference
@@ -1037,8 +985,6 @@ impl Catalog {
         let kind = words.next().unwrap_or_default();
         let arg = words.next();
         match (kind, arg) {
-            ("chapters", None) => Ok(self.chapters_table()),
-            ("grains", None) => Ok(self.grains_table()),
             ("crates", None) => Ok(self.crates_table(crate_descriptions, false)),
             ("crates", Some("engine")) => Ok(self.crates_table(crate_descriptions, true)),
             ("packages", Some(language @ ("rust" | "node" | "python" | "dotnet"))) => {
@@ -1065,42 +1011,6 @@ impl Catalog {
             }
             _ => Err(format!("unknown table `{directive}`")),
         }
-    }
-
-    fn chapters_table(&self) -> String {
-        let mut out = String::from("| Chapter | Guides | Crates |\n| --- | --- | --- |\n");
-        for chapter in &self.chapters {
-            let guides: Vec<String> = self
-                .in_chapter(&chapter.key)
-                .map(|capability| match guide_url(capability) {
-                    Some(url) => format!("[{}]({url})", capability.title),
-                    None => capability.title.clone(),
-                })
-                .collect();
-            let crates: Vec<String> = self
-                .in_chapter(&chapter.key)
-                .flat_map(|capability| capability.crates.iter())
-                .map(|krate| crate_link(krate))
-                .collect();
-            out.push_str(&format!(
-                "| {} | {} | {} |\n",
-                chapter.title,
-                guides.join(", "),
-                crates.join(", ")
-            ));
-        }
-        let engine: Vec<String> = self.engine.iter().map(|krate| crate_link(krate)).collect();
-        out.push_str(&format!(
-            "| Engine | the traits every capability implements, the C ABI, and the dashboard | {} |",
-            engine.join(", ")
-        ));
-        if let Some(bundle) = &self.bundle {
-            out.push_str(&format!(
-                "\n| Everything | `cargo add {bundle}`: every capability above, behind a feature each | {} |",
-                crate_link(bundle)
-            ));
-        }
-        out
     }
 
     fn crates_table(&self, descriptions: &BTreeMap<String, String>, engine_only: bool) -> String {
@@ -2259,16 +2169,6 @@ fn declared_types(source: &str) -> Vec<String> {
     names
 }
 
-// A small count written out, as prose does, and larger ones as numerals.
-fn words(count: usize) -> String {
-    const WORDS: [&str; 11] = [
-        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-    ];
-    WORDS
-        .get(count)
-        .map_or_else(|| count.to_string(), |word| (*word).to_owned())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2403,11 +2303,6 @@ crate = "zero-server"
                 "Everything in one crate".to_owned(),
             ),
         ]);
-
-        let chapters = catalog.render("chapters", &descriptions).unwrap();
-        assert!(chapters.contains("| Field I/O | [Modbus RTU](https://molexxxx.github.io/zero-server/docs/guides/modbus.html), Transports | [`zero-modbus`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_modbus/index.html) |"));
-        assert!(chapters.contains("| Engine |"));
-        assert!(chapters.ends_with("| Everything | `cargo add zero-server`: every capability above, behind a feature each | [`zero-server`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_server/index.html) |"));
 
         let crates = catalog.render("crates", &descriptions).unwrap();
         assert!(crates.contains("| **Engine** | [`zero-core`](https://molexxxx.github.io/zero-server/docs/reference/rust/zero_core/index.html) | The device model |"));
