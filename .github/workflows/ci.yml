@@ -21,6 +21,7 @@ jobs:
   rust:
     name: rust (fmt, clippy, test)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -103,15 +104,41 @@ jobs:
             exit 1
           fi
 
-      # Every example runs to completion with no other service present. The generator
+      # Every example other than the servers runs to completion with no other service
+      # present, and one that has not exited within a minute fails the step. The generator
       # regenerates the cross-language conformance vectors, and the diff fails if the
       # committed file no longer matches.
       - name: Examples run and the conformance vectors are current
+        env:
+          SERVER_EXAMPLES: hello users
         run: |
+          cargo build -p zero-examples --examples
           for example in $(ls crates/zero-examples/examples/*.rs crates/zero-examples/examples/guides/*.rs 2>/dev/null | xargs -n1 basename | sed 's/\.rs$//'); do
-            cargo run -p zero-examples --example "$example" > /dev/null
+            case " $SERVER_EXAMPLES " in
+              *" $example "*) continue ;;
+            esac
+            timeout 60 "target/debug/examples/$example" > /dev/null
           done
           git diff --exit-code -- conformance/vectors.json
+
+      # The server examples never exit on their own, so each one is started, asked for
+      # one response over HTTP, and stopped.
+      - name: Server examples answer over HTTP
+        run: |
+          check() {
+            "target/debug/examples/$1" > "$RUNNER_TEMP/$1.log" 2>&1 &
+            pid=$!
+            body=$(curl --silent --show-error --retry 30 --retry-connrefused --retry-delay 1 --max-time 5 "http://127.0.0.1:3000$2") || body="(no response)"
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            if [ "$body" != "$3" ]; then
+              echo "::error::$1 answered '$body' on $2, expected '$3'"
+              cat "$RUNNER_TEMP/$1.log"
+              exit 1
+            fi
+          }
+          check hello / hello
+          check users /users/42 42
 
       # Each crate's README is generated from its rustdoc and the capability catalog needs
       # a guide and a package per language for every capability. While the current release
