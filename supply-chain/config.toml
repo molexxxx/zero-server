@@ -289,6 +289,7 @@ criteria = "safe-to-deploy"
 [[exemptions.loom]]
 version = "0.7.2"
 criteria = "safe-to-deploy"
+notes = "A dev-dependency of zero-rt behind cfg(zero_loom), for model checking its slot protocol; the other crates that name it do so behind cfg(loom). No build of a shipped artifact sets either cfg. A 0.x line with no release since 2024-04-23, exempted rather than audited for the reasons recorded beside the dependency in crates/zero-rt/Cargo.toml (checked 2026-10-02, recheck by 2027-03-31)."
 
 [[exemptions.matchers]]
 version = "0.2.0"

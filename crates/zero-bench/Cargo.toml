@@ -14,6 +14,10 @@ io-compio = ["zero-server/io-compio"]
 
 [dependencies]
 zero-server.workspace = true
+# For measuring the cost of a host call through zero-host's Rust API and through
+# zero-ffi's C exports.
+zero-host.workspace = true
+zero-ffi.workspace = true
 # The load generator and the idle probe open thousands of client connections, which
 # takes a reactor; the same tokio feature set zero-io names, so the graph gains
 # nothing (crates.io max_stable_version 1.53.1, updated 2026-07-20, read 2026-10-01).

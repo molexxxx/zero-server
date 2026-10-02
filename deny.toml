@@ -71,6 +71,7 @@ allow = [
     "zero-examples",
     "zero-ffi",
     "zero-h3",
+    "zero-host",
     "zero-http",
     "zero-http-types",
     "zero-http1",

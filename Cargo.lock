@@ -2182,6 +2182,8 @@ name = "zero-bench"
 version = "0.1.0"
 dependencies = [
  "tokio",
+ "zero-ffi",
+ "zero-host",
  "zero-server",
 ]
 
@@ -2222,6 +2224,32 @@ version = "0.1.0"
 dependencies = [
  "zero-core",
  "zero-limits",
+]
+
+[[package]]
+name = "zero-host"
+version = "0.1.0"
+dependencies = [
+ "zero-base64",
+ "zero-core",
+ "zero-h3",
+ "zero-http",
+ "zero-http-types",
+ "zero-http1",
+ "zero-io",
+ "zero-json",
+ "zero-limits",
+ "zero-mime",
+ "zero-policy",
+ "zero-qpack",
+ "zero-realtime",
+ "zero-router",
+ "zero-rt",
+ "zero-server-crypto",
+ "zero-sse",
+ "zero-static",
+ "zero-tls",
+ "zero-ws",
 ]
 
 [[package]]
@@ -2347,6 +2375,7 @@ dependencies = [
 name = "zero-rt"
 version = "0.1.0"
 dependencies = [
+ "loom",
  "zero-core",
  "zero-io",
  "zero-limits",

@@ -55,7 +55,7 @@ intent = "Metrics, trace context, logs and health."
 [[chapter]]
 key = "runtime"
 title = "Runtime"
-intent = "Shutdown, timeouts and configuration."
+intent = "Shutdown, timeouts, configuration and the host boundary."
 
 [[chapter]]
 key = "webrtc"
@@ -174,11 +174,12 @@ next = ["qpack"]
 
 # The crates that are not a capability of their own: the error and buffer types
 # every crate shares, the limit table, the SIMD kernels, the raw system calls,
-# the runtime seam, the workers and their arenas, and the C ABI every binding
-# rides on. `abi` names which is which, so the site draws the core as the engine
-# and the C ABI under the bindings.
+# the runtime seam, the workers and their arenas, the host boundary between the
+# core and a host language, and the C ABI every binding rides on. `abi` names
+# which is which, so the site draws the core as the engine and the C ABI under
+# the bindings.
 [engine]
-crates = ["zero-core", "zero-limits", "zero-simd", "zero-sys", "zero-io", "zero-rt", "zero-ffi"]
+crates = ["zero-core", "zero-limits", "zero-simd", "zero-sys", "zero-io", "zero-rt", "zero-host", "zero-ffi"]
 abi = "zero-ffi"
 
 # The crate that bundles every capability behind a feature each, all on by
@@ -366,6 +367,12 @@ release = 1
 
 [[crate]]
 name = "zero-tls"
+lint = "workspace"
+no_std = false
+release = 1
+
+[[crate]]
+name = "zero-host"
 lint = "workspace"
 no_std = false
 release = 1

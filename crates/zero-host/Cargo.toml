@@ -1,0 +1,55 @@
+[package]
+name = "zero-host"
+description = "The host boundary of zero-server: the safe Rust layer between the HTTP/1.1 driver and a host language, for the C ABI and the language bindings."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+
+[features]
+# One feature per capability a host can register, all on by default.
+default = ["static", "policy", "realtime", "tls"]
+static = ["dep:zero-static", "dep:zero-mime"]
+policy = ["dep:zero-policy"]
+# zero-server-crypto supplies the SHA-1 of the WebSocket accept value.
+realtime = [
+    "dep:zero-realtime",
+    "dep:zero-ws",
+    "dep:zero-sse",
+    "dep:zero-server-crypto",
+]
+tls = ["dep:zero-tls", "dep:zero-server-crypto"]
+# Reserved for test hooks that the crates built over this one enable only through
+# their dev-dependencies, so no shipped build contains them.
+testing = []
+
+[dependencies]
+zero-core.workspace = true
+zero-limits.workspace = true
+zero-http-types.workspace = true
+zero-http1.workspace = true
+zero-router.workspace = true
+zero-json.workspace = true
+zero-base64.workspace = true
+zero-io.workspace = true
+zero-rt.workspace = true
+zero-http.workspace = true
+# For a conformance entry that covers the QPACK and HTTP/3 frame sections in every
+# build.
+zero-qpack.workspace = true
+zero-h3.workspace = true
+zero-static = { workspace = true, optional = true }
+zero-mime = { workspace = true, optional = true }
+zero-policy = { workspace = true, optional = true }
+zero-realtime = { workspace = true, optional = true }
+zero-ws = { workspace = true, optional = true }
+zero-sse = { workspace = true, optional = true }
+zero-tls = { workspace = true, optional = true }
+zero-server-crypto = { workspace = true, optional = true }
+
+[lints]
+workspace = true

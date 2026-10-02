@@ -222,8 +222,9 @@ fn load_table(root: &Path, name: &str) -> Result<Table, String> {
     Ok(table)
 }
 
-/// Flatten a `[lints]` table to `tool.lint` keys. A level is its string, or
-/// `level (priority n)` when written as a table.
+/// Flatten a `[lints]` table to `tool.lint` keys. A level is its string, or, when
+/// written as a table, the level followed by its priority and its `check-cfg`
+/// list, so a copy that drops or changes either differs from its table.
 fn flatten(lints: &dyn TableLike, context: &str) -> Result<Table, String> {
     let mut table = Table::new();
     for (tool, item) in lints.iter() {
@@ -237,14 +238,7 @@ fn flatten(lints: &dyn TableLike, context: &str) -> Result<Table, String> {
             let level = if let Some(level) = value.as_str() {
                 level.to_owned()
             } else if let Some(spec) = value.as_table_like() {
-                let level = spec
-                    .get("level")
-                    .and_then(Item::as_str)
-                    .ok_or_else(|| format!("{context}: lints.{tool}.{lint} has no level"))?;
-                match spec.get("priority").and_then(Item::as_integer) {
-                    Some(priority) => format!("{level} (priority {priority})"),
-                    None => level.to_owned(),
-                }
+                entry(spec, &format!("{context}: lints.{tool}.{lint}"))?
             } else {
                 return Err(format!(
                     "{context}: lints.{tool}.{lint} must be a level or a table"
@@ -254,6 +248,45 @@ fn flatten(lints: &dyn TableLike, context: &str) -> Result<Table, String> {
         }
     }
     Ok(table)
+}
+
+/// One lint written as a table: `level`, then `(priority n)` and
+/// `(check-cfg [..])` when present. Cargo's lint entries take `level` and
+/// `priority`, and `unexpected_cfgs` also takes `check-cfg`; any other key is
+/// refused, so nothing in a table goes uncompared.
+fn entry(spec: &dyn TableLike, context: &str) -> Result<String, String> {
+    if let Some((key, _)) = spec
+        .iter()
+        .find(|(key, _)| !matches!(*key, "level" | "priority" | "check-cfg"))
+    {
+        return Err(format!(
+            "{context} has a key `{key}` the lint tables do not compare"
+        ));
+    }
+    let mut flat = spec
+        .get("level")
+        .and_then(Item::as_str)
+        .ok_or_else(|| format!("{context} has no level"))?
+        .to_owned();
+    if let Some(priority) = spec.get("priority") {
+        let priority = priority
+            .as_integer()
+            .ok_or_else(|| format!("{context}: priority must be an integer"))?;
+        flat.push_str(&format!(" (priority {priority})"));
+    }
+    if let Some(list) = spec.get("check-cfg") {
+        let cfgs = list
+            .as_array()
+            .ok_or_else(|| format!("{context}: check-cfg must be an array"))?
+            .iter()
+            .map(|cfg| {
+                cfg.as_str()
+                    .ok_or_else(|| format!("{context}: check-cfg must hold only strings"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        flat.push_str(&format!(" (check-cfg [{}])", cfgs.join(", ")));
+    }
+    Ok(flat)
 }
 
 /// The table each crate is held to, from its `[[crate]]` row: the `lint` it
@@ -505,5 +538,84 @@ mod tests {
                 .unwrap();
         let table = flatten(doc.get("lints").and_then(Item::as_table_like).unwrap(), "t").unwrap();
         assert_eq!(table["rust.unsafe_code"], "forbid (priority -1)");
+    }
+
+    #[test]
+    fn a_level_written_as_a_table_keeps_its_check_cfg_list() {
+        let doc: DocumentMut = "[lints.rust]\nunexpected_cfgs = { level = \"warn\", priority = 1, check-cfg = ['cfg(a)', 'cfg(b, values(\"x\"))'] }\n"
+            .parse()
+            .unwrap();
+        let table = flatten(doc.get("lints").and_then(Item::as_table_like).unwrap(), "t").unwrap();
+        assert_eq!(
+            table["rust.unexpected_cfgs"],
+            "warn (priority 1) (check-cfg [cfg(a), cfg(b, values(\"x\"))])"
+        );
+    }
+
+    #[test]
+    fn a_differing_check_cfg_list_fails_the_check() {
+        let root = repository("check-cfg");
+        let original: Vec<(&str, String)> = [
+            "Cargo.toml",
+            "docs/lints/workspace.toml",
+            "docs/lints/nostd.toml",
+            "crates/b/Cargo.toml",
+            "crates/c/Cargo.toml",
+        ]
+        .into_iter()
+        .map(|path| (path, fs::read_to_string(root.join(path)).unwrap()))
+        .collect();
+        let set = |path: &str, cfgs: &str| {
+            let (_, text) = original.iter().find(|(known, _)| *known == path).unwrap();
+            let line = format!("unexpected_cfgs = {{ level = \"warn\", check-cfg = [{cfgs}] }}\n");
+            let text = text.replacen(
+                "missing_docs = \"deny\"\n",
+                &format!("missing_docs = \"deny\"\n{line}"),
+                1,
+            );
+            write(&root, path, &text);
+        };
+        for (path, _) in &original {
+            set(path, "'cfg(a)'");
+        }
+        check(&root).unwrap();
+
+        set("crates/b/Cargo.toml", "'cfg(b)'");
+        let problem = check(&root).unwrap_err();
+        assert!(
+            problem.contains("crates/b/Cargo.toml does not carry the nostd table"),
+            "{problem}"
+        );
+        assert!(
+            problem.contains("rust.unexpected_cfgs: warn (check-cfg [cfg(b)]) in crates/b/Cargo.toml, warn (check-cfg [cfg(a)]) in the nostd table"),
+            "{problem}"
+        );
+
+        set("crates/b/Cargo.toml", "'cfg(a)'");
+        set("Cargo.toml", "'cfg(a)', 'cfg(c)'");
+        let problem = check(&root).unwrap_err();
+        fs::remove_dir_all(&root).unwrap();
+        assert!(
+            problem.contains("[workspace.lints] differs from docs/lints/workspace.toml"),
+            "{problem}"
+        );
+        assert!(
+            problem.contains("rust.unexpected_cfgs: warn (check-cfg [cfg(a), cfg(c)]) in Cargo.toml, warn (check-cfg [cfg(a)]) in docs/lints/workspace.toml"),
+            "{problem}"
+        );
+    }
+
+    #[test]
+    fn an_entry_key_the_tables_do_not_compare_is_refused() {
+        let doc: DocumentMut =
+            "[lints.rust]\nunexpected_cfgs = { level = \"warn\", check_cfg = ['cfg(a)'] }\n"
+                .parse()
+                .unwrap();
+        let problem =
+            flatten(doc.get("lints").and_then(Item::as_table_like).unwrap(), "t").unwrap_err();
+        assert!(
+            problem.contains("lints.rust.unexpected_cfgs has a key `check_cfg`"),
+            "{problem}"
+        );
     }
 }

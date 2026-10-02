@@ -26,6 +26,7 @@ members = [
     "crates/zero-realtime",
     "crates/zero-server-crypto",
     "crates/zero-tls",
+    "crates/zero-host",
     "crates/zero-ffi",
     "crates/zero-serve",
     "crates/zero-server",
@@ -92,17 +93,23 @@ zero-policy = { path = "crates/zero-policy", version = "0.1.0" }
 zero-realtime = { path = "crates/zero-realtime", version = "0.1.0" }
 zero-server-crypto = { path = "crates/zero-server-crypto", version = "0.1.0" }
 zero-tls = { path = "crates/zero-tls", version = "0.1.0" }
+zero-host = { path = "crates/zero-host", version = "0.1.0" }
 zero-ffi = { path = "crates/zero-ffi", version = "0.1.0" }
 zero-server = { path = "crates/zero-server", version = "0.1.0" }
 
 # The workspace lint table. Cargo replaces rather than merges a package `[lints]`
 # table, so the no_std and audited crates carry a copy of this table with their
-# additions; the three tables live in docs/lints and `cargo xtask lints --check`
-# diffs every member manifest against the one it names.
+# additions, less the `unexpected_cfgs` entry, which only zero-rt (a crate that
+# inherits this table) needs; the three tables live in docs/lints and
+# `cargo xtask lints --check` diffs every member manifest against the one it names.
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "deny"
 unsafe_op_in_unsafe_fn = "deny"
+# `cfg(zero_loom)` is reserved for model checking zero-rt's slot protocol over
+# loom's types, and only RUSTFLAGS sets it; declaring it stops rustc reporting it
+# as unknown.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(zero_loom)'] }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

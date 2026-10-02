@@ -15,5 +15,22 @@ zero-core.workspace = true
 zero-limits.workspace = true
 zero-io.workspace = true
 
+# For model checking the slot protocol, in builds with RUSTFLAGS="--cfg zero_loom":
+# loom runs a test many times, permuting its concurrent executions according to what
+# the C11 memory model allows (https://docs.rs/loom/0.7.2/loom/, read 2026-10-02),
+# which the slot protocol's atomics need and no crate in the allowlist provides.
+# Checked 2026-10-02, recheck by 2027-03-31: loom 0.7.2 is crates.io's
+# max_stable_version and is not yanked, but it is a 0.x line with no release since
+# 2024-04-23, so it fails the stable-line and 12-month conditions. It is accepted
+# because it is a test-only dependency behind a cfg that no build of a shipped
+# artifact sets (deny.toml excludes dev-dependencies), its repository
+# (tokio-rs/loom) is not archived, and the RustSec advisory database lists no
+# advisory for it and none that affects the locked versions of its graph
+# (generator 0.8.10, scoped-tls 1.0.1, tracing 0.1.44, tracing-subscriber 0.3.23
+# and their dependencies). cargo deny does not see this edge, because no target it
+# evaluates sets the cfg. Its default feature set is empty.
+[target.'cfg(zero_loom)'.dev-dependencies]
+loom = "=0.7.2"
+
 [lints]
 workspace = true
