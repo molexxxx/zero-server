@@ -9,6 +9,9 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 authors.workspace = true
+# The integration tests and their certificates and private keys stay out of the
+# published package; they run from the repository.
+exclude = ["tests/"]
 
 [dependencies]
 zero-core.workspace = true
