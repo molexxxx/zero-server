@@ -156,7 +156,8 @@ impl<'a> MediaType<'a> {
     pub fn parameter(&self, name: &[u8]) -> Option<&'a [u8]> {
         let mut rest = self.parameters;
         while let Some(parameter) = next_parameter(rest) {
-            if parameter.name.eq_ignore_ascii_case(name)
+            if !parameter.name.is_empty()
+                && parameter.name.eq_ignore_ascii_case(name)
                 && (!parameter.quoted || !parameter.value.contains(&b'\\'))
             {
                 return Some(parameter.value);
@@ -183,7 +184,10 @@ impl<'a, 's> Parameters<'a, 's> {
     /// The name, the value, and whether the value sits in the scratch buffer;
     /// `None` at the end or at a parameter the grammar refuses.
     pub fn next_parameter(&mut self) -> Option<(&'a [u8], Unquoted<'a, '_>)> {
-        let parameter = next_parameter(self.rest)?;
+        let mut parameter = next_parameter(self.rest)?;
+        while parameter.name.is_empty() {
+            parameter = next_parameter(parameter.rest)?;
+        }
         self.rest = parameter.rest;
         let (name, value) = (parameter.name, parameter.value);
         if !parameter.quoted || !value.contains(&b'\\') {
@@ -272,13 +276,26 @@ struct Parameter<'a> {
     rest: &'a [u8],
 }
 
-/// Read one `OWS ";" OWS name "=" ( token / quoted-string )` from the front.
+/// Read one `OWS ";" OWS [ name "=" ( token / quoted-string ) ]` from the front.
+/// The parameter is optional (RFC 9110 Section 5.6.6), so a `;` followed by
+/// another `;` or by the end reads as a parameter with an empty name, which names
+/// nothing.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.6>
 fn next_parameter(input: &[u8]) -> Option<Parameter<'_>> {
     let mut pos = skip_ows(input, 0);
     if input.get(pos) != Some(&b';') {
         return None;
     }
     pos = skip_ows(input, pos.saturating_add(1));
+    if matches!(input.get(pos), None | Some(b';')) {
+        return Some(Parameter {
+            name: &[],
+            value: &[],
+            quoted: false,
+            rest: input.get(pos..)?,
+        });
+    }
     let name_len = input
         .get(pos..)?
         .iter()
@@ -432,6 +449,41 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_parameter_between_or_after_semicolons_is_allowed_and_names_nothing_per_rfc_9110_section_5_6_6(
+    ) {
+        // RFC 9110 Section 5.6.6: parameters = *( OWS ";" OWS [ parameter ] ).
+        for value in [
+            &b"text/html;charset=utf-8;"[..],
+            b"text/html; ;charset=utf-8",
+            b"text/html;;charset=utf-8;;",
+            b"text/html ; charset=utf-8 ;\t",
+        ] {
+            let media = parse(value);
+            assert_eq!(
+                media.map(|media| media.subtype),
+                Some(&b"html"[..]),
+                "{}",
+                String::from_utf8_lossy(value)
+            );
+            let media = media.unwrap_or_else(|| unreachable!());
+            assert_eq!(media.parameter(b"charset"), Some(&b"utf-8"[..]));
+            assert_eq!(media.parameter(b""), None);
+            let mut scratch = [0u8; 16];
+            let mut parameters = media.parameters(&mut scratch);
+            assert_eq!(
+                parameters.next_parameter(),
+                Some((&b"charset"[..], Unquoted::Borrowed(&b"utf-8"[..])))
+            );
+            assert_eq!(parameters.next_parameter(), None);
+        }
+        for value in [&b"text/plain;"[..], b"text/plain; ", b"text/plain;;"] {
+            let media = parse(value).map(|media| (media.kind, media.subtype));
+            assert_eq!(media, Some((&b"text"[..], &b"plain"[..])));
+        }
+        assert_eq!(parse(b"text/html;charset=utf-8;x"), None);
+    }
+
+    #[test]
     fn media_type_values_parse_with_their_parameters() {
         let empty = super::MediaType {
             kind: b"",
@@ -478,6 +530,5 @@ mod tests {
         assert_eq!(parse(b"text/html; charset=\"open"), None);
         assert_eq!(parse(b"text/html; =x"), None);
         assert_eq!(parse(b"text/html junk"), None);
-        assert_eq!(parse(b"text/html;charset=utf-8;"), None);
     }
 }
