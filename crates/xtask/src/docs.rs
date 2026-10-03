@@ -24,6 +24,9 @@ use syn::{Fields, ImplItem, Item, TraitItem, Visibility};
 use crate::catalog::{Catalog, NODE_BUNDLE, SITE};
 use crate::{builds, licenses, packages, regions, version};
 
+/// What the `docs` task generates, for its messages.
+const FILES: &str = "the crate READMEs and the generated regions";
+
 /// Run the `docs` task: regenerate every derived file, or `--check` to verify they are in sync.
 ///
 /// # Arguments
@@ -38,9 +41,9 @@ pub fn run(args: &[String]) -> ExitCode {
     match render_all() {
         Ok(readmes) => {
             let ok = if check {
-                verify_files(&readmes)
+                verify_files(&readmes, "docs", FILES)
             } else {
-                write_files(&readmes)
+                write_files(&readmes, "docs", FILES)
             };
             if ok {
                 ExitCode::SUCCESS
@@ -693,11 +696,13 @@ fn is_kept_handwritten(name: &str, path: &Path) -> bool {
 /// # Arguments
 ///
 /// * `readmes` - the files as (repository-relative path, contents).
+/// * `task` - the xtask task writing them, which names itself in the messages.
+/// * `what` - what the files are, for the summary line.
 ///
 /// # Returns
 ///
 /// Whether every file was written.
-pub(crate) fn write_files(readmes: &[(String, String)]) -> bool {
+pub(crate) fn write_files(readmes: &[(String, String)], task: &str, what: &str) -> bool {
     let base = repo_root();
     let mut written = 0;
     for (name, body) in readmes {
@@ -707,17 +712,17 @@ pub(crate) fn write_files(readmes: &[(String, String)]) -> bool {
         }
         if let Some(parent) = path.parent() {
             if let Err(err) = fs::create_dir_all(parent) {
-                eprintln!("xtask docs: creating {}: {err}", parent.display());
+                eprintln!("xtask {task}: creating {}: {err}", parent.display());
                 return false;
             }
         }
         if let Err(err) = fs::write(&path, body) {
-            eprintln!("xtask docs: writing {}: {err}", path.display());
+            eprintln!("xtask {task}: writing {}: {err}", path.display());
             return false;
         }
         written += 1;
     }
-    println!("docs: wrote {written} files (crate READMEs and the generated regions)");
+    println!("{task}: wrote {written} files ({what})");
     true
 }
 
@@ -726,11 +731,14 @@ pub(crate) fn write_files(readmes: &[(String, String)]) -> bool {
 /// # Arguments
 ///
 /// * `readmes` - the files as (repository-relative path, contents).
+/// * `task` - the xtask task checking them, which names itself in the messages and
+///   in the command it suggests.
+/// * `what` - what the files are, for the summary line.
 ///
 /// # Returns
 ///
 /// Whether every file on disk matches what was rendered.
-pub(crate) fn verify_files(readmes: &[(String, String)]) -> bool {
+pub(crate) fn verify_files(readmes: &[(String, String)], task: &str, what: &str) -> bool {
     let base = repo_root();
     let mut stale = Vec::new();
     for (name, body) in readmes {
@@ -744,11 +752,11 @@ pub(crate) fn verify_files(readmes: &[(String, String)]) -> bool {
         }
     }
     if stale.is_empty() {
-        println!("docs: the crate READMEs and the generated regions are in sync");
+        println!("{task}: {what} are in sync");
         true
     } else {
         eprintln!(
-            "xtask docs: stale or missing generated files: {}\n  run `cargo xtask docs` and commit the result",
+            "xtask {task}: stale or missing generated files: {}\n  run `cargo xtask {task}` and commit the result",
             stale.join(", ")
         );
         false

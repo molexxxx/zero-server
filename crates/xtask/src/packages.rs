@@ -69,6 +69,9 @@ impl Publish {
     }
 }
 
+/// What the `packages` task generates, for its messages.
+const FILES: &str = "the binding package manifests and READMEs";
+
 /// Run `cargo xtask packages [--check]`: render every binding package's manifest and
 /// README from the capability map, or verify the committed ones are current.
 ///
@@ -92,9 +95,9 @@ pub fn run(args: &[String]) -> ExitCode {
     match rendered {
         Ok(files) => {
             let ok = if check {
-                crate::docs::verify_files(&files)
+                crate::docs::verify_files(&files, "packages", FILES)
             } else {
-                crate::docs::write_files(&files)
+                crate::docs::write_files(&files, "packages", FILES)
             };
             if ok {
                 ExitCode::SUCCESS
