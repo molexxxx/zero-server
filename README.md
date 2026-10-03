@@ -121,7 +121,7 @@ work ready. The compio backend is behind the `io-compio` feature.
 <picture>
   <source media="(max-width: 600px)" srcset="assets/bindings-narrow.svg">
   <source media="(prefers-color-scheme: dark)" srcset="assets/bindings-dark.svg">
-  <img alt="The design for other languages: an app in Node, Python or .NET loads the core as a native library in its own process, with one thread per core. At startup it declares its routes, rules and static files once across the C ABI, and every core keeps them as tables. Requests reach the cores, not the app. Rules, static files and Rust handlers are answered in Rust; a route whose handler is the app's own function reaches that core's thread in one call per batch of up to 256, and the core writes the responses. Every core takes both kinds; the route decides." src="assets/bindings.svg" width="960">
+  <img alt="The design for other languages: an app in Node, Python or .NET loads the core as a native library in its own process, with one thread per core. At startup it declares its routes, rules and static files once across the host boundary, which Node crosses through Node-API and Python and .NET through the C ABI, and every core keeps them as tables. Requests reach the cores, not the app. Rules, static files and Rust handlers are answered in Rust; a route whose handler is the app's own function reaches that core's thread in one call per batch of up to 256, and the core writes the responses. Every core takes both kinds; the route decides." src="assets/bindings.svg" width="960">
 </picture>
 
 **The same core from other languages.** In the design the language packages

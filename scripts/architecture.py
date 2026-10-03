@@ -9,7 +9,8 @@ the track returns to the next connection with work ready.
 
 The bindings diagram keeps the same row of cores inside the application's
 process. The application declares its routes, rules and static files once at
-startup across the C ABI; two cores answer in Rust with no crossing, and two
+startup across the host boundary, which Node crosses through Node-API and Python
+and .NET through the C ABI; two cores answer in Rust with no crossing, and two
 hand a batch to their paired host thread and write the responses themselves.
 
 Every color is a palette token from docs/brand.md, and every glyph is outlined
@@ -114,17 +115,18 @@ BINDINGS_TITLE = "zero-server bindings: your language on the same engine"
 BINDINGS_DESC = (
     "One process holds an application in Node, Python or .NET and the zero-server core, loaded "
     "as a native library. At the top are the application's threads, one per core: a Node worker "
-    "isolate, the Python handler thread or a .NET thread. A dashed line marks the C ABI between "
-    "the application and the core. At startup the application declares its routes, its rules "
-    "such as CORS, security headers and limits, and its static files once, across the C ABI, "
-    "and the core keeps them as tables on every core. Below the C ABI is the same row of four "
+    "isolate, the Python handler thread or a .NET thread. A dashed line marks the host boundary "
+    "between the application and the core, which Node crosses through Node-API and Python and "
+    ".NET through the C ABI. At startup the application declares its routes, its rules such as "
+    "CORS, security headers and limits, and its static files once, across the host boundary, "
+    "and the core keeps them as tables on every core. Below the host boundary is the same row of four "
     "cores as in the engine diagram, one event loop per CPU core. Requests arrive from the "
     "network at the cores, not at the application, and each response leaves on the same "
     "connection from the same core. Cores 1 and n answer their requests entirely in Rust, from "
     "a rule, a static file or a handler written in Rust, with no crossing, and their threads "
     "stay idle. Cores 0 and 2 hold requests whose handler is the application's own function: "
     "each sends its paired thread one batch of whatever is ready, up to 256 requests, as one "
-    "call across the C ABI, the thread returns the results, and the core writes the responses. "
+    "call across the host boundary, the thread returns the results, and the core writes the responses. "
     "Every core takes both kinds; the route decides."
 )
 
@@ -664,7 +666,7 @@ def thread_pill(c, cx, cy, w, h, size, busy):
 
 
 def batch(c, cx, top, bottom, abi_y, off, square, pitch, arrow):
-    """Draws a core's batch to its thread: one call up across the C ABI carrying the ready
+    """Draws a core's batch to its thread: one call up across the host boundary carrying the ready
     requests, and the results coming back down to the core, which writes the responses."""
     up, down = cx - off, cx + off
     c.line([(up, bottom), (up, top + arrow * 1.4)], width=2)
@@ -684,7 +686,7 @@ def network(c, cx, top, bottom, off, width, size, role):
 
 
 def bindings_wide(palettes, faces):
-    """Your language on the engine at 960 wide: the app's threads above the C ABI, the same
+    """Your language on the engine at 960 wide: the app's threads above the host boundary, the same
     cores below it, the network meeting only the cores."""
     c = Canvas(960, 536, palettes, faces, BINDINGS_TITLE, BINDINGS_DESC, 16)
     r = 36
@@ -709,7 +711,7 @@ def bindings_wide(palettes, faces):
     )
 
     c.line([(24, abi_y), (944, abi_y)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI", 944, abi_y - 12, 18, anchor="end")
+    c.text("host boundary", 944, abi_y - 12, 18, anchor="end")
 
     c.line([(60, 150), (60, 258)], role="station", width=2.5, dash="6 6")
     c.arrow(60, 268, "down", role="station", size=7)
@@ -777,7 +779,7 @@ def bindings_narrow(palettes, faces):
     ], 21)
 
     c.line([(16, abi_y), (384, abi_y)], role="muted", width=1.5, dash="5 6")
-    c.text("C ABI", (FRAMED[2] + FRAMED[3]) / 2, abi_y - 10, 15, anchor="middle")
+    c.text("host boundary", 384, abi_y - 10, 15, anchor="end")
 
     c.line([(28, 128), (28, 278)], role="station", width=2.5, dash="6 6")
     c.arrow(28, 288, "down", role="station", size=6)
