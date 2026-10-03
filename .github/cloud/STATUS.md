@@ -103,11 +103,42 @@ section, this section wins.
    from the drafts in commit `658ad64` on branch `pending-work` (method table,
    router, routing tests; `git show 658ad64:<path>`), WP-7 from the `.suffix`
    origin entries of the CORS draft in the same commit.
-4. Beside them, the other GAPS.md workstreams, following its ownership table:
+   In progress since 2026-10-03: line 2 runs as one workflow (implement in a
+   worktree under `.claude/worktrees/`, adversarial review, fix), WP-2 and WP-3
+   first; the lead session checks, commits and pushes each package.
+4. GAPS.md items closed on 2026-10-03, each in its own commit on `main`:
+   - R1 (errors-01 to 07 and body-08 to 11 at release 1), R2 (`standards
+     --check` lists every problem and refuses a cited line that is not a test
+     that runs; the 29 missing tests are exactly the packages' rows), R4 (anchor
+     labels), R5 (Node rows cite the v22 documentation), R6 (`tls-06` note),
+     R11 (the standards page's row description).
+   - E4 for the release and backfill workflows (runner images named by
+     version; `ci.yml` and the binding workflows still say `-latest`), E5 for
+     release-nuget, release-python and pypi-backfill (mlugg/setup-zig v2.2.1,
+     cargo-zigbuild 0.23.4, maturin 1.15.0, build 1.6.1, twine 7.0.0, the
+     toolchain from rust-toolchain.toml, `--locked`), E7, E9, E11, E13, and
+     the Cargo half of E12 (the sdk trusted publisher line waits for WP-11).
+   - `rust-toolchain.toml` pins 1.99.0 (stable on 2026-10-03); fmt and clippy
+     are clean under it.
+   - C2: workers pin to the i-th CPU of the set the process may use, and
+     `SO_INCOMING_CPU` follows; zero-sys reads that set on Windows too.
+   - D12 needed nothing: no packaged file names the plan files any more.
+   Found and left open:
+   - On io-compio, a per-core future that returns before shutdown is
+     requested leaves its worker waiting out the whole drain (30 s), because
+     the Date ticker task runs until shutdown; io-tokio does not wait for it.
+     T3 should settle the seam's behavior.
+   - Zig stays 0.13.0 in release-nuget (and release-node); the current release
+     is 0.16.0, and 0.15 and later need clang 18 for bindgen. Move it with a
+     non-publishing release build run (E1).
+   - `crates/zero-tls/src/config.rs` still cites RFC 7627 in its module docs
+     (R10 or the zero-tls doc pass).
+   - `bench/techempower/README.md` names DESIGN.md section 12.5 (B8).
+5. Beside them, the other GAPS.md workstreams, following its ownership table:
    core fixes C1 to C3, test depth T, registry R, docs and site D, release
    engineering E, fuzz F4, F6 to F8, the benchmark harness B1 to B5 (built here,
    run on the owner's desktop).
-5. The release sequence of GAPS.md W10: version bump to `2.0.0-alpha.1`, CI on
+6. The release sequence of GAPS.md W10: version bump to `2.0.0-alpha.1`, CI on
    the bump, `cargo xtask release --dry-run`, the non-publishing release runs,
    then the tag, which only the owner confirms.
 
