@@ -9,10 +9,12 @@ on:
 permissions:
   contents: read
 
+# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
+# 2026-10-03).
 jobs:
   build:
     name: node (build, smoke, guides)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: bindings/node
