@@ -16,16 +16,20 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+# Toolchains, read 2026-10-03: Node 24 is the active LTS line (nodejs.org/dist/index.json,
+# v24.21.0); .NET 10.0 is the active LTS (dotnet/core releases-index.json, 10.0.401, end of
+# support 2028-11-14); maturin 1.15.0 and pdoc 16.0.0 from PyPI; docfx 2.81.0 from NuGet.
+# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README).
 jobs:
   site:
     name: docs (site)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
 
       - uses: actions/setup-python@v7
         with:
@@ -33,7 +37,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Cache cargo
         uses: actions/cache@v6
@@ -85,14 +89,14 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install maturin pdoc==16.0
+          pip install maturin==1.15.0 pdoc==16.0.0
           maturin develop -m packages/native/Cargo.toml
           pip install $(find packages -mindepth 1 -maxdepth 1 -type d ! -name native)
           pdoc zero_server '!zero_server._native' -o ../../target/site/docs/reference/python --docformat restructuredtext --template-directory ../../docs/theme/pdoc --logo https://molexxxx.github.io/zero-server/docs/assets/zero-logo.svg --logo-link https://molexxxx.github.io/zero-server/docs/
 
       - name: .NET reference
         run: |
-          dotnet tool install -g docfx --version 2.78.5
+          dotnet tool install -g docfx --version 2.81.0
           docfx bindings/dotnet/docs/docfx.json
 
       # The pages, the navigation, the search index, and the stylesheets, with every link

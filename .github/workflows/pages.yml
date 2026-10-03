@@ -28,7 +28,7 @@ jobs:
 
   deploy:
     needs: docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
