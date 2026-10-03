@@ -8,6 +8,7 @@ use zero_http_types::Method;
 use zero_io::seam::Stream;
 
 use crate::call::Call;
+use crate::error::ErrorShape;
 use crate::takeover::Taken;
 
 /// A tier 4 handler: one instance per core, called for every request on that core.
@@ -76,5 +77,33 @@ pub trait Handler: 'static {
     fn taken<S: Stream + 'static>(&self, taken: Taken<S>) -> impl Future<Output = ()> {
         drop(taken);
         async {}
+    }
+
+    /// The octets this handler holds outside the request records, such as request
+    /// bodies moved into an [`Exchange`](crate::Exchange) and queued outbound
+    /// frames, which the core's request-memory budget counts beside the leased
+    /// receive blocks and the buffered bodies. While the sum passes the budget, the
+    /// core accepts no connection.
+    ///
+    /// Asked on every accept and every budget check of the core's accept loop, so
+    /// the answer is a counter read, not a computation. The default holds nothing.
+    ///
+    /// # Returns
+    ///
+    /// The octets held.
+    fn leased_bytes(&self) -> u64 {
+        0
+    }
+
+    /// The body shape of the answers the core writes for errors on this handler's
+    /// requests: the router's 404, 405 and 501, the driver's 413 and 503, a
+    /// handler's error, and [`Call::problem`].
+    ///
+    /// # Returns
+    ///
+    /// [`ErrorShape::Problem`], the RFC 9457 body, unless the handler answers
+    /// otherwise.
+    fn error_shape(&self) -> ErrorShape {
+        ErrorShape::Problem
     }
 }

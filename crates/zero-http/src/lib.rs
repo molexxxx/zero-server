@@ -20,14 +20,19 @@
 pub mod call;
 mod conn;
 pub mod error;
+pub mod exchange;
 pub mod handler;
 mod record;
 mod ring;
 pub mod server;
 pub mod takeover;
 
-pub use call::{Call, Request, Response, Routed};
-pub use error::{code_for, status_for, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
+pub use call::{Call, Miss, ReadHold, Request, Response, Routed};
+pub use error::{code_for, status_for, ErrorShape, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
+pub use exchange::{
+    Action, Exchange, ExportOptions, ExternalBody, HostField, HostSpan, PublishedView,
+    ResponseBody, ViewSnapshot,
+};
 pub use handler::Handler;
 pub use server::{serve, serve_with, Accept, Config, Prepared};
 pub use takeover::{TakeOver, Taken};

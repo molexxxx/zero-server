@@ -32,10 +32,10 @@ use zero_io::seam::{Leased, Shutdown, Stream, Timer};
 use zero_limits::Http1Limits;
 use zero_rt::{contain, Reset, Worker};
 
-use crate::call::Call;
+use crate::call::{Call, HoldCell};
 use crate::error::Problem;
 use crate::handler::Handler;
-use crate::record::{Record, RESPONSE_HEAD_CAPACITY};
+use crate::record::{Record, RESPONSE_HEAD_CAPACITY, TRAILER_TABLE};
 use crate::ring::{poll_running, record_at, Entry, Framing, Ring, Split, Stage, CAP};
 use crate::takeover::{TakeOver, Taken};
 
@@ -59,9 +59,6 @@ const MAX_RESPONSE_HEAD: usize = 16 * 1024 * 1024;
 /// per response.
 const SLICES: usize = 1 + 2 * CAP;
 
-/// The trailer table a chunked body's trailers are validated into.
-const TRAILER_TABLE: usize = 16;
-
 /// What every connection on a core shares.
 pub(crate) struct Shared<H> {
     pub(crate) worker: Worker,
@@ -77,6 +74,9 @@ pub(crate) struct Shared<H> {
     budget: u64,
     /// The connections of this core are secure, such as TLS sessions.
     secure: bool,
+    /// The parsed head of the request whose handler future was dropped last, left
+    /// behind by its record, which went down with the future.
+    canceled: Cell<Option<Head>>,
 }
 
 impl<H> Shared<H> {
@@ -98,6 +98,7 @@ impl<H> Shared<H> {
             bodies: Cell::new(0),
             budget,
             secure,
+            canceled: Cell::new(None),
         }
     }
 
@@ -109,8 +110,9 @@ impl<H> Shared<H> {
             .unwrap_or_else(|| Box::new(Record::new(self.limits.header_table_entries)))
     }
 
-    /// Keep a record for reuse.
+    /// Keep a record for reuse; the body charge it still holds is returned.
     pub(crate) fn give_record(&self, mut record: Box<Record>) {
+        self.uncount_body(record.charge);
         record.reset();
         let mut free = self.records.borrow_mut();
         if free.len() < RECORDS_KEPT {
@@ -118,14 +120,19 @@ impl<H> Shared<H> {
         }
     }
 
-    /// Whether leased receive blocks plus buffered bodies exceed the core's
-    /// request-memory budget, in which case the core pauses accepts.
-    pub(crate) fn over_budget(&self) -> bool {
+    /// Whether leased receive blocks, buffered bodies and what the handler holds
+    /// outside the records exceed the core's request-memory budget, in which case
+    /// the core pauses accepts.
+    pub(crate) fn over_budget(&self) -> bool
+    where
+        H: Handler,
+    {
         self.worker
             .core()
             .pool
             .leased_bytes()
             .saturating_add(self.bodies.get())
+            .saturating_add(self.handler.leased_bytes())
             > self.budget
     }
 
@@ -142,34 +149,66 @@ impl<H> Shared<H> {
     }
 }
 
-/// Run the handler for one request under panic containment; the record comes back
-/// with the response set, from the handler, the registry or the panic rule.
-pub(crate) async fn request_task<H: Handler>(
+/// A request's record while its handler runs, with the body charge it holds on the
+/// core's budget: a future dropped before it completes returns the charge here and
+/// leaves the request's parsed head in [`Shared::canceled`], so the driver can
+/// still answer the request as what it was.
+struct Charged<H> {
     shared: Rc<Shared<H>>,
-    mut record: Box<Record>,
-) -> Box<Record> {
+    record: Option<Box<Record>>,
+}
+
+impl<H> Drop for Charged<H> {
+    fn drop(&mut self) {
+        if let Some(record) = &self.record {
+            self.shared.uncount_body(record.charge);
+            self.shared.canceled.set(record.parsed);
+        }
+    }
+}
+
+/// Run the handler for one request under panic containment; the record comes back
+/// with the response set, from the handler, the registry or the panic rule, and
+/// with the body charge the handler did not export.
+pub(crate) fn request_task<H: Handler>(
+    shared: Rc<Shared<H>>,
+    record: Box<Record>,
+) -> impl Future<Output = Box<Record>> {
+    let mut charged = Charged {
+        shared,
+        record: Some(record),
+    };
+    async move {
+        if let Some(record) = charged.record.as_deref_mut() {
+            run_handler(&charged.shared, record).await;
+        }
+        charged.record.take().unwrap_or_default()
+    }
+}
+
+async fn run_handler<H: Handler>(shared: &Shared<H>, record: &mut Record) {
+    let shape = shared.handler.error_shape();
     if record.misdirected {
         // RFC 9110 Section 7.4: the connection's certificate does not cover the
         // target's origin, so the request is rejected without reaching the handler.
-        record.problem(&Problem::new(
-            StatusCode::MISDIRECTED_REQUEST,
-            "misdirected",
-        ));
-        return record;
+        record.problem(
+            &Problem::new(StatusCode::MISDIRECTED_REQUEST, "misdirected"),
+            shape,
+        );
+        return;
     }
     let outcome = {
-        let mut call = Call::new(&mut record, &shared.worker);
+        let mut call = Call::new(record, &shared.worker, shape, &shared.bodies);
         contain(shared.handler.handle(&mut call)).await
     };
     match outcome {
         Ok(Ok(())) => {}
-        Ok(Err(error)) => record.problem(&Problem::from_error(&error)),
+        Ok(Err(error)) => record.problem(&Problem::from_error(&error), shape),
         Err(panicked) => {
             shared.worker.note_panic(panicked.message);
-            record.problem(&Problem::panicked());
+            record.problem(&Problem::panicked(), shape);
         }
     }
-    record
 }
 
 /// The unconsumed input of a connection: nothing, a leased block, or heap bytes when
@@ -329,6 +368,10 @@ pub(crate) struct Conn<S, H, Req> {
     taken: Option<Box<Record>>,
     /// The hosts this connection may serve; `None` serves any.
     authorities: Option<Arc<[Box<str>]>>,
+    /// The read holds the connection's requests took.
+    hold: Rc<HoldCell>,
+    /// A read hold was in place at the last turn.
+    read_held: bool,
 }
 
 impl<S, H, Req> Conn<S, H, Req>
@@ -365,6 +408,8 @@ where
             taking: false,
             taken: None,
             authorities: None,
+            hold: Rc::new(HoldCell::default()),
+            read_held: false,
         }
     }
 
@@ -472,6 +517,7 @@ where
     /// The bookkeeping of one turn.
     fn tick(&mut self) {
         let now = Instant::now();
+        self.resume_reading(now);
         self.expire(now);
         self.process_input(now);
         self.start_runnable();
@@ -479,7 +525,7 @@ where
     }
 
     /// Wait for the next event: a handler completing, the write, the read, the
-    /// earliest deadline, or the shutdown signal.
+    /// earliest deadline, the shutdown signal, or the last read hold dropping.
     async fn wait(&mut self) -> Event {
         let now = Instant::now();
         let deadline = self.next_deadline(now);
@@ -489,12 +535,14 @@ where
             && !self.taking
             && !self.ring.upgrade_pending();
         let watch_shutdown = !self.draining;
+        let held_before = self.hold.held();
         let Conn {
             shared,
             stream,
             ring,
             writing,
             completed,
+            hold,
             ..
         } = self;
         let core = shared.worker.core();
@@ -519,12 +567,18 @@ where
         let mut shutdown = pin!(shared.worker.shutdown().requested());
         poll_fn(|cx| {
             poll_running(entries, futures, head, len, cx, completed);
+            let held = hold.held();
+            if held {
+                hold.wake_on_release(cx.waker());
+            } else if held_before {
+                return Poll::Ready(Event::Progress);
+            }
             if !to_write.is_empty() {
                 if let Poll::Ready(outcome) = write.as_mut().poll(cx) {
                     return Poll::Ready(Event::Wrote(outcome));
                 }
             }
-            if want_read {
+            if want_read && !held {
                 if let Poll::Ready(outcome) = read.as_mut().poll(cx) {
                     return Poll::Ready(Event::Read(outcome));
                 }
@@ -569,20 +623,31 @@ where
         }
     }
 
+    /// Serialize a completed response and mark its entry done.
+    ///
+    /// A response that claims the connection, or that the handler marked to close
+    /// it, is the connection's last: nothing after it is parsed and the requests
+    /// pipelined behind it are dropped, since a server that sends the `close`
+    /// option processes no further request (RFC 9112 Section 9.6).
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-9.6>
     fn complete(&mut self, position: usize, mut record: Box<Record>) {
         let last = !self.ring.is_empty() && self.ring.position(self.ring.len() - 1) == position;
         let close = record.close || (self.close && last);
         serialize(&self.shared, &mut record, close);
-        if record.claim.is_some() {
-            // The connection ends with the claim: nothing after it is parsed, and
-            // requests pipelined behind it are dropped.
-            self.taking = true;
+        let claimed = record.claim.is_some();
+        if claimed || record.close {
+            self.taking |= claimed;
+            self.close |= record.close;
             if let Some(index) = self.ring.index_of(position) {
                 self.discard_from(index.saturating_add(1));
             }
         }
         self.ring.clear_future(position);
         if let Some(entry) = self.ring.entry_mut(position) {
+            entry.body_bytes = entry
+                .body_bytes
+                .saturating_add(std::mem::take(&mut record.charge));
             entry.record = Some(record);
             entry.stage = Stage::Done;
         } else {
@@ -662,7 +727,7 @@ where
         }
     }
 
-    /// Drop every entry from the `from`th onward; their handlers are cancelled.
+    /// Drop every entry from the `from`th onward; their handlers are canceled.
     fn discard_from(&mut self, from: usize) {
         while self.ring.len() > from {
             if let Some(entry) = self.ring.pop_back() {
@@ -671,11 +736,35 @@ where
         }
     }
 
-    /// Fire every deadline that passed.
+    /// Restart the read deadlines once the last read hold dropped: while a hold was
+    /// in place the connection read nothing, so a head begun before it and a body
+    /// still arriving get their full timeouts from the moment reading resumes.
+    fn resume_reading(&mut self, now: Instant) {
+        let held = self.hold.held();
+        if self.read_held && !held {
+            if self.head_since.is_some() {
+                self.head_since = Some(now);
+            }
+            for index in 0..self.ring.len() {
+                let position = self.ring.position(index);
+                if let Some(entry) = self.ring.entry_mut(position) {
+                    if matches!(entry.stage, Stage::Body { .. }) {
+                        entry.last_byte = now;
+                    }
+                }
+            }
+        }
+        self.read_held = held;
+    }
+
+    /// Fire every deadline that passed. The header read timeout and the body idle
+    /// timeout measure the client's pace, so neither runs while a read hold keeps
+    /// the connection from reading.
     fn expire(&mut self, now: Instant) {
         if self.retry_read_at.is_some_and(|at| now >= at) {
             self.retry_read_at = None;
         }
+        let held = self.hold.held();
         let limits = *self.limits();
         if self.writing.is_some() && now >= self.sent_at + limits.send_idle {
             // The client took no bytes for the whole send timeout: it stopped
@@ -689,9 +778,10 @@ where
             self.close = true;
             return;
         }
-        if self
-            .head_since
-            .is_some_and(|since| now >= since + limits.header_read_timeout)
+        if !held
+            && self
+                .head_since
+                .is_some_and(|since| now >= since + limits.header_read_timeout)
         {
             self.head_since = None;
             self.input.clear(self.shared.pool());
@@ -709,7 +799,7 @@ where
             };
             let total = entry.accepted + limits.request_total;
             let expired = match entry.stage {
-                Stage::Body { .. } => (now >= entry.last_byte + limits.body_read_idle
+                Stage::Body { .. } => ((!held && now >= entry.last_byte + limits.body_read_idle)
                     || now >= total)
                     .then_some(StatusCode::REQUEST_TIMEOUT),
                 Stage::Waiting | Stage::Running => {
@@ -732,9 +822,11 @@ where
             && self.writing.is_none()
     }
 
-    /// The earliest deadline, if any.
+    /// The earliest deadline, if any; the read deadlines are left out while a read
+    /// hold is in place.
     fn next_deadline(&self, now: Instant) -> Option<Instant> {
         let limits = self.limits();
+        let held = self.hold.held();
         let mut earliest: Option<Instant> = self.retry_read_at;
         let mut note = |at: Instant| {
             earliest = Some(earliest.map_or(at, |current| current.min(at)));
@@ -745,7 +837,7 @@ where
         if self.writing.is_some() {
             note(self.sent_at + limits.send_idle);
         }
-        if let Some(since) = self.head_since {
+        if let Some(since) = self.head_since.filter(|_| !held) {
             note(since + limits.header_read_timeout);
         }
         for index in 0..self.ring.len() {
@@ -754,7 +846,9 @@ where
             };
             match entry.stage {
                 Stage::Body { .. } => {
-                    note(entry.last_byte + limits.body_read_idle);
+                    if !held {
+                        note(entry.last_byte + limits.body_read_idle);
+                    }
                     note(entry.accepted + limits.request_total);
                 }
                 Stage::Waiting | Stage::Running => note(entry.accepted + limits.request_total),
@@ -765,18 +859,30 @@ where
     }
 
     /// Answer the `index`th request with `status` and close; later requests are
-    /// discarded, a running handler is cancelled.
+    /// discarded, a running handler is canceled.
+    ///
+    /// A running handler's record goes down with its future, so the answer is
+    /// built on a fresh record that carries the canceled request's parsed head:
+    /// the answer to a HEAD request then carries no content, which RFC 9110
+    /// Section 9.3.2 requires of every response to HEAD.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.2>
     fn fail_at(&mut self, index: usize, status: StatusCode) {
         self.discard_from(index.saturating_add(1));
         let position = self.ring.position(index);
+        self.shared.canceled.set(None);
         self.ring.clear_future(position);
-        let mut record = self
+        let canceled = self.shared.canceled.take();
+        let kept = self
             .ring
             .entry_mut(position)
-            .and_then(|entry| entry.record.take())
-            .unwrap_or_else(|| self.shared.take_record());
-        record.clear_response();
-        record.status = Some(status);
+            .and_then(|entry| entry.record.take());
+        let mut record = kept.unwrap_or_else(|| {
+            let mut record = self.shared.take_record();
+            record.parsed = canceled;
+            record
+        });
+        record.answer(status, self.shared.handler.error_shape());
         record.close = true;
         serialize(&self.shared, &mut record, true);
         if let Some(entry) = self.ring.entry_mut(position) {
@@ -790,8 +896,7 @@ where
     /// Answer a request that has no entry yet (a rejected or timed-out head) and
     /// close.
     fn answer_now(&mut self, mut record: Box<Record>, status: StatusCode, now: Instant) {
-        record.clear_response();
-        record.status = Some(status);
+        record.answer(status, self.shared.handler.error_shape());
         record.close = true;
         serialize(&self.shared, &mut record, true);
         let entry = Entry::new(record, Stage::Done, now);
@@ -852,7 +957,7 @@ where
                 self.input.clear(self.shared.pool());
                 break;
             }
-            if self.ring.len() >= self.max_pipelined() {
+            if self.ring.len() >= self.max_pipelined() || self.hold.held() {
                 break;
             }
             if !self.parse_head(now) {
@@ -1070,7 +1175,10 @@ where
             let safe = entry.safe;
             let waiting = matches!(entry.stage, Stage::Waiting);
             if waiting && (index == 0 || (all_safe_before && safe)) {
-                if let Some(record) = entry.record.take() {
+                if let Some(mut record) = entry.record.take() {
+                    record.charge = record.charge.saturating_add(entry.body_bytes);
+                    entry.body_bytes = 0;
+                    record.hold = Some(Rc::clone(&self.hold));
                     let future = (self.make)(Rc::clone(&self.shared), record);
                     if !self.ring.start(position, future) {
                         self.aborted = true;
@@ -1226,7 +1334,9 @@ fn response_len(record: &Record) -> usize {
 }
 
 /// Fill the slice array for a write: the prefix, then each done response's head and
-/// body, with the bytes already written skipped.
+/// body, with the bytes already written skipped. A body is one slice whether the
+/// response owns it or an external buffer holds it; an external buffer is dropped
+/// with the record once the write took all of it.
 ///
 /// # Returns
 ///
@@ -1257,7 +1367,7 @@ fn fill_slices<'a>(
         push(&record.response_head);
         let status = record.status.unwrap_or(StatusCode::OK);
         if body_allowed(record.head_request(), status) {
-            push(&record.response_body);
+            push(record.response_body.as_bytes());
         }
     }
     let mut remaining: &mut [IoSlice<'a>] = slices.get_mut(..filled).unwrap_or(&mut []);

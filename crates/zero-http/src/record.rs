@@ -7,21 +7,26 @@
 //! block go back to the pool while the request is in flight.
 
 use std::net::SocketAddr;
+use std::rc::Rc;
 
 use zero_http1::{Field, Head, Version};
 use zero_http_types::{Method, StatusCode};
 use zero_router::MAX_PARAMS;
 use zero_rt::Reset;
 
-use crate::error::{Problem, PROBLEM_CONTENT_TYPE};
+use crate::call::{HoldCell, Miss};
+use crate::error::{ErrorShape, Problem};
+use crate::exchange::{HostSpan, ResponseBody, BODY_KEEP};
 use crate::takeover::Claim;
 
 /// The response head capacity a record starts with; grown when a head needs more.
 pub(crate) const RESPONSE_HEAD_CAPACITY: usize = 4_096;
 
-/// A body buffer kept past this capacity is shrunk when the record is reused, so one
-/// large upload does not pin a megabyte to the record for the rest of the core's life.
-pub(crate) const BODY_KEEP: usize = 65_536;
+/// The most trailer fields a request keeps: the driver validates a chunked body's
+/// trailer section into a table of this size, and an exchange parses the section
+/// it was handed into one of the same size, so every section the driver accepted
+/// fits.
+pub(crate) const TRAILER_TABLE: usize = 16;
 
 /// One request from head to final write.
 #[derive(Debug, Default)]
@@ -46,19 +51,30 @@ pub struct Record {
     pub(crate) scratch: Vec<u8>,
     /// The normalized path the route matched, which the parameter ranges index.
     pub(crate) route_path: Vec<u8>,
-    /// The parameter ranges into `route_path`, in pattern order.
-    pub(crate) params: [(u32, u32); MAX_PARAMS],
+    /// The parameter spans into `route_path`, in pattern order.
+    pub(crate) params: [HostSpan; MAX_PARAMS],
     /// How many parameters the route captured.
     pub(crate) param_count: usize,
+    /// For a request the router sent to the miss route, what the core would have
+    /// answered.
+    pub(crate) miss: Option<Miss>,
+    /// The body octets this record holds on the core's request-memory budget while
+    /// its handler runs: the driver moves its entry's charge here when the handler
+    /// starts and back onto the entry when it completes, less what the handler
+    /// exported.
+    pub(crate) charge: u64,
     /// The status the handler set; `200` when it set none.
     pub(crate) status: Option<StatusCode>,
     /// The handler's field lines, each validated and ending in CRLF.
     pub(crate) response_fields: Vec<u8>,
     /// The response body.
-    pub(crate) response_body: Vec<u8>,
+    pub(crate) response_body: ResponseBody,
+    /// A status, field, body or action was written to the response.
+    pub(crate) touched: bool,
     /// The serialized response head, from the status line through the empty line.
     pub(crate) response_head: Vec<u8>,
-    /// Whether this response ends the connection.
+    /// Whether this response ends the connection: an answer of the driver's own, or
+    /// a handler's through [`Call::close_after_response`](crate::Call::close_after_response).
     pub(crate) close: bool,
     /// The handler claimed the connection after this response.
     pub(crate) claim: Option<Claim>,
@@ -66,6 +82,8 @@ pub struct Record {
     pub(crate) continued: bool,
     /// The response carries `Upgrade`, so `Connection` lists the `upgrade` option.
     pub(crate) advertise_upgrade: bool,
+    /// The read hold of the connection the request arrived on.
+    pub(crate) hold: Option<Rc<HoldCell>>,
 }
 
 impl Record {
@@ -109,8 +127,8 @@ impl Record {
         self.fields.get(..count).unwrap_or(&[])
     }
 
-    /// The captured parameter ranges.
-    pub(crate) fn live_params(&self) -> &[(u32, u32)] {
+    /// The captured parameter spans.
+    pub(crate) fn live_params(&self) -> &[HostSpan] {
         self.params.get(..self.param_count).unwrap_or(&[])
     }
 
@@ -119,17 +137,37 @@ impl Record {
         self.status = None;
         self.response_fields.clear();
         self.response_body.clear();
+        self.touched = false;
         self.response_head.clear();
         self.claim = None;
         self.advertise_upgrade = false;
     }
 
-    /// Replace whatever the handler wrote with a problem details response.
-    pub(crate) fn problem(&mut self, problem: &Problem) {
+    /// Replace whatever the handler wrote with a problem, in the server's error shape.
+    pub(crate) fn problem(&mut self, problem: &Problem, shape: ErrorShape) {
         self.clear_response();
         self.status = Some(problem.status);
-        self.response_fields.extend_from_slice(PROBLEM_CONTENT_TYPE);
-        problem.write_json(&mut self.response_body);
+        self.response_fields
+            .extend_from_slice(shape.content_type_line());
+        problem.write_body(shape, self.response_body.owned_mut());
+        self.touched = true;
+    }
+
+    /// Replace whatever the handler wrote with an answer of the driver's own: a 413
+    /// or a 503 carries the error body in the server's shape, any other status goes
+    /// without a body.
+    pub(crate) fn answer(&mut self, status: StatusCode, shape: ErrorShape) {
+        if status == StatusCode::CONTENT_TOO_LARGE {
+            self.problem(&Problem::new(StatusCode::CONTENT_TOO_LARGE, "limit"), shape);
+        } else if status == StatusCode::SERVICE_UNAVAILABLE {
+            self.problem(
+                &Problem::new(StatusCode::SERVICE_UNAVAILABLE, "timeout"),
+                shape,
+            );
+        } else {
+            self.clear_response();
+            self.status = Some(status);
+        }
     }
 }
 
@@ -146,16 +184,21 @@ impl Reset for Record {
         self.scratch.clear();
         self.route_path.clear();
         self.param_count = 0;
+        self.miss = None;
+        self.charge = 0;
         self.clear_response();
         self.response_body.shrink_to(BODY_KEEP);
         self.close = false;
         self.continued = false;
+        self.hold = None;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Record, BODY_KEEP};
+    use crate::error::ErrorShape;
+    use zero_http_types::StatusCode;
     use zero_rt::Reset;
 
     #[test]
@@ -167,13 +210,37 @@ mod tests {
         record.route_path.extend_from_slice(b"/x");
         record.param_count = 1;
         record.close = true;
+        record.charge = 9;
         let head_capacity = record.head.capacity();
         record.reset();
         assert!(record.head.is_empty() && record.body.is_empty());
         assert!(record.response_fields.is_empty() && !record.close);
         assert!(record.route_path.is_empty() && record.param_count == 0);
+        assert_eq!(record.charge, 0);
         assert_eq!(record.head.capacity(), head_capacity);
         assert!(record.body.capacity() <= BODY_KEEP);
         assert_eq!(record.fields.len(), 4);
+    }
+
+    #[test]
+    fn the_driver_answers_413_and_503_in_the_error_shape_and_other_statuses_bare() {
+        let mut record = Record::new(1);
+        record.answer(StatusCode::CONTENT_TOO_LARGE, ErrorShape::Legacy);
+        assert_eq!(
+            record.response_body.as_bytes(),
+            br#"{"error":"Content Too Large"}"#
+        );
+        assert_eq!(
+            record.response_fields,
+            b"Content-Type: application/json\r\n"
+        );
+        record.answer(StatusCode::SERVICE_UNAVAILABLE, ErrorShape::Problem);
+        assert_eq!(
+            record.response_body.as_bytes(),
+            br#"{"type":"about:blank","title":"Service Unavailable","status":503,"code":"timeout"}"#
+        );
+        record.answer(StatusCode::REQUEST_TIMEOUT, ErrorShape::Problem);
+        assert!(record.response_body.is_empty() && record.response_fields.is_empty());
+        assert_eq!(record.status, Some(StatusCode::REQUEST_TIMEOUT));
     }
 }

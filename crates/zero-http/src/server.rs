@@ -274,7 +274,7 @@ fn prepare(config: &Config) -> io::Result<(Http1Limits, Vec<u8>, u64)> {
 
 /// One core's accept loop: it pauses while the core is over its request-memory
 /// budget or `saturated` holds, and hands every accepted connection to `spawn`
-/// once `saturated` no longer holds.
+/// once neither holds.
 async fn run_core<H: Handler>(
     worker: Worker,
     acceptor: Acceptor,
@@ -300,9 +300,10 @@ async fn run_core<H: Handler>(
         };
         match accepted {
             Ok((stream, peer)) => {
-                // An accept that was already waiting when the core saturated holds its
-                // connection here, so the cap is never passed by one.
-                while saturated() {
+                // An accept that was already waiting when the core saturated or went
+                // over its budget holds its connection here, so neither is passed by
+                // one.
+                while saturated() || shared.over_budget() {
                     if worker
                         .shutdown()
                         .until(core.sleep(BUDGET_PAUSE))
