@@ -16,10 +16,12 @@ one: TLS cites RFC 9846, which obsoletes RFC 8446.
 
 [`docs/standards.toml`](../standards.toml) holds one row for each statement the core
 relies on: the document and section, the subject in the specification's own words, the
-file that implements it, and the test that pins it. A test is named after the statement
-it checks. `cargo xtask standards --check` runs on every push and blocks a release while
-any row of that release has no test, or names a test that can no longer be found, so a
-rule cannot lose its test silently.
+file that holds its test and the text of the line that names the test, what the test is
+held to (the document's own published example, a rule of the document, or a live
+implementation), and the release that ships it. A test is named after the statement it
+checks. `cargo xtask standards --check` runs on every push and blocks a release while any
+row of that release has no test, names a test that can no longer be found, or cites a
+line that is not a test that runs, so a rule cannot lose its test silently.
 
 ## One set of vectors for every language
 
