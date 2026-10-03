@@ -15,6 +15,18 @@ section, this section wins.
 
 ### Where things stand
 
+- Stopped 2026-10-03 (usage limit). Unfinished work is on branches, each one
+  commit on top of main as it was (c475f0e or 9bc8c1a), not reviewed and not
+  merged:
+  - `rt-slot-protocol` (WP-2, implemented, all exit checks passed, review pending),
+  - `http-exchange` (WP-3, implemented, tests pass on both backends, review pending),
+  - `realtime-outboxes` (WP-4), `patch-method` (WP-5), `contract-tooling` (WP-6),
+    `tier0-options` (WP-7): partial, cut off mid-implementation,
+  - `http1-tests` (T5, T11), `tls-tests` (T2, T15): partial.
+  Next: review WP-2 and WP-3 adversarially, run the clean-worktree check, merge
+  onto main; finish WP-4 to WP-7 from their branches; then the rest below.
+  Also pending: D3 (after WP-6), F4 targets, E3 (after WP-10/12/13), D10.
+
 - `main` holds everything finished and green in CI: steps 1 to 11 of release 1,
   the `zero` binary (`zero serve`), the QPACK and HTTP/3 codecs, the README with
   its two diagrams, the pre-release versioning and release tooling, and the first
