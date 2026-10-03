@@ -108,7 +108,6 @@
     "lifecycle.lifecycle_state": "LIFECYCLE_STATE",
     "lifecycle.cluster_manager": "ClusterManager",
     "lifecycle.cluster": "cluster",
-    "lifecycle.clusterize": "clusterize",
     "observe.logger": "Logger",
     "observe.structured_logger": "structuredLogger",
     "observe.counter": "Counter",

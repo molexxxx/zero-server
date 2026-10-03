@@ -33,7 +33,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">= 16"
+    "node": ">=22"
   },
   "dependencies": {
     "@zero-server/core": "0.1.0",

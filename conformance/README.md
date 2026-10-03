@@ -76,7 +76,8 @@ data example).
 
 ## api-surface.json
 
-Generated from the public exports and JSDoc of `@zero-server/sdk` 1.1.0 and
+Generated from the public exports and JSDoc of `@zero-server/sdk` 1.1.0, read
+from the commit npm records for that version (`source.gitHead` in the file), and
 copied here; it is never edited by hand. Every export has one canonical id, `<scope>.<snake_case>`, and a kind:
 
 - `ffi`: carried by the C ABI of `zero-ffi` and reached through the generated
@@ -91,15 +92,21 @@ copied here; it is never edited by hand. Every export has one canonical id, `<sc
 Each export also records its `status` (`kept`, `shim` for the cluster helpers
 that survive as a host-side shim, or `dropped` with the reason), the `release`
 whose contract tier first carries it, and the summary, parameters and return
-documented in the SDK. CI diffs each binding's generated declarations against
-this file by canonical id, so a missing export or a changed parameter list fails
-the build without a literal name comparison across naming conventions.
+documented in the SDK. The canonical ids let each binding's generated
+declarations be compared with this file without a literal name comparison
+across naming conventions; no CI step makes that comparison yet.
 
 `api-surface.node.json`, `api-surface.python.json` and `api-surface.dotnet.json`
 hold each binding's naming rules and the spelling of every canonical id in that
 language: the Node SDK name unchanged, snake_case functions with PascalCase
 classes in Python, and PascalCase everywhere in C# with error classes ending in
 `Exception`.
+
+`api-surface.members.json` lists the members of the classes the facade keeps
+(`App`, `Router`, `Request`, `Response`, `SSEStream`, `WebSocketConnection` and
+`WebSocketPool`), read from the `types/*.d.ts` files of the same commit: each
+property with its type and whether it is optional or read-only, and each method
+with its overloads.
 
 ## regressions.md
 

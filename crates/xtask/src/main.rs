@@ -3,8 +3,9 @@
 //! Run with `cargo xtask <task>`. The tasks cover the release (the crates.io
 //! publish order and the lockstep version bump), the generated documentation
 //! and site, the lint tables and the standards register the workspace is held
-//! to, the binding package manifests, and the binding probes that run in
-//! Docker.
+//! to, the binding package manifests, the contract of the C ABI (its named
+//! constants, the .NET declarations generated from the header and the check of
+//! those declarations), and the binding probes that run in Docker.
 
 use std::path::Path;
 use std::process::{Command, ExitCode};
@@ -12,6 +13,8 @@ use std::process::{Command, ExitCode};
 mod builds;
 mod catalog;
 mod docs;
+mod ffi_mirror;
+mod ffi_names;
 mod licenses;
 mod links;
 mod lints;
@@ -21,6 +24,7 @@ mod regions;
 mod release;
 mod site;
 mod standards;
+mod surface;
 mod version;
 
 /// The tasks xtask knows about, each paired with a one-line description.
@@ -62,6 +66,18 @@ const TASKS: &[(&str, &str)] = &[
         "diff every member manifest's [lints] table against the table docs/capabilities.toml names (lints [--check])",
     ),
     (
+        "ffi-names",
+        "render the named constants of the C ABI from the zero-http-types tables (ffi-names --write|--check)",
+    ),
+    (
+        "ffi-mirror",
+        "render the .NET declarations NativeMethods.g.cs from include/zero.h (ffi-mirror --write|--check)",
+    ),
+    (
+        "surface",
+        "check the .NET declarations against include/zero.h: names, parameter counts and types (surface --check)",
+    ),
+    (
         "probes",
         "run the binding probes in Docker and write bench/probes/rerun-<lang>-linux.txt (probes [node|python|dotnet]...)",
     ),
@@ -94,6 +110,9 @@ fn main() -> ExitCode {
         "standards" => standards::run(&rest),
         "packages" => packages::run(&rest),
         "lints" => lints::run(&rest),
+        "ffi-names" => ffi_names::run(&rest),
+        "ffi-mirror" => ffi_mirror::run(&rest),
+        "surface" => surface::run(&rest),
         "probes" => probes::run(&rest),
         "minify" => minify(&rest),
         _ => {

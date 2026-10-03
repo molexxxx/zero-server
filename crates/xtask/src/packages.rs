@@ -72,6 +72,18 @@ impl Publish {
 /// What the `packages` task generates, for its messages.
 const FILES: &str = "the binding package manifests and READMEs";
 
+/// The Node lines every npm package supports. Checked on 2026-10-22 against
+/// <https://nodejs.org/en/about/previous-releases> and
+/// <https://raw.githubusercontent.com/nodejs/Release/main/schedule.json>: 22 (maintenance
+/// to 2027-04-30), 24 (LTS, maintenance from 2026-10-20) and 26 (current, LTS from
+/// 2026-10-28) are supported, and 20 reached its end on 2026-04-30.
+const NODE_ENGINES: &str = ">=22";
+
+/// The Python versions every distribution supports. Checked on 2026-10-22 against
+/// <https://devguide.python.org/versions/>: 3.11 to 3.15 are supported, and 3.10 reached
+/// its end of life on 2026-10-01.
+const REQUIRES_PYTHON: &str = ">=3.11";
+
 /// Run `cargo xtask packages [--check]`: render every binding package's manifest and
 /// README from the capability map, or verify the committed ones are current.
 ///
@@ -443,7 +455,10 @@ fn manifest(package: &Manifest) -> Json {
         ("types", Json::str("dist/index.d.ts")),
         ("exports", Json::Object(exports)),
         ("files", Json::strings(["dist/", "LICENSE"])),
-        ("engines", Json::object(vec![("node", Json::str(">= 16"))])),
+        (
+            "engines",
+            Json::object(vec![("node", Json::str(NODE_ENGINES))]),
+        ),
         ("dependencies", pins(package.deps, package.version)),
     ]);
     Json::object(fields)
@@ -921,6 +936,17 @@ fn python_package_files(
 /// A pure Python project manifest built by hatchling. A capability package ships its
 /// portion of the `zero_server` import namespace; the metapackage ships nothing and only
 /// depends. `homepage`, when given, is the documentation URL beside the repository.
+///
+/// The license is an SPDX expression in the string form of `license`, which the build
+/// writes as `License-Expression`, and the file is named by `license-files`; the table
+/// form of `license` and the `License ::` classifiers are deprecated, so neither is
+/// written. PEP 639 introduced these rules; the PyPA specifications are their canonical
+/// text.
+///
+/// @see <https://packaging.python.org/en/latest/specifications/pyproject-toml/#license>
+/// @see <https://packaging.python.org/en/latest/specifications/pyproject-toml/#license-files>
+/// @see <https://packaging.python.org/en/latest/specifications/pyproject-toml/#classifiers>
+/// @see <https://packaging.python.org/en/latest/specifications/core-metadata/#license-expression>
 fn pyproject(
     key: &str,
     version: &str,
@@ -957,14 +983,13 @@ fn pyproject(
          version = \"{version}\"\n\
          description = \"{description}\"\n\
          readme = \"README.md\"\n\
-         license = {{ text = \"Apache-2.0\" }}\n\
+         license = \"Apache-2.0\"\n\
          license-files = [\"LICENSE\"]\n\
-         requires-python = \">=3.10\"\n\
+         requires-python = \"{REQUIRES_PYTHON}\"\n\
          authors = [{{ name = \"molexxxx\" }}]\n\
          keywords = [{}]\n\
          classifiers = [\n\
          \x20   \"Programming Language :: Python :: 3\",\n\
-         \x20   \"License :: OSI Approved :: Apache Software License\",\n\
          \x20   \"Operating System :: OS Independent\",\n\
          \x20   \"Typing :: Typed\",\n\
          ]\n\
@@ -1875,6 +1900,43 @@ mod tests {
         }
         assert!(domain[0].contains("## License\n\nApache-2.0\n"));
         assert!(domain[0].contains("`@zero-server/sdk` is the whole framework"));
+    }
+
+    #[test]
+    fn every_npm_manifest_supports_node_22_and_later() {
+        for version in ["0.1.0", "2.0.0-alpha.1"] {
+            let manifests: Vec<(String, String)> = rendered(version)
+                .into_iter()
+                .filter(|(path, _)| path.ends_with("package.json"))
+                .collect();
+            assert!(!manifests.is_empty());
+            for (path, text) in manifests {
+                assert!(
+                    text.contains("  \"engines\": {\n    \"node\": \">=22\"\n  },\n"),
+                    "{path}: {text}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_pyproject_states_an_spdx_license_and_python_3_11_and_later() {
+        let manifests: Vec<(String, String)> = rendered("2.0.0-alpha.1")
+            .into_iter()
+            .filter(|(path, _)| path.ends_with("pyproject.toml"))
+            .collect();
+        assert!(!manifests.is_empty());
+        for (path, text) in manifests {
+            assert!(
+                text.contains("\nlicense = \"Apache-2.0\"\n"),
+                "{path}: {text}"
+            );
+            assert!(text.contains("\nlicense-files = [\"LICENSE\"]\n"), "{path}");
+            assert!(text.contains("\nrequires-python = \">=3.11\"\n"), "{path}");
+            assert!(!text.contains("License ::"), "{path}");
+            assert!(!text.contains("license = {"), "{path}");
+            assert!(!text.contains("asgi"), "{path}");
+        }
     }
 
     #[test]

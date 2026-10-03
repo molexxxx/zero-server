@@ -1,0 +1,3430 @@
+{
+  "note": "Generated from @zero-server/sdk 1.1.0 (types/*.d.ts). Do not edit by hand.",
+  "source": {
+    "package": "@zero-server/sdk",
+    "version": "1.1.0",
+    "gitHead": "f15598947e130aad5498854fc2fb9092ec93f806"
+  },
+  "types": [
+    {
+      "name": "App",
+      "export": "core.create_app",
+      "declaration": "types/app.d.ts",
+      "interface": "App",
+      "members": [
+        {
+          "name": "router",
+          "kind": "property",
+          "summary": "Internal router instance.",
+          "type": "RouterInstance",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "middlewares",
+          "kind": "property",
+          "summary": "Middleware stack.",
+          "type": "MiddlewareFunction[]",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "locals",
+          "kind": "property",
+          "summary": "Application-level locals, merged into every request/response locals.",
+          "type": "Record<string, any>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "use",
+          "kind": "method",
+          "summary": "Register middleware or mount a sub-router.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "fn",
+                  "type": "MiddlewareFunction",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            },
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "MiddlewareFunction",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            },
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "router",
+                  "type": "RouterInstance",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "onError",
+          "kind": "method",
+          "summary": "Register a global error handler.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "fn",
+                  "type": "ErrorHandlerFunction",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "handler",
+          "kind": "method",
+          "summary": "Core request handler for use with `http.createServer()`.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "req",
+                  "type": "import('http').IncomingMessage",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "res",
+                  "type": "import('http').ServerResponse",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "listen",
+          "kind": "method",
+          "summary": "Start listening for connections. Pass `{ http2: true }` to create an HTTP/2 server (h2c cleartext or TLS with ALPN).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "port",
+                  "type": "number",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "() => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "HttpServer"
+            },
+            {
+              "params": [
+                {
+                  "name": "port",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "TlsOptions",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "() => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "HttpsServer"
+            },
+            {
+              "params": [
+                {
+                  "name": "port",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "ListenOptions & { http2: true } & TlsOptions",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "() => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "Http2SecureServer"
+            },
+            {
+              "params": [
+                {
+                  "name": "port",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "ListenOptions & { http2: true }",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "() => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "Http2Server"
+            },
+            {
+              "params": [
+                {
+                  "name": "port",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "ListenOptions",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "() => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "HttpServer | HttpsServer | Http2Server | Http2SecureServer"
+            }
+          ]
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "summary": "Gracefully close the server.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "cb",
+                  "type": "(err?: Error) => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "shutdown",
+          "kind": "method",
+          "summary": "Perform a full graceful shutdown.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "opts",
+                  "type": "{ timeout?: number }",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "Promise<void>"
+            }
+          ]
+        },
+        {
+          "name": "on",
+          "kind": "method",
+          "summary": "Register a lifecycle event listener.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'beforeShutdown' | 'shutdown'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => void | Promise<void>",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "off",
+          "kind": "method",
+          "summary": "Remove a lifecycle event listener.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'beforeShutdown' | 'shutdown'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => void | Promise<void>",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "registerPool",
+          "kind": "method",
+          "summary": "Register a WebSocket pool for graceful shutdown.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "pool",
+                  "type": "WebSocketPool",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "unregisterPool",
+          "kind": "method",
+          "summary": "Unregister a WebSocket pool from lifecycle management.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "pool",
+                  "type": "WebSocketPool",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "trackSSE",
+          "kind": "method",
+          "summary": "Track an SSE stream for graceful shutdown.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "stream",
+                  "type": "SSEStream",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "registerDatabase",
+          "kind": "method",
+          "summary": "Register an ORM Database for graceful shutdown.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "db",
+                  "type": "{ close(): Promise<void> }",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "unregisterDatabase",
+          "kind": "method",
+          "summary": "Unregister an ORM Database from lifecycle management.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "db",
+                  "type": "{ close(): Promise<void> }",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "shutdownTimeout",
+          "kind": "method",
+          "summary": "Configure the shutdown timeout in milliseconds.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ms",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "lifecycleState",
+          "kind": "property",
+          "summary": "Current lifecycle state.",
+          "type": "LifecycleState",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "health",
+          "kind": "method",
+          "summary": "Register a liveness health check endpoint.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "checks",
+                  "type": "Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            },
+            {
+              "params": [
+                {
+                  "name": "checks",
+                  "type": "Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "ready",
+          "kind": "method",
+          "summary": "Register a readiness health check endpoint.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "checks",
+                  "type": "Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            },
+            {
+              "params": [
+                {
+                  "name": "checks",
+                  "type": "Record<string, () => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>>",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "addHealthCheck",
+          "kind": "method",
+          "summary": "Register a custom health check.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => HealthCheckResult | boolean | Promise<HealthCheckResult | boolean>",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "metrics",
+          "kind": "method",
+          "summary": "Get the application metrics registry.",
+          "overloads": [
+            {
+              "params": [],
+              "returns": "MetricsRegistry"
+            }
+          ]
+        },
+        {
+          "name": "metricsEndpoint",
+          "kind": "method",
+          "summary": "Mount a Prometheus metrics endpoint.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "{ registry?: MetricsRegistry }",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "ws",
+          "kind": "method",
+          "summary": "Register a WebSocket upgrade handler.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handler",
+                  "type": "WebSocketHandler",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "WebSocketOptions",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handler",
+                  "type": "WebSocketHandler",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "grpc",
+          "kind": "method",
+          "summary": "Register a gRPC service with handlers.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "schema",
+                  "type": "ProtoSchema",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "serviceName",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "Record<string, GrpcHandler>",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "GrpcServiceOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "grpcInterceptor",
+          "kind": "method",
+          "summary": "Add a global gRPC interceptor.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "fn",
+                  "type": "GrpcInterceptor",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "routes",
+          "kind": "method",
+          "summary": "Return a flat list of all registered routes.",
+          "overloads": [
+            {
+              "params": [],
+              "returns": "RouteInfo[]"
+            }
+          ]
+        },
+        {
+          "name": "route",
+          "kind": "method",
+          "summary": "Register a route with a specific HTTP method.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "method",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "summary": "Get a setting value (1 arg) or set a setting value (2 args).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "any"
+            },
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "val",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "summary": "Get a setting value, or register a GET route. With 1 string arg: returns the setting value. With path + handlers: registers a GET route.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "any"
+            },
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "enable",
+          "kind": "method",
+          "summary": "Enable a boolean setting (set to `true`).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "disable",
+          "kind": "method",
+          "summary": "Disable a boolean setting (set to `false`).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "enabled",
+          "kind": "method",
+          "summary": "Check if a setting is truthy.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "disabled",
+          "kind": "method",
+          "summary": "Check if a setting is falsy.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "param",
+          "kind": "method",
+          "summary": "Register a parameter pre-processing handler.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(req: Request, res: Response, next: NextFunction, value: string) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "group",
+          "kind": "method",
+          "summary": "Create a route group under a prefix with shared middleware.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "prefix",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "args",
+                  "type": "[...MiddlewareFunction[], (router: RouterInstance) => void]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "chain",
+          "kind": "method",
+          "summary": "Create a chainable route builder for the given path.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "RouteChain"
+            }
+          ]
+        },
+        {
+          "name": "post",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "put",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "delete",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "patch",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "options",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        },
+        {
+          "name": "all",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "App"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Router",
+      "export": "core.router",
+      "declaration": "types/router.d.ts",
+      "interface": "RouterInstance",
+      "members": [
+        {
+          "name": "routes",
+          "kind": "property",
+          "summary": "Registered routes.",
+          "type": "RouteEntry[]",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "add",
+          "kind": "method",
+          "summary": "Register a route.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "method",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "RouteHandler[]",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "options",
+                  "type": "RouteOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "use",
+          "kind": "method",
+          "summary": "Mount a child router under a path prefix.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "prefix",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "router",
+                  "type": "RouterInstance",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "handle",
+          "kind": "method",
+          "summary": "Match and handle request.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "req",
+                  "type": "Request",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "res",
+                  "type": "Response",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "route",
+          "kind": "method",
+          "summary": "Chainable route builder.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "RouteChain"
+            }
+          ]
+        },
+        {
+          "name": "inspect",
+          "kind": "method",
+          "summary": "Return a flat list of all registered routes.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "prefix",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "RouteInfo[]"
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "post",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "put",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "delete",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "patch",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "options",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "head",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        },
+        {
+          "name": "all",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "handlers",
+                  "type": "(RouteOptions | RouteHandler)[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "RouterInstance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Request",
+      "export": null,
+      "declaration": "types/request.d.ts",
+      "interface": "Request",
+      "members": [
+        {
+          "name": "raw",
+          "kind": "property",
+          "summary": "Original Node request.",
+          "type": "IncomingMessage",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "method",
+          "kind": "property",
+          "summary": "HTTP method (e.g. 'GET').",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "url",
+          "kind": "property",
+          "summary": "Full request URL including query string.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "path",
+          "kind": "property",
+          "summary": "URL path without query string.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "headers",
+          "kind": "property",
+          "summary": "Lower-cased request headers.",
+          "type": "IncomingHttpHeaders",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "query",
+          "kind": "property",
+          "summary": "Parsed query-string key/value pairs.",
+          "type": "Record<string, string>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "params",
+          "kind": "property",
+          "summary": "Route parameters populated by the router.",
+          "type": "Record<string, string>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "body",
+          "kind": "property",
+          "summary": "Request body (set by body-parsing middleware).",
+          "type": "any",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "rawBody",
+          "kind": "property",
+          "summary": "Raw request body as a Buffer (set by body-parsing middleware before parsing).",
+          "type": "Buffer",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "ip",
+          "kind": "property",
+          "summary": "Remote IP address (trust-proxy-aware).",
+          "type": "string | null",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "ips",
+          "kind": "property",
+          "summary": "Proxy chain addresses from X-Forwarded-For when trust proxy is enabled.",
+          "type": "string[]",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "secure",
+          "kind": "property",
+          "summary": "`true` when the connection is over TLS (trust-proxy-aware).",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "protocol",
+          "kind": "property",
+          "summary": "Protocol string - `'https'` or `'http'` (trust-proxy-aware).",
+          "type": "'http' | 'https'",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "httpVersion",
+          "kind": "property",
+          "summary": "HTTP version string (e.g. '1.1', '2.0').",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "isHTTP2",
+          "kind": "property",
+          "summary": "Whether this request arrived over HTTP/2.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "alpnProtocol",
+          "kind": "property",
+          "summary": "ALPN protocol negotiated on the TLS socket (e.g. 'h2'), or null.",
+          "type": "string | null",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "cookies",
+          "kind": "property",
+          "summary": "Parsed cookies (populated by cookieParser middleware).",
+          "type": "Record<string, string>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "signedCookies",
+          "kind": "property",
+          "summary": "Verified signed cookies (populated by cookieParser middleware).",
+          "type": "Record<string, string>",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "locals",
+          "kind": "property",
+          "summary": "Request-scoped locals store.",
+          "type": "Record<string, any>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "id",
+          "kind": "property",
+          "summary": "Request ID (populated by requestId middleware).",
+          "type": "string",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "timedOut",
+          "kind": "property",
+          "summary": "Whether the request timed out (populated by timeout middleware).",
+          "type": "boolean",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "originalUrl",
+          "kind": "property",
+          "summary": "The original URL as received - never rewritten by middleware.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "baseUrl",
+          "kind": "property",
+          "summary": "The URL path on which the current router was mounted.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "app",
+          "kind": "property",
+          "summary": "Reference to the parent App instance.",
+          "type": "App | null",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "csrfToken",
+          "kind": "property",
+          "summary": "CSRF token (populated by csrf middleware).",
+          "type": "string",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "secret",
+          "kind": "property",
+          "summary": "First signing secret (populated by cookieParser middleware).",
+          "type": "string",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "secrets",
+          "kind": "property",
+          "summary": "All signing secrets (populated by cookieParser middleware).",
+          "type": "string[]",
+          "optional": true,
+          "readonly": false
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "summary": "Get a specific request header (case-insensitive).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "string | undefined"
+            }
+          ]
+        },
+        {
+          "name": "is",
+          "kind": "method",
+          "summary": "Check if the request Content-Type matches the given type.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "type",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "hostname",
+          "kind": "property",
+          "summary": "Get the hostname from the Host header.",
+          "type": "string",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "subdomains",
+          "kind": "method",
+          "summary": "Get the subdomains as an array.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "offset",
+                  "type": "number",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "string[]"
+            }
+          ]
+        },
+        {
+          "name": "accepts",
+          "kind": "method",
+          "summary": "Content negotiation - check which types the client accepts.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "types",
+                  "type": "string[]",
+                  "optional": false,
+                  "rest": true
+                }
+              ],
+              "returns": "string | false"
+            }
+          ]
+        },
+        {
+          "name": "fresh",
+          "kind": "property",
+          "summary": "Check if the request is \"fresh\" (client cache valid).",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "stale",
+          "kind": "property",
+          "summary": "Inverse of `fresh`.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "xhr",
+          "kind": "property",
+          "summary": "Check whether this request was made with XMLHttpRequest.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "range",
+          "kind": "method",
+          "summary": "Parse the Range header.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "size",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "RangeResult | -1 | -2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Response",
+      "export": null,
+      "declaration": "types/response.d.ts",
+      "interface": "Response",
+      "members": [
+        {
+          "name": "raw",
+          "kind": "property",
+          "summary": "Original Node response.",
+          "type": "ServerResponse",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "locals",
+          "kind": "property",
+          "summary": "Request-scoped locals store.",
+          "type": "Record<string, any>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "app",
+          "kind": "property",
+          "summary": "Reference to the parent App instance.",
+          "type": "App | null",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "supportsPush",
+          "kind": "property",
+          "summary": "Whether this response supports HTTP/2 server push.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "status",
+          "kind": "method",
+          "summary": "Set HTTP status code. Chainable.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "code",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "summary": "Set a response header. Chainable.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "value",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "summary": "Get a previously-set response header.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "string | undefined"
+            }
+          ]
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "summary": "Append a value to a header.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "value",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "vary",
+          "kind": "method",
+          "summary": "Add a field to the Vary response header.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "field",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "type",
+          "kind": "method",
+          "summary": "Set the Content-Type header. Chainable.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ct",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "headersSent",
+          "kind": "property",
+          "summary": "Whether headers have been sent.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "send",
+          "kind": "method",
+          "summary": "Send a response body and finalize.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "body",
+                  "type": "string | Buffer | object | null",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "json",
+          "kind": "method",
+          "summary": "Send a JSON response.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "obj",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "summary": "Send a plain-text response.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "str",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "html",
+          "kind": "method",
+          "summary": "Send an HTML response.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "str",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "sendStatus",
+          "kind": "method",
+          "summary": "Send only the status code with reason phrase.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "code",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "sendFile",
+          "kind": "method",
+          "summary": "Send a file as the response.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "filePath",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "SendFileOptions",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "(err: Error | null) => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "params": [
+                {
+                  "name": "filePath",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "(err: Error | null) => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "download",
+          "kind": "method",
+          "summary": "Prompt a file download.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "filePath",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "filename",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "(err: Error | null) => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "params": [
+                {
+                  "name": "filePath",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "(err: Error | null) => void",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "cookie",
+          "kind": "method",
+          "summary": "Set a cookie. Objects are auto-serialized as JSON cookies (j: prefix).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "value",
+                  "type": "string | object",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "CookieOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "clearCookie",
+          "kind": "method",
+          "summary": "Clear a cookie.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "name",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "CookieOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "redirect",
+          "kind": "method",
+          "summary": "Redirect to a URL.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "url",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "params": [
+                {
+                  "name": "status",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "sse",
+          "kind": "method",
+          "summary": "Open a Server-Sent Events stream.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "opts",
+                  "type": "SSEOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "format",
+          "kind": "method",
+          "summary": "Content-negotiated response based on Accept header. Keys are MIME types, values are handler functions.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "types",
+                  "type": "Record<string, () => void> & { default?: () => void }",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "links",
+          "kind": "method",
+          "summary": "Set the Link header from a map of rel → URL.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "links",
+                  "type": "Record<string, string>",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "location",
+          "kind": "method",
+          "summary": "Set the Location response header.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "url",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "Response"
+            }
+          ]
+        },
+        {
+          "name": "push",
+          "kind": "method",
+          "summary": "Initiate an HTTP/2 server push. Returns null if the connection is not HTTP/2 or the stream is closed.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "PushOptions",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SSEStream",
+      "export": "realtime.sse_stream",
+      "declaration": "types/sse.d.ts",
+      "interface": "SSEStream",
+      "members": [
+        {
+          "name": "connected",
+          "kind": "property",
+          "summary": "Whether the stream is still open.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "lastEventId",
+          "kind": "property",
+          "summary": "The Last-Event-ID from client reconnection.",
+          "type": "string | null",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "eventCount",
+          "kind": "property",
+          "summary": "Total events sent.",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "bytesSent",
+          "kind": "property",
+          "summary": "Total bytes written.",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "connectedAt",
+          "kind": "property",
+          "summary": "Timestamp when stream was opened.",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "uptime",
+          "kind": "property",
+          "summary": "Milliseconds since opened.",
+          "type": "number",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "secure",
+          "kind": "property",
+          "summary": "Whether connection is over TLS.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "data",
+          "kind": "property",
+          "summary": "Arbitrary user-data store.",
+          "type": "Record<string, any>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "send",
+          "kind": "method",
+          "summary": "Send an unnamed data event.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "data",
+                  "type": "string | object",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "id",
+                  "type": "string | number",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "sendJSON",
+          "kind": "method",
+          "summary": "Send a JSON event (alias for send).",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "obj",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "id",
+                  "type": "string | number",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "event",
+          "kind": "method",
+          "summary": "Send a named event.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "eventName",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "data",
+                  "type": "string | object",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "id",
+                  "type": "string | number",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "comment",
+          "kind": "method",
+          "summary": "Send a comment line.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "text",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "retry",
+          "kind": "method",
+          "summary": "Send or update the retry interval.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ms",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "keepAlive",
+          "kind": "method",
+          "summary": "Start/restart keep-alive timer.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "intervalMs",
+                  "type": "number",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "comment",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "flush",
+          "kind": "method",
+          "summary": "Flush buffered data.",
+          "overloads": [
+            {
+              "params": [],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "summary": "Close the SSE connection.",
+          "overloads": [
+            {
+              "params": [],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "on",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'close'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'error'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(err: Error) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "once",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'close'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'error'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(err: Error) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "off",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "Function",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "removeAllListeners",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "SSEStream"
+            }
+          ]
+        },
+        {
+          "name": "listenerCount",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "number"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WebSocketConnection",
+      "export": "realtime.web_socket_connection",
+      "declaration": "types/websocket.d.ts",
+      "interface": "WebSocketConnection",
+      "members": [
+        {
+          "name": "id",
+          "kind": "property",
+          "summary": "Unique connection identifier.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "readyState",
+          "kind": "property",
+          "summary": "Current ready state (0-3).",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "protocol",
+          "kind": "property",
+          "summary": "Negotiated sub-protocol.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "extensions",
+          "kind": "property",
+          "summary": "Requested extensions.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "headers",
+          "kind": "property",
+          "summary": "Request headers from the upgrade.",
+          "type": "IncomingHttpHeaders",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "ip",
+          "kind": "property",
+          "summary": "Remote IP address.",
+          "type": "string | null",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "query",
+          "kind": "property",
+          "summary": "Parsed query params from the upgrade URL.",
+          "type": "Record<string, string>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "url",
+          "kind": "property",
+          "summary": "Full upgrade URL.",
+          "type": "string",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "secure",
+          "kind": "property",
+          "summary": "Whether connection is over TLS.",
+          "type": "boolean",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "maxPayload",
+          "kind": "property",
+          "summary": "Maximum incoming payload bytes.",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "connectedAt",
+          "kind": "property",
+          "summary": "Timestamp when connected.",
+          "type": "number",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "data",
+          "kind": "property",
+          "summary": "Arbitrary user-data store.",
+          "type": "Record<string, any>",
+          "optional": false,
+          "readonly": false
+        },
+        {
+          "name": "bufferedAmount",
+          "kind": "property",
+          "summary": "Bytes waiting in send buffer.",
+          "type": "number",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "uptime",
+          "kind": "property",
+          "summary": "Milliseconds since connected.",
+          "type": "number",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "send",
+          "kind": "method",
+          "summary": "Send a text or binary message.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "data",
+                  "type": "string | Buffer",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "opts",
+                  "type": "{ binary?: boolean; callback?: Function }",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "sendJSON",
+          "kind": "method",
+          "summary": "Send a JSON-serialized message.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "obj",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "Function",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "ping",
+          "kind": "method",
+          "summary": "Send a ping frame.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "payload",
+                  "type": "string | Buffer",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "Function",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "pong",
+          "kind": "method",
+          "summary": "Send a pong frame.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "payload",
+                  "type": "string | Buffer",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "cb",
+                  "type": "Function",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "summary": "Close the connection.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "code",
+                  "type": "number",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "reason",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "terminate",
+          "kind": "method",
+          "summary": "Forcefully destroy the socket.",
+          "overloads": [
+            {
+              "params": [],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "on",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'message'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(data: string | Buffer) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'close'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(code: number, reason: string) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'error'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(err: Error) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'pong'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(payload: Buffer) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'ping'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "(payload: Buffer) => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            },
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "'drain'",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "() => void",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            }
+          ]
+        },
+        {
+          "name": "once",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "Function",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            }
+          ]
+        },
+        {
+          "name": "off",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "fn",
+                  "type": "Function",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            }
+          ]
+        },
+        {
+          "name": "removeAllListeners",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection"
+            }
+          ]
+        },
+        {
+          "name": "listenerCount",
+          "kind": "method",
+          "summary": "",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "event",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "number"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WebSocketPool",
+      "export": "realtime.web_socket_pool",
+      "declaration": "types/websocket.d.ts",
+      "interface": "WebSocketPool",
+      "members": [
+        {
+          "name": "size",
+          "kind": "property",
+          "summary": "Total active connections.",
+          "type": "number",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "rooms",
+          "kind": "property",
+          "summary": "All active room names.",
+          "type": "string[]",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "clients",
+          "kind": "property",
+          "summary": "All active connections.",
+          "type": "WebSocketConnection[]",
+          "optional": false,
+          "readonly": true
+        },
+        {
+          "name": "add",
+          "kind": "method",
+          "summary": "Add a connection to the pool.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ws",
+                  "type": "WebSocketConnection",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketPool"
+            }
+          ]
+        },
+        {
+          "name": "remove",
+          "kind": "method",
+          "summary": "Remove a connection from the pool.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ws",
+                  "type": "WebSocketConnection",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketPool"
+            }
+          ]
+        },
+        {
+          "name": "join",
+          "kind": "method",
+          "summary": "Join a connection to a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ws",
+                  "type": "WebSocketConnection",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketPool"
+            }
+          ]
+        },
+        {
+          "name": "leave",
+          "kind": "method",
+          "summary": "Remove a connection from a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ws",
+                  "type": "WebSocketConnection",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketPool"
+            }
+          ]
+        },
+        {
+          "name": "roomsOf",
+          "kind": "method",
+          "summary": "Get all rooms a connection belongs to.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "ws",
+                  "type": "WebSocketConnection",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "string[]"
+            }
+          ]
+        },
+        {
+          "name": "broadcast",
+          "kind": "method",
+          "summary": "Broadcast to ALL connections.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "data",
+                  "type": "string | Buffer",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "exclude",
+                  "type": "WebSocketConnection",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "broadcastJSON",
+          "kind": "method",
+          "summary": "Broadcast JSON to ALL connections.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "obj",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "exclude",
+                  "type": "WebSocketConnection",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "toRoom",
+          "kind": "method",
+          "summary": "Send to all connections in a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "data",
+                  "type": "string | Buffer",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "exclude",
+                  "type": "WebSocketConnection",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "toRoomJSON",
+          "kind": "method",
+          "summary": "Send JSON to all connections in a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "obj",
+                  "type": "any",
+                  "optional": false,
+                  "rest": false
+                },
+                {
+                  "name": "exclude",
+                  "type": "WebSocketConnection",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        {
+          "name": "in",
+          "kind": "method",
+          "summary": "Get all connections in a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "WebSocketConnection[]"
+            }
+          ]
+        },
+        {
+          "name": "roomSize",
+          "kind": "method",
+          "summary": "Number of connections in a room.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "room",
+                  "type": "string",
+                  "optional": false,
+                  "rest": false
+                }
+              ],
+              "returns": "number"
+            }
+          ]
+        },
+        {
+          "name": "closeAll",
+          "kind": "method",
+          "summary": "Close all connections.",
+          "overloads": [
+            {
+              "params": [
+                {
+                  "name": "code",
+                  "type": "number",
+                  "optional": true,
+                  "rest": false
+                },
+                {
+                  "name": "reason",
+                  "type": "string",
+                  "optional": true,
+                  "rest": false
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

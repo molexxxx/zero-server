@@ -2,7 +2,8 @@
   "note": "Generated from @zero-server/sdk 1.1.0 (index.js and lib/). Do not edit by hand.",
   "source": {
     "package": "@zero-server/sdk",
-    "version": "1.1.0"
+    "version": "1.1.0",
+    "gitHead": "f15598947e130aad5498854fc2fb9092ec93f806"
   },
   "kinds": {
     "ffi": "carried by the C ABI of zero-ffi and reached through the generated declarations of every binding",
@@ -1334,8 +1335,8 @@
         }
       ],
       "returns": {
-        "type": "{ name: string, up: Function, down: Function ",
-        "description": "}"
+        "type": "{ name: string, up: Function, down: Function }",
+        "description": ""
       },
       "examples": 1
     },
@@ -1753,7 +1754,7 @@
       "module": "lib/orm/geo.js",
       "status": "kept",
       "release": 3,
-      "summary": "Earth's radius in kilometres.",
+      "summary": "Earth's radius in kilometers.",
       "params": [],
       "returns": null,
       "examples": 0
@@ -2389,8 +2390,8 @@
         }
       ],
       "returns": {
-        "type": "Function & { trace, debug, info, warn, error, fatal, enabled ",
-        "description": "} Logger function."
+        "type": "Function & { trace, debug, info, warn, error, fatal, enabled }",
+        "description": "Logger function."
       },
       "examples": 0
     },
@@ -2454,7 +2455,7 @@
       "type": "function",
       "scope": "realtime",
       "module": "lib/ws/handshake.js",
-      "status": "kept",
+      "status": "dropped",
       "release": 1,
       "summary": "Handle an HTTP upgrade request and turn it into a WebSocket connection.",
       "params": [
@@ -2478,10 +2479,18 @@
           "optional": false,
           "default": null,
           "description": "First packet of the upgraded stream."
+        },
+        {
+          "name": "wsHandlers",
+          "type": "Map<string, { handler: Function, opts: object }>",
+          "optional": false,
+          "default": null,
+          "description": "Registered WS path→handler map."
         }
       ],
       "returns": null,
-      "examples": 0
+      "examples": 0,
+      "reason": "its parameters are Node socket objects, which no binding over the core receives"
     },
     {
       "id": "realtime.web_socket_pool",
@@ -2556,38 +2565,6 @@
     {
       "id": "lifecycle.cluster",
       "name": "cluster",
-      "kind": "facade",
-      "type": "function",
-      "scope": "lifecycle",
-      "module": "lib/cluster.js",
-      "status": "shim",
-      "release": 3,
-      "summary": "High-level clustering helper. Forks workers on the primary process and runs the provided setup function on each worker.",
-      "params": [
-        {
-          "name": "workerFn",
-          "type": "Function",
-          "optional": false,
-          "default": null,
-          "description": "Function to execute on each worker process. Receives the ClusterManager instance as argument."
-        },
-        {
-          "name": "opts",
-          "type": "object",
-          "optional": true,
-          "default": null,
-          "description": "Cluster options (see ClusterManager constructor)."
-        }
-      ],
-      "returns": {
-        "type": "ClusterManager",
-        "description": "The cluster manager instance (on both primary and workers)."
-      },
-      "examples": 1
-    },
-    {
-      "id": "lifecycle.clusterize",
-      "name": "clusterize",
       "kind": "facade",
       "type": "function",
       "scope": "lifecycle",
@@ -2933,8 +2910,8 @@
         }
       ],
       "returns": {
-        "type": "{ traceId: string, parentSpanId: string, traceFlags: number ",
-        "description": "|null}"
+        "type": "{ traceId: string, parentSpanId: string, traceFlags: number }|null",
+        "description": ""
       },
       "examples": 0
     },
@@ -3163,8 +3140,8 @@
         }
       ],
       "returns": {
-        "type": "{ health: Function, ready: Function ",
-        "description": "} Route handlers."
+        "type": "{ health: Function, ready: Function }",
+        "description": "Route handlers."
       },
       "examples": 1
     },
@@ -3589,8 +3566,8 @@
         }
       ],
       "returns": {
-        "type": "{ header: object, payload: object ",
-        "description": "} Decoded and verified token."
+        "type": "{ header: object, payload: object }",
+        "description": "Decoded and verified token."
       },
       "examples": 1
     },
@@ -3614,8 +3591,8 @@
         }
       ],
       "returns": {
-        "type": "{ header: object, payload: object, signature: string ",
-        "description": "|null}"
+        "type": "{ header: object, payload: object, signature: string }|null",
+        "description": ""
       },
       "examples": 1
     },
@@ -3727,8 +3704,8 @@
         }
       ],
       "returns": {
-        "type": "{ generateTokens: Function, verifyRefreshToken: Function, verifyAccessToken: Function ",
-        "description": "}"
+        "type": "{ generateTokens: Function, verifyRefreshToken: Function, verifyAccessToken: Function }",
+        "description": ""
       },
       "examples": 1
     },
@@ -4040,8 +4017,8 @@
         }
       ],
       "returns": {
-        "type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function ",
-        "description": "}"
+        "type": "{ authorize: Function, callback: Function, refresh: Function, userInfo: Function }",
+        "description": ""
       },
       "examples": 1
     },
@@ -4065,8 +4042,8 @@
         }
       ],
       "returns": {
-        "type": "{ codeVerifier: string, codeChallenge: string ",
-        "description": "}"
+        "type": "{ codeVerifier: string, codeChallenge: string }",
+        "description": ""
       },
       "examples": 1
     },
@@ -4400,8 +4377,8 @@
         }
       ],
       "returns": {
-        "type": "{ start: Function, verify: Function, complete: Function, disable: Function ",
-        "description": "}"
+        "type": "{ start: Function, verify: Function, complete: Function, disable: Function }",
+        "description": ""
       },
       "examples": 0
     },
@@ -5136,8 +5113,8 @@
         }
       ],
       "returns": {
-        "type": "{ getCurrent: () => ChannelCredentials, stop: () => void ",
-        "description": "}"
+        "type": "{ getCurrent: () => ChannelCredentials, stop: () => void }",
+        "description": ""
       },
       "examples": 1
     },
@@ -5238,8 +5215,8 @@
         }
       ],
       "returns": {
-        "type": "{ stop: () => void, schema: object ",
-        "description": "} Controller with `stop()` and current schema."
+        "type": "{ stop: () => void, schema: object }",
+        "description": "Controller with `stop()` and current schema."
       },
       "examples": 1
     },
@@ -5657,8 +5634,8 @@
         }
       ],
       "returns": {
-        "type": "{buffer:Buffer, transactionId:Buffer",
-        "description": "}"
+        "type": "{buffer:Buffer, transactionId:Buffer}",
+        "description": ""
       },
       "examples": 0
     },
@@ -5682,8 +5659,8 @@
         }
       ],
       "returns": {
-        "type": "{method:number, class:number, transactionId:Buffer, attributes:Array<{type:number,value:Buffer",
-        "description": ">}}"
+        "type": "{method:number, class:number, transactionId:Buffer, attributes:Array<{type:number,value:Buffer}>}",
+        "description": ""
       },
       "examples": 0
     },
@@ -5753,8 +5730,8 @@
         }
       ],
       "returns": {
-        "type": "{family:number, address:string, port:number",
-        "description": "}"
+        "type": "{family:number, address:string, port:number}",
+        "description": ""
       },
       "examples": 0
     },
@@ -6196,8 +6173,8 @@
         }
       ],
       "returns": {
-        "type": "",
-        "description": "{{ peer:               object, peerConnections:    Map<string, object>, getPeerConnection: (remotePeerId: string) => object | undefined, ready:              Promise<{ peerId: string }>, close:              () => void, }}"
+        "type": "{ peer: object, peerConnections: Map<string, object>, getPeerConnection: (remotePeerId: string) => object | undefined, ready: Promise<{ peerId: string }>, close: () => void, }",
+        "description": ""
       },
       "examples": 3
     },
@@ -6307,8 +6284,8 @@
       "summary": "Generate a fresh X25519 keypair suitable for {@link sealKey} / {@link openSealedKey}.",
       "params": [],
       "returns": {
-        "type": "{publicKey: KeyObject, privateKey: KeyObject",
-        "description": "}"
+        "type": "{publicKey: KeyObject, privateKey: KeyObject}",
+        "description": ""
       },
       "examples": 1,
       "reason": "the E2EE helpers are out of scope"
@@ -6393,6 +6370,13 @@
         {
           "name": "hub",
           "type": "import('./signaling').SignalingHub",
+          "optional": false,
+          "default": null,
+          "description": ""
+        },
+        {
+          "name": "adapter",
+          "type": "{publish:Function, subscribe:Function}",
           "optional": false,
           "default": null,
           "description": ""
@@ -6600,7 +6584,7 @@
           "type": "string",
           "optional": false,
           "default": null,
-          "description": " One of `stun`, `turn-creds`, `join-token`, `verify-token`, `help`."
+          "description": "One of `stun`, `turn-creds`, `join-token`, `verify-token`, `help`."
         },
         {
           "name": "flags",
@@ -6614,7 +6598,7 @@
           "type": "object",
           "optional": true,
           "default": null,
-          "description": " Injection seam for tests."
+          "description": "Injection seam for tests."
         },
         {
           "name": "deps.out",
