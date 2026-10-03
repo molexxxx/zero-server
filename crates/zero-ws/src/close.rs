@@ -6,14 +6,24 @@
 //! control frame (Section 5.5). 1005, 1006 and 1015 "MUST NOT be set as a status code
 //! in a Close control frame by an endpoint" (Section 7.4.1); 0 to 999 "are not used";
 //! and the rest of 1000 to 2999 is for this protocol and its extensions (Section
-//! 7.4.2). A code is accepted on a received frame and allowed on a sent one when the
-//! IANA WebSocket Close Code Number Registry assigns it to a closure an endpoint may
-//! signal (1000 to 1003 and 1007 to 1014) or when it falls in 3000 to 4999, which
-//! libraries, frameworks, applications and private agreements use.
+//! 7.4.2). A code is accepted on a received frame, and echoed in the answering Close,
+//! when the IANA WebSocket Close Code Number Registry assigns it to a closure an
+//! endpoint may signal (1000 to 1003 and 1007 to 1014) or when it falls in 3000 to
+//! 4999, which libraries, frameworks, applications and private agreements use.
+//!
+//! A Close the server starts itself is narrower ([`start_body`]). 1010 is the code a
+//! client sends when the server did not negotiate an extension it needs (Section
+//! 7.4.1), and 1014 is the registry's code for a gateway or proxy reporting an
+//! invalid upstream response, which a server closing its own connection does not
+//! report. So a server starts a closing handshake only with 1000 to 1003, 1007 to
+//! 1009, 1011 to 1013, or 3000 to 4999, and with a reason of at most [`MAX_REASON`]
+//! octets.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5.1>
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4>
 //! @see <https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number>
+
+use zero_core::Error;
 
 /// The largest Close reason: a control frame's 125 bytes less the status code.
 pub const MAX_REASON: usize = 123;
@@ -62,6 +72,23 @@ impl CloseCode {
     #[must_use]
     pub const fn is_valid(self) -> bool {
         matches!(self.0, 1000..=1003 | 1007..=1014 | 3000..=4999)
+    }
+
+    /// Whether a server may start a closing handshake with the code.
+    ///
+    /// # Returns
+    ///
+    /// `true` for 1000 to 1003, 1007 to 1009, 1011 to 1013, and 3000 to 4999; `false`
+    /// for the codes no endpoint sets (1005, 1006, 1015), the reserved 1004, the
+    /// client's 1010, the gateway's 1014, and every code below 1000, from 1016 to
+    /// 2999, or above 4999.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1>
+    /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.2>
+    /// @see <https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number>
+    #[must_use]
+    pub const fn is_sendable(self) -> bool {
+        matches!(self.0, 1000..=1003 | 1007..=1009 | 1011..=1013 | 3000..=4999)
     }
 }
 
@@ -132,4 +159,45 @@ pub fn body(code: CloseCode, reason: &str, out: &mut [u8; 125]) -> Result<usize,
         slot.copy_from_slice(reason.as_bytes());
     }
     Ok(2usize.saturating_add(reason.len()))
+}
+
+/// Build the body of a Close the server starts, as opposed to one it echoes.
+///
+/// # Arguments
+///
+/// * `code` - the status code; [`CloseCode::NO_STATUS`] for an empty body.
+/// * `reason` - the reason, at most [`MAX_REASON`] octets; ignored without a code.
+/// * `out` - receives the body.
+///
+/// # Returns
+///
+/// The length of the body written to the start of `out`.
+///
+/// # Errors
+///
+/// [`Error::Protocol`] for a code a server may not start a closing handshake with
+/// (see [`CloseCode::is_sendable`]); [`Error::Limit`] for a reason over
+/// [`MAX_REASON`] octets, since "All control frames MUST have a payload length of
+/// 125 bytes or less" (RFC 6455 Section 5.5) and the code takes two of them. Nothing
+/// is written then.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5>
+/// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1>
+pub fn start_body(code: CloseCode, reason: &str, out: &mut [u8; 125]) -> zero_core::Result<usize> {
+    if code == CloseCode::NO_STATUS {
+        return Ok(0);
+    }
+    if !code.is_sendable() {
+        return Err(Error::Protocol(alloc::format!(
+            "a server does not start a closing handshake with code {}",
+            code.0
+        )));
+    }
+    if reason.len() > MAX_REASON {
+        return Err(Error::Limit(alloc::format!(
+            "a close reason carries at most {MAX_REASON} octets, not {}",
+            reason.len()
+        )));
+    }
+    body(code, reason, out).map_err(|_| Error::Protocol(alloc::format!("close code {}", code.0)))
 }

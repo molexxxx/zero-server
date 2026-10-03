@@ -12,6 +12,12 @@
 //! server (RFC 6455 Section 10.4 asks an endpoint to protect itself from exceeding
 //! its limits).
 //!
+//! Broadcasts take `&self`, so any thread may send one. A broadcast can leave one
+//! member out, usually the sender, by its [`MemberId`]: the id the rooms assigned
+//! when the connection first joined, or, for a connection served with an outbox,
+//! [`MemberId::of_connection`] of its claim token, which a sender on another thread
+//! already knows.
+//!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-10.4>
 //! @see <https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number>
 
@@ -27,7 +33,35 @@ pub const INBOX_BYTES: usize = 16 * 1024 * 1024;
 
 /// The id of one connection in the rooms it joined.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MemberId(u64);
+pub struct MemberId {
+    value: u64,
+    /// The rooms assigned `value`, so it never equals the id of a connection that
+    /// brought its own.
+    assigned: bool,
+}
+
+impl MemberId {
+    /// The member id of a connection served with an outbox, which is its claim
+    /// token, so a sender that knows the connection only by that token can leave it
+    /// out of a broadcast.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - the connection's claim token, unique among the connections of
+    ///   the rooms.
+    ///
+    /// # Returns
+    ///
+    /// The member id; an id the rooms assign to a connection without an outbox
+    /// never equals it.
+    #[must_use]
+    pub const fn of_connection(token: u64) -> Self {
+        MemberId {
+            value: token,
+            assigned: false,
+        }
+    }
+}
 
 /// What a connection's inbox holds.
 #[derive(Debug, Default)]
@@ -232,8 +266,12 @@ pub(crate) struct Membership {
 }
 
 impl Membership {
-    pub(crate) fn new(rooms: &Arc<Rooms>) -> Self {
-        let id = MemberId(rooms.next.fetch_add(1, Ordering::Relaxed));
+    /// A membership with `id`, or with an id the rooms assign.
+    pub(crate) fn new(rooms: &Arc<Rooms>, id: Option<MemberId>) -> Self {
+        let id = id.unwrap_or_else(|| MemberId {
+            value: rooms.next.fetch_add(1, Ordering::Relaxed),
+            assigned: true,
+        });
         Membership {
             id,
             inbox: Arc::new(Inbox::default()),
@@ -271,5 +309,32 @@ impl Drop for Membership {
         for room in std::mem::take(&mut self.joined) {
             self.rooms.exit(&room, self.id);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::{MemberId, Membership, Rooms};
+
+    #[test]
+    fn an_id_the_rooms_assign_never_equals_the_id_of_a_connection_with_an_outbox() {
+        let rooms = Arc::new(Rooms::new());
+        let mut assigned = Membership::new(&rooms, None);
+        let mut own = Membership::new(&rooms, Some(MemberId::of_connection(0)));
+        assert_eq!(assigned.id.value, 0, "the first id the rooms assign");
+        assert_ne!(assigned.id, own.id);
+        assigned.join("lobby");
+        own.join("lobby");
+        assert_eq!(rooms.members("lobby"), 2);
+        assert_eq!(
+            rooms.broadcast_text("lobby", "x", Some(MemberId::of_connection(0))),
+            1
+        );
+        assert_eq!(assigned.inbox.take().0.len(), 1);
+        assert!(own.inbox.take().0.is_empty(), "the excluded member");
+        drop(own);
+        assert_eq!(rooms.members("lobby"), 1, "a dropped membership leaves");
     }
 }

@@ -10,8 +10,9 @@
 //! is written only as ASCII digits. The stream is UTF-8 because every value is a
 //! `str`; `Content-Type: text/event-stream; charset=utf-8` states it, the only
 //! charset the media type allows (Section 17.7). A comment line starts with `:` and
-//! is ignored by the client; one about every 15 seconds keeps idle proxies from
-//! dropping the connection (Section 9.2.7).
+//! is ignored by the client, and comment text is split into lines as `data` is; one
+//! comment about every 15 seconds keeps idle proxies from dropping the connection
+//! (Section 9.2.7).
 //!
 //! @see <https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream>
 //! @see <https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes>
@@ -133,21 +134,28 @@ pub fn encode(event: &Event<'_>, out: &mut Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-/// Write a comment line, which the client ignores.
+/// Write a comment, which the client ignores: one comment line per line of `text`.
+/// A comment line is a colon, characters other than CR and LF, and the end of the
+/// line (`comment = colon *any-char end-of-line`, Section 9.2.5), so the text is
+/// split at CRLF, LF and CR as `data` is, and each piece becomes its own line.
 ///
 /// # Arguments
 ///
-/// * `text` - the comment, without line breaks.
+/// * `text` - the comment.
 /// * `out` - the stream buffer.
 ///
 /// # Errors
 ///
-/// [`Error::Protocol`] for a comment holding CR or LF.
+/// None: every text can be written as comment lines. The `Result` matches
+/// [`encode`].
+///
+/// @see <https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream>
 pub fn comment(text: &str, out: &mut Vec<u8>) -> Result<()> {
-    check("comment", text, true)?;
-    out.push(b':');
-    out.extend_from_slice(text.as_bytes());
-    out.push(b'\n');
+    for line in lines(text) {
+        out.push(b':');
+        out.extend_from_slice(line.as_bytes());
+        out.push(b'\n');
+    }
     Ok(())
 }
 

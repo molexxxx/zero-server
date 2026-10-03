@@ -163,8 +163,34 @@ mod tests {
             assert!(encode(&event, &mut out).is_err(), "{event:?}");
         }
         assert!(out.is_empty(), "nothing is written for a refused event");
-        assert!(comment("a\nb", &mut out).is_err());
-        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn whatwg_9_2_5_comment_text_is_split_at_cr_lf_and_crlf_into_one_comment_line_each() {
+        let mut out = Vec::new();
+        assert!(comment("one\ntwo\r\nthree\rfour", &mut out).is_ok());
+        assert_eq!(out, b":one\n:two\n:three\n:four\n");
+        for (text, lines) in [
+            ("", &b":\n"[..]),
+            ("\n", b":\n:\n"),
+            ("a\r\n", b":a\n:\n"),
+            ("\r\r\n", b":\n:\n:\n"),
+            ("data: injected", b":data: injected\n"),
+        ] {
+            let mut out = Vec::new();
+            assert!(comment(text, &mut out).is_ok(), "{text:?}");
+            assert_eq!(out, lines, "{text:?}");
+        }
+        let mut stream = Vec::new();
+        assert!(comment("x\ndata: injected\r\n\r\nid: 9\revent: e", &mut stream).is_ok());
+        stream.extend_from_slice(b"data: real\n\n");
+        let (seen, decoder) = decoded(&stream, 3);
+        assert_eq!(
+            seen,
+            [message("message", "real", "")],
+            "a client ignores every comment line, so no line of the text becomes a field"
+        );
+        assert_eq!(decoder.last_event_id(), "");
     }
 
     #[test]

@@ -14,9 +14,19 @@
 //!   receiving a frame that is not masked" (Section 5.1).
 //!
 //! A header the server sends is never masked: "A server MUST NOT mask any frames that
-//! it sends to the client" (Section 5.1).
+//! it sends to the client" (Section 5.1). A frame encoded for a caller outside the
+//! session, such as a binding sending from its own thread, is checked first:
+//! [`write_message`] takes only a text or binary opcode and only UTF-8 text (Sections
+//! 5.6 and 8.1), and [`write_ping`] only a payload that fits a control frame (Section
+//! 5.5).
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.2>
+//! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5>
+//! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.6>
+
+use alloc::vec::Vec;
+
+use zero_core::Error;
 
 use crate::close::CloseCode;
 
@@ -175,12 +185,72 @@ pub fn decode(input: &[u8], allowed_rsv: u8) -> Result<Option<Header>, CloseCode
 /// * `opcode` - the opcode.
 /// * `payload` - the payload.
 /// * `out` - the buffer the frame is appended to.
-pub fn write(opcode: Opcode, payload: &[u8], out: &mut alloc::vec::Vec<u8>) {
+pub fn write(opcode: Opcode, payload: &[u8], out: &mut Vec<u8>) {
     let mut header = [0u8; 10];
     let len = u64::try_from(payload.len()).unwrap_or(u64::MAX);
     let written = encode(true, opcode, len, &mut header);
     out.extend_from_slice(header.get(..written).unwrap_or(&[]));
     out.extend_from_slice(payload);
+}
+
+/// Append one whole message frame after checking it: the opcode is text or binary,
+/// and a text payload is UTF-8 (RFC 6455 Section 5.6).
+///
+/// # Arguments
+///
+/// * `opcode` - [`Opcode::Text`] or [`Opcode::Binary`].
+/// * `payload` - the message.
+/// * `out` - the buffer the frame is appended to.
+///
+/// # Errors
+///
+/// [`Error::Protocol`] for another opcode or for text that is not UTF-8; nothing is
+/// written then.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.6>
+pub fn write_message(opcode: Opcode, payload: &[u8], out: &mut Vec<u8>) -> zero_core::Result<()> {
+    match opcode {
+        Opcode::Text => {
+            if core::str::from_utf8(payload).is_err() {
+                return Err(Error::Protocol(
+                    "a text message is UTF-8 (RFC 6455 Section 5.6)".into(),
+                ));
+            }
+        }
+        Opcode::Binary => {}
+        other => {
+            return Err(Error::Protocol(alloc::format!(
+                "a message is sent as text or binary, not opcode {:#x}",
+                other.bits()
+            )));
+        }
+    }
+    write(opcode, payload, out);
+    Ok(())
+}
+
+/// Append a ping after checking its payload fits a control frame: "All control frames
+/// MUST have a payload length of 125 bytes or less" (RFC 6455 Section 5.5).
+///
+/// # Arguments
+///
+/// * `payload` - the application data, at most [`MAX_CONTROL_PAYLOAD`] octets.
+/// * `out` - the buffer the frame is appended to.
+///
+/// # Errors
+///
+/// [`Error::Limit`] for a longer payload; nothing is written then.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5>
+pub fn write_ping(payload: &[u8], out: &mut Vec<u8>) -> zero_core::Result<()> {
+    if payload.len() > MAX_CONTROL_PAYLOAD {
+        return Err(Error::Limit(alloc::format!(
+            "a ping carries at most {MAX_CONTROL_PAYLOAD} octets, not {}",
+            payload.len()
+        )));
+    }
+    write(Opcode::Ping, payload, out);
+    Ok(())
 }
 
 /// Encode the header of a frame the server sends, which is never masked.

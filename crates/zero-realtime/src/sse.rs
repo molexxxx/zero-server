@@ -9,12 +9,20 @@
 //! (Section 9.2.4), and [`stop_reconnecting`] answers 204, which tells a client not
 //! to reconnect (Section 9.2.1).
 //!
+//! A stream that other threads send on gets an [`Outbox`] with
+//! [`EventStream::with_outbox`]: its waits then also write the events the outbox
+//! holds, in the order they were pushed, and [`EventStream::serve`] runs such a
+//! stream, reporting [`Drained`] after the outbox passed its high-water mark. When
+//! the server drains, the stream writes what the outbox still holds and ends.
+//!
 //! @see <https://html.spec.whatwg.org/multipage/server-sent-events.html>
 
+use std::convert::Infallible;
 use std::future::{poll_fn, Future};
 use std::io::{self, IoSlice};
-use std::pin::pin;
+use std::pin::{pin, Pin};
 use std::rc::Rc;
+use std::sync::Arc;
 use std::task::Poll;
 use std::time::{Duration, Instant};
 
@@ -25,6 +33,8 @@ use zero_sse::{
     comment, encode, last_event_id, Event, KeepAlive, KEEP_ALIVE_COMMENT, RESPONSE_FIELDS,
     STOP_RECONNECTING,
 };
+
+use crate::outbox::{Attached, Command, Drained, Outbox};
 
 pub use zero_sse::KEEP_ALIVE_MS;
 
@@ -66,6 +76,14 @@ enum Woke<T> {
     Due,
     Read(std::io::Result<Leased>),
     Shutdown,
+    Outbox,
+}
+
+/// What one turn of a wait produced.
+enum Turn<T> {
+    Done(T),
+    Drained,
+    Ended,
 }
 
 /// An event stream on a claimed connection.
@@ -77,6 +95,13 @@ pub struct EventStream<S> {
     /// How much of `buffer` the connection took; a write whose future was dropped
     /// leaves the rest, which the next write sends first.
     written: usize,
+    outbox: Option<Attached>,
+    /// Octets of outbox commands applied and not yet written.
+    unreleased: u64,
+    drained: bool,
+    /// The stream is over: an End was applied, the client went away, or the server
+    /// drains.
+    ended: bool,
 }
 
 impl<S> std::fmt::Debug for EventStream<S> {
@@ -102,7 +127,29 @@ impl<S: Stream + 'static> EventStream<S> {
             started: Instant::now(),
             buffer: Vec::new(),
             written: 0,
+            outbox: None,
+            unreleased: 0,
+            drained: false,
+            ended: false,
         }
+    }
+
+    /// Write the events other threads push to `outbox` while the stream waits. A
+    /// [`Command::End`] ends the stream once what was pushed before it is written,
+    /// and so do [`Command::Terminate`] and [`Command::Close`]; Join and Leave do
+    /// nothing on an event stream.
+    ///
+    /// # Arguments
+    ///
+    /// * `outbox` - the stream's outbox; it closes when this stream is dropped.
+    ///
+    /// # Returns
+    ///
+    /// The stream.
+    #[must_use]
+    pub fn with_outbox(mut self, outbox: Arc<Outbox>) -> Self {
+        self.outbox = Some(Attached::new(outbox));
+        self
     }
 
     /// The request that opened the stream.
@@ -137,15 +184,34 @@ impl<S: Stream + 'static> EventStream<S> {
         self.write_buffer().await
     }
 
-    /// Write a comment line, which the client ignores.
+    /// Write an event or comment already encoded with [`zero_sse::encode()`] or
+    /// [`zero_sse::comment()`], such as one encoded once for many streams or on
+    /// another thread.
     ///
     /// # Arguments
     ///
-    /// * `text` - the comment, without line breaks.
+    /// * `event` - the encoded event, ending with its blank line.
     ///
     /// # Errors
     ///
-    /// [`Error::Protocol`] for a line break; [`Error::Io`] when the write fails.
+    /// [`Error::Io`] when the write fails.
+    pub async fn send_encoded(&mut self, event: &[u8]) -> Result<()> {
+        self.write_buffer().await?;
+        self.restart();
+        self.buffer.extend_from_slice(event);
+        self.write_buffer().await
+    }
+
+    /// Write a comment, which the client ignores: one comment line per line of
+    /// `text`.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - the comment; split at CRLF, LF and CR.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Io`] when the write fails.
     pub async fn comment(&mut self, text: &str) -> Result<()> {
         self.write_buffer().await?;
         self.restart();
@@ -154,7 +220,8 @@ impl<S: Stream + 'static> EventStream<S> {
     }
 
     /// Run `future` while keeping the stream alive: a keep-alive comment goes out
-    /// whenever nothing was written for the interval.
+    /// whenever nothing was written for the interval, and what the outbox holds is
+    /// written as it arrives.
     ///
     /// # Arguments
     ///
@@ -166,11 +233,53 @@ impl<S: Stream + 'static> EventStream<S> {
     ///
     /// # Errors
     ///
-    /// [`Error::Closed`] when the client went away or the server drains; the future
-    /// is dropped then.
+    /// [`Error::Closed`] when the client went away, the server drains, or the outbox
+    /// ended the stream; the future is dropped then. [`Error::Io`] when a write
+    /// fails.
     pub async fn wait<F: Future>(&mut self, future: F) -> Result<F::Output> {
         let mut future = pin!(future);
         loop {
+            match self.turn(future.as_mut()).await? {
+                Turn::Done(value) => return Ok(value),
+                Turn::Drained => {}
+                Turn::Ended => return Err(Error::Closed),
+            }
+        }
+    }
+
+    /// Serve the outbox until the stream ends: write what other threads push, keep
+    /// the stream alive with comments, and notice the client leaving and the server
+    /// draining.
+    ///
+    /// # Returns
+    ///
+    /// [`Drained`] when the outbox fell below half its high-water mark after passing
+    /// it; `None` once the stream is over, after writing what the outbox held: an End
+    /// was applied, the client went away, a write failed, or the server drains. The
+    /// outbox is closed then.
+    pub async fn serve(&mut self) -> Option<Drained> {
+        let mut idle = pin!(std::future::pending::<Infallible>());
+        match self.turn(idle.as_mut()).await {
+            Ok(Turn::Drained) => Some(Drained),
+            Ok(Turn::Done(never)) => match never {},
+            Ok(Turn::Ended) | Err(_) => {
+                self.finish();
+                None
+            }
+        }
+    }
+
+    /// Wait for `future`, the keep-alive deadline, the outbox, the client and the
+    /// shutdown signal, writing what is due, until one of them settles the turn.
+    async fn turn<F: Future>(&mut self, mut future: Pin<&mut F>) -> Result<Turn<F::Output>> {
+        loop {
+            self.pour(false).await?;
+            if std::mem::take(&mut self.drained) {
+                return Ok(Turn::Drained);
+            }
+            if self.ended {
+                return Ok(Turn::Ended);
+            }
             let now = self.now_ms();
             if self.keep_alive.is_due(now) {
                 self.write_buffer().await?;
@@ -183,6 +292,7 @@ impl<S: Stream + 'static> EventStream<S> {
             let core = self.taken.core();
             let pool = Rc::clone(&core.pool);
             let woke = {
+                let outbox = self.outbox.as_deref();
                 let mut sleep = pin!(core.sleep(pause));
                 let mut read = pin!(self.taken.stream().read_leased(&pool));
                 let mut shutdown = pin!(self.taken.worker().shutdown().requested());
@@ -192,6 +302,9 @@ impl<S: Stream + 'static> EventStream<S> {
                     }
                     if shutdown.as_mut().poll(cx).is_ready() {
                         return Poll::Ready(Woke::Shutdown);
+                    }
+                    if outbox.is_some_and(|outbox| outbox.poll_ready(cx).is_ready()) {
+                        return Poll::Ready(Woke::Outbox);
                     }
                     if let Poll::Ready(outcome) = read.as_mut().poll(cx) {
                         return Poll::Ready(Woke::Read(outcome));
@@ -204,14 +317,69 @@ impl<S: Stream + 'static> EventStream<S> {
                 .await
             };
             match woke {
-                Woke::Done(value) => return Ok(value),
-                Woke::Due => {}
+                Woke::Done(value) => return Ok(Turn::Done(value)),
+                Woke::Due | Woke::Outbox => {}
                 Woke::Read(Ok(Leased::Data(buf))) => pool.release(buf),
                 Woke::Read(Ok(Leased::NoBudget)) => core.sleep(BUDGET_RETRY).await,
-                Woke::Read(Ok(Leased::Eof) | Err(_)) | Woke::Shutdown => {
-                    return Err(Error::Closed);
+                Woke::Read(Ok(Leased::Eof) | Err(_)) => {
+                    self.ended = true;
+                    self.finish();
+                }
+                Woke::Shutdown => {
+                    self.pour(true).await?;
+                    self.ended = true;
                 }
             }
+        }
+    }
+
+    /// Write what the outbox holds, in the order it was pushed; with `seal`, refuse
+    /// later pushes first, so nothing pushed before is left behind. The commands
+    /// move into the buffer before anything is awaited, so a wait whose future is
+    /// dropped loses none of them.
+    async fn pour(&mut self, seal: bool) -> Result<()> {
+        if self.outbox.is_none() {
+            return Ok(());
+        }
+        self.write_buffer().await?;
+        let commands = match self.outbox.as_deref() {
+            Some(outbox) if seal => outbox.seal(),
+            Some(outbox) => outbox.take(),
+            None => return Ok(()),
+        };
+        if !commands.is_empty() {
+            self.restart();
+            for command in commands {
+                self.unreleased = self.unreleased.saturating_add(command.octets());
+                if self.ended {
+                    continue;
+                }
+                match command {
+                    Command::Frame(frame) => self.buffer.extend_from_slice(&frame),
+                    Command::End | Command::Terminate | Command::Close { .. } => {
+                        self.ended = true;
+                    }
+                    Command::Join(_) | Command::Leave(_) => {}
+                }
+            }
+        }
+        self.write_buffer().await?;
+        let octets = std::mem::take(&mut self.unreleased);
+        if octets > 0
+            && self
+                .outbox
+                .as_deref()
+                .is_some_and(|outbox| outbox.release(octets))
+        {
+            self.drained = true;
+        }
+        Ok(())
+    }
+
+    /// Close the outbox once nothing more will be written.
+    fn finish(&self) {
+        if let Some(outbox) = self.outbox.as_deref() {
+            outbox.close();
         }
     }
 

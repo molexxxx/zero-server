@@ -31,10 +31,12 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
+    use zero_core::Error;
     use zero_http_types::{Method, StatusCode};
     use zero_limits::WebSocketLimits;
 
-    use super::frame::{self, Opcode};
+    use super::close::{self, MAX_REASON};
+    use super::frame::{self, Opcode, MAX_CONTROL_PAYLOAD};
     use super::handshake::{accept, negotiate, Accepted, Config, Reason};
     use super::session::{Event, Session};
     use super::CloseCode;
@@ -826,5 +828,147 @@ mod tests {
             session.feed(&mut ping, 1_002).map(|step| step.consumed),
             Err(CloseCode::POLICY_VIOLATION)
         );
+    }
+
+    #[test]
+    fn rfc6455_7_4_a_close_the_server_starts_carries_only_1000_to_1003_1007_to_1009_1011_to_1013_or_3000_to_4999(
+    ) {
+        for code in [
+            1000u16, 1001, 1002, 1003, 1007, 1008, 1009, 1011, 1012, 1013, 3000, 4000, 4999,
+        ] {
+            let mut session = fresh();
+            assert!(session.close(CloseCode(code), "").is_ok(), "{code}");
+            assert_eq!(server_frames(session.output()), [close_frame(code)]);
+        }
+        for code in [
+            0u16, 999, 1004, 1006, 1010, 1014, 1015, 1016, 2000, 2999, 5000, 65_535,
+        ] {
+            let mut session = fresh();
+            assert!(
+                matches!(session.close(CloseCode(code), "x"), Err(Error::Protocol(_))),
+                "{code}"
+            );
+            assert!(session.output().is_empty(), "nothing is written for {code}");
+            assert!(
+                session.send_text("still open").is_ok(),
+                "a refused close leaves the connection open"
+            );
+        }
+        for code in [1010u16, 1014] {
+            let mut session = fresh();
+            let (seen, failed) = drive(&mut session, &client(0x88, &code.to_be_bytes()));
+            assert_eq!(
+                (seen, failed),
+                (vec![Seen::Close(code, String::new())], None),
+                "a received {code} is still accepted"
+            );
+            assert_eq!(
+                server_frames(session.output()),
+                [close_frame(code)],
+                "and echoed"
+            );
+        }
+        for raw in 0..=u16::MAX {
+            let code = CloseCode(raw);
+            assert!(!code.is_sendable() || code.is_valid(), "{raw}");
+        }
+    }
+
+    #[test]
+    fn rfc6455_5_5_a_close_reason_carries_at_most_123_octets_so_the_close_frame_stays_within_125() {
+        assert_eq!((MAX_REASON, MAX_CONTROL_PAYLOAD), (123, 125));
+        let mut session = fresh();
+        assert!(session.close(CloseCode::NORMAL, &"a".repeat(123)).is_ok());
+        let frames = server_frames(session.output());
+        assert_eq!(
+            frames
+                .first()
+                .map(|(first, _, payload)| (*first, payload.len())),
+            Some((0x88, 125))
+        );
+        for reason in ["a".repeat(124), "é".repeat(62)] {
+            let mut session = fresh();
+            assert!(
+                matches!(
+                    session.close(CloseCode::NORMAL, &reason),
+                    Err(Error::Limit(_))
+                ),
+                "{} octets",
+                reason.len()
+            );
+            assert!(session.output().is_empty());
+        }
+        let mut body = [0u8; MAX_CONTROL_PAYLOAD];
+        assert_eq!(
+            close::start_body(CloseCode::NO_STATUS, &"a".repeat(200), &mut body).ok(),
+            Some(0),
+            "without a code there is no reason"
+        );
+        assert_eq!(
+            close::start_body(CloseCode::GOING_AWAY, "é", &mut body).ok(),
+            Some(4)
+        );
+        assert_eq!(body.get(..4), Some(&[0x03, 0xE9, 0xC3, 0xA9][..]));
+    }
+
+    #[test]
+    fn rfc6455_5_6_a_message_the_server_sends_is_text_or_binary_and_its_text_is_utf_8() {
+        let mut out = Vec::new();
+        assert!(frame::write_message(Opcode::Text, "κόσμε".as_bytes(), &mut out).is_ok());
+        assert!(frame::write_message(Opcode::Binary, &[0xFF, 0xFE], &mut out).is_ok());
+        assert_eq!(
+            server_frames(&out),
+            [
+                (0x81, false, "κόσμε".as_bytes().to_vec()),
+                (0x82, false, vec![0xFF, 0xFE])
+            ]
+        );
+        let before = out.clone();
+        for opcode in [
+            Opcode::Continuation,
+            Opcode::Close,
+            Opcode::Ping,
+            Opcode::Pong,
+        ] {
+            assert!(
+                matches!(
+                    frame::write_message(opcode, b"x", &mut out),
+                    Err(Error::Protocol(_))
+                ),
+                "{opcode:?}"
+            );
+        }
+        for text in [
+            &[0xFFu8][..],
+            &[0xCE],
+            &[0xC0, 0x80],
+            &[0xED, 0xA0, 0x80],
+            &[0xF4, 0x90, 0x80, 0x80],
+        ] {
+            assert!(
+                matches!(
+                    frame::write_message(Opcode::Text, text, &mut out),
+                    Err(Error::Protocol(_))
+                ),
+                "{text:?}"
+            );
+        }
+        assert_eq!(out, before, "nothing is written for a refused message");
+    }
+
+    #[test]
+    fn rfc6455_5_5_a_ping_the_server_sends_carries_at_most_125_octets() {
+        let mut out = Vec::new();
+        assert!(frame::write_ping(&[7u8; MAX_CONTROL_PAYLOAD], &mut out).is_ok());
+        assert_eq!(server_frames(&out), [(0x89, false, vec![7u8; 125])]);
+        let before = out.clone();
+        assert!(matches!(
+            frame::write_ping(&[7u8; 126], &mut out),
+            Err(Error::Limit(_))
+        ));
+        assert_eq!(out, before, "nothing is written for a refused ping");
+        let mut session = fresh();
+        assert!(session.send_encoded(&out).is_ok());
+        assert_eq!(session.output(), &out[..]);
     }
 }

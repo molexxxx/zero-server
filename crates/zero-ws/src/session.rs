@@ -26,7 +26,9 @@
 //!   budget fail with 1008;
 //! - after the session fails the connection it sends a Close with the code and
 //!   processes no further input (Section 7.1.7), and nothing is sent after a Close
-//!   (Section 5.5.1).
+//!   (Section 5.5.1);
+//! - a Close the application starts carries a code a server may send and a reason
+//!   that fits a control frame ([`close::start_body`], Sections 5.5 and 7.4.1).
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.4>
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5>
@@ -410,12 +412,13 @@ impl Session {
         Ok(())
     }
 
-    /// Queue a data frame already encoded with [`frame::write`], such as a message
-    /// broadcast to many connections and encoded once for all of them.
+    /// Queue a frame already encoded with [`frame::write`], [`frame::write_message`]
+    /// or [`frame::write_ping`], such as a message broadcast to many connections and
+    /// encoded once for all of them, or one encoded on another thread.
     ///
     /// # Arguments
     ///
-    /// * `frame` - one whole, final, unmasked text or binary frame.
+    /// * `frame` - one whole, final, unmasked text, binary or ping frame.
     ///
     /// # Errors
     ///
@@ -452,23 +455,19 @@ impl Session {
     ///
     /// # Arguments
     ///
-    /// * `code` - the status code, or [`CloseCode::NO_STATUS`] for an empty body.
+    /// * `code` - the status code, or [`CloseCode::NO_STATUS`] for an empty body; a
+    ///   code [`CloseCode::is_sendable`] accepts.
     /// * `reason` - the reason, at most 123 bytes.
     ///
     /// # Errors
     ///
-    /// [`Error::Closed`] once a Close was sent; [`Error::Protocol`] for a code that
-    /// may not be sent or a reason that does not fit.
+    /// [`Error::Closed`] once a Close was sent; [`Error::Protocol`] for a code a
+    /// server may not start a closing handshake with; [`Error::Limit`] for a reason
+    /// that does not fit.
     pub fn close(&mut self, code: CloseCode, reason: &str) -> Result<()> {
         self.ensure_open()?;
         let mut body = [0u8; MAX_CONTROL_PAYLOAD];
-        let len = close::body(code, reason, &mut body).map_err(|_| {
-            Error::Protocol(alloc::format!(
-                "close code {} with a {}-byte reason cannot be sent",
-                code.0,
-                reason.len()
-            ))
-        })?;
+        let len = close::start_body(code, reason, &mut body)?;
         self.write_frame(Opcode::Close, body.get(..len).unwrap_or(&[]));
         self.state = State::CloseSent;
         Ok(())
