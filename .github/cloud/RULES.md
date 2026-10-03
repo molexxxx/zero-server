@@ -50,7 +50,9 @@ the fmt and clippy job must be green before any publish.
   behavior from memory. No row: add one first and fetch it.
 - Cite the source in code (`@see <url>#section` in the rustdoc of the item
   that implements it) and in the commit body. Conformance tests are named
-  after the statement they check and carry the section number; every row
+  after the statement they check and carry the section number, in the test
+  name or in the URL fragment and note of the registry row that cites the
+  test (owner decision, 2026-10-02); every row
   carries a `release` field and `cargo xtask standards --check` enforces the
   rows at or below the current release.
 - Only the current document counts (RFC 9110 to 9112 not 2616 or 7230 to
@@ -104,7 +106,10 @@ the fmt and clippy job must be green before any publish.
   the last 12 months unless the crate is finished and says so, a stable line
   (no `0.x`, `beta` or `rc`) unless the design records why. Write the check
   date in the comment beside the allow entry; an entry older than 180 days is
-  rechecked before the next release.
+  rechecked before the next release. One exception (owner decision,
+  2026-10-02): httparse is admitted as a dependency of `fuzz/` only, as the
+  differential oracle of the HTTP/1.1 head parser, although its newest stable
+  release is older than 12 months; it never enters a shipped graph.
 - Support windows are fetched, not assumed: Node from
   nodejs.org/en/about/previous-releases, Python from
   devguide.python.org/versions, .NET from
@@ -125,8 +130,10 @@ the fmt and clippy job must be green before any publish.
 - No fixed sleeps to wait for an assertion: poll, use fake time, or await the
   real event. Every bug fix ships with a test that fails on the previous
   code.
-- Parsers of untrusted input carry proptest tests and a libFuzzer target and
-  never panic on arbitrary bytes. Tests anchor to the specification's own
+- Parsers of untrusted input carry property tests and a libFuzzer target and
+  never panic on arbitrary bytes. Tests driven by the in-crate deterministic
+  generator with fixed seeds satisfy the property-test rule, as proptest does
+  (owner decision, 2026-10-02). Tests anchor to the specification's own
   vectors, not to round-trips alone.
 - `Cargo.lock` is committed in the workspace and in every binding; `npm ci`
   and `cargo vet` must pass from the committed lockfiles. Linux-only failures

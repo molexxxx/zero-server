@@ -1,9 +1,9 @@
 # Status
 
-Updated 2026-10-02. A session that changes the position updates this file in
+Updated 2026-10-03. A session that changes the position updates this file in
 the same commit.
 
-## Start here (handoff to a cloud session, 2026-10-02)
+## Start here (handoff to a cloud session, updated 2026-10-03)
 
 This folder is tracked again so a cloud session can continue from a fresh clone.
 Read, in order: `RULES.md` (binding), this section, `work/BRIEF.md`,
@@ -18,27 +18,65 @@ section, this section wins.
 - `main` holds everything finished and green in CI: steps 1 to 11 of release 1,
   the `zero` binary (`zero serve`), the QPACK and HTTP/3 codecs, the README with
   its two diagrams, the pre-release versioning and release tooling, and the first
-  two DESIGN-12-13 packages (WP-0 registry rows, WP-1 zero-host plumbing). The
-  last code commit before this handoff is `ac0580a`.
-- Branch `pending-work` holds work that is not finished, on top of `main`:
-  - eight new fuzz targets with seeds and dictionaries (`ws_frames`,
-    `ws_session`, `sse_decode`, `tls_hello`, `base64_decode`, `mime_parse`,
-    `forwarded_parse`, `cors_fields`), `fuzz/Cargo.toml`, `fuzz/Cargo.lock` and
-    the fuzz paragraph of `docs/about/standards.md`. Three of the targets fail
-    on purpose: they found real defects (GAPS.md N1, F1). They merge into `main`
-    only once all eight run clean, because CI's fuzz smoke runs every target.
-  - partial, unreviewed edits from agents that a usage limit stopped minutes
-    into their work: `crates/zero-http-types/src/method.rs`,
-    `crates/zero-http/tests/routing.rs`, `crates/zero-router/src/lib.rs` (WP-5),
-    `crates/zero-policy/src/cors.rs` (WP-7 and the CORS origin fix),
-    `crates/zero-policy/src/forwarded.rs`, `crates/zero-tls/src/hello.rs` and
-    `crates/zero-tls/src/lib.rs` (the fuzz findings). Treat them as drafts:
-    review, finish or discard; they may not compile.
-- The reproducing inputs of the three fuzz findings are in `work/fuzz-crashes/`.
+  two DESIGN-12-13 packages (WP-0 registry rows, WP-1 zero-host plumbing).
+- 2026-10-03: the content of `pending-work` is on `main` as four linear commits
+  (the three fixes, then "Fuzz the WebSocket, SSE, TLS hello, base64, media type
+  and policy parsers"). The eight new fuzz targets run clean for 60 seconds each
+  under ASan. GAPS.md F1, F2 and F3 are closed:
+  - zero-tls: an unexpected record type before the hello is refused with
+    `unexpected_message`, a `legacy_version` below 0x0303 with
+    `protocol_version`, and every refusal rustls makes without queuing an alert
+    now carries one (a fourth finding of the `tls_hello` target: a handshake
+    message declared longer than rustls's 0xffff limit got no alert).
+  - zero-policy: quoted `Forwarded` values keep their `;` and `,`; CORS accepts
+    only a Fetch Section 3.2 `serialized-origin`.
+  - zero-mime: empty parameters are allowed (RFC 9110 Section 5.6.6).
+  - The reproducing inputs are seeds under `fuzz/seeds/<target>/`, so
+    `work/fuzz-crashes/` is removed. Root `crash-*` files are already ignored.
+  - The `pending-work` drafts of the method table, the router and the routing
+    tests (WP-5) were left out; they stay readable in commit `658ad64` on the
+    `pending-work` branch, which is kept on GitHub for that reason. The `.suffix`
+    CORS origin entries of the draft (WP-7) were left out too.
+- 2026-10-03: the owner decisions are written into the plan files (GAPS.md P1 to
+  P5): ROADMAP already carried the benchmark method, the httparse exception, the
+  test-name rule and the single-version policy; RULES now states the test-name
+  rule, the generator-driven property-test rule and the httparse exception;
+  DESIGN-12-13 sections 8.11, 8.13, 13 item 14 and 15 state the sdk publish under
+  `next` at `2.0.0-alpha.1` and record section 15 as answered; DESIGN.md's roadmap
+  copy defers to ROADMAP and its version lines follow the single-version policy.
+- `cargo xtask docs --check` and `standards --check` fail exactly as before the
+  merge (CI runs them with `continue-on-error`; GAPS.md G1).
 
-### Owner decisions not yet written into ROADMAP, RULES or DESIGN-12-13
+### Environment limits seen by the 2026-10-03 cloud session
 
-Write these in first (GAPS.md P1 to P5); they are decided:
+- Push and the GitHub API need the repository attached to the session with
+  push access. The container's global git config signs commits with its own
+  SSH key, which GitHub shows as Unverified: set `git config commit.gpgsign
+  false` in the clone before the first commit. The owner allowed one
+  force-push on 2026-10-03 to replace six signed commits with unsigned ones
+  of the same content; RULES' no-force-push rule otherwise stands.
+- Commit messages name no file under `.github/cloud/`, no notes, plans or
+  sessions, and nothing about the tooling or the environment (owner,
+  2026-10-03). Changes to this folder ride along with the code commit they
+  describe, or go in a commit titled "Update internal documents".
+- www.rfc-editor.org, datatracker.ietf.org, fetch.spec.whatwg.org,
+  url.spec.whatwg.org, docs.rs, spdx.org and cheatsheetseries.owasp.org were
+  unreachable. Reachable sources: crates.io (with a User-Agent), PyPI,
+  nodejs.org, raw.githubusercontent.com (the WHATWG `.bs` sources, the TLS WG
+  `draft-ietf-tls-rfc8446bis.md`, and the HTTP RFCs 9110 to 9114, 9204, 9651,
+  6265 and 7230 as HTML in `httpwg/httpwg.github.io/specs/`). Commits name every
+  source they could not fetch as unverified.
+- To check when rfc-editor.org is reachable: the TLS WG source of RFC 9846 says
+  in the ClientHello section that "A server which receives a legacy_version
+  value not equal to 0x0303 MUST abort the handshake with an illegal_parameter
+  alert", while zero-tls answers a TLS 1.3 hello with another `legacy_version`
+  with `protocol_version` (citing Section 4.2.2) and RFC 8996 requires
+  `protocol_version` for {03,01} and {03,02}. Read the published RFC 9846
+  Sections 4.1.2 and 4.2.2 and RFC 8996 Sections 4 and 5 and settle which alert
+  applies to which `legacy_version`.
+
+### Owner decisions (written into the plan files 2026-10-03)
+
 - Benchmarks: published as measured in Docker on the owner's 9950X3D with the
   RULES method; no ratio gates release 1; the rented tier A and tier C runs are
   waived for release 1; the Realistic entry goes through the router with the
@@ -50,25 +88,21 @@ Write these in first (GAPS.md P1 to P5); they are decided:
   registry row's URL fragment and note instead of the test name.
 - `@zero-server/sdk` publishes `2.0.0-alpha.1` under the npm dist-tag `next`
   with `@zero-server/core` and `@zero-server/native`; the first release is
-  `2.0.0-alpha.1` on every registry (fix DESIGN-12-13 sections 8.11, 8.13, 13
-  item 14 and 15 question 4, and every `v0.1.0` and `0.3.0` in ROADMAP).
+  `2.0.0-alpha.1` on every registry.
 - DESIGN-12-13 section 15: every recommended default is accepted.
-- Private vulnerability reporting is enabled on the repository.
+- Private vulnerability reporting is enabled on the repository (owner, stated
+  2026-10-02; not re-read, the API was unreachable from the 2026-10-03 session).
 
 ### Next, in order
 
-1. Finish the fuzz findings on `pending-work`: fix `zero-tls` hello (RFC 9846
-   Section 5 `unexpected_message` for a non-handshake record before the
-   ClientHello; RFC 8996 `protocol_version` for a TLS 1.0 or 1.1 only hello),
-   `zero-policy` Forwarded (RFC 7239 Section 4 quoted values holding `;`),
-   `zero-mime` (RFC 9110 Section 5.6.6 empty parameters) and the CORS origin
-   (Fetch Section 3.2 serialized origin), each with a test that fails on the
-   current code; then all eight fuzz targets clean for 60 seconds, then merge
-   into `main`.
-2. Write the decisions above into the plan files.
+1. Done 2026-10-03: the fuzz findings and the `pending-work` merge.
+2. Done 2026-10-03: the decisions above in the plan files.
 3. DESIGN-12-13 line 2: WP-2 to WP-7 (they own disjoint files and run in
    parallel), then WP-8, then WP-9 and WP-10, then WP-11 to WP-13, then WP-14
-   and WP-15, then WP-16. GAPS.md amends several (AM-1 to AM-8).
+   and WP-15, then WP-16. GAPS.md amends several (AM-1 to AM-8). WP-5 starts
+   from the drafts in commit `658ad64` on branch `pending-work` (method table,
+   router, routing tests; `git show 658ad64:<path>`), WP-7 from the `.suffix`
+   origin entries of the CORS draft in the same commit.
 4. Beside them, the other GAPS.md workstreams, following its ownership table:
    core fixes C1 to C3, test depth T, registry R, docs and site D, release
    engineering E, fuzz F4, F6 to F8, the benchmark harness B1 to B5 (built here,

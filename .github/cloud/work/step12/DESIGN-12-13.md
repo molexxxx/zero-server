@@ -2363,7 +2363,9 @@ implementation (unverified here).
 Packages: `@zero-server/native` (the generated loader and `index.d.ts`), `@zero-server/core` (typed
 wrapper over native: ids, the status enum, `ZeroError`, the server, targets, dispatch loop,
 completion flush, `request.body()`, `res.alloc`, `coreVersion`), `@zero-server/sdk` (the 1.x
-facade, `private`; nothing is published before 2.0.0, brief). Grounded in map-node-api ("Release
+facade). All three publish at `2.0.0-alpha.1` under the npm dist-tag `next` (owner decision
+2026-10-02, BRIEF): the package that builds the facade removes `"private": true` from the sdk
+manifest through the generator in `crates/xtask/src/packages.rs`. Grounded in map-node-api ("Release
 split for the Node facade") and map-legacy-tests section 5.
 
 | Area | Release 1 surface | Implementation |
@@ -2432,7 +2434,9 @@ split for the Node facade") and map-legacy-tests section 5.
 - node.yml: `npm ci`; Node 22, 24 and 26 on Linux; the addon also built on `windows-latest` and
   `macos-latest`; steps: build, `check:packaging`, generated-file diff, `npm test` (native, facade,
   lifecycle), conformance runner, legacy runner, surface check. release-node.yml keeps its 2.0.0
-  gate, builds on Node 24 (active LTS), and leaves the private `sdk` out of the publish set.
+  gate, builds on Node 24 (active LTS), and publishes `@zero-server/sdk` with
+  `@zero-server/core` and `@zero-server/native` at `2.0.0-alpha.1` under the dist-tag `next`
+  (owner decision 2026-10-02).
 - Guides: `bindings/node/guides/quickstart.ts` with an `ANCHOR: example` region (read by
   `crates/xtask/src/site/home.rs`), plus `ws.ts` and `sse.ts`, all run by `npm run guides`.
 
@@ -2704,8 +2708,9 @@ vocabulary is allowed), each with its reason:
 12. 10.8: plugin functions are non-unwinding and return `int32_t`; a foreign-std plugin panic
     cannot be caught at the vtable.
 13. 4.2: the new crate `zero-host` in the crate list.
-14. R.3 row 13 exit: the legacy count is the manifest's computed release 1 `run` count; no
-    `2.0.0-alpha.1` publish (owner decision, the release workflow gates npm below 2.0.0); the
+14. R.3 row 13 exit: the legacy count is the manifest's computed release 1 `run` count; `@zero-server/sdk@2.0.0-alpha.1`
+    is published under the npm dist-tag `next` with `@zero-server/core` and `@zero-server/native`
+    (owner decision 2026-10-02; the first release is `2.0.0-alpha.1` on every registry); the
     detach-after-send vector stays and `transfer-before-send`, `second-stage-refused` and
     `foreign-buffer-refused` join it.
 15. R.3 row 12 exit: "every accessor returns a status on null, stale and out-of-range input"
@@ -3069,18 +3074,22 @@ Critical path: WP-0, WP-1, WP-2 or WP-3, WP-8, WP-10, WP-11, WP-14, WP-16.
 
 ## 15. Open questions for the owner
 
+Answered 2026-10-02: every recommended default below is accepted (BRIEF, Owner decisions that
+apply), and question 4 publishes at `2.0.0-alpha.1`, the single version of the first release.
+
 1. Accept the plan amendments of section 13 as a set, vetoing any single item. Recommended: accept;
    each is argued where it appears.
 2. Support floors: Node `>=22`, .NET `net10.0`, Python `>=3.11` with `abi3-py311`. Recommended:
    accept. .NET 8 support ends 2026-11-10 and Python 3.10 ended 2026-10-01 (fetched), and the floors
-   decide who can install the 0.1.0 NuGet and PyPI packages.
+   decide who can install the 2.0.0-alpha.1 NuGet and PyPI packages.
 3. The 2.0.0 behavior breaks gathered for the CHANGELOG (hidden 5xx messages, 405, 501 and HEAD,
    per-isolate state, CORS preflight rules, no re-routing after a URL rewrite, SSE header merge, the
    driver-owned `Connection`, `static` refused after overlapping JavaScript middleware, tier 0
    `cors`, `helmet` and `requestId` regardless of position, the `sendFile` path and method rules,
    post-response field reads). Recommended: accept as a set; each moves named legacy cases to
    `dropped` with an anchor.
-4. Publish `zero-host` to crates.io with the other crates at 0.1.0 (a published name is permanent).
+4. Publish `zero-host` to crates.io with the other crates at 2.0.0-alpha.1, the single version of
+   the first release (a published name is permanent).
    Recommended: yes. The alternative folds it into zero-ffi behind a module-level
    `#![forbid(unsafe_code)]`, which keeps the code but puts safe and audited code in one crate.
 5. The R.3 row 13 budget exit. DESIGN 8.6's 8-by-8 cell needs 8 batches in flight, which this
