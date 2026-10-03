@@ -15,10 +15,12 @@ on:
 permissions:
   contents: read
 
+# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
+# 2026-10-03).
 jobs:
   analyze:
     name: analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       security-events: write
       actions: read
