@@ -1,6 +1,6 @@
 //! The server-sent events codec of zero-server.
 //!
-//! [`encode`] writes an event stream: events, comments, the response fields, and the
+//! [`encode`](mod@encode) writes an event stream: events, comments, the response fields, and the
 //! keep-alive schedule. [`decode`] reads one, for the bindings' fetch client.
 //! [`last_event_id`] checks the `Last-Event-ID` a reconnecting client sends, and
 //! [`STOP_RECONNECTING`] is the status that tells a client not to reconnect.
