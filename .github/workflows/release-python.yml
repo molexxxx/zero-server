@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+# Runner images are named by version, not -latest, so a release candidate and the tag
+# build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
+# ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
+# README, read 2026-10-03; -latest moves to a newer OS over one to two months).
 jobs:
   preflight:
     uses: ./.github/workflows/release-preflight.yml
@@ -35,7 +39,7 @@ jobs:
         # for, so no build here needs bindgen or libclang. Any other target is a source
         # build for the consumer, never a bindgen build.
         include:
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             manylinux: auto
           # Native ARM64 runner: the aws-lc-sys cmake build does not cross-compile in
@@ -43,7 +47,7 @@ jobs:
           - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: auto
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             manylinux: musllinux_1_2
           - host: ubuntu-24.04-arm
@@ -51,11 +55,11 @@ jobs:
             manylinux: musllinux_1_2
           # Cross-compiled on Apple Silicon: scarce macos-13 Intel runners sit
           # unallocated for minutes and stall the whole release.
-          - host: macos-latest
+          - host: macos-26
             target: x86_64-apple-darwin
-          - host: macos-latest
+          - host: macos-26
             target: aarch64-apple-darwin
-          - host: windows-latest
+          - host: windows-2025
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v7
@@ -90,7 +94,7 @@ jobs:
   sdist:
     name: sdist
     needs: preflight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -110,7 +114,7 @@ jobs:
   pure:
     name: pure packages
     needs: preflight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -140,7 +144,7 @@ jobs:
   publish:
     name: publish to PyPI
     needs: [build, sdist, pure]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 

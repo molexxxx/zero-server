@@ -17,6 +17,10 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+# Runner images are named by version, not -latest, so a release candidate and the tag
+# build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
+# ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
+# README, read 2026-10-03; -latest moves to a newer OS over one to two months).
 jobs:
   preflight:
     uses: ./.github/workflows/release-preflight.yml
@@ -38,11 +42,11 @@ jobs:
         # for, so no build here needs bindgen or libclang. Any other runtime identifier
         # is a source build for the consumer, never a bindgen build.
         include:
-          - host: windows-latest
+          - host: windows-2025
             target: x86_64-pc-windows-msvc
             rid: win-x64
             lib: zero_ffi.dll
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             rid: linux-x64
             lib: libzero_ffi.so
@@ -54,7 +58,7 @@ jobs:
             lib: libzero_ffi.so
           # The musl targets link through zig's bundled musl, on the runner of their
           # own architecture so only the C library is foreign.
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             rid: linux-musl-x64
             lib: libzero_ffi.so
@@ -66,11 +70,11 @@ jobs:
             cross: true
           # Cross-compiled on Apple Silicon: scarce macos-13 Intel runners stall
           # the release.
-          - host: macos-latest
+          - host: macos-26
             target: x86_64-apple-darwin
             rid: osx-x64
             lib: libzero_ffi.dylib
-          - host: macos-latest
+          - host: macos-26
             target: aarch64-apple-darwin
             rid: osx-arm64
             lib: libzero_ffi.dylib
@@ -118,7 +122,7 @@ jobs:
   publish:
     name: pack and publish to NuGet
     needs: native
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       # Required to mint a short-lived NuGet key via OIDC trusted publishing.

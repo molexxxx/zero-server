@@ -30,10 +30,14 @@ concurrency:
   group: pypi-backfill
   cancel-in-progress: false
 
+# Runner images are named by version, not -latest, so a release candidate and the tag
+# build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
+# ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
+# README, read 2026-10-03; -latest moves to a newer OS over one to two months).
 jobs:
   missing:
     name: what PyPI lacks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.find.outputs.version }}
       missing: ${{ steps.find.outputs.missing }}
@@ -90,23 +94,23 @@ jobs:
       matrix:
         # The seven prebuilt targets, the same matrix as release-python.yml.
         include:
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             manylinux: auto
           - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             manylinux: auto
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             manylinux: musllinux_1_2
           - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             manylinux: musllinux_1_2
-          - host: macos-latest
+          - host: macos-26
             target: x86_64-apple-darwin
-          - host: macos-latest
+          - host: macos-26
             target: aarch64-apple-darwin
-          - host: windows-latest
+          - host: windows-2025
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v7
@@ -143,7 +147,7 @@ jobs:
     name: sdist
     needs: missing
     if: needs.missing.outputs.native == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -165,7 +169,7 @@ jobs:
     name: pure packages
     needs: missing
     if: needs.missing.outputs.missing != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -202,7 +206,7 @@ jobs:
     name: publish what is missing
     needs: [missing, build, sdist, pure]
     if: ${{ !cancelled() && needs.missing.outputs.missing != '' && needs.pure.result == 'success' && (needs.missing.outputs.native != 'true' || (needs.build.result == 'success' && needs.sdist.result == 'success')) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # The distributions were built from the tag above; the upload script is this
       # workflow's own, so it comes from the ref the workflow runs on, not the tag.

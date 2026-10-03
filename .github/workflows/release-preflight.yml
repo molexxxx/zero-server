@@ -33,10 +33,14 @@ permissions:
   contents: read
   actions: read
 
+# Runner images are named by version, not -latest, so a release candidate and the tag
+# build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
+# ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
+# README, read 2026-10-03; -latest moves to a newer OS over one to two months).
 jobs:
   preflight:
     name: preflight ${{ inputs.version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       prerelease: ${{ steps.kind.outputs.prerelease }}
     steps:

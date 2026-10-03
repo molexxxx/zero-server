@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+# Runner images are named by version, not -latest, so a release candidate and the tag
+# build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
+# ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
+# README, read 2026-10-03; -latest moves to a newer OS over one to two months).
 jobs:
   preflight:
     uses: ./.github/workflows/release-preflight.yml
@@ -31,7 +35,7 @@ jobs:
   # latest stays on the 1.x line until the first final release.
   gate:
     name: npm release gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: preflight
     outputs:
       publish: ${{ steps.gate.outputs.publish }}
@@ -68,24 +72,24 @@ jobs:
         # for, so no build here needs bindgen or libclang. Any other target is a source
         # build for the consumer, never a bindgen build.
         include:
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             cross: true
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             cross: true
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: aarch64-unknown-linux-musl
             cross: true
           # Cross-compiled on Apple Silicon: scarce macos-13 Intel runners sit
           # unallocated for minutes and stall the whole release.
-          - host: macos-latest
+          - host: macos-26
             target: x86_64-apple-darwin
-          - host: macos-latest
+          - host: macos-26
             target: aarch64-apple-darwin
-          - host: windows-latest
+          - host: windows-2025
             target: x86_64-pc-windows-msvc
     defaults:
       run:
@@ -131,7 +135,7 @@ jobs:
   publish:
     name: publish to npm
     needs: [gate, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
