@@ -1,0 +1,111 @@
+# The long fuzz runs: every libFuzzer target for a fixed budget each week, beside the
+# one-minute smoke in ci.yml. Each target gets its own job and runs one libFuzzer worker
+# per CPU from its checked-in seeds and the corpus the previous runs grew, which is kept
+# in the actions cache. A crash fails the job and its input is uploaded, so a regression
+# input can be copied into fuzz/seeds/<target>/ once the defect is fixed.
+name: fuzz
+
+on:
+  schedule:
+    # Sundays at 03:17 UTC.
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per target.
+        required: false
+        default: "3600"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz
+  cancel-in-progress: false
+
+# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
+# 2026-10-03). cargo-fuzz 0.13.2 is crates.io's max_stable_version, released 2026-06-09,
+# read 2026-10-03.
+jobs:
+  targets:
+    name: list the targets
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.list.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Every target is a file under fuzz/fuzz_targets, which is what cargo fuzz list
+      # reads; listing the files avoids building cargo-fuzz for this job.
+      - name: List the targets
+        id: list
+        run: |
+          targets=$(find fuzz/fuzz_targets -maxdepth 1 -name '*.rs' -printf '%f\n' \
+            | sed 's/\.rs$//' | sort | jq -R . | jq -sc .)
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          echo "$targets"
+
+  fuzz:
+    name: fuzz ${{ matrix.target }}
+    needs: targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.targets) }}
+    env:
+      TARGET: ${{ matrix.target }}
+      SECONDS_PER_TARGET: ${{ inputs.seconds || '3600' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install nightly
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Cache cargo-fuzz and the build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-fuzz
+            fuzz/target
+          key: ${{ runner.os }}-fuzz-long-cargo-${{ hashFiles('fuzz/Cargo.lock', 'Cargo.lock') }}
+
+      - name: Install cargo-fuzz
+        run: command -v cargo-fuzz || cargo install cargo-fuzz --version 0.13.2 --locked
+
+      # Each run saves the corpus it grew under a new key and starts from the newest one
+      # saved before it.
+      - name: Restore the corpus
+        uses: actions/cache/restore@v6
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+
+      - name: Fuzz
+        run: |
+          mkdir -p "fuzz/corpus/$TARGET" "fuzz/artifacts/$TARGET"
+          cargo +nightly fuzz run "$TARGET" "fuzz/corpus/$TARGET" "fuzz/seeds/$TARGET" \
+            -O -a -s address -- \
+            -max_total_time="$SECONDS_PER_TARGET" \
+            -fork="$(nproc)" \
+            "-dict=fuzz/dictionaries/$TARGET.dict"
+
+      - name: Save the corpus
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+
+      - name: Upload the crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}
+          if-no-files-found: ignore
