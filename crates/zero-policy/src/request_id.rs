@@ -11,7 +11,7 @@
 //! capabilities" (Section 8), and nothing in this rule reads an id to decide what a
 //! request may do.
 //!
-//! Source, read 2026-10-01: https://www.rfc-editor.org/rfc/rfc9562.html.
+//! Source, read 2026-10-01: <https://www.rfc-editor.org/rfc/rfc9562.html>.
 
 use zero_core::{Result, Rng};
 

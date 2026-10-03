@@ -13,8 +13,8 @@
 //! every response the rule sees carries `Vary: Sec-Fetch-Site` (Section 5.1).
 //!
 //! Sources, read 2026-10-01: the Fetch Metadata Request Headers source,
-//! https://raw.githubusercontent.com/w3c/webappsec-fetch-metadata/main/index.bs, and
-//! https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html.
+//! <https://raw.githubusercontent.com/w3c/webappsec-fetch-metadata/main/index.bs>, and
+//! <https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html>.
 
 use zero_http_types::Method;
 
