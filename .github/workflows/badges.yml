@@ -15,9 +15,11 @@ on:
 # skips rather than failing the run.
 permissions: {}
 
+# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
+# 2026-10-03).
 jobs:
   dispatch:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Trigger badge refresh in molexxxx/molexxxx
         env:
