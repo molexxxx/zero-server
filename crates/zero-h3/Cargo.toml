@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["http3", "quic", "varint", "frame", "no-std"]
+categories = ["network-programming", "parser-implementations", "web-programming", "no-std"]
 authors.workspace = true
 
 [features]

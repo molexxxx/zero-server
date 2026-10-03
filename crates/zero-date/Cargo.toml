@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["http-date", "imf-fixdate", "rfc9110", "date", "no-std"]
+categories = ["date-and-time", "web-programming", "no-std"]
 authors.workspace = true
 
 [features]

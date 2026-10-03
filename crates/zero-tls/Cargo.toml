@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["tls", "rustls", "sni", "server", "https"]
+categories = ["cryptography", "network-programming", "web-programming::http-server"]
 authors.workspace = true
 # The integration tests and their certificates and private keys stay out of the
 # published package; they run from the repository.

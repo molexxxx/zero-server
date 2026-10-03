@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["static-files", "http", "range", "etag", "server"]
+categories = ["web-programming::http-server", "filesystem"]
 authors.workspace = true
 
 [dependencies]

@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["websocket", "sse", "rooms", "pubsub", "server"]
+categories = ["web-programming::websocket", "web-programming::http-server", "asynchronous"]
 authors.workspace = true
 
 [dependencies]

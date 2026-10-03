@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["qpack", "http3", "huffman", "rfc9204", "no-std"]
+categories = ["compression", "network-programming", "web-programming", "no-std"]
 authors.workspace = true
 
 [features]

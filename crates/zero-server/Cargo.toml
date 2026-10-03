@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["http", "server", "websocket", "tls", "web"]
+categories = ["web-programming::http-server", "network-programming", "asynchronous"]
 authors.workspace = true
 
 [package.metadata.docs.rs]

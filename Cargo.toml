@@ -56,13 +56,6 @@ rust-version = "1.89"
 license = "Apache-2.0"
 repository = "https://github.com/molexxxx/zero-server"
 authors = ["molexxxx"]
-keywords = ["http", "server", "no-std", "async", "web"]
-categories = [
-  "web-programming::http-server",
-  "network-programming",
-  "asynchronous",
-  "no-std",
-]
 
 # Internal crate dependencies. The version is required so each crate can be
 # published to crates.io, and is kept in lockstep with workspace.package.version.

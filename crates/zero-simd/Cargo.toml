@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["simd", "swar", "avx2", "neon", "no-std"]
+categories = ["hardware-support", "algorithms", "no-std"]
 authors.workspace = true
 
 [features]

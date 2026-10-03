@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["sha1", "sha256", "constant-time", "zeroize", "crypto"]
+categories = ["cryptography"]
 authors.workspace = true
 
 [dependencies]
