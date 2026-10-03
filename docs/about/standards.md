@@ -33,12 +33,17 @@ TypeScript, Python and C# at once; no binding asserts it yet. See
 
 The parsers of bytes from the network have libFuzzer targets under `fuzz/` with seeds
 built from the specification's examples: the HTTP/1.1 head and chunked body, the
-router, URIs, query strings, JSON, UTF-8, and the QPACK and HTTP/3 codecs. The
-WebSocket frame and server-sent event decoders, the TLS hello reader and the smaller
-field parsers do not have one yet. Every parser runs randomized tests against arbitrary
-input and is written so it can never panic: the codec crates deny indexing, unwrap,
-panics and unchecked arithmetic at compile time and build without the standard library
-for a bare-metal target.
+router, URIs, query strings, JSON, UTF-8, the QPACK and HTTP/3 codecs, WebSocket frames
+and sessions, the server-sent event decoder, the TLS client hello reader, base64, media
+types and `Accept`, and the `Forwarded` and CORS request fields. Where the crate allows
+it, a target checks more than the absence of a panic: what decodes is encoded again and
+compared, input fed whole and in pieces gives the same result, a documented bound
+holds, or a rule of the specification is checked directly, such as the alert a TLS
+server must send. The WebSocket handshake fields, HTTP dates, the range and
+conditional request fields, and the Fetch Metadata and Referrer-Policy values do not
+have one yet; only their unit tests check them. Every parser is written so it can
+never panic: the codec crates deny indexing, unwrap, panics and unchecked arithmetic at
+compile time and build without the standard library for a bare-metal target.
 
 ## Checks on every push
 

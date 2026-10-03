@@ -1,0 +1,18 @@
+# Event stream field names, line endings and the byte order mark (libFuzzer
+# dictionaries accept only \\, \" and \xHH escapes).
+data="data:"
+data_space="data: "
+event="event:"
+id="id:"
+retry="retry:"
+comment=":"
+lf="\x0a"
+cr="\x0d"
+crlf="\x0d\x0a"
+blank="\x0a\x0a"
+bom="\xef\xbb\xbf"
+nul="\x00"
+space=" "
+message="message"
+digits="1000"
+invalid_utf8="\xff"

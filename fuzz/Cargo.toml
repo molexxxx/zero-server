@@ -29,6 +29,17 @@ zero-core = { path = "../crates/zero-core" }
 zero-http-types = { path = "../crates/zero-http-types" }
 zero-qpack = { path = "../crates/zero-qpack" }
 zero-h3 = { path = "../crates/zero-h3" }
+zero-ws = { path = "../crates/zero-ws" }
+zero-sse = { path = "../crates/zero-sse" }
+zero-base64 = { path = "../crates/zero-base64" }
+zero-mime = { path = "../crates/zero-mime" }
+zero-policy = { path = "../crates/zero-policy" }
+# The TLS hello reader is private to zero-tls, so tls_hello compiles its source
+# file in place against the rustls zero-tls pins. Only `std` (for Acceptor) and
+# `tls12` gate code on the Acceptor's path in this version; the provider
+# features zero-tls also enables do not. crates.io max_stable_version 0.23.45,
+# released 2026-09-14, not yanked, read 2026-10-02.
+rustls = { version = "0.23.45", default-features = false, features = ["std", "tls12"] }
 
 [[bin]]
 name = "cmsg_decode"
@@ -145,6 +156,62 @@ bench = false
 [[bin]]
 name = "h3_capsules"
 path = "fuzz_targets/h3_capsules.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ws_frames"
+path = "fuzz_targets/ws_frames.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ws_session"
+path = "fuzz_targets/ws_session.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sse_decode"
+path = "fuzz_targets/sse_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tls_hello"
+path = "fuzz_targets/tls_hello.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "base64_decode"
+path = "fuzz_targets/base64_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mime_parse"
+path = "fuzz_targets/mime_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "forwarded_parse"
+path = "fuzz_targets/forwarded_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cors_fields"
+path = "fuzz_targets/cors_fields.rs"
 test = false
 doc = false
 bench = false

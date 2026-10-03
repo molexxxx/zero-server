@@ -1,0 +1,3 @@
+https://foo.invalid
+POST
+Content-Security-Policy, Strict-Transport-Security

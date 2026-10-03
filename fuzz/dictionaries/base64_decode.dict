@@ -1,0 +1,15 @@
+# Alphabet edges and padding (libFuzzer dictionaries accept only \\, \" and
+# \xHH escapes).
+pad="="
+pad_two="=="
+plus="+"
+slash="/"
+minus="-"
+underscore="_"
+quantum="Zm9v"
+one_byte="Zg=="
+two_bytes="Zm8="
+zeros="AAAA"
+high="////"
+url_high="____"
+lf="\x0a"
