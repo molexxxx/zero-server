@@ -3,8 +3,8 @@
 //! [`Writer`] serializes straight into a byte buffer: objects, keys, strings with
 //! the escapes Section 7 requires, integers, floats, arrays, booleans and null,
 //! with no intermediate tree, which is what the json benchmark route and the
-//! tier 2 serializers need. [`parse`] is the strict parser: it accepts every text
-//! of the Section 2 grammar and nothing else, into the [`Value`] model of
+//! tier 2 serializers need. [`parse`](fn@parse) is the strict parser: it accepts every text
+//! of the Section 2 grammar and nothing else, into the [`Value`](zero_core::Value) model of
 //! `zero-core`, under a size cap and a nesting cap (Section 9), decoding strings as
 //! UTF-8 (Section 8.1) with an unpaired surrogate escape refused.
 
