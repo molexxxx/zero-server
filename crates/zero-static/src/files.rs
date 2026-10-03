@@ -5,12 +5,18 @@
 //! decoded), the remaining percent-escapes are decoded strictly, and a segment
 //! that is empty, `.` or `..`, or that holds a separator, a NUL or a control
 //! character, or on Windows a colon (an alternate data stream) or a tilde followed
-//! by a digit (an 8.3 short name), ends the request with 404, as does a segment
-//! that begins with a dot unless [`Options::dotfiles`] allows it. The file is then
-//! opened without following a symbolic link in its final component (`O_NOFOLLOW`
-//! on Unix), its resolved path is compared against the resolved root, and on Unix
+//! by a digit (an 8.3 short name), makes the request a miss, as does a segment
+//! that begins with a dot unless [`Options::dotfiles`] is [`Dotfiles::Allow`],
+//! or [`Dotfiles::Deny`], which answers it with 403. The file is then opened
+//! without following a symbolic link in its final component (`O_NOFOLLOW` on
+//! Unix), its resolved path is compared against the resolved root, and on Unix
 //! the opened file's identity is compared with the resolved path's, so a link
-//! swapped in between the two cannot hand out a file from outside the root.
+//! swapped in between the two cannot hand out a file from outside the root. A
+//! path that names no file is tried again with each of [`Options::extensions`].
+//!
+//! [`Files::serve_path`] answers a miss with 404; [`Files::try_serve_path`]
+//! writes nothing for one and returns [`Served::Miss`], so a host can fall
+//! through to its next route.
 //!
 //! A file no larger than [`Options::small_file_limit`] stays in a per-core cache
 //! with its validators and its prebuilt field values, revalidated by one `stat`
@@ -39,6 +45,31 @@ use crate::range::{
 /// The media type of a file whose extension names none.
 const OCTET_STREAM: &str = "application/octet-stream";
 
+/// How a request path with a segment that begins with `.`, such as `.env`,
+/// `.git/config` or `/.well-known/`, is answered.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3>
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Dotfiles {
+    /// As a miss, whether or not the file exists: [`Files::serve_path`] answers
+    /// 404 and [`Files::try_serve_path`] returns [`Served::Miss`], so a host can
+    /// fall through to its next route.
+    #[default]
+    Ignore,
+    /// With `403 Forbidden` and no content, whether or not the file exists. RFC
+    /// 9110 Section 15.5.4 lets an origin server that wishes to "hide" the
+    /// existence of a forbidden target resource answer 404 instead, which is
+    /// why [`Dotfiles::Ignore`] is the default.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.4>
+    Deny,
+    /// Served like any other path, as a root that serves `/.well-known/` (RFC
+    /// 8615) needs.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc8615.html#section-3>
+    Allow,
+}
+
 /// How a root is served.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Options {
@@ -56,13 +87,16 @@ pub struct Options {
     pub small_file_limit: usize,
     /// How many bytes of files the per-core cache holds at most.
     pub cache_budget: usize,
-    /// Whether a path segment that begins with `.`, such as `.env` or `.git`, may be
-    /// served. Off by default, which answers such a path with 404; a root that
-    /// serves `/.well-known/` (RFC 8615) turns it on.
+    /// How a path segment that begins with `.`, such as `.env` or `.git`, is
+    /// answered; [`Dotfiles::Ignore`] by default.
     ///
     /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3>
-    /// @see <https://www.rfc-editor.org/rfc/rfc8615.html#section-3>
-    pub dotfiles: bool,
+    pub dotfiles: Dotfiles,
+    /// The extensions tried in order, such as `html`, when a path that does not
+    /// end in `/` names no file: with `html`, `/about` serves `about.html`. An
+    /// entry may begin with `.`, which is dropped. Each candidate goes through
+    /// the same path policy and root checks as the path itself. Empty by default.
+    pub extensions: Vec<String>,
 }
 
 impl Default for Options {
@@ -74,7 +108,8 @@ impl Default for Options {
             attachment: false,
             small_file_limit: 256 * 1024,
             cache_budget: 8 * 1024 * 1024,
-            dotfiles: false,
+            dotfiles: Dotfiles::Ignore,
+            extensions: Vec::new(),
         }
     }
 }
@@ -154,6 +189,35 @@ pub enum Refusal {
     Directory,
 }
 
+/// What [`Files::try_serve_path`] did with a request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[must_use]
+pub enum Served {
+    /// A response was written: the file, 304, 412, 416, 405, or 403 for a
+    /// dotfile under [`Dotfiles::Deny`].
+    Written,
+    /// The path names no file the root serves. Nothing was written, so the
+    /// caller answers it, with 404 or by falling through to another route.
+    Miss,
+}
+
+/// Why a request path is not served, before anything is opened.
+#[derive(Clone, Copy)]
+enum Unserved {
+    /// A miss, for the reason given.
+    Refused(Refusal),
+    /// A dotfile segment that [`Dotfiles::Deny`] answers with 403.
+    Forbidden,
+}
+
+/// A request path resolved under the root.
+struct Located {
+    /// The relative path of policy-checked segments.
+    relative: PathBuf,
+    /// Whether the request named a directory, so the index file was appended.
+    directory: bool,
+}
+
 /// Whether one decoded segment may name a path component.
 fn segment_allowed(segment: &[u8]) -> bool {
     if segment.is_empty() || segment == b"." || segment == b".." {
@@ -189,8 +253,21 @@ impl Files {
     ///
     /// # Errors
     ///
-    /// The operating system's error when the root cannot be resolved.
+    /// [`io::ErrorKind::InvalidInput`] when an entry of [`Options::extensions`] is
+    /// empty, `.` or `..` once its leading `.` is dropped, or holds a character a
+    /// path segment may not; otherwise the operating system's error when the root
+    /// cannot be resolved.
     pub fn new(root: impl Into<PathBuf>, options: Options) -> io::Result<Self> {
+        if let Some(bad) = options
+            .extensions
+            .iter()
+            .find(|extension| !segment_allowed(bare_extension(extension).as_bytes()))
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("the extension {bad:?} cannot end a path segment"),
+            ));
+        }
         let root = root.into();
         let canonical_root = fs::canonicalize(&root)?;
         Ok(Files {
@@ -231,17 +308,31 @@ impl Files {
     ///
     /// # Errors
     ///
-    /// [`Refusal`] when the path names nothing under the root.
+    /// [`Refusal`] when the path names nothing under the root; a dotfile segment
+    /// is [`Refusal::Policy`] under both [`Dotfiles::Ignore`] and
+    /// [`Dotfiles::Deny`].
     pub fn locate(&self, path: &[u8]) -> Result<PathBuf, Refusal> {
+        self.resolve(path)
+            .map(|located| located.relative)
+            .map_err(|unserved| match unserved {
+                Unserved::Refused(refusal) => refusal,
+                Unserved::Forbidden => Refusal::Policy,
+            })
+    }
+
+    /// The file a request path names under the root, with whether the request
+    /// named a directory.
+    fn resolve(&self, path: &[u8]) -> Result<Located, Unserved> {
+        let policy = Unserved::Refused(Refusal::Policy);
         let mut scratch = self.scratch.borrow_mut();
         scratch.clear();
-        let normalized = normalize_path(path, &mut scratch).map_err(|_| Refusal::Policy)?;
+        let normalized = normalize_path(path, &mut scratch).map_err(|_| policy)?;
         let mut relative = PathBuf::new();
         let mut decoded = Vec::new();
         let mut directory = normalized.is_empty();
         for segment in normalized.split(|&byte| byte == b'/') {
             decoded.clear();
-            percent_decode(segment, &mut decoded).map_err(|_| Refusal::Policy)?;
+            percent_decode(segment, &mut decoded).map_err(|_| policy)?;
             if decoded.is_empty() {
                 // The leading slash and a trailing slash both split off an empty
                 // segment; a trailing one names a directory.
@@ -249,21 +340,29 @@ impl Files {
                 continue;
             }
             directory = false;
-            if !segment_allowed(&decoded)
-                || (!self.options.dotfiles && decoded.first() == Some(&b'.'))
-            {
-                return Err(Refusal::Policy);
+            if !segment_allowed(&decoded) {
+                return Err(policy);
             }
-            let text = std::str::from_utf8(&decoded).map_err(|_| Refusal::Policy)?;
+            if decoded.first() == Some(&b'.') {
+                match self.options.dotfiles {
+                    Dotfiles::Allow => {}
+                    Dotfiles::Ignore => return Err(policy),
+                    Dotfiles::Deny => return Err(Unserved::Forbidden),
+                }
+            }
+            let text = std::str::from_utf8(&decoded).map_err(|_| policy)?;
             relative.push(text);
         }
         if directory {
             match &self.options.index {
                 Some(index) => relative.push(index),
-                None => return Err(Refusal::Directory),
+                None => return Err(Unserved::Refused(Refusal::Directory)),
             }
         }
-        Ok(relative)
+        Ok(Located {
+            relative,
+            directory,
+        })
     }
 
     /// Open and read the file at `relative`, refusing a path that resolves outside
@@ -350,7 +449,31 @@ impl Files {
         Ok(entry)
     }
 
-    /// Serve the request at its own path.
+    /// The entry a located path serves: the file itself, or else the first of
+    /// [`Options::extensions`] appended to its name that names one, with the
+    /// relative path served.
+    fn find(&self, located: Located) -> Option<(PathBuf, Entry)> {
+        let key = path_key(&located.relative);
+        if let Ok(entry) = self.entry(&located.relative, &key) {
+            return Some((located.relative, entry));
+        }
+        if located.directory {
+            return None;
+        }
+        let name = located.relative.file_name()?.to_str()?;
+        self.options.extensions.iter().find_map(|extension| {
+            let candidate = format!("{name}.{}", bare_extension(extension));
+            if !segment_allowed(candidate.as_bytes()) {
+                return None;
+            }
+            let relative = located.relative.with_file_name(candidate);
+            let key = path_key(&relative);
+            let entry = self.entry(&relative, &key).ok()?;
+            Some((relative, entry))
+        })
+    }
+
+    /// Serve the request at its own path, answering a miss with 404.
     ///
     /// # Arguments
     ///
@@ -365,7 +488,7 @@ impl Files {
     }
 
     /// Serve the request for `path` under the root, which a mounted route passes as
-    /// the part of the request path after its prefix.
+    /// the part of the request path after its prefix, answering a miss with 404.
     ///
     /// # Arguments
     ///
@@ -376,21 +499,70 @@ impl Files {
     ///
     /// [`Error`] from the response builder, which refuses nothing this writes.
     pub fn serve_path(&self, call: &mut Call<'_>, path: &[u8]) -> Result<(), Error> {
+        if self.try_serve_path(call, path)? == Served::Miss {
+            call.response().status(StatusCode::NOT_FOUND);
+        }
+        Ok(())
+    }
+
+    /// Serve the request at its own path, or report a miss without writing.
+    ///
+    /// # Arguments
+    ///
+    /// * `call` - the request and its response.
+    ///
+    /// # Returns
+    ///
+    /// Whether a response was written; see [`Files::try_serve_path`].
+    ///
+    /// # Errors
+    ///
+    /// [`Error`] from the response builder, which refuses nothing this writes.
+    pub fn try_serve(&self, call: &mut Call<'_>) -> Result<Served, Error> {
+        let path = call.request().path().to_vec();
+        self.try_serve_path(call, &path)
+    }
+
+    /// Serve the request for `path` under the root, or report a miss without
+    /// writing anything, so a host can fall through to its next route. A method
+    /// other than GET and HEAD is answered 405 with `Allow: GET, HEAD`, and a
+    /// dotfile under [`Dotfiles::Deny`] is answered 403 with no content, whether
+    /// or not the file exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `call` - the request and its response.
+    /// * `path` - the path under the root, as received.
+    ///
+    /// # Returns
+    ///
+    /// [`Served::Written`] when a response was written, [`Served::Miss`] when the
+    /// path names no file the root serves and the response is untouched.
+    ///
+    /// # Errors
+    ///
+    /// [`Error`] from the response builder, which refuses nothing this writes.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.4>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3>
+    pub fn try_serve_path(&self, call: &mut Call<'_>, path: &[u8]) -> Result<Served, Error> {
         let method = call.request().method();
         if !matches!(method, Some(Method::Get | Method::Head)) {
             let mut response = call.response();
             response.status(StatusCode::METHOD_NOT_ALLOWED);
             response.header_id(HeaderName::Allow, b"GET, HEAD")?;
-            return Ok(());
+            return Ok(Served::Written);
         }
-        let Ok(relative) = self.locate(path) else {
-            call.response().status(StatusCode::NOT_FOUND);
-            return Ok(());
+        let located = match self.resolve(path) {
+            Ok(located) => located,
+            Err(Unserved::Forbidden) => {
+                call.response().status(StatusCode::FORBIDDEN);
+                return Ok(Served::Written);
+            }
+            Err(Unserved::Refused(_)) => return Ok(Served::Miss),
         };
-        let key = relative.to_string_lossy().into_owned().into_bytes();
-        let Ok(entry) = self.entry(&relative, &key) else {
-            call.response().status(StatusCode::NOT_FOUND);
-            return Ok(());
+        let Some((relative, entry)) = self.find(located) else {
+            return Ok(Served::Miss);
         };
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -424,11 +596,11 @@ impl Files {
         match evaluate(method, preconditions, current, now) {
             Outcome::NotModified => {
                 response.status(StatusCode::NOT_MODIFIED);
-                return Ok(());
+                return Ok(Served::Written);
             }
             Outcome::PreconditionFailed => {
                 response.status(StatusCode::PRECONDITION_FAILED);
-                return Ok(());
+                return Ok(Served::Written);
             }
             Outcome::Proceed { range } => {
                 let mut value = Vec::new();
@@ -492,8 +664,18 @@ impl Files {
                 }
             }
         }
-        Ok(())
+        Ok(Served::Written)
     }
+}
+
+/// The cache key and media type source of a relative path.
+fn path_key(relative: &Path) -> Vec<u8> {
+    relative.to_string_lossy().into_owned().into_bytes()
+}
+
+/// An entry of [`Options::extensions`] without its leading `.`, if any.
+fn bare_extension(extension: &str) -> &str {
+    extension.strip_prefix('.').unwrap_or(extension)
 }
 
 /// A strong entity tag from the modification time and the length: a change to the

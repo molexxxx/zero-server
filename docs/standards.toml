@@ -3078,6 +3078,19 @@ anchor = "rule"
 release = 1
 note = "RFC 9110 Section 17.3; RFC 8615 Section 3 for `/.well-known/`"
 
+[[entry]]
+key = "static-18"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "With dotfiles denied, a path segment that begins with a dot is answered 403 Forbidden whether or not the file exists"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.4"
+evidence = "crates/zero-static/tests/options.rs"
+at = "fn dotfiles_deny_answers_a_dotfile_path_with_rfc_9110_section_15_5_4_403_forbidden_whether_or_not_it_exists"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Sections 15.5.4 and 17.3"
+
 # Cookies and sessions
 
 [[entry]]
@@ -3706,6 +3719,19 @@ at = "fn body_limit_prefixes_match_on_segment_boundaries_after_rfc_3986_normaliz
 anchor = "rule"
 release = 1
 note = "RFC 3986 Sections 3.4, 5.2.4 and 6.2.2; RFC 9110 Section 15.5.14"
+
+[[entry]]
+key = "policy-32"
+chapter = "http"
+designation = "OWASP HTML5 Security Cheat Sheet"
+body = "OWASP"
+subject = "A `.suffix` CORS origin entry matches only at a label boundary, so `.example.com` never allows `badexample.com`"
+url = "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#web-messaging"
+evidence = "crates/zero-policy/tests/cors_suffix.rs"
+at = "fn a_suffix_entry_matches_only_at_a_label_boundary_so_example_com_never_allows_badexample_com"
+anchor = "rule"
+release = 1
+note = "OWASP HTML5 Security Cheat Sheet, Web Messaging; entries are checked against the Fetch Section 3.2 serialized-origin and serialized-domain grammar"
 
 
 # Rate limiting

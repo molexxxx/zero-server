@@ -609,7 +609,7 @@ fn load_identity(tls: &Tls) -> Result<Identity, Failure> {
 fn site_options() -> Options {
     Options {
         index: Some("index.html".to_owned()),
-        dotfiles: false,
+        dotfiles: zero_static::Dotfiles::Ignore,
         ..Options::default()
     }
 }

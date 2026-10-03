@@ -15,7 +15,7 @@ pub mod headers;
 pub mod range;
 
 pub use cond::{evaluate, EntityTag, Outcome, Preconditions, Validators};
-pub use files::{Files, Options, Refusal};
+pub use files::{Dotfiles, Files, Options, Refusal, Served};
 pub use headers::{last_modified_for, write_attachment, CachePolicy};
 pub use range::{resolve, Ranges, MAX_RANGES};
 
@@ -736,7 +736,7 @@ mod tests {
         let (workers, addr) = start(
             root,
             Options {
-                dotfiles: true,
+                dotfiles: crate::Dotfiles::Allow,
                 ..Options::default()
             },
         );

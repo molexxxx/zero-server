@@ -14,8 +14,11 @@
 //! the literal `null` of a privacy-sensitive context included, matches no rule, so
 //! it is never reflected. An origin is compared as RFC 6454 Section 5 says, "the
 //! same if, and only if, they have identical schemes, hosts, and ports", which for
-//! two serialized origins is byte equality. When the allowed origin varies per
-//! request the response carries `Vary: Origin` (RFC 9110 Section 12.5.5).
+//! two serialized origins is byte equality. A list entry that begins with `.` is a
+//! domain suffix instead, matched only at a label boundary, so `.example.com`
+//! allows `https://api.example.com` and never `https://badexample.com`. When the
+//! allowed origin varies per request the response carries `Vary: Origin` (RFC 9110
+//! Section 12.5.5).
 
 use zero_date::Decimal;
 use zero_http_types::Method;
@@ -26,8 +29,42 @@ pub enum AllowOrigin {
     /// Every serialized origin: `*`, or the request's origin reflected when
     /// credentials are on.
     Any,
-    /// These serialized origins exactly, scheme, host and port.
+    /// These entries. An entry that begins with `.`, such as `.example.com`, is a
+    /// domain suffix: it allows an origin of any scheme whose host is a domain
+    /// ending with the entry, with at least one label of its own before it and no
+    /// port, so `.example.com` allows `https://api.example.com` and
+    /// `http://a.b.example.com` but neither `https://example.com`,
+    /// `https://badexample.com` nor `https://api.example.com:8443`. Any other entry
+    /// is a serialized origin compared exactly, scheme, host and port. An entry
+    /// that [`AllowOrigin::is_valid_entry`] refuses allows nothing.
     List(Vec<Vec<u8>>),
+}
+
+impl AllowOrigin {
+    /// Whether `entry` can allow an origin as an [`AllowOrigin::List`] entry: a
+    /// `serialized-origin` of the Fetch Standard's `Origin` grammar, or `.`
+    /// followed by a `serialized-domain` that does not end in a number. A domain
+    /// that ends in a number is an IPv4 address to the URL Standard's host parser,
+    /// not a domain, so it has no subdomains to allow.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` - the list entry, as configured.
+    ///
+    /// # Returns
+    ///
+    /// Whether the entry is well formed; a rule never matches a malformed entry,
+    /// so a caller that builds rules from configuration refuses one up front.
+    ///
+    /// @see <https://fetch.spec.whatwg.org/#origin-header>
+    /// @see <https://url.spec.whatwg.org/#ends-in-a-number-checker>
+    #[must_use]
+    pub fn is_valid_entry(entry: &[u8]) -> bool {
+        match entry.strip_prefix(b".") {
+            Some(domain) => is_suffix_domain(domain),
+            None => is_serialized_origin(entry),
+        }
+    }
 }
 
 /// A CORS rule.
@@ -159,6 +196,70 @@ fn is_serialized_domain(domain: &[u8]) -> bool {
     })
 }
 
+/// Whether `domain`, a suffix entry without its leading `.`, is a
+/// `serialized-domain` that does not end in a number.
+///
+/// @see <https://url.spec.whatwg.org/#ends-in-a-number-checker>
+fn is_suffix_domain(domain: &[u8]) -> bool {
+    is_serialized_domain(domain) && !ends_in_a_number(domain)
+}
+
+/// Whether the suffix entry `entry`, such as `.example.com`, allows `origin`, a
+/// value [`is_serialized_origin`] accepted. The host is the part of the ASCII
+/// serialization after the scheme's `://`, which carries a `:` only before a
+/// port or inside an IPv6 address, and neither matches. The host must be a
+/// domain that ends with the whole entry and is longer than it. The entry's own
+/// `.` then meets a label separator of the host, so the match is anchored at a
+/// label boundary and `.example.com` never allows `badexample.com` or
+/// `example.com.evil`; a substring or unanchored suffix test would ("Check the
+/// origin properly exactly to match the FQDN(s) you expect", OWASP HTML5 Security
+/// Cheat Sheet).
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc6454.html#section-6.2>
+/// @see <https://url.spec.whatwg.org/#host-parsing>
+/// @see <https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#web-messaging>
+fn suffix_allows(entry: &[u8], origin: &[u8]) -> bool {
+    if !entry.strip_prefix(b".").is_some_and(is_suffix_domain) {
+        return false;
+    }
+    let host = origin
+        .iter()
+        .position(|&byte| byte == b':')
+        .and_then(|colon| origin.get(colon.saturating_add(3)..))
+        .unwrap_or(&[]);
+    !host.contains(&b':') && host.len() > entry.len() && host.ends_with(entry)
+}
+
+/// The URL Standard's ends-in-a-number checker over an ASCII `input`: after one
+/// trailing empty label is dropped, whether the last label is ASCII digits only,
+/// or an IPv4 number in another form (`0x` or `0X` followed by hexadecimal
+/// digits). The host parser reads such a host as an IPv4 address.
+///
+/// @see <https://url.spec.whatwg.org/#ends-in-a-number-checker>
+fn ends_in_a_number(input: &[u8]) -> bool {
+    let parts = input.strip_suffix(b".").unwrap_or(input);
+    let last = parts.rsplit(|&byte| byte == b'.').next().unwrap_or(&[]);
+    if !last.is_empty() && last.iter().all(u8::is_ascii_digit) {
+        return true;
+    }
+    is_ipv4_number(last)
+}
+
+/// Whether the URL Standard's IPv4 number parser accepts `input`: a decimal,
+/// a `0`-prefixed octal, or a `0x`- or `0X`-prefixed hexadecimal number, where
+/// the prefix alone counts as zero.
+///
+/// @see <https://url.spec.whatwg.org/#ipv4-number-parser>
+fn is_ipv4_number(input: &[u8]) -> bool {
+    let (digits, radix) = match input {
+        [] => return false,
+        [b'0', b'x' | b'X', rest @ ..] => (rest, 16),
+        [b'0', rest @ ..] if !rest.is_empty() => (rest, 8),
+        _ => (input, 10),
+    };
+    digits.iter().all(|&byte| char::from(byte).is_digit(radix))
+}
+
 /// Whether `address` is a `serialized-ipv6`: eight `h16` groups, or at most six
 /// around one `::`, each `"0"` or a lowercase hexadecimal number without leading
 /// zeros, so the least significant groups are never an IPv4 address.
@@ -228,10 +329,11 @@ fn join(list: &[Vec<u8>]) -> Vec<u8> {
 }
 
 impl Cors {
-    /// Whether `origin` is allowed. A value that is not a `serialized-origin` of
-    /// the Fetch Standard's `Origin` grammar, the literal `null` included, is
-    /// allowed by no rule, [`AllowOrigin::Any`] with credentials included, so it is
-    /// never reflected.
+    /// Whether `origin` is allowed: by [`AllowOrigin::Any`], by a list entry equal
+    /// to it, or by a suffix entry its host ends with at a label boundary. A value
+    /// that is not a `serialized-origin` of the Fetch Standard's `Origin` grammar,
+    /// the literal `null` included, is allowed by no rule, [`AllowOrigin::Any`]
+    /// with credentials included, so it is never reflected.
     ///
     /// # Arguments
     ///
@@ -242,6 +344,7 @@ impl Cors {
     /// Whether the rule allows the origin.
     ///
     /// @see <https://fetch.spec.whatwg.org/#origin-header>
+    /// @see <https://www.rfc-editor.org/rfc/rfc6454.html#section-5>
     #[must_use]
     pub fn allows(&self, origin: &[u8]) -> bool {
         if !is_serialized_origin(origin) {
@@ -249,7 +352,13 @@ impl Cors {
         }
         match &self.allow_origin {
             AllowOrigin::Any => true,
-            AllowOrigin::List(list) => list.iter().any(|allowed| allowed == origin),
+            AllowOrigin::List(list) => list.iter().any(|allowed| {
+                if allowed.first() == Some(&b'.') {
+                    suffix_allows(allowed, origin)
+                } else {
+                    allowed == origin
+                }
+            }),
         }
     }
 
