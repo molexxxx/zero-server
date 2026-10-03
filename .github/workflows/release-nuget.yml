@@ -81,19 +81,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      # The toolchain is the one rust-toolchain.toml names, as in CI.
+      - name: Add the target to the toolchain
+        run: rustup target add ${{ matrix.target }}
 
+      # mlugg/setup-zig v2.2.1 (tag of 2026-01-19, read 2026-10-03); the action this
+      # replaces says it is unmaintained and names this one. Zig stays at 0.13.0, the
+      # version these cross builds were set up with; a newer Zig changes what bindgen
+      # needs and is moved only with a release build run that proves it.
       - name: Setup zig for cross compilation
         if: matrix.cross
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v2.2.1
         with:
           version: 0.13.0
 
       - name: Install cargo-zigbuild
         if: matrix.cross
-        run: pip install cargo-zigbuild
+        # PyPI cargo-zigbuild 0.23.4, released 2026-09-02, read 2026-10-03.
+        run: pip install cargo-zigbuild==0.23.4
 
       # aws-lc-sys assembles with NASM on Windows x86-64; the crate's prebuilt objects
       # are declined, so the assembler is installed at a pinned version instead.
@@ -104,7 +109,7 @@ jobs:
           version: "2.16.01"
 
       - name: Build the native library
-        run: cargo ${{ matrix.cross && 'zigbuild' || 'build' }} -p zero-ffi --release --target ${{ matrix.target }}
+        run: cargo ${{ matrix.cross && 'zigbuild' || 'build' }} -p zero-ffi --release --locked --target ${{ matrix.target }}
 
       - name: Stage the native library under its runtime identifier
         shell: bash

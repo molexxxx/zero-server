@@ -30,6 +30,8 @@ concurrency:
   group: pypi-backfill
   cancel-in-progress: false
 
+# Tool versions from PyPI, read 2026-10-03: maturin 1.15.0 (2026-08-24), build 1.6.1
+# (2026-09-10), twine 7.0.0 (2026-07-27).
 # Runner images are named by version, not -latest, so a release candidate and the tag
 # build on the same images: ubuntu-24.04, macos-26 and windows-2025 are what
 # ubuntu-latest, macos-latest and windows-latest name today (actions/runner-images
@@ -132,6 +134,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: v1.15.0
           target: ${{ matrix.target }}
           args: --release --out dist --manifest-path bindings/python/packages/native/Cargo.toml
           manylinux: ${{ matrix.manylinux || 'auto' }}
@@ -156,6 +159,7 @@ jobs:
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
+          maturin-version: v1.15.0
           command: sdist
           args: --out dist --manifest-path bindings/python/packages/native/Cargo.toml
 
@@ -185,7 +189,7 @@ jobs:
         env:
           MISSING: ${{ needs.missing.outputs.missing }}
         run: |
-          pip install build
+          pip install build==1.6.1
           for pyproject in packages/*/pyproject.toml; do
             name=$(sed -n 's/^name = "\(.*\)"/\1/p' "$pyproject" | head -1)
             case " $MISSING " in
@@ -231,5 +235,5 @@ jobs:
           # short enough to stay well inside a job's own limit.
           PYPI_WAIT_BUDGET: 14400
         run: |
-          python -m pip install --quiet twine
+          python -m pip install --quiet twine==7.0.0
           bash .github/scripts/pypi-upload.sh dist "${{ needs.missing.outputs.version }}"
