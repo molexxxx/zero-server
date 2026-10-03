@@ -24,7 +24,7 @@ toml_edit = "0.25"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 syntect = { version = "5.3", default-features = false, features = ["default-syntaxes", "regex-fancy"] }
 two-face = { version = "0.5", default-features = false, features = ["syntect-fancy"] }
-oxc = { version = "0.150", features = ["minifier", "codegen"] }
+oxc = { version = "0.152", features = ["minifier", "codegen"] }
 
 [dev-dependencies]
 # The front-page budget test gzips the rendered files as a server would send them.
