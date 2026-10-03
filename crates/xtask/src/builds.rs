@@ -13,7 +13,7 @@
 //! committed. `cargo xtask docs` renders them into a `<!-- table: builds -->` region and
 //! `cargo xtask docs --check` fails when they drift, so the published numbers cannot rot.
 //! The compiled engine each binding ships is measured separately by
-//! [`report`](crate::builds::report), because an artifact's size depends on the platform
+//! [`report`], because an artifact's size depends on the platform
 //! and toolchain that produced it.
 
 use std::collections::BTreeSet;

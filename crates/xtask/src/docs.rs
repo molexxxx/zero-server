@@ -5,7 +5,7 @@
 //! source is parsed with `syn`, so no nightly toolchain is needed. And the generated regions
 //! inside hand-written Markdown (the capability tables in the READMEs and the site's pages,
 //! and the code snippets spliced from test files) are re-rendered in place; see
-//! [`regions`](crate::regions). `cargo xtask docs` writes all of it; `cargo xtask docs --check`
+//! [`regions`]. `cargo xtask docs` writes all of it; `cargo xtask docs --check`
 //! renders in memory, fails if any committed file is stale, and checks the capability map
 //! against the crates, the Node packages, the Python modules, and the .NET types. It also renders
 //! the binding packages' manifests and READMEs from that map. A hand-written crate README

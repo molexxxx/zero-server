@@ -27,7 +27,7 @@ const USAGE: &str = "version [<x.y.z>[-alpha.N|-beta.N|-rc.N] | --check [expecte
 /// The pre-release phases a version may carry, each with the letter PEP 440
 /// normalizes its name to.
 ///
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling>
 const PHASES: [(&str, &str); 3] = [("alpha", "a"), ("beta", "b"), ("rc", "rc")];
 
 /// The prefix shared by every crate in the workspace; a dependency with this
@@ -86,14 +86,14 @@ enum Spelling {
     SemVer,
     /// The normalized PEP 440 form PyPI, pip, hatchling and maturin use: `2.0.0a1`.
     ///
-    /// @see https://packaging.python.org/en/latest/specifications/pyproject-toml/#version
+    /// @see <https://packaging.python.org/en/latest/specifications/pyproject-toml/#version>
     Pep440,
     /// A Cargo requirement on a sibling crate: a caret requirement for a final
     /// version, and an exact one for a pre-release, since a caret requirement on a
     /// pre-release also matches every later pre-release of the same `x.y.z` and the
     /// crates of one pre-release are only known to work with each other.
     ///
-    /// @see https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#pre-releases
+    /// @see <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#pre-releases>
     CargoPin,
 }
 
@@ -128,7 +128,7 @@ impl Spelling {
 /// normalize to: the separators are dropped and the phase is shortened, so
 /// `2.0.0-alpha.1` is `2.0.0a1`, and a final version is unchanged.
 ///
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-separators
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-separators>
 ///
 /// # Arguments
 ///
@@ -162,10 +162,10 @@ struct Parts<'a> {
 /// and it sorts a development release before the alpha, where SemVer's ASCII order
 /// puts `dev` after `beta`.
 ///
-/// @see https://semver.org/spec/v2.0.0.html
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#developmental-releases
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#local-version-identifiers
+/// @see <https://semver.org/spec/v2.0.0.html>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#developmental-releases>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#local-version-identifiers>
 fn parse(version: &str) -> Result<Parts<'_>, String> {
     if version.contains('+') {
         return Err(format!(
@@ -591,7 +591,7 @@ fn versions_in(text: &str) -> Vec<(String, Spelling)> {
 /// way pip reads a requirement. `===` ends in `==`; `<` and `>` alone are left out,
 /// since in prose they more often close markup, as in NuGet's `<Version>`.
 ///
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#id5
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#id5>
 const REQUIREMENT_OPERATORS: [&str; 5] = ["==", "~=", ">=", "<=", "!="];
 
 /// Every version in a piece of prose, as the byte range it covers and the spelling
@@ -637,7 +637,7 @@ fn version_spans(text: &str) -> Vec<(Range<usize>, Spelling)> {
 /// Whether the version starting at `start` follows one of the requirement
 /// operators, with the optional whitespace the specification allows between them.
 ///
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#id5
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#id5>
 fn is_requirement_operand(text: &str, start: usize) -> bool {
     let before = text[..start].trim_end_matches([' ', '\t']);
     REQUIREMENT_OPERATORS
@@ -654,11 +654,11 @@ fn is_requirement_operand(text: &str, start: usize) -> bool {
 /// and separators (`2.0.0c1`, `2.0.0.rc1`, `2.0.0_rc1`) that name a version other
 /// than the final `2.0.0`.
 ///
-/// @see https://semver.org/spec/v2.0.0.html
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#public-version-identifiers
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#local-version-identifiers
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-separators
-/// @see https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling
+/// @see <https://semver.org/spec/v2.0.0.html>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#public-version-identifiers>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#local-version-identifiers>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-separators>
+/// @see <https://packaging.python.org/en/latest/specifications/version-specifiers/#pre-release-spelling>
 fn version_end(bytes: &[u8], end: usize) -> usize {
     let mut end = if bytes.get(end) == Some(&b'-') {
         identifiers_end(bytes, end + 1).unwrap_or(end)
