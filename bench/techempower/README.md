@@ -1,6 +1,6 @@
 # zero-server TechEmpower entries
 
-The two entries the self-run of `DESIGN.md` section 12.5 measures beside the
+The two entries a self-run of the TechEmpower toolset measures beside the
 pinned Round 23 Drogon entry, in the layout of the archived
 TechEmpower/FrameworkBenchmarks tree at commit 523534bb
 (`frameworks/Rust/<framework>/benchmark_config.json` plus one dockerfile per
