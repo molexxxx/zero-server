@@ -139,7 +139,8 @@ mod tests {
     };
 
     use super::hello::{
-        fatal_alert, Hello, HelloReader, MISSING_EXTENSION, PROTOCOL_VERSION, UNRECOGNIZED_NAME,
+        fatal_alert, Hello, HelloReader, DECODE_ERROR, MISSING_EXTENSION, PROTOCOL_VERSION,
+        UNEXPECTED_MESSAGE, UNRECOGNIZED_NAME,
     };
     use super::identity::Choice;
     use super::{
@@ -529,6 +530,125 @@ mod tests {
                 fatal_alert(PROTOCOL_VERSION),
                 "a TLS 1.2 hello to a listener with TLS 1.2 off"
             ),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    /// RFC 8996 Sections 4 and 5: "Any party receiving a Hello message with the
+    /// protocol version set to {03,01} MUST respond with a "protocol_version" alert
+    /// message and close the connection", and the same for {03,02}; RFC 9846
+    /// Section 4.2.2 and Appendix E.5 extend it to any `legacy_version` but 0x0303.
+    #[test]
+    fn a_hello_whose_legacy_version_is_03_01_or_03_02_is_answered_with_a_protocol_version_alert_whatever_supported_versions_offers(
+    ) {
+        let tls12_only: &[[u8; 2]] = &[[0x03, 0x03]];
+        let both: &[[u8; 2]] = &[[0x03, 0x04], [0x03, 0x03]];
+        for (legacy, versions) in [
+            ([0x03, 0x01], tls12_only),
+            ([0x03, 0x02], tls12_only),
+            ([0x03, 0x00], tls12_only),
+            ([0x03, 0x01], both),
+            ([0x03, 0x02], both),
+        ] {
+            for tls12 in [true, false] {
+                let bytes = hello(legacy, &[[0xc0, 0x2b]], true, Some(versions));
+                match gate(&bytes, tls12) {
+                    Hello::Refused(record, _) => assert_eq!(
+                        record,
+                        fatal_alert(PROTOCOL_VERSION),
+                        "{legacy:?} {versions:?} tls12={tls12}"
+                    ),
+                    other => panic!("{legacy:?} {versions:?} tls12={tls12}: {other:?}"),
+                }
+            }
+        }
+        // RFC 9846 Section 4.3.1: without supported_versions, a server that also
+        // speaks TLS 1.2 negotiates TLS 1.2 even for a legacy_version of 0x0304.
+        assert!(matches!(
+            gate(&hello([0x03, 0x04], &[[0xc0, 0x2b]], true, None), true),
+            Hello::Read(Some(name), _) if name == "localhost"
+        ));
+    }
+
+    /// RFC 9846 Section 5: "If a TLS implementation receives an unexpected record
+    /// type, it MUST terminate the connection with an "unexpected_message" alert",
+    /// and a `change_cipher_spec` record "received before the first ClientHello
+    /// message ... MUST be treated as an unexpected record type"; Section 5.1:
+    /// handshake records carrying one message admit no other record between them.
+    #[test]
+    fn an_unexpected_record_type_before_the_first_clienthello_terminates_the_connection_with_an_unexpected_message_alert(
+    ) {
+        let refused = |pieces: &[&[u8]], tls12: bool| {
+            let mut reader = HelloReader::new(tls12);
+            let decided = pieces.iter().find_map(|piece| reader.push(piece));
+            match decided {
+                Some(Hello::Refused(record, _)) => record == fatal_alert(UNEXPECTED_MESSAGE),
+                _ => false,
+            }
+        };
+        let change_cipher_spec = [0x14, 0x03, 0x01, 0x00, 0x01, 0x01];
+        let application_data = [0x17, 0x03, 0x03, 0x00, 0x01, 0x00];
+        let unassigned = [0x00, 0x03, 0x03, 0x00, 0x01, 0x00];
+        let heartbeat = [0x18, 0x03, 0x03, 0x00, 0x01, 0x00];
+        for record in [change_cipher_spec, application_data, unassigned, heartbeat] {
+            for tls12 in [true, false] {
+                assert!(refused(&[&record], tls12), "{record:?} tls12={tls12}");
+                assert!(refused(&[&record[..1]], tls12), "{record:?} by its type");
+            }
+        }
+
+        let whole = hello([0x03, 0x03], &[[0xc0, 0x2b]], true, None);
+        let handshake_record = |fragment: &[u8]| {
+            let mut record = vec![0x16, 0x03, 0x01];
+            record.extend_from_slice(&(fragment.len() as u16).to_be_bytes());
+            record.extend_from_slice(fragment);
+            record
+        };
+        let (front, back) = whole[5..].split_at(20);
+        let interleaved = [
+            handshake_record(front),
+            change_cipher_spec.to_vec(),
+            handshake_record(back),
+        ]
+        .concat();
+        assert!(refused(&[&interleaved], true), "inside the hello's records");
+        let (first, second) = interleaved.split_at(30);
+        assert!(refused(&[first, second], true), "over two reads");
+
+        let mut after = whole.clone();
+        after.extend_from_slice(&change_cipher_spec);
+        assert!(
+            matches!(gate(&after, true), Hello::Read(Some(name), _) if name == "localhost"),
+            "a change_cipher_spec record after the whole hello is not this reader's to refuse"
+        );
+    }
+
+    /// RFC 9846 Section 6.2: "Whenever an implementation encounters a fatal error
+    /// condition, it SHOULD send an appropriate fatal alert"; `decode_error` is
+    /// for "the length of the message was incorrect". rustls refuses a handshake
+    /// message declared longer than 0xffff octets without queuing any alert.
+    #[test]
+    fn a_hello_declared_longer_than_the_reader_accepts_is_refused_with_a_fatal_decode_error_alert()
+    {
+        let mut whole = hello([0x03, 0x03], &[[0xc0, 0x2b]], true, None);
+        whole[6..9].copy_from_slice(&[0x01, 0x00, 0x00]);
+        for tls12 in [true, false] {
+            match HelloReader::new(tls12).push(&whole) {
+                Some(Hello::Refused(record, _)) => {
+                    assert_eq!(record, fatal_alert(DECODE_ERROR), "tls12={tls12}");
+                }
+                other => panic!("tls12={tls12}: {other:?}"),
+            }
+        }
+
+        let alert = [0x15, 0x03, 0x01, 0x00, 0x02, 0x02, 0x28];
+        match HelloReader::new(true).push(&alert) {
+            Some(Hello::Refused(record, _)) => {
+                assert!(
+                    record.is_empty(),
+                    "no alert answers the client's own: {record:?}"
+                );
+            }
             other => panic!("{other:?}"),
         }
     }
