@@ -162,7 +162,7 @@ lead = "The runtime seam, the workers, the C ABI, and the three languages that r
 tags = [
   { text = "errors, buffers, slot ids and the crypto traits", state = "ships", crate = "zero-core" },
   { text = "the runtime seam over tokio, with compio behind a feature", state = "ships", crate = "zero-io" },
-  { text = "workers, request arenas and the slot ownership protocol", state = "ships", crate = "zero-rt" },
+  { text = "workers, request arenas, the slot ownership protocol, the batch dispatcher and epoch-based index reuse", state = "ships", crate = "zero-rt" },
   { text = "every raw system call behind a checked wrapper", state = "ships", crate = "zero-sys" },
   { text = "the C ABI with a generated header", state = "ships", crate = "zero-ffi" },
   { text = "the bundle crate", state = "ships", crate = "zero-server" },

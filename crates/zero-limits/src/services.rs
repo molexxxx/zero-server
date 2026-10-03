@@ -15,12 +15,35 @@ pub const MAX_BATCH_SIZE: usize = 256;
 /// The batches kept in flight toward one target before the worker stops
 /// reading from the connections that feed it.
 pub const MAX_BATCHES_IN_FLIGHT: usize = 4;
+/// The most batches a configuration may keep in flight toward one target: the
+/// queue bound of the Node target, so its queue never refuses a batch in
+/// steady state.
+pub const MAX_BATCHES_IN_FLIGHT_CEILING: usize = 8;
 /// The batches one core queues past the in-flight bound before new host
 /// requests are answered 503 with a retry hint.
 pub const MAX_QUEUED_BATCHES_PER_CORE: usize = 16;
 /// The time a host may hold a leased slot before it is closed; the same as the
 /// HTTP/1.1 request total.
 pub const LEASE_TIMEOUT: Duration = Duration::from_secs(300);
+/// The released slot indexes one core keeps warm, with their buffers kept for
+/// reuse; indexes past it give their buffers back and are used only when no
+/// warm index is free.
+pub const SLOTS_KEPT: usize = 4_096;
+/// The inbound WebSocket and SSE events one connection may have waiting for
+/// the host's acknowledgment before it stops reading its socket.
+pub const MAX_PENDING_EVENTS_PER_CONN: usize = 64;
+/// The `Retry-After` value, in seconds, of a 503 answered because the host
+/// queue is full, no target is attached, or the arena is exhausted.
+pub const RETRY_AFTER_SECS: u32 = 1;
+/// The `Retry-After` value, in seconds, of a 503 answered while the server
+/// drains.
+pub const DRAIN_RETRY_AFTER_SECS: u32 = 5;
+/// The largest response body a host may write into a leased slot, in octets.
+pub const MAX_RESPONSE_BODY: u64 = 67_108_864;
+/// How long a dispatcher whose target answered full waits before it offers
+/// the batch again, when no batch is in flight whose acknowledgment would
+/// wake it sooner.
+pub const QUEUE_FULL_RETRY: Duration = Duration::from_millis(1);
 
 /// The configured memory and dispatch budgets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -91,7 +91,8 @@ impl Limits {
     /// Returns the first [`InvalidLimit`] found: a pipelining depth over the
     /// codec's cap, a request line or header field longer than the head, a
     /// chunk-size digit cap a `u64` cannot hold, a zero header count, header
-    /// table, batch size, in-flight batch count or varint length.
+    /// table, batch size or varint length, or an in-flight batch count outside
+    /// one to [`services::MAX_BATCHES_IN_FLIGHT_CEILING`].
     pub const fn check(&self) -> Result<(), InvalidLimit> {
         let http1 = &self.http1;
         if http1.max_pipelined > http1::PIPELINE_CODEC_CAP {
@@ -136,10 +137,12 @@ impl Limits {
                 reason: "is zero",
             });
         }
-        if self.memory.max_batches_in_flight == 0 {
+        if self.memory.max_batches_in_flight == 0
+            || self.memory.max_batches_in_flight > services::MAX_BATCHES_IN_FLIGHT_CEILING
+        {
             return Err(InvalidLimit {
                 name: "memory.max_batches_in_flight",
-                reason: "is zero",
+                reason: "is not between one and eight",
             });
         }
         if self.grpc.max_varint_bytes == 0 || self.grpc.max_varint_bytes > 10 {
@@ -247,7 +250,7 @@ mod tests {
 
     #[test]
     fn each_relation_is_checked() {
-        let cases: [(Mutation, &str); 9] = [
+        let cases: [(Mutation, &str); 10] = [
             (|l| l.http1.max_pipelined = 33, "http1.max_pipelined"),
             (
                 |l| l.http1.max_request_line = 40_000,
@@ -271,6 +274,10 @@ mod tests {
                 |l| l.memory.max_batches_in_flight = 0,
                 "memory.max_batches_in_flight",
             ),
+            (
+                |l| l.memory.max_batches_in_flight = 9,
+                "memory.max_batches_in_flight",
+            ),
             (|l| l.grpc.max_varint_bytes = 11, "grpc.max_varint_bytes"),
         ];
         for (mutate, name) in cases {
@@ -281,6 +288,26 @@ mod tests {
         let mut limits = Limits::DEFAULT;
         limits.grpc.max_varint_bytes = 0;
         assert!(limits.check().is_err());
+    }
+
+    #[test]
+    fn batches_in_flight_are_accepted_from_one_to_eight() {
+        for count in 1..=services::MAX_BATCHES_IN_FLIGHT_CEILING {
+            let mut limits = Limits::DEFAULT;
+            limits.memory.max_batches_in_flight = count;
+            assert_eq!(limits.check(), Ok(()), "{count} in flight");
+        }
+        assert_eq!(services::MAX_BATCHES_IN_FLIGHT_CEILING, 8);
+    }
+
+    #[test]
+    fn the_host_dispatch_constants_are_the_design_values() {
+        assert_eq!(services::SLOTS_KEPT, 4_096);
+        assert_eq!(services::MAX_PENDING_EVENTS_PER_CONN, 64);
+        assert_eq!(services::RETRY_AFTER_SECS, 1);
+        assert_eq!(services::DRAIN_RETRY_AFTER_SECS, 5);
+        assert_eq!(services::MAX_RESPONSE_BODY, 64 * 1_024 * 1_024);
+        assert_eq!(services::QUEUE_FULL_RETRY, Duration::from_millis(1));
     }
 
     #[test]

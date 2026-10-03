@@ -46,6 +46,32 @@ pub enum Event {
         /// The panic message.
         message: String,
     },
+    /// A core's host dispatch failed: its waiting requests were answered 500 and new
+    /// host requests get 503, while the core keeps serving everything that runs in
+    /// Rust.
+    HostFailed {
+        /// The core.
+        core: usize,
+        /// The panic message.
+        message: String,
+    },
+}
+
+thread_local! {
+    /// Set on each worker thread before its per-core future runs. A const initializer
+    /// and no destructor, so reading it never allocates.
+    static WORKER_THREAD: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Whether the calling thread is one of the workers' I/O threads, where a host must
+/// never block or run host code.
+///
+/// # Returns
+///
+/// `true` on a worker thread started by [`start`].
+#[must_use]
+pub fn is_worker_thread() -> bool {
+    WORKER_THREAD.with(Cell::get)
 }
 
 /// The status callback: called on the core's thread, so it must be `Send + Sync`.
@@ -216,6 +242,7 @@ where
     Fut: Future<Output = io::Result<()>> + 'static,
 {
     let inner = rt::serve(addr, config.io, move |core, acceptor| {
+        WORKER_THREAD.with(|flag| flag.set(true));
         let status = Arc::clone(&status);
         let worker = Worker {
             core,
@@ -366,6 +393,42 @@ mod tests {
                 .count(),
             2
         );
+    }
+
+    #[test]
+    fn the_worker_flag_is_set_on_the_worker_threads_only_and_host_failures_are_reported() {
+        let flags: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+        let events: Arc<Mutex<Vec<Event>>> = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&events);
+        let seen = Arc::clone(&flags);
+        let workers = start(
+            "127.0.0.1:0".parse().unwrap(),
+            config(),
+            Arc::new(move |event| sink.lock().unwrap().push(event)),
+            move |worker: Worker, _acceptor| {
+                let seen = Arc::clone(&seen);
+                async move {
+                    seen.lock().unwrap().push(super::is_worker_thread());
+                    worker.report(Event::HostFailed {
+                        core: worker.index(),
+                        message: "dispatch fell over".to_owned(),
+                    });
+                    worker.shutdown().requested().await;
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+        assert!(!super::is_worker_thread(), "the test thread is no worker");
+        workers.stop().unwrap();
+        assert_eq!(*flags.lock().unwrap(), [true, true]);
+        let events = events.lock().unwrap();
+        for core in 0..2 {
+            assert!(events.iter().any(|event| matches!(
+                event,
+                Event::HostFailed { core: c, message } if *c == core && message == "dispatch fell over"
+            )));
+        }
     }
 
     #[test]

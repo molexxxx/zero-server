@@ -688,6 +688,11 @@ fn status_sink(events: Sender<Message>) -> StatusSink {
         Event::WorkerPanic { core, message } => {
             say(format_args!("zero: core {core} failed: {message}"));
         }
+        Event::HostFailed { core, message } => {
+            say(format_args!(
+                "zero: the host dispatch on core {core} failed: {message}"
+            ));
+        }
     })
 }
 

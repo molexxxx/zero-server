@@ -14,12 +14,16 @@ pub struct Cancel {
 
 #[derive(Debug, Default)]
 struct Inner {
-    cancelled: Cell<bool>,
+    canceled: Cell<bool>,
     waker: RefCell<Option<Waker>>,
 }
 
 impl Cancel {
     /// A flag that is not set.
+    ///
+    /// # Returns
+    ///
+    /// The flag.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -27,22 +31,30 @@ impl Cancel {
 
     /// Set the flag and wake whoever waits on it.
     pub fn cancel(&self) {
-        self.inner.cancelled.set(true);
+        self.inner.canceled.set(true);
         if let Some(waker) = self.inner.waker.take() {
             waker.wake();
         }
     }
 
     /// Whether the flag is set.
+    ///
+    /// # Returns
+    ///
+    /// `true` once [`cancel`](Self::cancel) ran.
     #[must_use]
-    pub fn is_cancelled(&self) -> bool {
-        self.inner.cancelled.get()
+    pub fn is_canceled(&self) -> bool {
+        self.inner.canceled.get()
     }
 
     /// Wait until the flag is set; returns at once when it already is.
-    pub fn cancelled(&self) -> impl Future<Output = ()> + '_ {
+    ///
+    /// # Returns
+    ///
+    /// A future that completes once the flag is set.
+    pub fn canceled(&self) -> impl Future<Output = ()> + '_ {
         poll_fn(move |cx| {
-            if self.inner.cancelled.get() {
+            if self.inner.canceled.get() {
                 return Poll::Ready(());
             }
             let mut slot = self.inner.waker.borrow_mut();
@@ -67,14 +79,14 @@ mod tests {
     fn the_flag_wakes_its_waiter_once_set() {
         let cancel = Cancel::new();
         let other = cancel.clone();
-        assert!(!cancel.is_cancelled());
-        let mut waiting = pin!(cancel.cancelled());
+        assert!(!cancel.is_canceled());
+        let mut waiting = pin!(cancel.canceled());
         let mut cx = Context::from_waker(Waker::noop());
         assert_eq!(waiting.as_mut().poll(&mut cx), Poll::Pending);
         other.cancel();
-        assert!(cancel.is_cancelled());
+        assert!(cancel.is_canceled());
         assert_eq!(waiting.as_mut().poll(&mut cx), Poll::Ready(()));
-        let mut again = pin!(other.cancelled());
+        let mut again = pin!(other.canceled());
         assert_eq!(again.as_mut().poll(&mut cx), Poll::Ready(()));
     }
 }

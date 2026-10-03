@@ -15,6 +15,10 @@ zero-core.workspace = true
 zero-limits.workspace = true
 zero-io.workspace = true
 
+[dev-dependencies]
+# The counting global allocator of the no-allocation test.
+zero-sys.workspace = true
+
 # For model checking the slot protocol, in builds with RUSTFLAGS="--cfg zero_loom":
 # loom runs a test many times, permuting its concurrent executions according to what
 # the C11 memory model allows (https://docs.rs/loom/0.7.2/loom/, read 2026-10-02),
