@@ -22,7 +22,7 @@ use zero_http1::{parse_request, BodyLength, Field, ResponseWriter, Status, Write
 use zero_http_types::Method;
 use zero_limits::http1::Http1Limits;
 use zero_limits::transport::QPACK_INTEGER_CAP;
-use zero_limits::Http3Limits;
+use zero_limits::{Http3Limits, WebSocketLimits};
 use zero_qpack::encoder::SENSITIVE_NAMES;
 use zero_qpack::huffman::{self, HuffmanError};
 use zero_qpack::integer::{self, IntegerError, PrefixBits, MAX_VALUE};
@@ -33,6 +33,12 @@ use zero_qpack::{
     EncoderStreamReceiver, FieldLine, HuffmanPolicy, Representation, StringLiteral,
 };
 use zero_router::{Resolution, Router};
+use zero_server::crypto::Sha1;
+use zero_server::simd::unmask;
+use zero_server::sse::{self, Event as SseEvent};
+use zero_server::ws::frame::{self, Opcode};
+use zero_server::ws::handshake::{self, Config as WsConfig};
+use zero_server::ws::session::{Event as WsEvent, Session};
 
 /// One request-head case: the bytes, and either the head that results or
 /// the rejection.
@@ -437,6 +443,7 @@ fn router_table() -> (Value, Router<u32>) {
         ("GET", "/files/:name", 8),
         ("GET", "/static/*path", 9),
         ("GET", "/*", 10),
+        ("PATCH", "/users/:id", 11),
     ];
     let admin: Vec<(&str, &str, u32)> = vec![
         ("GET", "/", 20),
@@ -538,8 +545,13 @@ fn router_cases() -> Vec<(&'static str, &'static str, &'static str)> {
         ("options automatic", "OPTIONS", "/users"),
         ("method not allowed", "PUT", "/users"),
         ("method not allowed on parameter route", "PUT", "/users/42"),
-        ("unimplemented token", "PATCH", "/users"),
+        ("patch route", "PATCH", "/users/42"),
+        ("patch without a patch route", "PATCH", "/users"),
+        ("options lists patch", "OPTIONS", "/users/42"),
+        ("unimplemented token", "PROPFIND", "/users"),
+        ("short unimplemented token", "MKCOL", "/users"),
         ("lowercase token", "get", "/users"),
+        ("lowercase patch token", "patch", "/users/42"),
         ("mount root", "GET", "/admin"),
         ("mount root with slash", "GET", "/admin/"),
         ("mount route", "GET", "/admin/list"),
@@ -563,6 +575,1119 @@ fn router_cases() -> Vec<(&'static str, &'static str, &'static str)> {
         ("bad percent", "GET", "/users/%zz"),
         ("space in path", "GET", "/a b"),
         ("asterisk is not a path", "OPTIONS", "*"),
+    ]
+}
+
+/// The router cases whose outcome the specification fixes: PATCH is a method with
+/// its own route slot (RFC 5789 Section 2), a token outside the method table is
+/// 501 (RFC 9110 Section 9.1), and `Allow` lists PATCH like any other method
+/// (RFC 5789 Section 3, RFC 9110 Section 10.2.1).
+fn router_checks() -> Vec<(&'static str, &'static str, Value)> {
+    vec![
+        (
+            "PATCH",
+            "/users/42",
+            json!({ "matched": {
+                "id": 11,
+                "head": false,
+                "path": "/users/42",
+                "query": null,
+                "params": [["id", "42"]],
+            } }),
+        ),
+        (
+            "PATCH",
+            "/users",
+            json!({ "status": 405, "allow": "GET, HEAD, POST, OPTIONS" }),
+        ),
+        (
+            "PUT",
+            "/users/42",
+            json!({ "status": 405, "allow": "GET, HEAD, DELETE, OPTIONS, PATCH" }),
+        ),
+        (
+            "OPTIONS",
+            "/users/42",
+            json!({ "status": 200, "allow": "GET, HEAD, DELETE, OPTIONS, PATCH" }),
+        ),
+        ("PROPFIND", "/users", json!({ "status": 501 })),
+        ("MKCOL", "/users", json!({ "status": 501 })),
+        ("patch", "/users/42", json!({ "status": 501 })),
+    ]
+}
+
+/// The masking key of every client frame, since a client masks each frame it
+/// sends (RFC 6455 Section 5.1).
+const WS_MASK: [u8; 4] = [0x37, 0xfa, 0x21, 0x3d];
+
+/// The `Sec-WebSocket-Key` of the sample handshake in RFC 6455 Section 1.3.
+const WS_SAMPLE_KEY: &str = "dGhlIHNhbXBsZSBub25jZQ==";
+
+/// The `Sec-WebSocket-Accept` value RFC 6455 Section 1.3 derives from
+/// [`WS_SAMPLE_KEY`].
+const WS_SAMPLE_ACCEPT: &str = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
+
+/// The header fields of a valid opening handshake (RFC 6455 Section 4.2.1).
+fn ws_fields() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("Host", "server.example.com"),
+        ("Upgrade", "websocket"),
+        ("Connection", "Upgrade"),
+        ("Sec-WebSocket-Key", WS_SAMPLE_KEY),
+        ("Sec-WebSocket-Version", "13"),
+    ]
+}
+
+/// The valid handshake fields with `name` removed.
+fn ws_without(name: &str) -> Vec<(&'static str, &'static str)> {
+    ws_fields()
+        .into_iter()
+        .filter(|(field, _)| !field.eq_ignore_ascii_case(name))
+        .collect()
+}
+
+/// The valid handshake fields with `name` set to `value`, added when absent.
+fn ws_with(name: &'static str, value: &'static str) -> Vec<(&'static str, &'static str)> {
+    let mut fields = ws_without(name);
+    fields.push((name, value));
+    fields
+}
+
+/// An opening handshake request: the request line and the fields.
+fn ws_request(request_line: &str, fields: &[(&str, &str)]) -> Vec<u8> {
+    let lines: Vec<String> = std::iter::once(request_line.to_owned())
+        .chain(
+            fields
+                .iter()
+                .map(|(name, value)| format!("{name}: {value}")),
+        )
+        .collect();
+    let lines: Vec<&str> = lines.iter().map(String::as_str).collect();
+    request(&lines)
+}
+
+/// The valid opening handshake every `frames` and `close` case starts with.
+fn ws_sample_request() -> Vec<u8> {
+    ws_request("GET /chat HTTP/1.1", &ws_fields())
+}
+
+/// A frame as a client sends it (RFC 6455 Section 5.2): the header the codec
+/// writes for `fin`, `opcode` and the payload length, with the MASK bit set,
+/// then [`WS_MASK`] and the payload masked with it.
+fn ws_client(fin: bool, opcode: Opcode, payload: &[u8]) -> Vec<u8> {
+    let mut header = [0u8; 10];
+    let len = u64::try_from(payload.len()).expect("a vector payload fits in 64 bits");
+    let written = frame::encode(fin, opcode, len, &mut header);
+    let mut out = header[..written].to_vec();
+    out[1] |= 0x80;
+    out.extend_from_slice(&WS_MASK);
+    let mut masked = payload.to_vec();
+    unmask(&mut masked, WS_MASK);
+    out.extend_from_slice(&masked);
+    out
+}
+
+/// A masked client frame header declaring `len` octets in the 64-bit form,
+/// with no payload after it.
+fn ws_client_header_64(len: u64) -> Vec<u8> {
+    let mut out = vec![0x82, 0x80 | 127];
+    out.extend_from_slice(&len.to_be_bytes());
+    out.extend_from_slice(&WS_MASK);
+    out
+}
+
+/// A Close frame body: the status code in network byte order, then the reason
+/// (RFC 6455 Section 5.5.1).
+fn ws_close_body(code: u16, reason: &[u8]) -> Vec<u8> {
+    let mut body = code.to_be_bytes().to_vec();
+    body.extend_from_slice(reason);
+    body
+}
+
+/// An unmasked control frame as the server sends it (RFC 6455 Sections 5.1 and
+/// 5.2): FIN and the opcode, the 7-bit length, then the payload.
+fn ws_server_control(opcode: u8, payload: &[u8]) -> Vec<u8> {
+    let len = u8::try_from(payload.len()).expect("a control payload is at most 125 octets");
+    assert!(len <= 125, "a control payload is at most 125 octets");
+    let mut out = vec![0x80 | opcode, len];
+    out.extend_from_slice(payload);
+    out
+}
+
+/// The Close frame the server sends with `code` and no reason.
+fn ws_server_close(code: u16) -> Vec<u8> {
+    ws_server_control(0x8, &code.to_be_bytes())
+}
+
+/// One event the session reports, in the vector's shape.
+fn ws_event(kind: &str, data: &[u8], code: Option<u16>) -> Value {
+    json!({ "type": kind, "data": hex(data), "code": code })
+}
+
+/// The outcome of a `frames` or `close` case: what the session reported, the
+/// frames it queued in reply, the close code it failed the connection with, and
+/// whether the connection closes once those frames are written.
+fn ws_run(events: Vec<Value>, server: &[u8], failed: Option<u16>, finished: bool) -> Value {
+    json!({
+        "events": events,
+        "serverFrames": hex(server),
+        "failed": failed,
+        "finished": finished,
+    })
+}
+
+/// A connection failed with `code`: nothing reported, one Close with the code
+/// sent, and the connection closed (RFC 6455 Section 7.1.7).
+fn ws_failed(code: u16) -> Value {
+    ws_run(Vec::new(), &ws_server_close(code), Some(code), true)
+}
+
+/// The response a handshake case expects: `101` with the fields of RFC 6455
+/// Section 4.2.2, the sample accept value and the chosen subprotocol.
+fn ws_switching(protocol: Option<&str>) -> Value {
+    let mut fields = vec![
+        json!(["Upgrade", "websocket"]),
+        json!(["Connection", "Upgrade"]),
+        json!(["Sec-WebSocket-Accept", WS_SAMPLE_ACCEPT]),
+    ];
+    if let Some(protocol) = protocol {
+        fields.push(json!(["Sec-WebSocket-Protocol", protocol]));
+    }
+    json!({ "status": 101, "fields": fields })
+}
+
+/// A refused handshake: the status, with `Sec-WebSocket-Version: 13` on a 426
+/// (RFC 6455 Section 4.2.2).
+fn ws_refused(status: u16) -> Value {
+    let fields = if status == 426 {
+        vec![json!(["Sec-WebSocket-Version", "13"])]
+    } else {
+        Vec::new()
+    };
+    json!({ "status": status, "fields": fields })
+}
+
+/// What a WebSocket case sends: an opening handshake under a route's
+/// subprotocols and origins, or client frames after the sample handshake.
+enum WsInput {
+    Handshake {
+        request: Vec<u8>,
+        protocols: &'static [&'static str],
+        origins: Option<&'static [&'static str]>,
+    },
+    Frames(Vec<u8>),
+}
+
+/// One `ws` case.
+struct WsCase {
+    name: String,
+    section: &'static str,
+    kind: &'static str,
+    input: WsInput,
+    expect: Value,
+}
+
+impl WsCase {
+    fn handshake(
+        name: &str,
+        section: &'static str,
+        request: Vec<u8>,
+        protocols: &'static [&'static str],
+        origins: Option<&'static [&'static str]>,
+        expect: Value,
+    ) -> Self {
+        WsCase {
+            name: name.to_owned(),
+            section,
+            kind: "handshake",
+            input: WsInput::Handshake {
+                request,
+                protocols,
+                origins,
+            },
+            expect,
+        }
+    }
+
+    fn frames(name: &str, section: &'static str, frames: Vec<u8>, expect: Value) -> Self {
+        WsCase {
+            name: name.to_owned(),
+            section,
+            kind: "frames",
+            input: WsInput::Frames(frames),
+            expect,
+        }
+    }
+
+    fn close(name: &str, section: &'static str, frames: Vec<u8>, expect: Value) -> Self {
+        WsCase {
+            name: name.to_owned(),
+            section,
+            kind: "close",
+            input: WsInput::Frames(frames),
+            expect,
+        }
+    }
+
+    /// The case in the vector's shape: every case carries the handshake request,
+    /// the route's subprotocols and origins, and the client frames sent after an
+    /// accepted handshake.
+    fn value(&self) -> Value {
+        let (request, protocols, origins, frames) = match &self.input {
+            WsInput::Handshake {
+                request,
+                protocols,
+                origins,
+            } => (request.clone(), *protocols, *origins, Vec::new()),
+            WsInput::Frames(frames) => (ws_sample_request(), &[][..], None, frames.clone()),
+        };
+        json!({
+            "name": self.name,
+            "section": self.section,
+            "kind": self.kind,
+            "request": hex(&request),
+            "routeProtocols": protocols,
+            "routeOrigins": origins,
+            "clientFrames": hex(&frames),
+            "expect": self.expect,
+        })
+    }
+}
+
+/// The close codes a client may send and the server echoes, with the section
+/// of RFC 6455 that assigns each: 7.4.1 for the defined codes, 7.4.2 for the
+/// registered and private ranges.
+const WS_CLIENT_CODES: [(u16, &str); 7] = [
+    (1002, "RFC 6455 Section 7.4.1"),
+    (1003, "RFC 6455 Section 7.4.1"),
+    (1007, "RFC 6455 Section 7.4.1"),
+    (1010, "RFC 6455 Section 7.4.1"),
+    (1011, "RFC 6455 Section 7.4.1"),
+    (3000, "RFC 6455 Section 7.4.2"),
+    (4999, "RFC 6455 Section 7.4.2"),
+];
+
+/// The close codes no endpoint may send, which fail the connection with 1002
+/// when a client sends them.
+const WS_FORBIDDEN_CODES: [(u16, &str); 8] = [
+    (999, "RFC 6455 Section 7.4.2"),
+    (1004, "RFC 6455 Section 7.4.1"),
+    (1005, "RFC 6455 Section 7.4.1"),
+    (1006, "RFC 6455 Section 7.4.1"),
+    (1015, "RFC 6455 Section 7.4.1"),
+    (1016, "RFC 6455 Section 7.4.2"),
+    (2999, "RFC 6455 Section 7.4.2"),
+    (5000, "RFC 6455 Section 7.4.2"),
+];
+
+/// The `ws` cases: the opening handshake, the frames a client sends after it, and
+/// the closing handshake, each code a client may send included.
+fn ws_cases() -> Vec<WsCase> {
+    let mut cases = ws_fixed_cases();
+    for (code, section) in WS_CLIENT_CODES {
+        cases.push(WsCase::close(
+            &format!("client close code {code}"),
+            section,
+            ws_client(true, Opcode::Close, &ws_close_body(code, b"")),
+            ws_run(
+                vec![ws_event("close", b"", Some(code))],
+                &ws_server_close(code),
+                None,
+                true,
+            ),
+        ));
+    }
+    for (code, section) in WS_FORBIDDEN_CODES {
+        cases.push(WsCase::close(
+            &format!("close code {code} refused"),
+            section,
+            ws_client(true, Opcode::Close, &ws_close_body(code, b"")),
+            ws_failed(1002),
+        ));
+    }
+    cases
+}
+
+fn ws_fixed_cases() -> Vec<WsCase> {
+    let kosme = "\u{3ba}\u{1f79}\u{3c3}\u{3bc}\u{3b5}".as_bytes();
+    let (kosme_head, kosme_tail) = kosme.split_at(1);
+    let long_reason = "r".repeat(123);
+    vec![
+        WsCase::handshake(
+            "accept value for the sample key",
+            "RFC 6455 Section 1.3",
+            ws_sample_request(),
+            &[],
+            None,
+            ws_switching(None),
+        ),
+        WsCase::handshake(
+            "subprotocol taken in the client's order",
+            "RFC 6455 Section 4.2.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Protocol", "superchat, chat"),
+            ),
+            &["chat", "superchat"],
+            None,
+            ws_switching(Some("superchat")),
+        ),
+        WsCase::handshake(
+            "subprotocol the route speaks",
+            "RFC 6455 Section 4.2.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Protocol", "v2.chat, chat"),
+            ),
+            &["chat"],
+            None,
+            ws_switching(Some("chat")),
+        ),
+        WsCase::handshake(
+            "no offered subprotocol matches",
+            "RFC 6455 Section 4.2.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Protocol", "mqtt, soap"),
+            ),
+            &["chat"],
+            None,
+            ws_switching(None),
+        ),
+        WsCase::handshake(
+            "a subprotocol offered to a route without any",
+            "RFC 6455 Section 4.2.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Protocol", "chat"),
+            ),
+            &[],
+            None,
+            ws_switching(None),
+        ),
+        WsCase::handshake(
+            "upgrade and connection tokens ignore case",
+            "RFC 6455 Section 4.2.1",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &[
+                    ("host", "server.example.com"),
+                    ("upgrade", "WebSocket"),
+                    ("connection", "keep-alive, UPGRADE"),
+                    ("sec-websocket-key", WS_SAMPLE_KEY),
+                    ("sec-websocket-version", "13"),
+                ],
+            ),
+            &[],
+            None,
+            ws_switching(None),
+        ),
+        WsCase::handshake(
+            "http 1.0 is refused",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.0", &ws_fields()),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "missing upgrade",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.1", &ws_without("Upgrade")),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "upgrade to another protocol",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.1", &ws_with("Upgrade", "h2c")),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "connection without the upgrade token",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.1", &ws_with("Connection", "keep-alive")),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "missing key",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.1", &ws_without("Sec-WebSocket-Key")),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "key without padding",
+            "RFC 6455 Section 4.2.1",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ"),
+            ),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "key decoding to other than 16 bytes",
+            "RFC 6455 Section 4.2.1",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Sec-WebSocket-Key", "AAAAAAAAAAAAAAAAAAAAAAA="),
+            ),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "repeated key",
+            "RFC 6455 Section 4.2.1",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &[ws_fields(), vec![("Sec-WebSocket-Key", WS_SAMPLE_KEY)]].concat(),
+            ),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "missing version",
+            "RFC 6455 Section 4.2.1",
+            ws_request("GET /chat HTTP/1.1", &ws_without("Sec-WebSocket-Version")),
+            &[],
+            None,
+            ws_refused(400),
+        ),
+        WsCase::handshake(
+            "version other than 13",
+            "RFC 6455 Section 4.2.2",
+            ws_request("GET /chat HTTP/1.1", &ws_with("Sec-WebSocket-Version", "8")),
+            &[],
+            None,
+            ws_refused(426),
+        ),
+        WsCase::handshake(
+            "origin in the allow list",
+            "RFC 6455 Section 10.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Origin", "https://APP.example"),
+            ),
+            &[],
+            Some(&["https://app.example"]),
+            ws_switching(None),
+        ),
+        WsCase::handshake(
+            "origin outside the allow list",
+            "RFC 6455 Section 10.2",
+            ws_request(
+                "GET /chat HTTP/1.1",
+                &ws_with("Origin", "https://evil.example"),
+            ),
+            &[],
+            Some(&["https://app.example"]),
+            ws_refused(403),
+        ),
+        WsCase::handshake(
+            "no origin under an allow list",
+            "RFC 6455 Section 4.2.1",
+            ws_sample_request(),
+            &[],
+            Some(&["https://app.example"]),
+            ws_switching(None),
+        ),
+        WsCase::frames(
+            "masked text message",
+            "RFC 6455 Section 5.6",
+            ws_client(true, Opcode::Text, b"Hello"),
+            ws_run(vec![ws_event("text", b"Hello", None)], &[], None, false),
+        ),
+        WsCase::frames(
+            "masked binary message",
+            "RFC 6455 Section 5.6",
+            ws_client(true, Opcode::Binary, &[0x00, 0x01, 0xfe, 0xff]),
+            ws_run(
+                vec![ws_event("binary", &[0x00, 0x01, 0xfe, 0xff], None)],
+                &[],
+                None,
+                false,
+            ),
+        ),
+        WsCase::frames(
+            "fragmented text message",
+            "RFC 6455 Section 5.4",
+            [
+                ws_client(false, Opcode::Text, b"Hel"),
+                ws_client(true, Opcode::Continuation, b"lo"),
+            ]
+            .concat(),
+            ws_run(vec![ws_event("text", b"Hello", None)], &[], None, false),
+        ),
+        WsCase::frames(
+            "ping between fragments",
+            "RFC 6455 Section 5.4",
+            [
+                ws_client(false, Opcode::Text, b"Hel"),
+                ws_client(true, Opcode::Ping, b"mid"),
+                ws_client(true, Opcode::Continuation, b"lo"),
+            ]
+            .concat(),
+            ws_run(
+                vec![
+                    ws_event("ping", b"mid", None),
+                    ws_event("text", b"Hello", None),
+                ],
+                &ws_server_control(0xA, b"mid"),
+                None,
+                false,
+            ),
+        ),
+        WsCase::frames(
+            "ping answered with identical data",
+            "RFC 6455 Section 5.5.3",
+            ws_client(true, Opcode::Ping, b"Hello"),
+            ws_run(
+                vec![ws_event("ping", b"Hello", None)],
+                &ws_server_control(0xA, b"Hello"),
+                None,
+                false,
+            ),
+        ),
+        WsCase::frames(
+            "ping with 125 octets",
+            "RFC 6455 Section 5.5",
+            ws_client(true, Opcode::Ping, &[0x07; 125]),
+            ws_run(
+                vec![ws_event("ping", &[0x07; 125], None)],
+                &ws_server_control(0xA, &[0x07; 125]),
+                None,
+                false,
+            ),
+        ),
+        WsCase::frames(
+            "unsolicited pong is not answered",
+            "RFC 6455 Section 5.5.3",
+            ws_client(true, Opcode::Pong, b"beat"),
+            ws_run(vec![ws_event("pong", b"beat", None)], &[], None, false),
+        ),
+        WsCase::frames(
+            "text split inside a code point",
+            "RFC 6455 Section 8.1",
+            [
+                ws_client(false, Opcode::Text, kosme_head),
+                ws_client(true, Opcode::Continuation, kosme_tail),
+            ]
+            .concat(),
+            ws_run(vec![ws_event("text", kosme, None)], &[], None, false),
+        ),
+        WsCase::frames(
+            "unmasked frame",
+            "RFC 6455 Section 5.1",
+            {
+                let mut out = Vec::new();
+                frame::write(Opcode::Text, b"Hello", &mut out);
+                out
+            },
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "reserved bit without an extension",
+            "RFC 6455 Section 5.2",
+            {
+                let mut out = ws_client(true, Opcode::Text, b"x");
+                out[0] |= 0x40;
+                out
+            },
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "reserved opcode",
+            "RFC 6455 Section 5.2",
+            {
+                let mut out = ws_client(true, Opcode::Binary, b"");
+                out[0] = (out[0] & 0xf0) | 0x3;
+                out
+            },
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "length not in the minimal form",
+            "RFC 6455 Section 5.2",
+            {
+                let mut out = vec![0x82, 0x80 | 126];
+                out.extend_from_slice(&124u16.to_be_bytes());
+                out.extend_from_slice(&WS_MASK);
+                let mut payload = vec![0u8; 124];
+                unmask(&mut payload, WS_MASK);
+                out.extend_from_slice(&payload);
+                out
+            },
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "64-bit length with the most significant bit set",
+            "RFC 6455 Section 5.2",
+            ws_client_header_64(1 << 63),
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "control frame over 125 octets",
+            "RFC 6455 Section 5.5",
+            ws_client(true, Opcode::Ping, &[0u8; 126]),
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "fragmented control frame",
+            "RFC 6455 Section 5.5",
+            ws_client(false, Opcode::Ping, b""),
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "continuation without a message",
+            "RFC 6455 Section 5.4",
+            ws_client(true, Opcode::Continuation, b"lo"),
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "new message inside a fragmented one",
+            "RFC 6455 Section 5.4",
+            [
+                ws_client(false, Opcode::Text, b"Hel"),
+                ws_client(true, Opcode::Binary, b"bin"),
+            ]
+            .concat(),
+            ws_failed(1002),
+        ),
+        WsCase::frames(
+            "text that is not utf-8",
+            "RFC 6455 Section 8.1",
+            ws_client(true, Opcode::Text, &[0xce, 0xba, 0xff]),
+            ws_failed(1007),
+        ),
+        WsCase::frames(
+            "text ending inside a code point",
+            "RFC 6455 Section 8.1",
+            [
+                ws_client(false, Opcode::Text, b"ok"),
+                ws_client(true, Opcode::Continuation, &[0xe2, 0x82]),
+            ]
+            .concat(),
+            ws_failed(1007),
+        ),
+        WsCase::frames(
+            "declared length over the message limit",
+            "RFC 6455 Section 10.4",
+            ws_client_header_64(1 << 60),
+            ws_failed(1009),
+        ),
+        WsCase::close(
+            "close echoed with its code",
+            "RFC 6455 Section 5.5.1",
+            ws_client(true, Opcode::Close, &ws_close_body(1000, b"")),
+            ws_run(
+                vec![ws_event("close", b"", Some(1000))],
+                &ws_server_close(1000),
+                None,
+                true,
+            ),
+        ),
+        WsCase::close(
+            "close reason reported, code echoed",
+            "RFC 6455 Section 5.5.1",
+            ws_client(true, Opcode::Close, &ws_close_body(1001, b"shutting down")),
+            ws_run(
+                vec![ws_event("close", b"shutting down", Some(1001))],
+                &ws_server_close(1001),
+                None,
+                true,
+            ),
+        ),
+        WsCase::close(
+            "empty close answered with an empty close",
+            "RFC 6455 Section 7.4.1",
+            ws_client(true, Opcode::Close, b""),
+            ws_run(
+                vec![ws_event("close", b"", Some(1005))],
+                &ws_server_control(0x8, b""),
+                None,
+                true,
+            ),
+        ),
+        WsCase::close(
+            "reason of 123 octets",
+            "RFC 6455 Section 5.5",
+            ws_client(
+                true,
+                Opcode::Close,
+                &ws_close_body(1000, long_reason.as_bytes()),
+            ),
+            ws_run(
+                vec![ws_event("close", long_reason.as_bytes(), Some(1000))],
+                &ws_server_close(1000),
+                None,
+                true,
+            ),
+        ),
+        WsCase::close(
+            "ping after a close is not answered",
+            "RFC 6455 Section 5.5.2",
+            [
+                ws_client(true, Opcode::Close, &ws_close_body(1000, b"")),
+                ws_client(true, Opcode::Ping, b"late"),
+            ]
+            .concat(),
+            ws_run(
+                vec![ws_event("close", b"", Some(1000))],
+                &ws_server_close(1000),
+                None,
+                true,
+            ),
+        ),
+        WsCase::close(
+            "one-octet close body",
+            "RFC 6455 Section 5.5.1",
+            ws_client(true, Opcode::Close, &[0x03]),
+            ws_failed(1002),
+        ),
+        WsCase::close(
+            "close reason that is not utf-8",
+            "RFC 6455 Section 5.5.1",
+            ws_client(true, Opcode::Close, &ws_close_body(1000, &[0xff, 0xfe])),
+            ws_failed(1007),
+        ),
+        WsCase::close(
+            "close body over 125 octets",
+            "RFC 6455 Section 5.5",
+            ws_client(
+                true,
+                Opcode::Close,
+                &ws_close_body(1000, "r".repeat(124).as_bytes()),
+            ),
+            ws_failed(1002),
+        ),
+    ]
+}
+
+/// What the server answers to an opening handshake: the request parsed as the
+/// driver parses it, then checked by `zero-ws` under the route's subprotocols and
+/// origins, with the accept value hashed by the server's SHA-1.
+fn ws_handshake_outcome(request: &[u8], protocols: &[&str], origins: Option<&[&str]>) -> Value {
+    let mut table = [Field::EMPTY; 64];
+    let head = match parse_request(request, &mut table, &Http1Limits::DEFAULT) {
+        Status::Complete(head) => head,
+        Status::Reject(reject) => return json!({ "status": reject.status.as_u16(), "fields": [] }),
+        Status::Partial => panic!("a handshake vector is a whole request head"),
+    };
+    let fields = table
+        .iter()
+        .take(head.field_count)
+        .map(|field| (field.name(request), field.value(request)));
+    let protocols: Vec<&[u8]> = protocols.iter().map(|name| name.as_bytes()).collect();
+    let origins: Option<Vec<&[u8]>> =
+        origins.map(|list| list.iter().map(|origin| origin.as_bytes()).collect());
+    let config = WsConfig {
+        protocols: &protocols,
+        origins: origins.as_deref(),
+    };
+    let http11 = head.version != zero_http1::Version::Http10;
+    match handshake::negotiate(head.method, http11, fields, &config) {
+        Ok(accepted) => {
+            let response = accepted
+                .response_fields(&Sha1)
+                .expect("the accept value is computed");
+            json!({ "status": 101, "fields": field_pairs(response.iter()) })
+        }
+        Err(refusal) => json!({
+            "status": refusal.status.as_u16(),
+            "fields": field_pairs(refusal.fields.iter().copied()),
+        }),
+    }
+}
+
+/// Response fields as `[name, value]` pairs of text.
+fn field_pairs<'n, 'v>(fields: impl Iterator<Item = (&'n [u8], &'v [u8])>) -> Vec<Value> {
+    fields
+        .map(|(name, value)| json!([utf8(name), utf8(value)]))
+        .collect()
+}
+
+/// One event the session reported, in the vector's shape.
+fn ws_event_value(event: WsEvent<'_>) -> Value {
+    match event {
+        WsEvent::Text(text) => ws_event("text", text.as_bytes(), None),
+        WsEvent::Binary(data) => ws_event("binary", data, None),
+        WsEvent::Ping(data) => ws_event("ping", data, None),
+        WsEvent::Pong(data) => ws_event("pong", data, None),
+        WsEvent::Close(close) => ws_event("close", close.reason.as_bytes(), Some(close.code.0)),
+    }
+}
+
+/// What the server does with client frames sent after an accepted handshake:
+/// the session the server runs, with the default limits, fed everything at once.
+fn ws_frames_outcome(client: &[u8]) -> Value {
+    let mut session = Session::new(WebSocketLimits::DEFAULT);
+    let mut pending = client.to_vec();
+    let mut events = Vec::new();
+    let mut failed = None;
+    loop {
+        match session.feed(&mut pending, 0) {
+            Ok(fed) => {
+                let consumed = fed.consumed;
+                let event = fed.event.map(ws_event_value);
+                pending.drain(..consumed);
+                match event {
+                    Some(event) => events.push(event),
+                    None if consumed == 0 => break,
+                    None => {}
+                }
+            }
+            Err(code) => {
+                failed = Some(code.0);
+                break;
+            }
+        }
+    }
+    ws_run(events, session.output(), failed, session.is_finished())
+}
+
+/// One server-sent events call a host makes on an open stream.
+enum SseCall {
+    /// An event: the optional type and id, and the data, which is always present
+    /// and may be empty.
+    Send {
+        event: Option<&'static str>,
+        id: Option<&'static str>,
+        data: &'static str,
+    },
+    /// A comment, written as one comment line per line of its text.
+    Comment(&'static str),
+    /// A reconnection time in milliseconds.
+    Retry(u32),
+}
+
+impl SseCall {
+    /// The call in the vector's shape; an absent field is left out.
+    fn value(&self) -> Value {
+        let mut call = Map::new();
+        match self {
+            SseCall::Send { event, id, data } => {
+                if let Some(event) = event {
+                    call.insert("event".into(), json!(event));
+                }
+                if let Some(id) = id {
+                    call.insert("id".into(), json!(id));
+                }
+                call.insert("data".into(), json!(data));
+            }
+            SseCall::Comment(text) => {
+                call.insert("comment".into(), json!(text));
+            }
+            SseCall::Retry(milliseconds) => {
+                call.insert("retry".into(), json!(milliseconds));
+            }
+        }
+        Value::Object(call)
+    }
+}
+
+/// One `sse` case: the call, and the stream text it writes, or `None` when the
+/// call is refused and writes nothing.
+struct SseCase {
+    name: &'static str,
+    section: &'static str,
+    call: SseCall,
+    expect: Option<&'static str>,
+}
+
+/// The lines of a text, split where WHATWG HTML Section 9.2.5 ends a line: at
+/// CRLF, LF and CR.
+fn sse_lines(text: &str) -> Vec<&str> {
+    let mut lines = Vec::new();
+    let mut rest = text;
+    while let Some(at) = rest.find(['\r', '\n']) {
+        lines.push(&rest[..at]);
+        let skip = if rest[at..].starts_with("\r\n") { 2 } else { 1 };
+        rest = &rest[at + skip..];
+    }
+    lines.push(rest);
+    lines
+}
+
+/// What the `zero-sse` encoder writes for a call. A comment line is
+/// `colon *any-char end-of-line`, and `any-char` excludes CR and LF (WHATWG HTML
+/// Section 9.2.5), so a comment is written as one comment line per line of its
+/// text.
+fn sse_outcome(call: &SseCall) -> Value {
+    let mut out = Vec::new();
+    let written = match call {
+        SseCall::Send { event, id, data } => sse::encode(
+            &SseEvent {
+                event: *event,
+                id: *id,
+                retry: None,
+                data: Some(data),
+            },
+            &mut out,
+        ),
+        SseCall::Comment(text) => sse_lines(text)
+            .into_iter()
+            .try_for_each(|line| sse::comment(line, &mut out)),
+        SseCall::Retry(milliseconds) => sse::encode(
+            &SseEvent {
+                retry: Some(u64::from(*milliseconds)),
+                ..SseEvent::default()
+            },
+            &mut out,
+        ),
+    };
+    match written {
+        Ok(()) => json!({ "bytes": hex(&out) }),
+        Err(_) => {
+            assert!(out.is_empty(), "a refused call writes nothing");
+            json!({ "rejected": true })
+        }
+    }
+}
+
+fn sse_send(event: Option<&'static str>, id: Option<&'static str>, data: &'static str) -> SseCall {
+    SseCall::Send { event, id, data }
+}
+
+/// The `sse` cases: events, comments and reconnection times as a host writes
+/// them, and the values the encoder refuses.
+fn sse_cases() -> Vec<SseCase> {
+    vec![
+        SseCase {
+            name: "data dispatched by a blank line",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(None, None, "payload"),
+            expect: Some("data: payload\n\n"),
+        },
+        SseCase {
+            name: "event type id and data",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(Some("update"), Some("42"), "payload"),
+            expect: Some("event: update\nid: 42\ndata: payload\n\n"),
+        },
+        SseCase {
+            name: "the specification's multi-line data",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(None, None, "YHOO\n+2\n10"),
+            expect: Some("data: YHOO\ndata: +2\ndata: 10\n\n"),
+        },
+        SseCase {
+            name: "data split at crlf lf and cr",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, None, "a\r\nb\nc\rd"),
+            expect: Some("data: a\ndata: b\ndata: c\ndata: d\n\n"),
+        },
+        SseCase {
+            name: "data ending in a line break",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, None, "a\n"),
+            expect: Some("data: a\ndata: \n\n"),
+        },
+        SseCase {
+            name: "empty data",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(None, None, ""),
+            expect: Some("data: \n\n"),
+        },
+        SseCase {
+            name: "utf-8 data",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, None, "\u{3ba}\u{1f79}\u{3c3}\u{3bc}\u{3b5}"),
+            expect: Some("data: \u{3ba}\u{1f79}\u{3c3}\u{3bc}\u{3b5}\n\n"),
+        },
+        SseCase {
+            name: "nul in data",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, None, "a\u{0}b"),
+            expect: Some("data: a\u{0}b\n\n"),
+        },
+        SseCase {
+            name: "nul in an event type",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(Some("e\u{0}"), None, "x"),
+            expect: Some("event: e\u{0}\ndata: x\n\n"),
+        },
+        SseCase {
+            name: "empty id",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(None, Some(""), "x"),
+            expect: Some("id: \ndata: x\n\n"),
+        },
+        SseCase {
+            name: "lf in an event type",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(Some("a\nb"), None, "x"),
+            expect: None,
+        },
+        SseCase {
+            name: "cr in an event type",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(Some("a\rb"), None, "x"),
+            expect: None,
+        },
+        SseCase {
+            name: "crlf in an id",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, Some("1\r\n2"), "x"),
+            expect: None,
+        },
+        SseCase {
+            name: "lf in an id",
+            section: "WHATWG HTML Section 9.2.5",
+            call: sse_send(None, Some("1\n2"), "x"),
+            expect: None,
+        },
+        SseCase {
+            name: "nul in an id",
+            section: "WHATWG HTML Section 9.2.6",
+            call: sse_send(None, Some("a\u{0}b"), "x"),
+            expect: None,
+        },
+        SseCase {
+            name: "comment",
+            section: "WHATWG HTML Section 9.2.5",
+            call: SseCall::Comment(" keep-alive"),
+            expect: Some(": keep-alive\n"),
+        },
+        SseCase {
+            name: "empty comment",
+            section: "WHATWG HTML Section 9.2.5",
+            call: SseCall::Comment(""),
+            expect: Some(":\n"),
+        },
+        SseCase {
+            name: "comment split at line breaks",
+            section: "WHATWG HTML Section 9.2.5",
+            call: SseCall::Comment("a\nb\r\nc\rd"),
+            expect: Some(":a\n:b\n:c\n:d\n"),
+        },
+        SseCase {
+            name: "retry",
+            section: "WHATWG HTML Section 9.2.6",
+            call: SseCall::Retry(3_000),
+            expect: Some("retry: 3000\n\n"),
+        },
+        SseCase {
+            name: "retry of zero",
+            section: "WHATWG HTML Section 9.2.6",
+            call: SseCall::Retry(0),
+            expect: Some("retry: 0\n\n"),
+        },
+        SseCase {
+            name: "largest retry",
+            section: "WHATWG HTML Section 9.2.6",
+            call: SseCall::Retry(u32::MAX),
+            expect: Some("retry: 4294967295\n\n"),
+        },
     ]
 }
 
@@ -3975,6 +5100,13 @@ fn main() {
     }
 
     let (router_table_value, router) = router_table();
+    for (method, target, expect) in router_checks() {
+        assert_eq!(
+            router_outcome(&router, method, target),
+            expect,
+            "router disagrees with the specification for {method} {target}"
+        );
+    }
     let mut router_cases_value = Vec::new();
     for (name, method, target) in router_cases() {
         router_cases_value.push(json!({
@@ -3982,6 +5114,49 @@ fn main() {
             "method": method,
             "target": target,
             "expect": router_outcome(&router, method, target),
+        }));
+    }
+
+    assert_eq!(
+        ws_handshake_outcome(&ws_sample_request(), &[], None),
+        ws_switching(None),
+        "the handshake the frame cases start with is accepted"
+    );
+    let mut ws = Vec::new();
+    for case in ws_cases() {
+        let outcome = match &case.input {
+            WsInput::Handshake {
+                request,
+                protocols,
+                origins,
+            } => ws_handshake_outcome(request, protocols, *origins),
+            WsInput::Frames(frames) => ws_frames_outcome(frames),
+        };
+        assert_eq!(
+            outcome, case.expect,
+            "zero-ws disagrees with the vector {}",
+            case.name
+        );
+        ws.push(case.value());
+    }
+
+    let mut sse_cases_value = Vec::new();
+    for case in sse_cases() {
+        let expect = match case.expect {
+            Some(text) => json!({ "bytes": hex(text.as_bytes()) }),
+            None => json!({ "rejected": true }),
+        };
+        assert_eq!(
+            sse_outcome(&case.call),
+            expect,
+            "zero-sse disagrees with the vector {}",
+            case.name
+        );
+        sse_cases_value.push(json!({
+            "name": case.name,
+            "section": case.section,
+            "call": case.call.value(),
+            "expect": expect,
         }));
     }
 
@@ -4000,6 +5175,8 @@ fn main() {
         "router".into(),
         json!({ "table": router_table_value, "cases": router_cases_value }),
     );
+    document.insert("ws".into(), json!({ "cases": ws }));
+    document.insert("sse".into(), json!({ "cases": sse_cases_value }));
     document.insert("qpack".into(), qpack());
     document.insert("h3Frames".into(), h3_frames());
 

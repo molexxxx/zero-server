@@ -2,16 +2,19 @@
 //!
 //! RFC 9110 Section 9.1 defines the method as a case-sensitive token and
 //! standardizes eight of them; Section 9.2 classifies them as safe and
-//! idempotent. A method outside the table is not a `Method`: the parser
+//! idempotent. RFC 5789 Section 2 adds PATCH, which "is neither safe nor
+//! idempotent". A method outside these nine is not a `Method`: the parser
 //! reports it as unrecognized and the router answers 501.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-9.1>
 //! @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2>
+//! @see <https://www.rfc-editor.org/rfc/rfc5789.html#section-2>
 
 use core::fmt;
 
 /// A standardized request method, numbered in the order of the RFC 9110
-/// method table so the id is stable across the C header and every binding.
+/// method table and then PATCH, so the id is stable across the C header and
+/// every binding.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Method {
@@ -32,11 +35,16 @@ pub enum Method {
     Options = 6,
     /// Perform a message loop-back test along the path to the target resource.
     Trace = 7,
+    /// Apply a set of changes described in the request content to the target
+    /// resource (RFC 5789 Section 2).
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc5789.html#section-2>
+    Patch = 8,
 }
 
 impl Method {
     /// Every standardized method, in id order.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Get,
         Self::Head,
         Self::Post,
@@ -45,6 +53,7 @@ impl Method {
         Self::Connect,
         Self::Options,
         Self::Trace,
+        Self::Patch,
     ];
 
     /// Recognizes a method token.
@@ -58,7 +67,7 @@ impl Method {
     ///
     /// # Returns
     ///
-    /// The method, or `None` when the token is not one of the eight.
+    /// The method, or `None` when the token is not one of the nine.
     #[must_use]
     pub const fn parse(token: &[u8]) -> Option<Self> {
         match token {
@@ -70,6 +79,7 @@ impl Method {
             b"CONNECT" => Some(Self::Connect),
             b"OPTIONS" => Some(Self::Options),
             b"TRACE" => Some(Self::Trace),
+            b"PATCH" => Some(Self::Patch),
             _ => None,
         }
     }
@@ -94,17 +104,26 @@ impl Method {
             5 => Some(Self::Connect),
             6 => Some(Self::Options),
             7 => Some(Self::Trace),
+            8 => Some(Self::Patch),
             _ => None,
         }
     }
 
     /// Returns the integer id.
+    ///
+    /// # Returns
+    ///
+    /// The id, 0 to 8, which is the method's position in [`Method::ALL`].
     #[must_use]
     pub const fn id(self) -> u8 {
         self as u8
     }
 
     /// Returns the method token.
+    ///
+    /// # Returns
+    ///
+    /// The token in its registered, all-uppercase spelling.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -116,24 +135,38 @@ impl Method {
             Self::Connect => "CONNECT",
             Self::Options => "OPTIONS",
             Self::Trace => "TRACE",
+            Self::Patch => "PATCH",
         }
     }
 
     /// Returns the method token as bytes.
+    ///
+    /// # Returns
+    ///
+    /// The bytes of [`Method::as_str`].
     #[must_use]
     pub const fn as_bytes(self) -> &'static [u8] {
         self.as_str().as_bytes()
     }
 
-    /// Returns `true` for the methods Section 9.2.1 defines as safe: GET, HEAD,
-    /// OPTIONS and TRACE.
+    /// Whether the method is safe.
+    ///
+    /// # Returns
+    ///
+    /// `true` for the methods RFC 9110 Section 9.2.1 defines as safe: GET,
+    /// HEAD, OPTIONS and TRACE. PATCH is not safe (RFC 5789 Section 2).
     #[must_use]
     pub const fn is_safe(self) -> bool {
         matches!(self, Self::Get | Self::Head | Self::Options | Self::Trace)
     }
 
-    /// Returns `true` for the methods Section 9.2.2 defines as idempotent: PUT,
-    /// DELETE and the safe methods.
+    /// Whether the method is idempotent.
+    ///
+    /// # Returns
+    ///
+    /// `true` for the methods RFC 9110 Section 9.2.2 defines as idempotent:
+    /// PUT, DELETE and the safe methods. PATCH is not idempotent (RFC 5789
+    /// Section 2).
     #[must_use]
     pub const fn is_idempotent(self) -> bool {
         self.is_safe() || matches!(self, Self::Put | Self::Delete)
@@ -151,14 +184,14 @@ mod tests {
     use super::Method;
 
     #[test]
-    fn the_eight_methods_round_trip_through_their_tokens_and_ids() {
+    fn the_nine_methods_round_trip_through_their_tokens_and_ids() {
         for (index, method) in Method::ALL.iter().enumerate() {
             assert_eq!(Method::parse(method.as_bytes()), Some(*method));
             assert_eq!(usize::from(method.id()), index);
             assert_eq!(Method::from_id(method.id()), Some(*method));
             assert_eq!(alloc::format!("{method}"), method.as_str());
         }
-        assert_eq!(Method::from_id(8), None);
+        assert_eq!(Method::from_id(9), None);
         assert_eq!(Method::from_id(u8::MAX), None);
     }
 
@@ -169,7 +202,8 @@ mod tests {
         assert_eq!(Method::parse(b"Get"), None);
         assert_eq!(Method::parse(b"GET "), None);
         assert_eq!(Method::parse(b""), None);
-        assert_eq!(Method::parse(b"PATCH"), None);
+        assert_eq!(Method::parse(b"patch"), None);
+        assert_eq!(Method::parse(b"PROPFIND"), None);
     }
 
     #[test]
@@ -186,5 +220,18 @@ mod tests {
         for method in neither {
             assert!(!method.is_safe() && !method.is_idempotent(), "{method}");
         }
+    }
+
+    /// Standards row `routing-29`: RFC 5789 Section 2, "PATCH is neither safe
+    /// nor idempotent".
+    #[test]
+    fn patch_is_a_recognized_method_that_is_neither_safe_nor_idempotent() {
+        assert_eq!(Method::parse(b"PATCH"), Some(Method::Patch));
+        assert_eq!(Method::Patch.id(), 8);
+        assert_eq!(Method::from_id(8), Some(Method::Patch));
+        assert_eq!(Method::Patch.as_bytes(), b"PATCH");
+        assert_eq!(Method::ALL.last(), Some(&Method::Patch));
+        assert!(!Method::Patch.is_safe());
+        assert!(!Method::Patch.is_idempotent());
     }
 }

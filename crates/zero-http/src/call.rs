@@ -699,7 +699,7 @@ impl<'a> Request<'a> {
         }
     }
 
-    /// The method, when it is one of the eight RFC 9110 methods.
+    /// The method, when it is one of the eight RFC 9110 methods or PATCH.
     #[must_use]
     pub fn method(&self) -> Option<Method> {
         self.parsed.and_then(|head| head.method)

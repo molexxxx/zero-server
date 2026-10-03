@@ -4239,7 +4239,7 @@
       },
       {
         "expect": {
-          "allow": "GET, HEAD, DELETE, OPTIONS",
+          "allow": "GET, HEAD, DELETE, OPTIONS, PATCH",
           "status": 405
         },
         "method": "PUT",
@@ -4248,10 +4248,55 @@
       },
       {
         "expect": {
-          "status": 501
+          "matched": {
+            "head": false,
+            "id": 11,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": null
+          }
         },
         "method": "PATCH",
+        "name": "patch route",
+        "target": "/users/42"
+      },
+      {
+        "expect": {
+          "allow": "GET, HEAD, POST, OPTIONS",
+          "status": 405
+        },
+        "method": "PATCH",
+        "name": "patch without a patch route",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "allow": "GET, HEAD, DELETE, OPTIONS, PATCH",
+          "status": 200
+        },
+        "method": "OPTIONS",
+        "name": "options lists patch",
+        "target": "/users/42"
+      },
+      {
+        "expect": {
+          "status": 501
+        },
+        "method": "PROPFIND",
         "name": "unimplemented token",
+        "target": "/users"
+      },
+      {
+        "expect": {
+          "status": 501
+        },
+        "method": "MKCOL",
+        "name": "short unimplemented token",
         "target": "/users"
       },
       {
@@ -4261,6 +4306,14 @@
         "method": "get",
         "name": "lowercase token",
         "target": "/users"
+      },
+      {
+        "expect": {
+          "status": 501
+        },
+        "method": "patch",
+        "name": "lowercase patch token",
+        "target": "/users/42"
       },
       {
         "expect": {
@@ -4608,10 +4661,1389 @@
           "id": 10,
           "method": "GET",
           "pattern": "/*"
+        },
+        {
+          "id": 11,
+          "method": "PATCH",
+          "pattern": "/users/:id"
         }
       ],
       "trailingSlash": "ignore"
     }
   },
-  "tolerance": 1e-6
+  "sse": {
+    "cases": [
+      {
+        "call": {
+          "data": "payload"
+        },
+        "expect": {
+          "bytes": "646174613a207061796c6f61640a0a"
+        },
+        "name": "data dispatched by a blank line",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "data": "payload",
+          "event": "update",
+          "id": "42"
+        },
+        "expect": {
+          "bytes": "6576656e743a207570646174650a69643a2034320a646174613a207061796c6f61640a0a"
+        },
+        "name": "event type id and data",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "data": "YHOO\n+2\n10"
+        },
+        "expect": {
+          "bytes": "646174613a2059484f4f0a646174613a202b320a646174613a2031300a0a"
+        },
+        "name": "the specification's multi-line data",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "data": "a\r\nb\nc\rd"
+        },
+        "expect": {
+          "bytes": "646174613a20610a646174613a20620a646174613a20630a646174613a20640a0a"
+        },
+        "name": "data split at crlf lf and cr",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "a\n"
+        },
+        "expect": {
+          "bytes": "646174613a20610a646174613a200a0a"
+        },
+        "name": "data ending in a line break",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": ""
+        },
+        "expect": {
+          "bytes": "646174613a200a0a"
+        },
+        "name": "empty data",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "data": "κόσμε"
+        },
+        "expect": {
+          "bytes": "646174613a20cebae1bdb9cf83cebcceb50a0a"
+        },
+        "name": "utf-8 data",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "a\u0000b"
+        },
+        "expect": {
+          "bytes": "646174613a206100620a0a"
+        },
+        "name": "nul in data",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "event": "e\u0000"
+        },
+        "expect": {
+          "bytes": "6576656e743a2065000a646174613a20780a0a"
+        },
+        "name": "nul in an event type",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "id": ""
+        },
+        "expect": {
+          "bytes": "69643a200a646174613a20780a0a"
+        },
+        "name": "empty id",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "data": "x",
+          "event": "a\nb"
+        },
+        "expect": {
+          "rejected": true
+        },
+        "name": "lf in an event type",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "event": "a\rb"
+        },
+        "expect": {
+          "rejected": true
+        },
+        "name": "cr in an event type",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "id": "1\r\n2"
+        },
+        "expect": {
+          "rejected": true
+        },
+        "name": "crlf in an id",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "id": "1\n2"
+        },
+        "expect": {
+          "rejected": true
+        },
+        "name": "lf in an id",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "data": "x",
+          "id": "a\u0000b"
+        },
+        "expect": {
+          "rejected": true
+        },
+        "name": "nul in an id",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "comment": " keep-alive"
+        },
+        "expect": {
+          "bytes": "3a206b6565702d616c6976650a"
+        },
+        "name": "comment",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "comment": ""
+        },
+        "expect": {
+          "bytes": "3a0a"
+        },
+        "name": "empty comment",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "comment": "a\nb\r\nc\rd"
+        },
+        "expect": {
+          "bytes": "3a610a3a620a3a630a3a640a"
+        },
+        "name": "comment split at line breaks",
+        "section": "WHATWG HTML Section 9.2.5"
+      },
+      {
+        "call": {
+          "retry": 3000
+        },
+        "expect": {
+          "bytes": "72657472793a20333030300a0a"
+        },
+        "name": "retry",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "retry": 0
+        },
+        "expect": {
+          "bytes": "72657472793a20300a0a"
+        },
+        "name": "retry of zero",
+        "section": "WHATWG HTML Section 9.2.6"
+      },
+      {
+        "call": {
+          "retry": 4294967295
+        },
+        "expect": {
+          "bytes": "72657472793a20343239343936373239350a0a"
+        },
+        "name": "largest retry",
+        "section": "WHATWG HTML Section 9.2.6"
+      }
+    ]
+  },
+  "tolerance": 1e-6,
+  "ws": {
+    "cases": [
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "accept value for the sample key",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 1.3"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ],
+            [
+              "Sec-WebSocket-Protocol",
+              "superchat"
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "subprotocol taken in the client's order",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d50726f746f636f6c3a207375706572636861742c20636861740d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [
+          "chat",
+          "superchat"
+        ],
+        "section": "RFC 6455 Section 4.2.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ],
+            [
+              "Sec-WebSocket-Protocol",
+              "chat"
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "subprotocol the route speaks",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d50726f746f636f6c3a2076322e636861742c20636861740d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [
+          "chat"
+        ],
+        "section": "RFC 6455 Section 4.2.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "no offered subprotocol matches",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d50726f746f636f6c3a206d7174742c20736f61700d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [
+          "chat"
+        ],
+        "section": "RFC 6455 Section 4.2.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "a subprotocol offered to a route without any",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d50726f746f636f6c3a20636861740d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "upgrade and connection tokens ignore case",
+        "request": "474554202f6368617420485454502f312e310d0a686f73743a207365727665722e6578616d706c652e636f6d0d0a757067726164653a20576562536f636b65740d0a636f6e6e656374696f6e3a206b6565702d616c6976652c20555047524144450d0a7365632d776562736f636b65742d6b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a7365632d776562736f636b65742d76657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "http 1.0 is refused",
+        "request": "474554202f6368617420485454502f312e300d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "missing upgrade",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "upgrade to another protocol",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a557067726164653a206832630d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "connection without the upgrade token",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a436f6e6e656374696f6e3a206b6565702d616c6976650d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "missing key",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "key without padding",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a510d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "key decoding to other than 16 bytes",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d4b65793a2041414141414141414141414141414141414141414141413d0d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "repeated key",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 400
+        },
+        "kind": "handshake",
+        "name": "missing version",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Sec-WebSocket-Version",
+              "13"
+            ]
+          ],
+          "status": 426
+        },
+        "kind": "handshake",
+        "name": "version other than 13",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a20380d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "origin in the allow list",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a4f726967696e3a2068747470733a2f2f4150502e6578616d706c650d0a0d0a",
+        "routeOrigins": [
+          "https://app.example"
+        ],
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 10.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [],
+          "status": 403
+        },
+        "kind": "handshake",
+        "name": "origin outside the allow list",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a4f726967696e3a2068747470733a2f2f6576696c2e6578616d706c650d0a0d0a",
+        "routeOrigins": [
+          "https://app.example"
+        ],
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 10.2"
+      },
+      {
+        "clientFrames": "",
+        "expect": {
+          "fields": [
+            [
+              "Upgrade",
+              "websocket"
+            ],
+            [
+              "Connection",
+              "Upgrade"
+            ],
+            [
+              "Sec-WebSocket-Accept",
+              "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+            ]
+          ],
+          "status": 101
+        },
+        "kind": "handshake",
+        "name": "no origin under an allow list",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": [
+          "https://app.example"
+        ],
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 4.2.1"
+      },
+      {
+        "clientFrames": "818537fa213d7f9f4d5158",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "48656c6c6f",
+              "type": "text"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": ""
+        },
+        "kind": "frames",
+        "name": "masked text message",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.6"
+      },
+      {
+        "clientFrames": "828437fa213d37fbdfc2",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "0001feff",
+              "type": "binary"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": ""
+        },
+        "kind": "frames",
+        "name": "masked binary message",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.6"
+      },
+      {
+        "clientFrames": "018337fa213d7f9f4d808237fa213d5b95",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "48656c6c6f",
+              "type": "text"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": ""
+        },
+        "kind": "frames",
+        "name": "fragmented text message",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.4"
+      },
+      {
+        "clientFrames": "018337fa213d7f9f4d898337fa213d5a9345808237fa213d5b95",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "6d6964",
+              "type": "ping"
+            },
+            {
+              "code": null,
+              "data": "48656c6c6f",
+              "type": "text"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": "8a036d6964"
+        },
+        "kind": "frames",
+        "name": "ping between fragments",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.4"
+      },
+      {
+        "clientFrames": "898537fa213d7f9f4d5158",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "48656c6c6f",
+              "type": "ping"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": "8a0548656c6c6f"
+        },
+        "kind": "frames",
+        "name": "ping answered with identical data",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.3"
+      },
+      {
+        "clientFrames": "89fd37fa213d30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30fd263a30",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707",
+              "type": "ping"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": "8a7d0707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707"
+        },
+        "kind": "frames",
+        "name": "ping with 125 octets",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5"
+      },
+      {
+        "clientFrames": "8a8437fa213d559f4049",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "62656174",
+              "type": "pong"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": ""
+        },
+        "kind": "frames",
+        "name": "unsolicited pong is not answered",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.3"
+      },
+      {
+        "clientFrames": "018137fa213df9808a37fa213d8d1b9c84f879ef81f94f",
+        "expect": {
+          "events": [
+            {
+              "code": null,
+              "data": "cebae1bdb9cf83cebcceb5",
+              "type": "text"
+            }
+          ],
+          "failed": null,
+          "finished": false,
+          "serverFrames": ""
+        },
+        "kind": "frames",
+        "name": "text split inside a code point",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 8.1"
+      },
+      {
+        "clientFrames": "810548656c6c6f",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "unmasked frame",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.1"
+      },
+      {
+        "clientFrames": "c18137fa213d4f",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "reserved bit without an extension",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.2"
+      },
+      {
+        "clientFrames": "838037fa213d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "reserved opcode",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.2"
+      },
+      {
+        "clientFrames": "82fe007c37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "length not in the minimal form",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.2"
+      },
+      {
+        "clientFrames": "82ff800000000000000037fa213d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "64-bit length with the most significant bit set",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.2"
+      },
+      {
+        "clientFrames": "89fe007e37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa213d37fa",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "control frame over 125 octets",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5"
+      },
+      {
+        "clientFrames": "098037fa213d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "fragmented control frame",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5"
+      },
+      {
+        "clientFrames": "808237fa213d5b95",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "continuation without a message",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.4"
+      },
+      {
+        "clientFrames": "018337fa213d7f9f4d828337fa213d55934f",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "frames",
+        "name": "new message inside a fragmented one",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.4"
+      },
+      {
+        "clientFrames": "818337fa213df940de",
+        "expect": {
+          "events": [],
+          "failed": 1007,
+          "finished": true,
+          "serverFrames": "880203ef"
+        },
+        "kind": "frames",
+        "name": "text that is not utf-8",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 8.1"
+      },
+      {
+        "clientFrames": "018237fa213d5891808237fa213dd578",
+        "expect": {
+          "events": [],
+          "failed": 1007,
+          "finished": true,
+          "serverFrames": "880203ef"
+        },
+        "kind": "frames",
+        "name": "text ending inside a code point",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 8.1"
+      },
+      {
+        "clientFrames": "82ff100000000000000037fa213d",
+        "expect": {
+          "events": [],
+          "failed": 1009,
+          "finished": true,
+          "serverFrames": "880203f1"
+        },
+        "kind": "frames",
+        "name": "declared length over the message limit",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 10.4"
+      },
+      {
+        "clientFrames": "888237fa213d3412",
+        "expect": {
+          "events": [
+            {
+              "code": 1000,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203e8"
+        },
+        "kind": "close",
+        "name": "close echoed with its code",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.1"
+      },
+      {
+        "clientFrames": "888f37fa213d34135255428e5554599d0159588d4f",
+        "expect": {
+          "events": [
+            {
+              "code": 1001,
+              "data": "7368757474696e6720646f776e",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203e9"
+        },
+        "kind": "close",
+        "name": "close reason reported, code echoed",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.1"
+      },
+      {
+        "clientFrames": "888037fa213d",
+        "expect": {
+          "events": [
+            {
+              "code": 1005,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "8800"
+        },
+        "kind": "close",
+        "name": "empty close answered with an empty close",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "88fd37fa213d3412534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f45",
+        "expect": {
+          "events": [
+            {
+              "code": 1000,
+              "data": "727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203e8"
+        },
+        "kind": "close",
+        "name": "reason of 123 octets",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5"
+      },
+      {
+        "clientFrames": "888237fa213d3412898437fa213d5b9b5558",
+        "expect": {
+          "events": [
+            {
+              "code": 1000,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203e8"
+        },
+        "kind": "close",
+        "name": "ping after a close is not answered",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.2"
+      },
+      {
+        "clientFrames": "888137fa213d34",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "one-octet close body",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.1"
+      },
+      {
+        "clientFrames": "888437fa213d3412dec3",
+        "expect": {
+          "events": [],
+          "failed": 1007,
+          "finished": true,
+          "serverFrames": "880203ef"
+        },
+        "kind": "close",
+        "name": "close reason that is not utf-8",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5.1"
+      },
+      {
+        "clientFrames": "88fe007e37fa213d3412534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588534f4588",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close body over 125 octets",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 5.5"
+      },
+      {
+        "clientFrames": "888237fa213d3410",
+        "expect": {
+          "events": [
+            {
+              "code": 1002,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "client close code 1002",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3411",
+        "expect": {
+          "events": [
+            {
+              "code": 1003,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203eb"
+        },
+        "kind": "close",
+        "name": "client close code 1003",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3415",
+        "expect": {
+          "events": [
+            {
+              "code": 1007,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203ef"
+        },
+        "kind": "close",
+        "name": "client close code 1007",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3408",
+        "expect": {
+          "events": [
+            {
+              "code": 1010,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203f2"
+        },
+        "kind": "close",
+        "name": "client close code 1010",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3409",
+        "expect": {
+          "events": [
+            {
+              "code": 1011,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "880203f3"
+        },
+        "kind": "close",
+        "name": "client close code 1011",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3c42",
+        "expect": {
+          "events": [
+            {
+              "code": 3000,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "88020bb8"
+        },
+        "kind": "close",
+        "name": "client close code 3000",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      },
+      {
+        "clientFrames": "888237fa213d247d",
+        "expect": {
+          "events": [
+            {
+              "code": 4999,
+              "data": "",
+              "type": "close"
+            }
+          ],
+          "failed": null,
+          "finished": true,
+          "serverFrames": "88021387"
+        },
+        "kind": "close",
+        "name": "client close code 4999",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      },
+      {
+        "clientFrames": "888237fa213d341d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 999 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      },
+      {
+        "clientFrames": "888237fa213d3416",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 1004 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3417",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 1005 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3414",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 1006 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d340d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 1015 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.1"
+      },
+      {
+        "clientFrames": "888237fa213d3402",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 1016 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      },
+      {
+        "clientFrames": "888237fa213d3c4d",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 2999 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      },
+      {
+        "clientFrames": "888237fa213d2472",
+        "expect": {
+          "events": [],
+          "failed": 1002,
+          "finished": true,
+          "serverFrames": "880203ea"
+        },
+        "kind": "close",
+        "name": "close code 5000 refused",
+        "request": "474554202f6368617420485454502f312e310d0a486f73743a207365727665722e6578616d706c652e636f6d0d0a557067726164653a20776562736f636b65740d0a436f6e6e656374696f6e3a20557067726164650d0a5365632d576562536f636b65742d4b65793a206447686c49484e68625842735a5342756232356a5a513d3d0d0a5365632d576562536f636b65742d56657273696f6e3a2031330d0a0d0a",
+        "routeOrigins": null,
+        "routeProtocols": [],
+        "section": "RFC 6455 Section 7.4.2"
+      }
+    ]
+  }
 }

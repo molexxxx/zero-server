@@ -20,6 +20,7 @@ enum Route {
     Users,
     CreateUser,
     User,
+    PatchUser,
     File,
     Moved,
     Found,
@@ -44,6 +45,9 @@ impl App {
             .unwrap();
         router
             .route(Method::Get, "/users/:id", Route::User)
+            .unwrap();
+        router
+            .route(Method::Patch, "/users/:id", Route::PatchUser)
             .unwrap();
         router
             .route(Method::Get, "/files/:name", Route::File)
@@ -86,6 +90,15 @@ impl Handler for App {
                 let (request, mut response) = call.parts();
                 let id = request.param(0).unwrap_or(b"?").to_vec();
                 response.body(b"user ").body(&id);
+            }
+            Route::PatchUser => {
+                let (request, mut response) = call.parts();
+                let id = request.param(0).unwrap_or(b"?").to_vec();
+                let mut body = b"patched ".to_vec();
+                body.extend_from_slice(&id);
+                body.extend_from_slice(b" with ");
+                body.extend_from_slice(request.body());
+                response.body(&body);
             }
             Route::File => {
                 let (request, mut response) = call.parts();
@@ -271,6 +284,16 @@ fn send(conn: &mut TcpStream, method: &str, target: &str, extra: &str) -> Respon
     read_response(conn, method == "HEAD").unwrap()
 }
 
+fn send_body(conn: &mut TcpStream, method: &str, target: &str, body: &str) -> Response {
+    let length = body.len();
+    conn.write_all(
+        format!("{method} {target} HTTP/1.1\r\nHost: t\r\nContent-Length: {length}\r\n\r\n{body}")
+            .as_bytes(),
+    )
+    .unwrap();
+    read_response(conn, false).unwrap()
+}
+
 #[test]
 fn routes_dispatch_on_method_and_path_with_the_parameters_captured() {
     let server = Server::start();
@@ -313,7 +336,7 @@ fn a_missing_method_is_405_with_allow_and_an_unimplemented_token_is_501() {
     assert_eq!(refused.status, 405);
     assert_eq!(refused.header("allow"), Some("GET, HEAD, POST, OPTIONS"));
     assert!(refused.text().contains("\"status\":405"));
-    let unknown = send(&mut conn, "PATCH", "/users", "Content-Length: 0\r\n");
+    let unknown = send(&mut conn, "MKCOL", "/users", "Content-Length: 0\r\n");
     assert_eq!(unknown.status, 501);
     assert_eq!(
         send(&mut conn, "get", "/users", "").status,
@@ -321,6 +344,50 @@ fn a_missing_method_is_405_with_allow_and_an_unimplemented_token_is_501() {
         "case matters"
     );
     assert_eq!(send(&mut conn, "GET", "/users", "").text(), "[]");
+    let mut longer = server.connect();
+    let refused = send(&mut longer, "PROPFIND", "/users", "Content-Length: 0\r\n");
+    assert_eq!(
+        refused.status, 501,
+        "a token longer than every implemented method is refused before routing"
+    );
+    let mut rest = Vec::new();
+    assert_eq!(
+        longer.read_to_end(&mut rest).unwrap(),
+        0,
+        "and the connection closes"
+    );
+    server.stop().unwrap();
+}
+
+/// Standards row `routing-29` on the wire: RFC 5789 Section 2 and Section 3,
+/// which lets PATCH appear in `Allow` (RFC 9110 Section 10.2.1).
+#[test]
+fn a_patch_request_dispatches_to_its_own_route_and_allow_lists_patch() {
+    let server = Server::start();
+    let mut conn = server.connect();
+    let patched = send_body(&mut conn, "PATCH", "/users/42", r#"{"name":"a"}"#);
+    assert_eq!(
+        (patched.status, patched.text()),
+        (200, r#"patched 42 with {"name":"a"}"#.to_owned())
+    );
+    let refused = send(&mut conn, "PUT", "/users/42", "Content-Length: 0\r\n");
+    assert_eq!(refused.status, 405);
+    assert_eq!(refused.header("allow"), Some("GET, HEAD, OPTIONS, PATCH"));
+    let options = send(&mut conn, "OPTIONS", "/users/42", "");
+    assert_eq!(options.status, 200);
+    assert_eq!(options.header("allow"), Some("GET, HEAD, OPTIONS, PATCH"));
+    let elsewhere = send_body(&mut conn, "PATCH", "/users", "{}");
+    assert_eq!(
+        elsewhere.status, 405,
+        "PATCH is a recognized method, so a path without a PATCH route is 405, not 501"
+    );
+    assert_eq!(elsewhere.header("allow"), Some("GET, HEAD, POST, OPTIONS"));
+    assert_eq!(
+        send(&mut conn, "patch", "/users/42", "Content-Length: 0\r\n").status,
+        501,
+        "the token is case-sensitive"
+    );
+    assert_eq!(send(&mut conn, "GET", "/users/42", "").text(), "user 42");
     server.stop().unwrap();
 }
 

@@ -98,7 +98,7 @@ impl FetchMetadata {
     ///
     /// # Arguments
     ///
-    /// * `method` - the request method, or `None` for a method outside the eight the
+    /// * `method` - the request method, or `None` for a method outside the nine the
     ///   registry knows, which is treated as unsafe.
     /// * `site` - the `Sec-Fetch-Site` field value, if the request carries one.
     ///

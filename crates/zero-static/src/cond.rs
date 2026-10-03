@@ -160,7 +160,7 @@ fn one_date(value: &[u8], now: u64) -> Option<u64> {
 ///
 /// # Arguments
 ///
-/// * `method` - the request method; `None` for a method outside the eight, which
+/// * `method` - the request method; `None` for a method outside the nine, which
 ///   has no selected representation to condition on.
 /// * `request` - the precondition fields as received.
 /// * `current` - the validators of the selected representation.

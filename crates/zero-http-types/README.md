@@ -29,7 +29,7 @@ RFC states, cited on the item that implements it.
 
 The primary items are:
 
-- `Method` - the eight standardized request methods.
+- `Method` - the nine standardized request methods: the eight of RFC 9110 and PATCH.
 - `StatusCode` and `StatusClass` - status codes and their classes.
 - `HeaderName` - the interned field names.
 - `Fields`, `Name` and `FieldError` - the bounded field list and the

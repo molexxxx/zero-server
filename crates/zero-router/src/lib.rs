@@ -99,29 +99,60 @@ pub enum TrailingSlash {
     Strict,
 }
 
-/// The set of methods a resource supports, for `Allow` (RFC 9110 Section 10.2.1).
+/// How many methods a route can be registered for: one handler slot per
+/// [`Method`] id.
+const METHODS: usize = Method::ALL.len();
+
+/// The set of methods a resource supports, for `Allow` (RFC 9110 Section 10.2.1):
+/// one bit per [`Method`] id, PATCH included, which RFC 5789 Section 3 lets a
+/// server advertise in `Allow`.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.1>
+/// @see <https://www.rfc-editor.org/rfc/rfc5789.html#section-3>
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Allow(u8);
+pub struct Allow(u16);
+
+const _: () = assert!(METHODS <= u16::BITS as usize, "one Allow bit per method id");
 
 impl Allow {
     /// Add a method.
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - the method to add.
     pub fn insert(&mut self, method: Method) {
-        self.0 |= 1u8.wrapping_shl(u32::from(method.id()));
+        self.0 |= 1u16.wrapping_shl(u32::from(method.id()));
     }
 
     /// Whether the set holds `method`.
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - the method to look for.
+    ///
+    /// # Returns
+    ///
+    /// `true` when the method was inserted.
     #[must_use]
     pub const fn contains(self, method: Method) -> bool {
-        self.0 & 1u8.wrapping_shl(method.id() as u32) != 0
+        self.0 & 1u16.wrapping_shl(method.id() as u32) != 0
     }
 
     /// Whether no method is allowed.
+    ///
+    /// # Returns
+    ///
+    /// `true` for the empty set.
     #[must_use]
     pub const fn is_empty(self) -> bool {
         self.0 == 0
     }
 
     /// The methods, in id order.
+    ///
+    /// # Returns
+    ///
+    /// An iterator over the methods in the set.
     pub fn iter(self) -> impl Iterator<Item = Method> {
         Method::ALL
             .into_iter()
@@ -314,14 +345,14 @@ impl<T> Node<T> {
 
 #[derive(Clone, Debug)]
 struct Leaf<T> {
-    handlers: [Option<T>; 8],
+    handlers: [Option<T>; METHODS],
     pattern: String,
 }
 
 impl<T: Copy> Leaf<T> {
     fn new(pattern: &str) -> Self {
         Leaf {
-            handlers: [None; 8],
+            handlers: [None; METHODS],
             pattern: String::from(pattern),
         }
     }
@@ -964,7 +995,7 @@ mod tests {
     fn an_unrecognized_or_unimplemented_method_is_answered_with_501_not_implemented() {
         let router = app();
         assert!(matches!(
-            router.resolve(b"PATCH", b"/users"),
+            router.resolve(b"PROPFIND", b"/users"),
             Resolution::NotImplemented
         ));
         assert!(matches!(
@@ -1038,6 +1069,60 @@ mod tests {
         let mut empty = Vec::new();
         Allow::default().write(&mut empty);
         assert!(empty.is_empty());
+    }
+
+    /// Standards row `routing-29`: RFC 5789 Section 2, and RFC 9110 Section
+    /// 10.2.1 for `Allow`.
+    #[test]
+    fn a_patch_route_has_its_own_slot_and_allow_lists_patch_apart_from_every_other_method() {
+        let mut router = Router::new();
+        assert_eq!(router.route(Method::Get, "/users/:id", 1), Ok(()));
+        assert_eq!(router.route(Method::Patch, "/users/:id", 2), Ok(()));
+        assert_eq!(
+            router.route(Method::Patch, "/users/:id", 3),
+            Err(RouteError::Duplicate)
+        );
+        assert_eq!(
+            resolve(&router, "PATCH", "/users/42"),
+            (Some(2), alloc::vec![pair("id", "42")])
+        );
+        assert_eq!(resolve(&router, "GET", "/users/42").0, Some(1));
+        assert!(matches!(
+            router.resolve(b"patch", b"/users/42"),
+            Resolution::NotImplemented
+        ));
+        let Resolution::MethodNotAllowed { allow } = router.resolve(b"PUT", b"/users/42") else {
+            unreachable!("GET and PATCH exist");
+        };
+        let mut value = Vec::new();
+        allow.write(&mut value);
+        assert_eq!(value, b"GET, HEAD, OPTIONS, PATCH");
+        let Resolution::Options { allow } = router.resolve(b"OPTIONS", b"/users/42") else {
+            unreachable!("no OPTIONS route");
+        };
+        assert!(allow.contains(Method::Patch));
+        let Resolution::MethodNotAllowed { allow } = app().resolve(b"PATCH", b"/users") else {
+            unreachable!("GET and POST exist, PATCH does not");
+        };
+        let mut value = Vec::new();
+        allow.write(&mut value);
+        assert_eq!(value, b"GET, HEAD, POST, OPTIONS");
+        let mut only = Allow::default();
+        only.insert(Method::Patch);
+        assert_eq!(only.iter().collect::<Vec<_>>(), [Method::Patch]);
+        assert!(Method::ALL
+            .into_iter()
+            .filter(|method| *method != Method::Patch)
+            .all(|method| !only.contains(method)));
+        let mut every = Allow::default();
+        for method in Method::ALL {
+            every.insert(method);
+        }
+        assert_eq!(every.iter().collect::<Vec<_>>(), Method::ALL);
+        assert!(router
+            .routes()
+            .iter()
+            .any(|route| route.method == Method::Patch && route.descriptor == 2));
     }
 
     #[test]
