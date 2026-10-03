@@ -70,8 +70,8 @@ fn current_release_of(doc: &DocumentMut) -> Result<u32, String> {
 ///
 /// # Arguments
 ///
-/// * `args` - `--check` fails on the first rule the register breaks; without it the
-///   register is summarized, pending rows listed, and the same check run.
+/// * `args` - `--check` fails when the register breaks a rule and lists every problem;
+///   without it the register is summarized, pending rows listed, and the same check run.
 ///
 /// # Returns
 ///
@@ -103,7 +103,9 @@ pub fn run(args: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(message) => {
-            eprintln!("xtask standards: {message}");
+            for line in message.lines() {
+                eprintln!("xtask standards: {line}");
+            }
             ExitCode::FAILURE
         }
     }
@@ -193,7 +195,10 @@ impl Standards {
             .map_err(|err| format!("reading {}: {err}", path.display()))?;
         let mut standards = Standards::parse(&text)?;
         for entry in &mut standards.entries {
-            entry.line = Some(locate(root, &entry.evidence, &entry.at));
+            entry.line = Some(
+                locate(root, &entry.evidence, &entry.at)
+                    .and_then(|(line, text)| shape(&text, line, &entry.evidence).map(|()| line)),
+            );
         }
         Ok(standards)
     }
@@ -348,11 +353,29 @@ impl Standards {
     /// cites an `at` that is on no line of its evidence file, or on more than one. A row
     /// beyond the current release may cite a test that does not exist yet.
     pub fn check(&self, catalog: &Catalog) -> Result<(), String> {
+        let problems = self.problems(catalog);
+        if problems.is_empty() {
+            return Ok(());
+        }
+        Err(problems.join("\n"))
+    }
+
+    /// Every rule the register breaks, one line each, in file order.
+    ///
+    /// # Arguments
+    ///
+    /// * `catalog` - the capability map, whose chapters a group must name.
+    ///
+    /// # Returns
+    ///
+    /// The problems [`Standards::check`] reports; empty when there are none.
+    pub fn problems(&self, catalog: &Catalog) -> Vec<String> {
+        let mut problems = Vec::new();
         let chapters: BTreeSet<&str> = catalog.chapters.iter().map(|c| c.key.as_str()).collect();
         let mut seen = BTreeSet::new();
         for group in &self.groups {
             if !chapters.contains(group.chapter.as_str()) {
-                return Err(format!(
+                problems.push(format!(
                     "standards.toml: group {} names chapter {}, which docs/capabilities.toml does not have",
                     group.title, group.chapter
                 ));
@@ -362,16 +385,16 @@ impl Standards {
         let kinds: BTreeSet<&str> = ANCHORS.iter().map(|(key, _)| *key).collect();
         for entry in &self.entries {
             if !seen.insert(entry.key.as_str()) {
-                return Err(format!("standards.toml: {} appears twice", entry.key));
+                problems.push(format!("standards.toml: {} appears twice", entry.key));
             }
             if !groups.contains(entry.chapter.as_str()) {
-                return Err(format!(
+                problems.push(format!(
                     "standards.toml: {} names chapter {}, which has no group",
                     entry.key, entry.chapter
                 ));
             }
             if !kinds.contains(entry.anchor.as_str()) {
-                return Err(format!(
+                problems.push(format!(
                     "standards.toml: {} has anchor {}, which is not one of {:?}",
                     entry.key,
                     entry.anchor,
@@ -379,28 +402,29 @@ impl Standards {
                 ));
             }
             if !entry.url.starts_with("https://") {
-                return Err(format!("standards.toml: {} has a non-https url", entry.key));
+                problems.push(format!("standards.toml: {} has a non-https url", entry.key));
             }
             if entry.evidence.contains('#') {
-                return Err(format!(
+                problems.push(format!(
                     "standards.toml: {} cites a line by number, which edits move; name the file in evidence and the line's text in at",
                     entry.key
                 ));
             }
             if !RELEASES.contains(&entry.release) {
-                return Err(format!(
+                problems.push(format!(
                     "standards.toml: {} names release {}, not one of {RELEASES:?}",
                     entry.key, entry.release
                 ));
+                continue;
             }
             if entry.release > self.current_release {
                 continue;
             }
             if let Some(Err(problem)) = &entry.line {
-                return Err(format!("standards.toml: {}: {problem}", entry.key));
+                problems.push(format!("standards.toml: {}: {problem}", entry.key));
             }
         }
-        Ok(())
+        problems
     }
 
     /// How many entries the register holds, and how many pin a published vector.
@@ -472,9 +496,9 @@ fn release(table: &dyn toml_edit::TableLike, context: &str) -> Result<u32, Strin
         .ok_or_else(|| format!("{context}: `release` must be one of {RELEASES:?}"))
 }
 
-// The one line of `file`, from the repository root, that contains `at`: its one-based number,
-// or why there is not exactly one.
-fn locate(root: &Path, file: &str, at: &str) -> Result<usize, String> {
+// The one line of `file`, from the repository root, that contains `at`: its one-based number
+// and the file's text, or why there is not exactly one.
+fn locate(root: &Path, file: &str, at: &str) -> Result<(usize, String), String> {
     let text =
         fs::read_to_string(root.join(file)).map_err(|err| format!("reading {file}: {err}"))?;
     let lines: Vec<usize> = text
@@ -484,7 +508,7 @@ fn locate(root: &Path, file: &str, at: &str) -> Result<usize, String> {
         .map(|(index, _)| index + 1)
         .collect();
     match lines.as_slice() {
-        [line] => Ok(*line),
+        [line] => Ok((*line, text)),
         [] => Err(format!("no line of {file} contains {at:?}")),
         many => Err(format!(
             "{} lines of {file} contain {at:?}, lines {}; quote more of the one meant",
@@ -495,6 +519,90 @@ fn locate(root: &Path, file: &str, at: &str) -> Result<usize, String> {
                 .join(", ")
         )),
     }
+}
+
+// Whether the cited line of `file` (one-based `line` of `text`) is a test that runs: a Rust
+// function under a `#[test]` family attribute and not `#[ignore]`d, a JavaScript or TypeScript
+// `it(` or `test(` call, or a Python `def test_`. A page (`.md`) is cited as text and has no
+// shape.
+fn shape(text: &str, line: usize, file: &str) -> Result<(), String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let cited = lines
+        .get(line.saturating_sub(1))
+        .copied()
+        .unwrap_or_default()
+        .trim_start();
+    let extension = file.rsplit('.').next().unwrap_or_default();
+    match extension {
+        "rs" => {
+            if !(cited.starts_with("fn ")
+                || cited.starts_with("async fn ")
+                || cited.starts_with("pub fn ")
+                || cited.starts_with("pub(crate) fn "))
+            {
+                return Err(format!(
+                    "line {line} of {file} is not a function: {cited:?}"
+                ));
+            }
+            let attributes = attributes_above(&lines, line.saturating_sub(1));
+            if attributes.contains("#[ignore") {
+                return Err(format!(
+                    "line {line} of {file} is an ignored test, which `cargo test` does not run"
+                ));
+            }
+            if !(attributes.contains("#[test]") || attributes.contains("::test")) {
+                return Err(format!(
+                    "line {line} of {file} is a function without a #[test] attribute"
+                ));
+            }
+            Ok(())
+        }
+        "js" | "mjs" | "cjs" | "ts" | "mts" => {
+            let call = cited.starts_with("it(")
+                || cited.starts_with("test(")
+                || cited.starts_with("it.concurrent(")
+                || cited.starts_with("test.concurrent(");
+            if !call {
+                return Err(format!(
+                    "line {line} of {file} is not an it( or test( call: {cited:?}"
+                ));
+            }
+            Ok(())
+        }
+        "py" => {
+            if !(cited.starts_with("def test_") || cited.starts_with("async def test_")) {
+                return Err(format!(
+                    "line {line} of {file} is not a def test_ function: {cited:?}"
+                ));
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
+// The attributes and doc comments directly above the zero-based line `index`, joined, with a
+// multi-line attribute read whole.
+fn attributes_above(lines: &[&str], index: usize) -> String {
+    let mut out = Vec::new();
+    let mut inside = false;
+    let mut at = index;
+    while at > 0 {
+        at -= 1;
+        let line = lines.get(at).copied().unwrap_or_default().trim();
+        if line.starts_with("#[") || line.starts_with("#![") {
+            inside = false;
+            out.push(line);
+        } else if line.starts_with("//") {
+            out.push(line);
+        } else if inside || line.ends_with(']') {
+            inside = !line.starts_with("#[");
+            out.push(line);
+        } else {
+            break;
+        }
+    }
+    out.join("\n")
 }
 
 #[cfg(test)]
@@ -627,6 +735,82 @@ release = 2
             "{problem}"
         );
         assert!(problem.contains("lines 4, 10"), "{problem}");
+    }
+
+    #[test]
+    fn a_cited_line_counts_only_when_it_is_a_test_that_runs() {
+        let name = "fn cmac_of_the_empty_message_matches_rfc_4493";
+        let refused = |crypto: &str| {
+            let root = repository("shape", MINIMAL, crypto);
+            let standards = Standards::load(&root).expect("loads");
+            fs::remove_dir_all(&root).unwrap();
+            standards.check(&with_trust()).unwrap_err()
+        };
+        let comment = refused(&format!("// {name} is pending\n"));
+        assert!(comment.contains("is not a function"), "{comment}");
+        let helper = refused(&format!("{name}() {{}}\n"));
+        assert!(helper.contains("without a #[test] attribute"), "{helper}");
+        let ignored = refused(&format!("#[test]\n#[ignore]\n{name}() {{}}\n"));
+        assert!(ignored.contains("is an ignored test"), "{ignored}");
+
+        let accepted = |crypto: &str| {
+            let root = repository("shape-ok", MINIMAL, crypto);
+            let standards = Standards::load(&root).expect("loads");
+            fs::remove_dir_all(&root).unwrap();
+            standards.check(&with_trust())
+        };
+        for crypto in [
+            format!("    /// RFC 4493 Section 4.\n    #[test]\n    {name}() {{}}\n"),
+            format!("#[tokio::test(flavor = \"current_thread\")]\nasync {name}() {{}}\n"),
+            format!(
+                "#[test]\n#[cfg_attr(\n    miri,\n    ignore = \"slow\"\n)]\n{name}(\n) {{}}\n"
+            ),
+        ] {
+            accepted(&crypto).unwrap_or_else(|problem| panic!("{problem}: {crypto}"));
+        }
+    }
+
+    #[test]
+    fn a_javascript_or_python_test_is_recognized_by_its_call_or_definition() {
+        let lines = |text: &str, file: &str| {
+            let line = text
+                .lines()
+                .position(|line| line.contains("rfc 4493"))
+                .expect("the cited text")
+                + 1;
+            shape(text, line, file)
+        };
+        assert!(lines("it('rfc 4493 empty message', () => {});\n", "a.test.mjs").is_ok());
+        assert!(lines("  test(\"rfc 4493 empty\", () => {});\n", "a.test.ts").is_ok());
+        assert!(lines("// rfc 4493 later\n", "a.test.js").is_err());
+        assert!(lines("it.skip('rfc 4493', () => {});\n", "a.test.js").is_err());
+        assert!(lines("def test_rfc 4493():\n    pass\n", "test_a.py").is_ok());
+        assert!(lines("def helper_rfc 4493():\n", "test_a.py").is_err());
+        assert!(lines("See rfc 4493.\n", "docs/a.md").is_ok());
+    }
+
+    #[test]
+    fn every_problem_is_reported_not_only_the_first() {
+        let second = MINIMAL
+            .replace("key = \"rfc-4493\"", "key = \"rfc-4493-b\"")
+            .replace("current_release = 1\n", "")
+            .replace("[[group]]\nchapter = \"trust\"\ntitle = \"Cryptography\"\nintent = \"The primitives.\"\n", "");
+        let register = format!("{MINIMAL}{second}");
+        let root = repository("every", &register, "fn renamed() {}\n");
+        let standards = Standards::load(&root).expect("loads");
+        fs::remove_dir_all(&root).unwrap();
+        let problems = standards.problems(&with_trust());
+        assert_eq!(problems.len(), 2, "{problems:?}");
+        assert!(
+            problems[0].starts_with("standards.toml: rfc-4493: "),
+            "{problems:?}"
+        );
+        assert!(
+            problems[1].starts_with("standards.toml: rfc-4493-b: "),
+            "{problems:?}"
+        );
+        let joined = standards.check(&with_trust()).unwrap_err();
+        assert_eq!(joined.lines().count(), 2, "{joined}");
     }
 
     #[test]
