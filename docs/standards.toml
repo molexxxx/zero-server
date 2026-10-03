@@ -5,9 +5,8 @@
 # links` fetches every `url`, so a specification that moves takes the build with
 # it rather than sitting on the page looking authoritative.
 #
-# Imported once by scripts/standards-from-markdown.mjs from the Node line's
-# docs/STANDARDS.md; since then this file is the registry and is edited here.
-# Running the import again would drop every row added after it.
+# Imported once from the Node line's docs/STANDARDS.md; since then this file is
+# the registry and is edited here.
 #
 # `chapter` is one of the capability chapters in docs/capabilities.toml, so a row
 # points at the crates that implement it. `designation` is the document as its

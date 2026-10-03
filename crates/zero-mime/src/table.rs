@@ -1,6 +1,6 @@
-//! The extension table, written by `scripts/mime_table.py` from mime-db
-//! 1.54.0 (jshttp, MIT), itself compiled from the IANA media type registry,
-//! Apache's and nginx's tables. Do not edit by hand.
+//! The extension table, generated from mime-db 1.54.0 (jshttp, MIT), itself
+//! compiled from the IANA media type registry, Apache's and nginx's tables. Do
+//! not edit by hand.
 
 /// The mime-db version the table was written from.
 pub const SOURCE_VERSION: &str = "1.54.0";

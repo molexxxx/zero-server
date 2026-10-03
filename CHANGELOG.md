@@ -13,8 +13,8 @@ version and are released together, so one entry covers all of them.
   `zero-server` bundle crate, the `zero-ffi` C ABI, and the three lint tables in
   `docs/lints` that every member manifest copies.
 - `docs/standards.toml`, the conformance register imported once from
-  zero-server's `docs/STANDARDS.md` by `scripts/standards-from-markdown.mjs` and
-  maintained in this repository since, with a release on every row.
+  zero-server's `docs/STANDARDS.md` and maintained in this repository since,
+  with a release on every row.
 - The runtime seam in `zero-io` with two backends, tokio by default and compio
   behind the `io-compio` feature, and per-core workers in `zero-rt`.
 - The HTTP/1.1 server in `zero-http`: pipelining, `Expect: 100-continue`,
@@ -42,5 +42,4 @@ version and are released together, so one entry covers all of them.
 - `docs/capabilities.toml`, the capability map that claims every crate once
   with its lint table and release.
 - `conformance/api-surface.json`, the export contract generated from the JSDoc
-  of `@zero-server/sdk` by `scripts/api-surface-from-zero-server.mjs`, with a
-  naming map per binding.
+  of `@zero-server/sdk`, with a naming map per binding.

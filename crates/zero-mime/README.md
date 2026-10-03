@@ -19,8 +19,8 @@ The TypeScript, Python and C# packages of this capability ship in a later releas
 The media type table of zero-server.
 
 `from_extension` and `from_path` name the media type a file is served as,
-from the table `scripts/mime_table.py` writes out of mime-db (itself compiled
-from the IANA registry, Apache's and nginx's tables). `parse` reads a
+from a table generated from mime-db (itself compiled from the IANA registry,
+Apache's and nginx's tables). `parse` reads a
 `media-type` value (RFC 9110 Section 8.3.1): `type "/" subtype parameters`,
 the type and subtype case-insensitive, the parameters as `name=value` or
 `name="quoted"` after semicolons. `is_text` says when a type is served with a

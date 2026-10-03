@@ -60,5 +60,8 @@ conformance/regressions.md
 # The working plan for remote sessions, kept on the development machine.
 .github/cloud/
 
+# Local generators for the brand marks, the diagrams and one-time imports.
+/scripts/
+
 # Inputs libFuzzer writes into the working directory when a target fails.
 /crash-*
