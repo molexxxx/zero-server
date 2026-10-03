@@ -205,7 +205,7 @@ subject = "Generated HTTP-date values (Date, Last-Modified, Expires, cookie expi
 url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7"
 evidence = "crates/zero-date/src/imf.rs"
 at = "fn generated_http_date_values_date_last_modified_expires_cookie_expiry_use_imf"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 9110 Section 5.6.7"
 
@@ -374,7 +374,7 @@ subject = "Forwarded header values are parsed as comma-separated forwarded-eleme
 url = "https://www.rfc-editor.org/rfc/rfc7239.html#section-4"
 evidence = "crates/zero-policy/src/lib.rs"
 at = "fn forwarded_header_values_are_parsed_as_comma_separated_forwarded_elements_of_for"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 7239 Sections 4 and 5"
 
@@ -1169,15 +1169,15 @@ note = "RFC 9325 Section 3.4"
 [[entry]]
 key = "tls-17"
 chapter = "tls"
-designation = "Node.js tls"
+designation = "Node.js v22.23.3 tls"
 body = "OpenJS Foundation"
 subject = "A connection whose TLS handshake has not completed within the handshake timeout is closed, and the default timeout does not exceed 120 seconds"
-url = "https://nodejs.org/api/tls.html#tlscreateserveroptions-secureconnectionlistener"
+url = "https://nodejs.org/docs/latest-v22.x/api/tls.html#tlscreateserveroptions-secureconnectionlistener"
 evidence = "crates/zero-tls/tests/driver.rs"
 at = "fn a_connection_whose_tls_handshake_has_not_completed_within_the_handshake_timeout"
 anchor = "rule"
 release = 1
-note = "Node.js tls.createServer handshakeTimeout; local policy, no TLS RFC sets one. The buffered driver sends close_notify when it times out (RFC 9846 Section 6.1)"
+note = "Node.js 22 tls.createServer handshakeTimeout, \"Default: 120000 (120 seconds)\"; local policy, no TLS RFC sets one. The buffered driver sends close_notify when it times out (RFC 9846 Section 6.1)"
 
 [[entry]]
 key = "tls-18"
@@ -2867,7 +2867,7 @@ subject = "If-Match uses the strong comparison function and If-None-Match uses t
 url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3.2"
 evidence = "crates/zero-static/src/lib.rs"
 at = "fn if_match_uses_the_strong_comparison_function_and_if_none_match_uses"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 9110 Sections 8.8.3.2, 13.1.1, and 13.1.2"
 
@@ -2945,7 +2945,7 @@ subject = "A satisfiable single byte range yields 206 with `Content-Range: bytes
 url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-14.4"
 evidence = "crates/zero-static/src/lib.rs"
 at = "fn a_satisfiable_single_byte_range_yields_206_with_content_range_bytes_first"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 9110 Sections 14.4 and 15.3.7"
 
@@ -3062,7 +3062,7 @@ subject = "Downloads send `Content-Disposition: attachment` with an ASCII `filen
 url = "https://www.rfc-editor.org/rfc/rfc6266.html#appendix-4.3"
 evidence = "crates/zero-static/src/lib.rs"
 at = "fn downloads_send_content_disposition_attachment_with_an_ascii_filename_fallback_and_a"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 6266 Section 4.3 and Appendix D; RFC 8187 Section 3.2.1"
 
@@ -4996,7 +4996,7 @@ subject = "Frames sent by the server are never masked"
 url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-5.1"
 evidence = "crates/zero-ws/src/lib.rs"
 at = "fn frames_sent_by_the_server_are_never_masked"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 6455 Section 5.1"
 
@@ -5035,7 +5035,7 @@ subject = "Payload lengths use the minimal encoding, and a 64-bit length with th
 url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-5.2"
 evidence = "crates/zero-ws/src/lib.rs"
 at = "fn payload_lengths_use_the_minimal_encoding_and_a_64_bit_length_with"
-anchor = "rule"
+anchor = "vector"
 release = 1
 note = "RFC 6455 Section 5.2"
 
@@ -6312,28 +6312,28 @@ note = "RFC 9562 Section 8"
 [[entry]]
 key = "runtime-01"
 chapter = "runtime"
-designation = "Node.js v26.10.0 process"
+designation = "Node.js v22.23.3 process"
 body = "Node.js"
 subject = "Installing SIGTERM and SIGINT listeners replaces the default exit, so the lifecycle module must exit explicitly after draining"
-url = "https://nodejs.org/api/process.html"
+url = "https://nodejs.org/docs/latest-v22.x/api/process.html#signal-events"
 evidence = "bindings/node/test/lifecycle.test.js"
 at = "installing SIGTERM and SIGINT listeners replaces the default exit, so the lifecycle exits explicitly after draining"
 anchor = "interop"
 release = 1
-note = "Node.js process, Signal events"
+note = "Node.js 22 process, Signal events: \"If one of these signals has a listener installed, its default behavior will be removed (Node.js will no longer exit).\""
 
 [[entry]]
 key = "runtime-02"
 chapter = "runtime"
-designation = "Node.js v26.10.0 http"
+designation = "Node.js v22.23.3 http"
 body = "Node.js"
 subject = "Shutdown calls server.close to stop accepting, then closeIdleConnections, then closeAllConnections after the grace timeout"
-url = "https://nodejs.org/api/http.html"
+url = "https://nodejs.org/docs/latest-v22.x/api/http.html#servercloseidleconnections"
 evidence = "crates/zero-http/tests/driver.rs"
 at = "fn shutdown_calls_server_close_to_stop_accepting_then_closeidleconnections_then_closeallconnections_after"
-anchor = "interop"
+anchor = "rule"
 release = 1
-note = "Node.js http, server.close, server.closeIdleConnections, server.closeAllConnections"
+note = "Node.js 22 http, server.close, server.closeIdleConnections, server.closeAllConnections."
 
 [[entry]]
 key = "runtime-03"
@@ -6383,22 +6383,22 @@ subject = "The default drain timeout is shorter than the Kubernetes default term
 url = "https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/"
 evidence = "crates/zero-serve/src/lib.rs"
 at = "fn the_default_drain_timeout_is_shorter_than_the_kubernetes_default_terminationgraceperiodseconds_of"
-anchor = "interop"
+anchor = "rule"
 release = 1
 note = "Kubernetes Pod Lifecycle, Termination of Pods"
 
 [[entry]]
 key = "runtime-07"
 chapter = "runtime"
-designation = "Node.js v26.10.0 process"
+designation = "Node.js v22.23.3 process"
 body = "Node.js"
 subject = "Work in the process 'exit' handler is synchronous only"
-url = "https://nodejs.org/api/process.html"
+url = "https://nodejs.org/docs/latest-v22.x/api/process.html#event-exit"
 evidence = "bindings/node/test/lifecycle.test.js"
 at = "work in the process exit handler is synchronous only"
 anchor = "interop"
 release = 1
-note = "Node.js process, Event 'exit'"
+note = "Node.js 22 process, Event 'exit': \"Listener functions must only perform synchronous operations.\""
 
 [[entry]]
 key = "runtime-08"
@@ -6694,11 +6694,11 @@ key = "runtime-22"
 chapter = "runtime"
 designation = "Node.js v22.23.3 Node-API"
 body = "Node.js"
-subject = "A value is queued only when the call returns napi_ok, so a batch refused as full stays queued on the worker and is posted after the next acknowledgment"
+subject = "The dispatcher keeps a batch the target refused as full queued on the worker and posts it after the next acknowledgment, since a value is queued only when the call returns napi_ok"
 url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_call_threadsafe_function"
 evidence = "crates/zero-host/tests/dispatch.rs"
 at = "fn a_full_target_keeps_the_batch_queued_and_posts_it_after_an_acknowledgment"
-anchor = "interop"
+anchor = "rule"
 release = 1
 note = "Node.js Node-API, napi_call_threadsafe_function: The value is only added to the queue if the API returns napi_ok"
 
