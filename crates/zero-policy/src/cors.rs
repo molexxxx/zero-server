@@ -7,11 +7,15 @@
 //! `Access-Control-Allow-Credentials: true` beside a reflected origin, since "if
 //! credentials mode is 'include', then Access-Control-Allow-Origin cannot be `*`"
 //! and the `*` of the other allow fields "counts as a wildcard for requests without
-//! credentials" only. An origin is compared as RFC 6454 Section 5 says, "the same
-//! if, and only if, they have identical schemes, hosts, and ports", and the literal
-//! `null` of a privacy-sensitive context matches nothing. When the allowed origin
-//! varies per request the response carries `Vary: Origin` (RFC 9110 Section
-//! 12.5.5).
+//! credentials" only. An `Origin` value counts only when it is a `serialized-origin`
+//! of the Fetch Standard's `Origin` grammar (Section 3.2, which "supplants the
+//! definition in The Web Origin Concept"): lowercase scheme and domain, no path,
+//! query, fragment or user information, and a canonical IPv6 form. Anything else,
+//! the literal `null` of a privacy-sensitive context included, matches no rule, so
+//! it is never reflected. An origin is compared as RFC 6454 Section 5 says, "the
+//! same if, and only if, they have identical schemes, hosts, and ports", which for
+//! two serialized origins is byte equality. When the allowed origin varies per
+//! request the response carries `Vary: Origin` (RFC 9110 Section 12.5.5).
 
 use zero_date::Decimal;
 use zero_http_types::Method;
@@ -19,7 +23,8 @@ use zero_http_types::Method;
 /// Which origins a rule allows.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AllowOrigin {
-    /// Every origin: `*`, or the request's origin reflected when credentials are on.
+    /// Every serialized origin: `*`, or the request's origin reflected when
+    /// credentials are on.
     Any,
     /// These serialized origins exactly, scheme, host and port.
     List(Vec<Vec<u8>>),
@@ -80,39 +85,117 @@ pub enum Decision {
     Allowed(Vec<Field>),
 }
 
-/// Whether `origin` is a serialized origin of RFC 6454 Section 6.2,
-/// `scheme "://" host [ ":" port ]`, which the literal `null` is not.
+/// Whether `origin` is a `serialized-origin` of the Fetch Standard's `Origin`
+/// grammar, `serialized-scheme "://" serialized-host [ ":" serialized-port ]`,
+/// which the literal `null` is not.
+///
+/// @see <https://fetch.spec.whatwg.org/#origin-header>
 fn is_serialized_origin(origin: &[u8]) -> bool {
-    let Some(at) = origin.windows(3).position(|window| window == b"://") else {
+    let Some(colon) = origin.iter().position(|&byte| byte == b':') else {
         return false;
     };
-    let scheme = origin.get(..at).unwrap_or(&[]);
-    let rest = origin.get(at.saturating_add(3)..).unwrap_or(&[]);
-    let scheme_ok = scheme.first().is_some_and(u8::is_ascii_alphabetic)
-        && scheme
-            .iter()
-            .all(|&byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'-' | b'.'));
-    if !scheme_ok || rest.is_empty() {
+    let (scheme, rest) = origin.split_at(colon);
+    let Some(rest) = rest.strip_prefix(b"://") else {
+        return false;
+    };
+    if !is_serialized_scheme(scheme) {
         return false;
     }
-    let (host, port) = match rest.iter().rposition(|&byte| byte == b':') {
-        Some(colon)
-            if !rest.get(..colon).unwrap_or(&[]).ends_with(b"]")
-                || rest.contains(&b'[') && rest.get(colon..).is_some_and(|tail| tail.len() > 1) =>
-        {
-            let tail = rest.get(colon.saturating_add(1)..).unwrap_or(&[]);
-            if rest.starts_with(b"[") && !rest.get(..colon).unwrap_or(&[]).ends_with(b"]") {
-                (rest, &[][..])
-            } else {
-                (rest.get(..colon).unwrap_or(&[]), tail)
+    let tail = match rest.strip_prefix(b"[") {
+        Some(inner) => {
+            let Some(close) = inner.iter().position(|&byte| byte == b']') else {
+                return false;
+            };
+            let (address, tail) = inner.split_at(close);
+            if !is_serialized_ipv6(address) {
+                return false;
+            }
+            tail.get(1..).unwrap_or(&[])
+        }
+        None => {
+            let end = rest
+                .iter()
+                .position(|&byte| byte == b':')
+                .unwrap_or(rest.len());
+            let (domain, tail) = rest.split_at(end);
+            if !is_serialized_domain(domain) {
+                return false;
+            }
+            tail
+        }
+    };
+    match tail.strip_prefix(b":") {
+        None => tail.is_empty(),
+        Some(digits) => (1..=5).contains(&digits.len()) && digits.iter().all(u8::is_ascii_digit),
+    }
+}
+
+/// Whether `scheme` is a `serialized-scheme`:
+/// `lower-alpha *( lower-alphanum / "+" / "-" / "." )`.
+///
+/// @see <https://fetch.spec.whatwg.org/#serialized-scheme>
+fn is_serialized_scheme(scheme: &[u8]) -> bool {
+    scheme.first().is_some_and(u8::is_ascii_lowercase)
+        && scheme.iter().all(|&byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'+' | b'-' | b'.')
+        })
+}
+
+/// Whether `domain` is a `serialized-domain`: dot-separated `domain-label`s of
+/// lowercase letters, digits and inner hyphens. Every `serialized-ipv4` has this
+/// form too, so this also accepts the IPv4 alternative of `serialized-host`.
+///
+/// @see <https://fetch.spec.whatwg.org/#serialized-domain>
+fn is_serialized_domain(domain: &[u8]) -> bool {
+    let edge = |byte: Option<&u8>| {
+        byte.is_some_and(|&byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+    };
+    domain.split(|&byte| byte == b'.').all(|label| {
+        edge(label.first())
+            && edge(label.last())
+            && label
+                .iter()
+                .all(|&byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    })
+}
+
+/// Whether `address` is a `serialized-ipv6`: eight `h16` groups, or at most six
+/// around one `::`, each `"0"` or a lowercase hexadecimal number without leading
+/// zeros, so the least significant groups are never an IPv4 address.
+///
+/// @see <https://fetch.spec.whatwg.org/#serialized-ipv6>
+fn is_serialized_ipv6(address: &[u8]) -> bool {
+    let h16 = |group: &[u8]| {
+        group == b"0"
+            || (group.len() <= 4
+                && matches!(group.first(), Some(b'1'..=b'9' | b'a'..=b'f'))
+                && group
+                    .iter()
+                    .all(|&byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')))
+    };
+    let groups = |part: &[u8]| -> Option<usize> {
+        if part.is_empty() {
+            return Some(0);
+        }
+        let mut count = 0usize;
+        for group in part.split(|&byte| byte == b':') {
+            if !h16(group) {
+                return None;
+            }
+            count = count.saturating_add(1);
+        }
+        Some(count)
+    };
+    match address.windows(2).position(|pair| pair == b"::") {
+        None => groups(address) == Some(8),
+        Some(at) => {
+            let (before, after) = address.split_at(at);
+            match (groups(before), groups(after.get(2..).unwrap_or(&[]))) {
+                (Some(before), Some(after)) => before.saturating_add(after) <= 6,
+                _ => false,
             }
         }
-        _ => (rest, &[][..]),
-    };
-    if host.is_empty() || host.contains(&b'/') || host.contains(&b' ') {
-        return false;
     }
-    port.is_empty() || (port.len() <= 5 && port.iter().all(u8::is_ascii_digit))
 }
 
 /// The members of a `#field-name` or `#method` list, trimmed, empty ones dropped.
@@ -145,11 +228,23 @@ fn join(list: &[Vec<u8>]) -> Vec<u8> {
 }
 
 impl Cors {
-    /// Whether `origin` is allowed; the literal `null` never is, nor anything that
-    /// is not a serialized origin.
+    /// Whether `origin` is allowed. A value that is not a `serialized-origin` of
+    /// the Fetch Standard's `Origin` grammar, the literal `null` included, is
+    /// allowed by no rule, [`AllowOrigin::Any`] with credentials included, so it is
+    /// never reflected.
+    ///
+    /// # Arguments
+    ///
+    /// * `origin` - the `Origin` field value.
+    ///
+    /// # Returns
+    ///
+    /// Whether the rule allows the origin.
+    ///
+    /// @see <https://fetch.spec.whatwg.org/#origin-header>
     #[must_use]
     pub fn allows(&self, origin: &[u8]) -> bool {
-        if origin == b"null" || !is_serialized_origin(origin) {
+        if !is_serialized_origin(origin) {
             return false;
         }
         match &self.allow_origin {

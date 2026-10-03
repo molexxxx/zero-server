@@ -165,6 +165,43 @@ mod tests {
     }
 
     #[test]
+    fn a_semicolon_or_comma_inside_a_quoted_string_forwarded_value_belongs_to_the_value_not_the_element_list(
+    ) {
+        // RFC 7239 Section 4: value = token / quoted-string; RFC 9110 Section 5.6.4:
+        // a recipient handles a quoted-pair as the octet after the backslash.
+        let semicolon = parse(b"for=192.0.2.43;host=\"a;b\"");
+        assert_eq!(semicolon.len(), 1);
+        assert_eq!(
+            semicolon[0].for_node.as_ref().and_then(Node::ip),
+            Some(v4(192, 0, 2, 43))
+        );
+        assert_eq!(semicolon[0].host.as_deref(), Some(&b"a;b"[..]));
+
+        let nested = parse(b"for=192.0.2.43;ext=\"for=192.0.2.43;host=\\\"a;b\\\"\"");
+        assert_eq!(nested.len(), 1);
+        assert_eq!(
+            nested[0].for_node.as_ref().and_then(Node::ip),
+            Some(v4(192, 0, 2, 43))
+        );
+        assert_eq!(nested[0].host, None);
+
+        let comma = parse(b"for=192.0.2.43;host=\"a,b\", for=198.51.100.17");
+        assert_eq!(comma.len(), 2);
+        assert_eq!(comma[0].host.as_deref(), Some(&b"a,b"[..]));
+        assert_eq!(
+            comma[1].for_node.as_ref().and_then(Node::ip),
+            Some(v4(198, 51, 100, 17))
+        );
+
+        let escaped = parse(b"for=\"192.0.2.\\43\"");
+        assert_eq!(
+            escaped[0].for_node.as_ref().and_then(Node::ip),
+            Some(v4(192, 0, 2, 43))
+        );
+        assert!(parse(b"for=\"_hid\\den\"").is_empty());
+    }
+
+    #[test]
     fn the_first_for_value_is_the_originating_client_and_later_values_are_successive_proxies() {
         // RFC 7239 Section 5.2, with the proxy at 203.0.113.60 trusted.
         let trust = TrustProxy::new(vec![(v4(203, 0, 113, 60), 32)]);
@@ -275,6 +312,69 @@ mod tests {
             Cors::default().decide(Some(Method::Get), Some(b"null"), None, None),
             Decision::Refused { preflight: false }
         );
+    }
+
+    #[test]
+    fn an_origin_value_that_is_not_a_fetch_section_3_2_serialized_origin_is_never_allowed_or_reflected(
+    ) {
+        // Fetch Section 3.2: serialized-origin = serialized-scheme "://"
+        // serialized-host [ ":" serialized-port ], all lowercase, no path.
+        let reflecting = Cors {
+            credentials: true,
+            ..Cors::default()
+        };
+        for origin in [
+            &b"https://a?b"[..],
+            b"fhttps://a?b",
+            b"https://a#b",
+            b"https://a/",
+            b"https://user@a",
+            b"https://a b",
+            b"HTTPS://a",
+            b"https://A",
+            b"https://-a",
+            b"https://a-",
+            b"https://a..b",
+            b"https://",
+            b"https://a:",
+            b"https://a:123456",
+            b"https://a:8x",
+            b"https://[::ffff:192.0.2.1]",
+            b"https://[2001:DB8::1]",
+            b"https://[2001:db8:0:0:0:0:0:01]",
+            b"https://[2001:db8::0:0:0:0:1]",
+            b"https://[1::2::3]",
+            b"https://[2001:db8::1",
+            b"null",
+        ] {
+            assert!(
+                !reflecting.allows(origin),
+                "{}",
+                String::from_utf8_lossy(origin)
+            );
+            assert_eq!(
+                reflecting.decide(Some(Method::Get), Some(origin), None, None),
+                Decision::Refused { preflight: false },
+                "{}",
+                String::from_utf8_lossy(origin)
+            );
+        }
+        for origin in [
+            &b"https://a"[..],
+            b"https://a.b-c.d:443",
+            b"web+app.x-1://h0st",
+            b"http://192.0.2.1:8080",
+            b"https://[2001:db8::1]",
+            b"https://[::]:1",
+            b"https://[1:2:3:4:5:6:7:8]",
+            b"https://[1::7:8]",
+        ] {
+            assert!(
+                reflecting.allows(origin),
+                "{}",
+                String::from_utf8_lossy(origin)
+            );
+        }
     }
 
     #[test]

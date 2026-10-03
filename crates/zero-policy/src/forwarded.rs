@@ -141,7 +141,18 @@ pub struct Element<'a> {
 
 /// The members of a comma-separated list, outside quoted strings, each trimmed.
 fn list_members(value: &[u8]) -> Vec<&[u8]> {
-    let mut members = Vec::new();
+    split_unquoted(value, b',')
+}
+
+/// The parts of `value` between the `separator` octets that sit outside quoted
+/// strings, each trimmed. A quoted-string runs from one `"` to the next one that
+/// no backslash escapes (RFC 9110 Section 5.6.4), so a `,` or `;` inside one, as
+/// in `host="a;b"` or `ext="a\";b"`, belongs to its value (RFC 7239 Section 4).
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc7239.html#section-4>
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.4>
+fn split_unquoted(value: &[u8], separator: u8) -> Vec<&[u8]> {
+    let mut parts = Vec::new();
     let mut start = 0usize;
     let mut quoted = false;
     let mut escaped = false;
@@ -154,19 +165,15 @@ fn list_members(value: &[u8]) -> Vec<&[u8]> {
                 b'"' => quoted = false,
                 _ => {}
             }
-        } else {
-            match byte {
-                b'"' => quoted = true,
-                b',' => {
-                    members.push(trim(value.get(start..index).unwrap_or(&[])));
-                    start = index.saturating_add(1);
-                }
-                _ => {}
-            }
+        } else if byte == b'"' {
+            quoted = true;
+        } else if byte == separator {
+            parts.push(trim(value.get(start..index).unwrap_or(&[])));
+            start = index.saturating_add(1);
         }
     }
-    members.push(trim(value.get(start..).unwrap_or(&[])));
-    members
+    parts.push(trim(value.get(start..).unwrap_or(&[])));
+    parts
 }
 
 fn trim(bytes: &[u8]) -> &[u8] {
@@ -232,32 +239,35 @@ const fn is_tchar(byte: u8) -> bool {
         )
 }
 
-/// One element's pairs; `None` when a parameter repeats or a pair is malformed,
-/// which makes the element invalid as a whole.
+/// One element's pairs, separated by the semicolons outside quoted strings (RFC
+/// 7239 Section 4); `None` when a parameter repeats or a pair is malformed, which
+/// makes the element invalid as a whole.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc7239.html#section-4>
 fn element(member: &[u8]) -> Option<Element<'_>> {
     let mut out = Element::default();
     let mut seen_for = false;
     let mut seen_by = false;
-    for pair in member.split(|&byte| byte == b';') {
-        let pair = trim(pair);
+    for pair in split_unquoted(member, b';') {
         if pair.is_empty() {
             continue;
         }
         let at = pair.iter().position(|&byte| byte == b'=')?;
         let name = trim(pair.get(..at)?);
-        let value = unquote(trim(pair.get(at.checked_add(1)?..)?))?;
+        let raw = trim(pair.get(at.checked_add(1)?..)?);
+        let value = unquote(raw)?;
         if name.eq_ignore_ascii_case(b"for") {
             if seen_for {
                 return None;
             }
             seen_for = true;
-            out.for_node = Some(parse_owned_node(member, pair, &value)?);
+            out.for_node = Some(node(raw, &value)?);
         } else if name.eq_ignore_ascii_case(b"by") {
             if seen_by {
                 return None;
             }
             seen_by = true;
-            out.by = Some(parse_owned_node(member, pair, &value)?);
+            out.by = Some(node(raw, &value)?);
         } else if name.eq_ignore_ascii_case(b"host") {
             if out.host.is_some() {
                 return None;
@@ -273,21 +283,39 @@ fn element(member: &[u8]) -> Option<Element<'_>> {
     Some(out)
 }
 
-/// A node from an unquoted value, borrowed from the field; a quoted one with
-/// escapes is rare enough to be parsed from the original quoted text when it has
-/// none, and refused otherwise.
-fn parse_owned_node<'a>(member: &'a [u8], pair: &'a [u8], value: &[u8]) -> Option<Node<'a>> {
-    let at = pair.iter().position(|&byte| byte == b'=')?;
-    let raw = trim(pair.get(at.checked_add(1)?..)?);
-    let borrowed = match raw.strip_prefix(b"\"") {
+/// The node a pair's value names, from the value as it sits in the field (`raw`)
+/// and with its quoting undone (`value`).
+///
+/// A value without quoted-pairs is parsed where it sits, so an obfuscated
+/// identifier borrows the field. One with quoted-pairs is parsed with them resolved
+/// (RFC 9110 Section 5.6.4) when it names an address or `unknown`. An obfuscated
+/// identifier or port written with quoted-pairs is refused: its octets do not sit
+/// in the field in that order, so it has nothing to borrow, and no sender needs a
+/// quoted-pair there, since Section 5.6.4 says one "SHOULD NOT" be generated except
+/// for `"` and `\`, which an identifier never holds (RFC 7239 Section 6.3).
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.4>
+/// @see <https://www.rfc-editor.org/rfc/rfc7239.html#section-6.3>
+fn node<'a>(raw: &'a [u8], value: &[u8]) -> Option<Node<'a>> {
+    let inner = match raw.strip_prefix(b"\"") {
         Some(inner) => inner.strip_suffix(b"\"")?,
         None => raw,
     };
-    if borrowed != value {
-        return None;
+    if inner == value {
+        return Node::parse(inner);
     }
-    let _ = member;
-    Node::parse(borrowed)
+    let node = Node::parse(value)?;
+    let name = match node.name {
+        NodeName::Ip(ip) => NodeName::Ip(ip),
+        NodeName::Unknown => NodeName::Unknown,
+        NodeName::Obfuscated(_) => return None,
+    };
+    let port = match node.port {
+        None => None,
+        Some(Port::Number(number)) => Some(Port::Number(number)),
+        Some(Port::Obfuscated(_)) => return None,
+    };
+    Some(Node { name, port })
 }
 
 /// Parses a `Forwarded` field value into its elements, first proxy first; an
