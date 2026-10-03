@@ -1034,7 +1034,7 @@ evidence = "crates/zero-tls/src/lib.rs"
 at = "fn on_tls_1_2_a_clienthello_without_the_extended_main_secret_extension_is"
 anchor = "rule"
 release = 1
-note = "RFC 9325 Section 3.5; RFC 7627 Section 5.2; RFC 9846 Appendix D"
+note = "RFC 9325 Section 3.5; RFC 9846 Appendix D, which carries the Extended Master Secret of TLS 1.2 and earlier forward"
 
 [[entry]]
 key = "tls-07"
