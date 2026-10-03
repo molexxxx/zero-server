@@ -95,7 +95,7 @@ jobs:
           cargo test -p zero-http --features io-compio
           cargo test -p zero-bench --features io-compio
 
-      # The shipped graph carries no completion-backend crate (DESIGN.md section 5.3):
+      # The shipped graph carries no completion-backend crate: io-compio is opt-in, so
       # the default build's dependency tree names none of them.
       - name: No compio crate in the default graph
         run: |
