@@ -27,8 +27,11 @@ on:
         required: true
         type: string
 
+# Listing this commit's workflow runs (the last step) needs actions: read; a caller
+# grants it, since a called workflow can only narrow the token it receives.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   preflight:

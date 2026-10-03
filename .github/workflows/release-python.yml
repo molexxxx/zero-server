@@ -17,6 +17,10 @@ permissions:
 jobs:
   preflight:
     uses: ./.github/workflows/release-preflight.yml
+    # The preflight lists this commit's workflow runs, which needs actions: read.
+    permissions:
+      contents: read
+      actions: read
     with:
       version: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
 
