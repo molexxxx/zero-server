@@ -57,12 +57,16 @@ const LOADER_SITES: [(&str, &str); 2] = [
 /// manifest is rewritten to it, the cargo and npm lockfiles are refreshed, the
 /// generated Node loader is updated, and the check runs. With `--check`, every
 /// version-bearing file is read and compared with the workspace version in the
-/// spelling that file uses, and with `expected` also with that.
+/// spelling that file uses; with a version after `--check`, also with that, and
+/// the CHANGELOG entry of that version must carry its release date.
 pub fn run(args: &[String]) -> ExitCode {
     let root = repo_root();
     let result = match args.first().map(String::as_str) {
         None => current().map(|version| println!("{version}")),
-        Some("--check") => check(&root, args.get(1).map(String::as_str)),
+        Some("--check") => {
+            let expected = args.get(1).map(String::as_str);
+            check(&root, expected, expected.is_some())
+        }
         Some(flag) if flag.starts_with('-') => Err(format!("unknown flag {flag}; usage: {USAGE}")),
         Some(version) => bump(&root, version),
     };
@@ -233,8 +237,14 @@ fn workspace_version(root: &Path) -> Result<String, String> {
 }
 
 /// Compare every version-bearing file of the tree at `root` with its workspace
-/// version, each in the spelling that file uses, listing each disagreement.
-fn check(root: &Path, expected: Option<&str>) -> Result<(), String> {
+/// version, each in the spelling that file uses, listing each disagreement. A
+/// `release` check, the one the release workflows run with the tag's version,
+/// also requires the CHANGELOG entry of that version to carry its release date,
+/// `## [<version>] - YYYY-MM-DD` as Keep a Changelog writes it, so an entry still
+/// marked unreleased cannot ship.
+///
+/// @see <https://keepachangelog.com/en/1.1.0/>
+fn check(root: &Path, expected: Option<&str>, release: bool) -> Result<(), String> {
     let version = workspace_version(root)?;
     parse(&version).map_err(|err| format!("Cargo.toml: workspace.package.version: {err}"))?;
     let mut problems = Vec::new();
@@ -259,9 +269,16 @@ fn check(root: &Path, expected: Option<&str>) -> Result<(), String> {
         }
     }
 
-    let changelog = root.join("CHANGELOG.md");
-    if !read(&changelog)?.contains(&format!("## [{version}]")) {
-        problems.push(format!("CHANGELOG.md: no `## [{version}]` entry"));
+    let changelog = read(&root.join("CHANGELOG.md"))?;
+    let heading = format!("## [{version}]");
+    match changelog.lines().find(|line| line.starts_with(&heading)) {
+        None => problems.push(format!("CHANGELOG.md: no `{heading}` entry")),
+        Some(line) if release && !is_dated(line.get(heading.len()..).unwrap_or_default()) => {
+            problems.push(format!(
+                "CHANGELOG.md: the `{heading}` entry has no release date; write `{heading} - YYYY-MM-DD`"
+            ));
+        }
+        Some(_) => {}
     }
 
     if problems.is_empty() {
@@ -274,6 +291,29 @@ fn check(root: &Path, expected: Option<&str>) -> Result<(), String> {
             problems.join("\n  ")
         ))
     }
+}
+
+/// Whether the rest of a CHANGELOG heading after `## [<version>]` is ` - YYYY-MM-DD`
+/// with a month from 01 to 12 and a day from 01 to 31.
+fn is_dated(rest: &str) -> bool {
+    let Some(date) = rest.strip_prefix(" - ") else {
+        return false;
+    };
+    let date = date.trim_end();
+    let bytes = date.as_bytes();
+    let digits = |range: std::ops::Range<usize>| {
+        bytes
+            .get(range)
+            .filter(|part| part.iter().all(u8::is_ascii_digit))
+            .and_then(|part| std::str::from_utf8(part).ok())
+            .and_then(|part| part.parse::<u32>().ok())
+    };
+    bytes.len() == 10
+        && bytes.get(4) == Some(&b'-')
+        && bytes.get(7) == Some(&b'-')
+        && digits(0..4).is_some()
+        && digits(5..7).is_some_and(|month| (1..=12).contains(&month))
+        && digits(8..10).is_some_and(|day| (1..=31).contains(&day))
 }
 
 /// Rewrite every manifest of the tree at `root` to `new`, each in its own spelling,
@@ -374,7 +414,7 @@ fn bump(root: &Path, new: &str) -> Result<(), String> {
         }
     }
 
-    check(root, Some(new))
+    check(root, Some(new), false)
 }
 
 /// Read every version-bearing file of the tree at `root`.
@@ -1641,6 +1681,61 @@ mod tests {
         )
         .unwrap();
         assert!(readings.is_empty());
+    }
+
+    #[test]
+    fn a_release_check_requires_the_changelog_entry_dated_and_a_plain_check_does_not() {
+        let root =
+            std::env::temp_dir().join(format!("zero-server-version-dated-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        fs::write(
+            root.join("Cargo.toml"),
+            "[workspace.package]\nversion = \"2.0.0-alpha.1\"\n",
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("docs/about")).unwrap();
+        fs::write(
+            root.join("README.md"),
+            "cargo add zero-server@2.0.0-alpha.1\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/about/releasing.md"),
+            "cargo xtask version 2.0.0-alpha.1\n",
+        )
+        .unwrap();
+        let checked = |changelog: &str, release: bool| {
+            fs::write(root.join("CHANGELOG.md"), changelog).unwrap();
+            let expected = release.then_some("2.0.0-alpha.1");
+            check(&root, expected, release)
+        };
+        let undated = "# Changelog\n\n## [2.0.0-alpha.1] - Unreleased\n";
+        let dated = "# Changelog\n\n## [2.0.0-alpha.1] - 2026-10-03\n";
+        let results = [
+            checked(undated, false),
+            checked(undated, true),
+            checked(dated, true),
+            checked("## [2.0.0-alpha.1] - 2026-13-03\n", true),
+            checked("## [2.0.0-alpha.1] - 2026-10-3\n", true),
+            checked("## [2.0.0-alpha.10] - 2026-10-03\n", true),
+        ];
+        fs::remove_dir_all(&root).unwrap();
+        let [plain, release_undated, release_dated, bad_month, short_day, other] = results;
+        plain.expect("development carries an undated entry");
+        let problem = release_undated.unwrap_err();
+        assert!(
+            problem.contains("CHANGELOG.md: the `## [2.0.0-alpha.1]` entry has no release date"),
+            "{problem}"
+        );
+        release_dated.expect("a dated entry passes the release check");
+        assert!(bad_month.is_err());
+        assert!(short_day.is_err());
+        let problem = other.unwrap_err();
+        assert!(
+            problem.contains("no `## [2.0.0-alpha.1]` entry"),
+            "{problem}"
+        );
     }
 
     #[test]
