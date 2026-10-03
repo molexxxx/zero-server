@@ -36,6 +36,10 @@ cargo run -p xtask -- standards --check
 cargo xtask release --dry-run       # resolves every crate against its siblings
 ```
 
+The dry run is one `cargo publish --workspace --dry-run`, which Cargo has
+supported since 1.90; the toolchain `rust-toolchain.toml` names is newer, while
+the crates' `rust-version` of 1.89 only sets what a user needs to build them.
+
 Open that as a pull request labeled `release`, merge it when green, and wait for
 the `rust` job and the three binding jobs to finish on the merge commit. Then
 tag it:
@@ -151,8 +155,11 @@ release. They have no 1.x line, and nothing installs them by tag:
 
 Every release workflow also takes a version by hand, so a run that failed
 partway can be restarted without inventing a new tag. crates.io publishes new
-crates at one per ten minutes, and `cargo xtask release` waits that out and skips
-what is already published, so a rerun continues rather than starting over.
+crates in a burst of five and then one per ten minutes, so the first release of
+the 28 crates spends at least 230 minutes waiting, close to the job's limit.
+`cargo xtask release` waits that out and skips what is already published, so a
+rerun continues rather than starting over: dispatch `release-crates` by hand
+with the same version.
 `release-node` likewise skips a package npm already has at the version, and the
 PyPI and NuGet uploads skip a file the registry already holds.
 
