@@ -9,10 +9,15 @@
 //! a binding), so pinning on Apple platforms, and on every other platform this crate
 //! binds no call for, reports unsupported and the caller runs unpinned.
 //!
+//! The CPUs a thread may use are read with `sched_getaffinity(2)` on Linux and, on
+//! Windows, from the process affinity mask of the calling thread's primary group
+//! (`GetProcessAffinityMask`), so a caller can place work inside a restricted set.
+//!
 //! Sources: sched_setaffinity(2) and CPU_SET(3) of the Linux man-pages project and the
 //! pinned libc crate; the Windows binding from the pinned windows-sys crate, with the
-//! return convention (the previous mask, zero on failure) read from Wine's
-//! implementation of the call because the Microsoft reference page was unreachable;
+//! return convention of `SetThreadAffinityMask` (the previous mask, zero on failure)
+//! read from Wine's implementation of the call and that of `GetProcessAffinityMask`
+//! from Microsoft's reference;
 //! Apple's Thread Affinity API release notes,
 //! <https://developer.apple.com/library/archive/releasenotes/Performance/RN-AffinityAPI/index.html>.
 
@@ -153,6 +158,64 @@ pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
     } else {
         Ok(())
     }
+}
+
+/// The processors the calling thread may run on, in ascending order: the process
+/// affinity mask of the calling thread's primary processor group, which a job object,
+/// `start /affinity` or a parent's mask restricts.
+///
+/// # Returns
+///
+/// The indices.
+///
+/// # Errors
+///
+/// `Unsupported` when the process has threads in several processor groups, which the
+/// call reports as an empty mask, else the operating system's error.
+///
+/// @see <https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getprocessaffinitymask>
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn current_thread_cpus() -> io::Result<Vec<usize>> {
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetProcessAffinityMask};
+
+    let mut process: usize = 0;
+    let mut system: usize = 0;
+    // SAFETY: returns the pseudo handle of the calling process, which needs no closing;
+    // no preconditions.
+    let handle = unsafe { GetCurrentProcess() };
+    // SAFETY: `handle` is the calling process's pseudo handle, which carries every
+    // access right, and both out pointers name locals on this frame for the call.
+    let ok = unsafe { GetProcessAffinityMask(handle, &mut process, &mut system) };
+    if ok == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    if process == 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "the process runs in several processor groups",
+        ));
+    }
+    Ok((0..usize::BITS as usize)
+        .filter(|&cpu| process >> cpu & 1 == 1)
+        .collect())
+}
+
+/// The CPUs the calling thread may run on.
+///
+/// # Returns
+///
+/// Never: this crate binds no affinity call on this platform.
+///
+/// # Errors
+///
+/// `Unsupported`, always.
+#[cfg(not(any(target_os = "linux", windows)))]
+pub fn current_thread_cpus() -> io::Result<Vec<usize>> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "thread affinity is not available on this platform",
+    ))
 }
 
 /// Pin the calling thread to `cpus`.

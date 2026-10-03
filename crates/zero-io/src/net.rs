@@ -26,7 +26,8 @@ pub struct ListenConfig {
     /// `TCP_FASTOPEN` (Linux): the queue length for connections carrying data in the
     /// SYN.
     pub fastopen: Option<u32>,
-    /// `SO_INCOMING_CPU` (Linux): steer each core's listener to its own CPU.
+    /// `SO_INCOMING_CPU` (Linux): steer each core's listener to the CPU its worker
+    /// runs on.
     pub incoming_cpu: bool,
     /// `TCP_NODELAY` on every accepted socket.
     pub nodelay: bool,
@@ -55,28 +56,47 @@ pub(crate) const fn per_core_listeners(config: &ListenConfig) -> bool {
     cfg!(target_os = "linux") && !config.handoff
 }
 
+/// The CPU each of `count` workers runs on: worker `i` takes the `i`-th of the CPUs
+/// the starting thread may use, wrapping around when there are more workers than
+/// CPUs, so a process confined to a CPU set (`taskset`, `docker run --cpuset-cpus`, a
+/// Kubernetes CPU manager, a Windows job object) places its workers inside that set.
+/// Every entry is `None` when the set cannot be read, and the workers then run
+/// unpinned.
+pub(crate) fn worker_cpus(count: usize) -> Vec<Option<usize>> {
+    match zero_sys::affinity::current_thread_cpus() {
+        Ok(allowed) if !allowed.is_empty() => allowed
+            .iter()
+            .copied()
+            .map(Some)
+            .cycle()
+            .take(count)
+            .collect(),
+        _ => vec![None; count],
+    }
+}
+
 /// A listening socket at `addr`, non-blocking, ready for a backend.
 ///
 /// # Arguments
 ///
 /// * `addr` - where to listen; port 0 picks one.
 /// * `config` - the options.
-/// * `core` - the core the listener belongs to, for `SO_INCOMING_CPU`.
+/// * `cpu` - the CPU of the worker the listener belongs to, for `SO_INCOMING_CPU`.
 pub(crate) fn bind_listener(
     addr: SocketAddr,
     config: &ListenConfig,
-    core: usize,
+    cpu: usize,
 ) -> io::Result<std::net::TcpListener> {
     let socket = Socket::new(Domain::for_address(addr), Type::STREAM, Some(Protocol::TCP))?;
     #[cfg(target_os = "linux")]
     {
         zero_sys::sockopt::set_reuse_port(&socket, true)?;
         if config.incoming_cpu {
-            zero_sys::sockopt::set_incoming_cpu(&socket, core)?;
+            zero_sys::sockopt::set_incoming_cpu(&socket, cpu)?;
         }
     }
     #[cfg(not(target_os = "linux"))]
-    let _ = core;
+    let _ = cpu;
     #[cfg(windows)]
     zero_sys::sockopt::set_exclusive_address_use(&socket, true)?;
     socket.bind(&addr.into())?;

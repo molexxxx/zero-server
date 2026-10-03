@@ -28,8 +28,10 @@ pub struct Config {
     /// How many cores to run; 0 means one per logical CPU
     /// (`std::thread::available_parallelism`).
     pub threads: usize,
-    /// Pin each worker to its CPU where the platform allows; a platform without a
-    /// pinning call runs unpinned.
+    /// Pin each worker to a CPU where the platform allows: worker `i` to the `i`-th
+    /// of the CPUs the starting thread may run on, wrapping around, so a process
+    /// confined to a CPU set keeps its workers inside it. A platform without a
+    /// pinning call, or whose allowed set cannot be read, runs unpinned.
     pub pin: bool,
     /// The listener options.
     pub listen: ListenConfig,
@@ -61,7 +63,7 @@ impl Default for Config {
 pub struct Core {
     index: usize,
     count: usize,
-    pinned: bool,
+    cpu: Option<usize>,
     /// This core's receive-buffer pool.
     pub pool: Rc<Pool>,
     /// This core's `Date` block.
@@ -110,7 +112,14 @@ impl Core {
     /// Whether this worker is pinned to its CPU.
     #[must_use]
     pub const fn pinned(&self) -> bool {
-        self.pinned
+        self.cpu.is_some()
+    }
+
+    /// The CPU this worker is pinned to: the `index`-th of the CPUs the process may
+    /// run on, wrapping around, or `None` when it runs unpinned.
+    #[must_use]
+    pub const fn cpu(&self) -> Option<usize> {
+        self.cpu
     }
 
     /// The shutdown signal.
@@ -268,7 +277,9 @@ where
     } else {
         config.threads
     };
-    let first = net::bind_listener(addr, &config.listen, 0)?;
+    let cpus = net::worker_cpus(count);
+    let listener_cpu = |index: usize| cpus.get(index).copied().flatten().unwrap_or(index);
+    let first = net::bind_listener(addr, &config.listen, listener_cpu(0))?;
     let bound = first.local_addr()?;
     let shutdown = ShutdownHandle::new();
     let config = Arc::new(config);
@@ -278,7 +289,11 @@ where
     if net::per_core_listeners(&config.listen) {
         seeds.push(Seed::Own(first));
         for index in 1..count {
-            seeds.push(Seed::Own(net::bind_listener(bound, &config.listen, index)?));
+            seeds.push(Seed::Own(net::bind_listener(
+                bound,
+                &config.listen,
+                listener_cpu(index),
+            )?));
         }
     } else {
         let (senders, receivers): (Vec<_>, Vec<_>) =
@@ -304,9 +319,10 @@ where
         let config = Arc::clone(&config);
         let per_core = Arc::clone(&per_core);
         let signal = shutdown.clone();
+        let cpu = cpus.get(index).copied().flatten();
         let spawned = thread::Builder::new()
             .name(format!("zero-core-{index}"))
-            .spawn(move || worker(index, count, seed, &config, &*per_core, signal));
+            .spawn(move || worker(index, count, cpu, seed, &config, &*per_core, signal));
         match spawned {
             Ok(handle) => threads.push(handle),
             Err(err) => {
@@ -355,6 +371,7 @@ where
 fn worker<F, Fut>(
     index: usize,
     count: usize,
+    cpu: Option<usize>,
     seed: Seed,
     config: &Config,
     per_core: &F,
@@ -368,7 +385,8 @@ where
         .enable_io()
         .enable_time()
         .build()?;
-    let pinned = config.pin && zero_sys::affinity::pin_current_thread(&[index]).is_ok();
+    let cpu =
+        cpu.filter(|&cpu| config.pin && zero_sys::affinity::pin_current_thread(&[cpu]).is_ok());
     let local = tokio::task::LocalSet::new();
     let outcome = local.block_on(&runtime, async {
         let pool = Rc::new(Pool::new(config.receive_block, config.memory_budget));
@@ -376,7 +394,7 @@ where
         let core = Core {
             index,
             count,
-            pinned,
+            cpu,
             pool,
             date: Rc::clone(&date),
             shutdown: shutdown.clone(),

@@ -27,8 +27,10 @@ pub struct Config {
     /// How many cores to run; 0 means one per logical CPU
     /// (`std::thread::available_parallelism`).
     pub threads: usize,
-    /// Pin each worker to its CPU where the platform allows; a platform without a
-    /// pinning call runs unpinned.
+    /// Pin each worker to a CPU where the platform allows: worker `i` to the `i`-th
+    /// of the CPUs the starting thread may run on, wrapping around, so a process
+    /// confined to a CPU set keeps its workers inside it. A platform without a
+    /// pinning call, or whose allowed set cannot be read, runs unpinned.
     pub pin: bool,
     /// The listener options.
     pub listen: ListenConfig,
@@ -60,7 +62,7 @@ impl Default for Config {
 pub struct Core {
     index: usize,
     count: usize,
-    pinned: bool,
+    cpu: Option<usize>,
     /// This core's receive-buffer pool.
     pub pool: Rc<Pool>,
     /// This core's `Date` block.
@@ -74,7 +76,7 @@ impl std::fmt::Debug for Core {
         f.debug_struct("Core")
             .field("index", &self.index)
             .field("count", &self.count)
-            .field("pinned", &self.pinned)
+            .field("cpu", &self.cpu)
             .field("io_uring", &self.handle.is_io_uring())
             .finish_non_exhaustive()
     }
@@ -96,7 +98,14 @@ impl Core {
     /// Whether this worker is pinned to its CPU.
     #[must_use]
     pub const fn pinned(&self) -> bool {
-        self.pinned
+        self.cpu.is_some()
+    }
+
+    /// The CPU this worker is pinned to: the `index`-th of the CPUs the process may
+    /// run on, wrapping around, or `None` when it runs unpinned.
+    #[must_use]
+    pub const fn cpu(&self) -> Option<usize> {
+        self.cpu
     }
 
     /// The shutdown signal.
@@ -250,7 +259,9 @@ where
     } else {
         config.threads
     };
-    let first = net::bind_listener(addr, &config.listen, 0)?;
+    let cpus = net::worker_cpus(count);
+    let listener_cpu = |index: usize| cpus.get(index).copied().flatten().unwrap_or(index);
+    let first = net::bind_listener(addr, &config.listen, listener_cpu(0))?;
     let bound = first.local_addr()?;
     let shutdown = ShutdownHandle::new();
     let config = Arc::new(config);
@@ -260,7 +271,11 @@ where
     if net::per_core_listeners(&config.listen) {
         seeds.push(Seed::Own(first));
         for index in 1..count {
-            seeds.push(Seed::Own(net::bind_listener(bound, &config.listen, index)?));
+            seeds.push(Seed::Own(net::bind_listener(
+                bound,
+                &config.listen,
+                listener_cpu(index),
+            )?));
         }
     } else {
         let slots: Vec<Arc<Slot>> = (0..count).map(|_| Arc::new(Slot::default())).collect();
@@ -280,9 +295,10 @@ where
         let config = Arc::clone(&config);
         let per_core = Arc::clone(&per_core);
         let signal = shutdown.clone();
+        let cpu = cpus.get(index).copied().flatten();
         let spawned = thread::Builder::new()
             .name(format!("zero-core-{index}"))
-            .spawn(move || worker(index, count, seed, &config, &*per_core, signal));
+            .spawn(move || worker(index, count, cpu, seed, &config, &*per_core, signal));
         match spawned {
             Ok(handle) => threads.push(handle),
             Err(err) => {
@@ -321,6 +337,7 @@ fn share_listener(
 fn worker<F, Fut>(
     index: usize,
     count: usize,
+    cpu: Option<usize>,
     seed: Seed,
     config: &Config,
     per_core: &F,
@@ -333,7 +350,7 @@ where
     let pool = Rc::new(Pool::new(config.receive_block, config.memory_budget));
     let handle = Handle::new(pool)?;
     executor::enter(&handle);
-    let outcome = run(index, count, seed, config, per_core, shutdown, &handle);
+    let outcome = run(index, count, cpu, seed, config, per_core, shutdown, &handle);
     // Whatever is still queued after the drain goes with the executor: the tasks
     // are dropped first, which cancels their operations and closes their sockets,
     // then the driver.
@@ -343,9 +360,11 @@ where
 }
 
 /// The worker's body, on its thread with the core set.
+#[allow(clippy::too_many_arguments)]
 fn run<F, Fut>(
     index: usize,
     count: usize,
+    cpu: Option<usize>,
     seed: Seed,
     config: &Config,
     per_core: &F,
@@ -356,12 +375,13 @@ where
     F: Fn(Core, Acceptor) -> Fut,
     Fut: Future<Output = io::Result<()>> + 'static,
 {
-    let pinned = config.pin && zero_sys::affinity::pin_current_thread(&[index]).is_ok();
+    let cpu =
+        cpu.filter(|&cpu| config.pin && zero_sys::affinity::pin_current_thread(&[cpu]).is_ok());
     let date = Rc::new(Date::now());
     let core = Core {
         index,
         count,
-        pinned,
+        cpu,
         pool: Rc::clone(&handle.pool),
         date: Rc::clone(&date),
         shutdown: shutdown.clone(),
