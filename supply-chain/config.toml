@@ -267,7 +267,7 @@ version = "1.5.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.libc]]
-version = "0.2.189"
+version = "0.2.190"
 criteria = "safe-to-deploy"
 
 [[exemptions.linux-raw-sys]]
@@ -648,7 +648,7 @@ version = "0.8.4"
 criteria = "safe-to-deploy"
 
 [[exemptions.tokio]]
-version = "1.53.1"
+version = "1.53.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml]]

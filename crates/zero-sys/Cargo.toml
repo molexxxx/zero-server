@@ -18,7 +18,7 @@ zero-core.workspace = true
 # (updated 2026-07-13; `all` unlocks the Linux-only setters it wraps) and windows-sys
 # 0.61.2 (updated 2025-10-06).
 [target.'cfg(unix)'.dependencies]
-libc = { version = "0.2.189", default-features = false }
+libc = { version = "0.2.190", default-features = false }
 socket2 = { version = "0.6.5", default-features = false, features = ["all"] }
 
 [target.'cfg(windows)'.dependencies]

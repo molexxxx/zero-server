@@ -95,9 +95,9 @@ allow = [
     "zero-tls",
     "zero-uri",
     "zero-ws",
-    # Runtime seam, io-tokio. Checked against crates.io on 2026-10-01: none yanked,
-    # each released within the year (tokio 1.53.1 on 2026-07-20, mio 1.2.3 on
-    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.189 on 2026-08-03, bytes
+    # Runtime seam, io-tokio. Checked against crates.io on 2026-10-14: none yanked,
+    # each released within the year (tokio 1.53.3 on 2026-10-13, mio 1.2.3 on
+    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.190 on 2026-10-02, bytes
     # 1.12.1 on 2026-07-08, pin-project-lite 0.2.17 on 2026-02-27, windows-sys
     # 0.61.2 on 2025-10-06, windows-link 0.2.1 as its dependency); libc,
     # pin-project-lite and windows-sys stay on the 0.x lines tokio itself pins.
