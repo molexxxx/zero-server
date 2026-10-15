@@ -20,11 +20,11 @@ zero-http.workspace = true
 zero-limits.workspace = true
 zero-rt.workspace = true
 zero-server-crypto.workspace = true
-# rustls 0.23.45 (released 2026-09-14, checked on crates.io 2026-10-01), without
+# rustls 0.23.46 (released 2026-10-14, checked on crates.io 2026-10-14), without
 # its default `logging`: `std` for the buffered connection API, `aws_lc_rs` for the
 # provider zero-server-crypto already carries, `tls12`, and `prefer-post-quantum`,
 # which only puts X25519MLKEM768 first among the aws-lc-rs key exchange groups.
-rustls = { version = "0.23.45", default-features = false, features = [
+rustls = { version = "0.23.46", default-features = false, features = [
     "std",
     "aws_lc_rs",
     "tls12",

@@ -27,10 +27,10 @@ zero-realtime.workspace = true
 zero-tls.workspace = true
 
 # The HTTPS client of the end-to-end test: the rustls that zero-tls already pins
-# (0.23.45, the stable line on crates.io and not yanked, checked 2026-10-02), with
+# (0.23.46, the stable line on crates.io and not yanked, checked 2026-10-14), with
 # the same features, so the graph gains no crate and no feature.
 [dev-dependencies]
-rustls = { version = "0.23.45", default-features = false, features = [
+rustls = { version = "0.23.46", default-features = false, features = [
     "std",
     "aws_lc_rs",
     "tls12",
