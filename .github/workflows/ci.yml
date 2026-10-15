@@ -438,13 +438,48 @@ jobs:
 
       # A late accessor races slot recycle while traffic runs on the same core; the
       # test is ignored by default because it runs long enough to exercise the race.
+      # cargo exits 0 when a filter matches nothing, so the step also requires the
+      # race test's own ok line.
       - name: Race a late accessor against slot recycle
+        shell: bash
         env:
           RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
           RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
-        run: >
-          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
-          -p zero-rt -- --include-ignored slot_recycle
+        run: |
+          set -o pipefail
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu \
+            -p zero-rt -- --include-ignored slot_recycle 2>&1 | tee race.log
+          grep -E '^test [a-z_]*slot_recycle[a-z_]* \.\.\. ok$' race.log
+
+  loom:
+    name: loom (slot protocol models)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-loom-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      # The models run the slot word, the slot, the intake, the allocator and the
+      # dispatcher's publish step over loom's atomics and mutex. The filter skips every
+      # other zero-rt test, since loom's types panic outside a model, and cargo exits 0
+      # when a filter matches nothing, so the step also requires a nonzero pass count.
+      - name: Run the loom models
+        shell: bash
+        env:
+          RUSTFLAGS: --cfg zero_loom
+          LOOM_MAX_PREEMPTIONS: 3
+        run: |
+          set -o pipefail
+          cargo test -p zero-rt --release --lib loom_ 2>&1 | tee loom.log
+          grep -E '^test result: ok\. [1-9][0-9]* passed' loom.log
 
   fuzz-smoke:
     name: fuzz smoke (60 s per target)
