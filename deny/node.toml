@@ -74,8 +74,8 @@ allow = [
     "windows-link",
     # Node-API glue: napi 3 with the napi6 feature only, its derive macros, the
     # raw symbol table and the build helper (measured with cargo tree on
-    # 2026-09-30 against napi 3.13.0, napi-derive 3.6.9, napi-sys 3.3.2,
-    # napi-build 2.5.0).
+    # 2026-10-14 against napi 3.14.2, napi-derive 3.6.12, napi-sys 3.4.0,
+    # napi-build 2.6.0).
     "napi",
     "napi-build",
     "napi-derive",
@@ -332,6 +332,9 @@ allow-build-scripts = [
     "zero-server-node",
     "napi",
     "napi-build",
+    # napi-sys 3.4.0 gained a build script that only emits cfg(napi_wasi_threads)
+    # for the wasm32-wasip1-threads target (its build.rs, read 2026-10-14).
+    "napi-sys",
     "cbindgen",
     "libc",
     "getrandom",
