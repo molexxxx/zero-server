@@ -422,6 +422,12 @@ impl<T: Payload> Arena<T> {
 
     /// Set the next chunk of the spine; for the worker only.
     ///
+    /// Every new slot's lock is taken and released once before the chunk is
+    /// published. std's mutex on Apple targets and the other pthread platforms
+    /// allocates its pthread mutex on first use, so taking each lock here keeps
+    /// that allocation with the chunk's own and leaves a slot's first request
+    /// allocation-free, as every later one is.
+    ///
     /// # Returns
     ///
     /// The indexes of the new slots, or `None` when the arena holds its limit.
@@ -430,6 +436,10 @@ impl<T: Payload> Arena<T> {
         let first = cell.checked_mul(self.chunk)?;
         let count = self.chunk.min(self.limit.saturating_sub(first));
         let slots: Box<[Slot<T>]> = (0..count).map(|_| Slot::new()).collect();
+        #[cfg(not(zero_loom))]
+        for slot in &*slots {
+            drop(sync::lock_recovered(&slot.payload));
+        }
         self.chunks.get(cell)?.set(slots).ok()?;
         let start = u32::try_from(first).ok()?;
         let end = u32::try_from(first.saturating_add(count)).ok()?;
