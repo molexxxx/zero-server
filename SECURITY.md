@@ -19,8 +19,9 @@ are on an older version, the fix is to upgrade.
 
 On npm, the 1.x versions of `@zero-server/sdk` and `@zero-server/core` are the
 earlier JavaScript framework,
-[zero-server-node](https://github.com/molexxxx/zero-server-node), which
-maintains them; report issues in them there. This core's pre-releases publish
+[zero-server-node](https://github.com/molexxxx/zero-server-node), which is no
+longer maintained: its versions receive no fixes, security fixes included, and
+this core replaces it. This core's pre-releases publish
 to npm under the `next` tag. The `latest` tag of `@zero-server/core` moves to
 this core with 2.0.0, while the `latest` tag of `@zero-server/sdk` stays on the
 1.x line until this core's sdk package is made public.
