@@ -46,6 +46,11 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      # No workspace member enables io-compio, so the run above never compiles the
+      # completion backend; lint it with the feature on, as its tests run below.
+      - name: Clippy the io-compio backend
+        run: cargo clippy -p zero-io --all-targets --no-default-features --features io-compio -- -D warnings
+
       # The audited system crate has Windows and macOS code paths that only compile for
       # those targets, so it is linted for each of them from this runner as well.
       - name: Clippy zero-sys for Windows and macOS
