@@ -2249,6 +2249,7 @@ dependencies = [
  "zero-sse",
  "zero-static",
  "zero-tls",
+ "zero-uri",
  "zero-ws",
 ]
 

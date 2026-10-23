@@ -409,12 +409,12 @@ chapter = "http"
 designation = "RFC 7239"
 body = "IETF"
 subject = "The first `for` value is the originating client and later values are successive proxies, so client IP is taken from the rightmost untrusted hop"
-url = "https://www.rfc-editor.org/rfc/rfc7239.html#section-5.2"
+url = "https://www.rfc-editor.org/rfc/rfc7239.html#section-8.1"
 evidence = "crates/zero-policy/src/lib.rs"
-at = "fn the_first_for_value_is_the_originating_client_and_later_values_are"
+at = "fn the_chain_of_ip_addresses_listed_before_the_request_came_to_the_proxy_cannot_be"
 anchor = "rule"
 release = 1
-note = "RFC 7239 Section 5.2"
+note = "RFC 7239 Section 8.1, the chain of IP addresses listed before the request came to the proxy cannot be trusted, and Section 5.2, the first for parameter discloses the client"
 
 [[entry]]
 key = "routing-27"
@@ -6717,7 +6717,7 @@ note = "RFC 9110 Sections 15.6.4, The server MAY send a Retry-After header field
 [[entry]]
 key = "runtime-22"
 chapter = "runtime"
-designation = "Node.js v22.23.3 Node-API"
+designation = "Node.js v22.23.4 Node-API"
 body = "Node.js"
 subject = "The dispatcher keeps a batch the target refused as full queued on the worker and posts it after the next acknowledgment, since a value is queued only when the call returns napi_ok"
 url = "https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_call_threadsafe_function"

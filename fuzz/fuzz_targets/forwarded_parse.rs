@@ -4,10 +4,12 @@
 //! value quoted (RFC 7239 Section 4) and node identifiers in their Section 6
 //! form, parse to the same elements; a node identifier on its own round-trips
 //! the same way; an untrusted peer is the client and reports no scheme whatever
-//! the fields say (Section 8.1); and a trusted peer's client comes from the first
-//! `for` (Section 5.2) or the first `X-Forwarded-For` address, its scheme
-//! lowercased. A pair's value may be any quoted-string (Section 4), so the
-//! first line's octets that a quoted-string carries, quoted as an extension
+//! the fields say (Section 8.1); a rule reads only the family of fields it names,
+//! so the other family's lines change nothing; a line a proxy adds after the
+//! client's names the client whatever the client's line holds, since the chain is
+//! walked from the right and each line is split on its own (Section 8.1); and a
+//! scheme is lowercased. A pair's value may be any quoted-string (Section 4), so
+//! the first line's octets that a quoted-string carries, quoted as an extension
 //! pair after `for=192.0.2.43`, leave that element and its client in place, and
 //! its octets that a `reg-name` holds unescaped (RFC 3986 Section 3.2.2), quoted
 //! as `host`, parse back unchanged (Section 5.3).
@@ -19,7 +21,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use libfuzzer_sys::fuzz_target;
 use zero_policy::forwarded::parse;
-use zero_policy::{Element, Node, NodeName, Port, TrustProxy};
+use zero_policy::{Element, Forwarding, ForwardingHeader, Node, NodeName, Port, TrustProxy};
 
 /// A node identifier as `nodename [ ":" node-port ]` (RFC 7239 Section 6).
 fn write_node(out: &mut Vec<u8>, node: &Node<'_>) {
@@ -37,20 +39,6 @@ fn write_node(out: &mut Vec<u8>, node: &Node<'_>) {
         }
         None => {}
     }
-}
-
-/// `bytes` without the spaces and horizontal tabs around it (RFC 9110 Section
-/// 5.6.3 `OWS`).
-fn trim_ows(bytes: &[u8]) -> &[u8] {
-    let start = bytes
-        .iter()
-        .position(|&byte| byte != b' ' && byte != b'\t')
-        .unwrap_or(bytes.len());
-    let end = bytes
-        .iter()
-        .rposition(|&byte| byte != b' ' && byte != b'\t')
-        .map_or(start, |last| last + 1);
-    &bytes[start..end]
 }
 
 /// A quoted-string with `"` and `\` escaped.
@@ -111,6 +99,14 @@ fn write_elements(elements: &[Element<'_>]) -> Vec<u8> {
     out
 }
 
+/// Whether a field line belongs to the family `header` names.
+fn in_family(header: ForwardingHeader, name: &[u8]) -> bool {
+    match header {
+        ForwardingHeader::Forwarded => name == b"forwarded",
+        ForwardingHeader::XForwardedFor => name == b"x-forwarded-for" || name == b"x-forwarded-proto",
+    }
+}
+
 fuzz_target!(|data: &[u8]| {
     let mut fields = data.splitn(3, |&byte| byte == b'\n');
     let forwarded = fields.next().unwrap_or_default();
@@ -132,30 +128,57 @@ fuzz_target!(|data: &[u8]| {
         assert_eq!(Node::parse(&written), Some(node));
     }
 
-    let rule = TrustProxy::new(vec![(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 0)), 24)]);
-    let fields = (Some(forwarded), x_forwarded_for, x_forwarded_proto);
-    let outsider = SocketAddr::from(([203, 0, 113, 9], 443));
-    assert_eq!(rule.client(outsider, fields.0, fields.1), outsider.ip());
-    assert_eq!(rule.proto(outsider, fields.0, fields.2), None);
-
-    let proxy = SocketAddr::from(([192, 0, 2, 7], 443));
-    let client = rule.client(proxy, fields.0, fields.1);
-    if client != proxy.ip() {
-        let first_for = elements
-            .iter()
-            .find_map(|element| element.for_node.as_ref())
-            .and_then(Node::ip);
-        let first_listed = x_forwarded_for.and_then(|value| {
-            let member = value
-                .split(|&byte| byte == b',')
-                .map(trim_ows)
-                .find(|member| !member.is_empty())?;
-            std::str::from_utf8(member).ok()?.parse::<IpAddr>().ok()
-        });
-        assert!(Some(client) == first_for || Some(client) == first_listed);
+    let mut lines: Vec<(&[u8], &[u8])> = vec![(b"forwarded", forwarded)];
+    if let Some(value) = x_forwarded_for {
+        lines.push((b"x-forwarded-for", value));
     }
-    if let Some(proto) = rule.proto(proxy, fields.0, fields.2) {
-        assert_eq!(proto, proto.to_ascii_lowercase());
+    if let Some(value) = x_forwarded_proto {
+        lines.push((b"x-forwarded-proto", value));
+    }
+    let listed = TrustProxy::new(vec![(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 0)), 24)]);
+    let rules = [
+        listed.clone(),
+        listed.with_header(ForwardingHeader::Forwarded),
+    ];
+    let outsider = SocketAddr::from(([203, 0, 113, 9], 443));
+    let proxy = SocketAddr::from(([192, 0, 2, 7], 443));
+    let answer = IpAddr::V4(Ipv4Addr::new(198, 51, 100, 17));
+    for rule in &rules {
+        assert_eq!(
+            rule.forwarding(outsider, lines.iter().copied()),
+            Forwarding {
+                client: Some(outsider.ip()),
+                proto: None,
+            }
+        );
+        let all = rule.forwarding(proxy, lines.iter().copied());
+        let own = rule.forwarding(
+            proxy,
+            lines
+                .iter()
+                .copied()
+                .filter(|(name, _)| in_family(rule.header, name)),
+        );
+        assert_eq!(all, own, "the other family changes nothing");
+        if let Some(proto) = &all.proto {
+            assert_eq!(*proto, proto.to_ascii_lowercase());
+        }
+
+        let (name, appended): (&[u8], &[u8]) = match rule.header {
+            ForwardingHeader::Forwarded => (b"forwarded", b"for=198.51.100.17"),
+            ForwardingHeader::XForwardedFor => (b"x-forwarded-for", b"198.51.100.17"),
+        };
+        let client_line = match rule.header {
+            ForwardingHeader::Forwarded => forwarded,
+            ForwardingHeader::XForwardedFor => x_forwarded_for.unwrap_or_default(),
+        };
+        assert_eq!(
+            rule.forwarding(proxy, [(name, client_line), (name, appended)])
+                .client,
+            Some(answer),
+            "a proxy's line after the client's names the client: {:?}",
+            String::from_utf8_lossy(client_line)
+        );
     }
 
     let sender = IpAddr::V4(Ipv4Addr::new(192, 0, 2, 43));
@@ -179,7 +202,13 @@ fuzz_target!(|data: &[u8]| {
         "a quoted-string value keeps its element (RFC 7239 Section 4): {:?}",
         String::from_utf8_lossy(&written)
     );
-    assert_eq!(rule.client(proxy, Some(&written), None), sender);
+    assert_eq!(
+        rules[1]
+            .forwarding(proxy, [(&b"forwarded"[..], written.as_slice())])
+            .client,
+        Some(sender),
+        "a chain of trusted addresses yields its leftmost one"
+    );
 
     let host: Vec<u8> = forwarded
         .iter()

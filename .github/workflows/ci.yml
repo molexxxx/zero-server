@@ -88,6 +88,14 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      # The host crate's hook-driven tests build only with its `testing` feature, and
+      # its refusals of a compiled-out capability only in a build that leaves the
+      # capabilities out, so the workspace run above reaches neither; both run here.
+      - name: Test the host crate with its test hooks and with no capabilities
+        run: |
+          cargo test -p zero-host --features testing
+          cargo test -p zero-host --no-default-features
+
       # The completion backend is a feature of the runtime seam, off in every published
       # default, so the crates that sit on the seam are tested a second time with it on;
       # `rt` resolves to it whenever the feature is on, so the tests above the seam

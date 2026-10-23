@@ -1,15 +1,18 @@
-//! The trust-proxy rule: the client's address, scheme and host as a trusted proxy
-//! reported them in `Forwarded` (RFC 7239) or the `X-Forwarded-*` fields, and the
-//! peer's own address otherwise.
+//! The trust-proxy rule: the client's address and scheme as the trusted proxies in
+//! front of a request report them, in `Forwarded` (RFC 7239) or in
+//! `X-Forwarded-For` and `X-Forwarded-Proto`, and the peer's own address otherwise.
 //!
 //! RFC 7239 Section 8.1: the field "cannot be relied upon to be correct, as it may
-//! be modified ... by every node on the way to the server, including the client",
-//! and the one approach it names is "to verify the correctness of proxies and to
-//! whitelist them as trusted". So nothing in these fields is read unless the
-//! immediate peer is a configured trusted proxy, and then the first `for` value is
-//! the originating client (Section 5.2: "the first 'for' parameter will disclose
-//! the client where the request was first made, followed by any subsequent proxy
-//! identifiers").
+//! be modified ... by every node on the way to the server, including the client
+//! making the request", and "the chain of IP addresses listed before the request
+//! came to the proxy cannot be trusted". So nothing in these fields is read unless
+//! the immediate peer is a configured trusted proxy; a rule reads one family of
+//! fields, the one its proxies write, and never the other, which reaches the server
+//! as the client sent it; and the chain is walked from the right, from the peer
+//! through each trusted proxy, to the first address that is not one: the client. In
+//! a chain the proxies wrote, the first `for` parameter "will disclose the client
+//! where the request was first made" (Section 5.2), and the walk stops there, so
+//! what a client wrote to the left of its own address is never read.
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
@@ -333,35 +336,101 @@ pub fn parse(value: &[u8]) -> Vec<Element<'_>> {
         .collect()
 }
 
-/// A trusted-proxy rule: the peers whose forwarding fields are believed.
+/// The family of forwarding fields a trust-proxy rule reads: the one its trusted
+/// proxies write. The other family is never read, whatever it says, since a proxy
+/// that writes one passes the other through as the client sent it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum ForwardingHeader {
+    /// `X-Forwarded-For` names the chain, one address per member, and
+    /// `X-Forwarded-Proto` the scheme.
+    #[default]
+    XForwardedFor,
+    /// `Forwarded` (RFC 7239): the `for` parameter of each element names the chain,
+    /// and the `proto` of the element that names the client is the scheme.
+    Forwarded,
+}
+
+/// What the trusted proxies in front of a request report.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Forwarding {
+    /// The client: the first address from the right that is not a trusted proxy,
+    /// the leftmost address of a chain whose every address is trusted, or the peer
+    /// when it is not trusted or forwards no chain. `None` when the hop the walk
+    /// reaches names no address (`unknown`, an obfuscated identifier, an element
+    /// without `for`, or a member that does not parse), so the client is unknown.
+    pub client: Option<IpAddr>,
+    /// The scheme the proxy facing the client reported, lowercased, when it
+    /// reported one.
+    pub proto: Option<Vec<u8>>,
+}
+
+/// A trusted-proxy rule: the peers whose forwarding fields are believed, and the
+/// family of fields they write.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TrustProxy {
     /// The trusted peers, as addresses with a prefix length (`/32` or `/128` for one
     /// address).
     pub trusted: Vec<(IpAddr, u8)>,
+    /// The family of forwarding fields the trusted proxies write.
+    pub header: ForwardingHeader,
 }
 
 impl TrustProxy {
     /// Trust no peer: every request's client is its peer.
+    ///
+    /// # Returns
+    ///
+    /// The rule.
     #[must_use]
     pub const fn none() -> Self {
         TrustProxy {
             trusted: Vec::new(),
+            header: ForwardingHeader::XForwardedFor,
         }
     }
 
-    /// Trust these peers.
+    /// Trust these peers, which write `X-Forwarded-For` and `X-Forwarded-Proto`.
     ///
     /// # Arguments
     ///
     /// * `trusted` - addresses with a prefix length; a length past the address's
     ///   width counts as the full width.
+    ///
+    /// # Returns
+    ///
+    /// The rule.
     #[must_use]
     pub fn new(trusted: Vec<(IpAddr, u8)>) -> Self {
-        TrustProxy { trusted }
+        TrustProxy {
+            trusted,
+            header: ForwardingHeader::XForwardedFor,
+        }
+    }
+
+    /// The same rule over another family of forwarding fields.
+    ///
+    /// # Arguments
+    ///
+    /// * `header` - the family the trusted proxies write.
+    ///
+    /// # Returns
+    ///
+    /// The rule.
+    #[must_use]
+    pub fn with_header(mut self, header: ForwardingHeader) -> Self {
+        self.header = header;
+        self
     }
 
     /// Whether `peer` is a trusted proxy.
+    ///
+    /// # Arguments
+    ///
+    /// * `peer` - the address.
+    ///
+    /// # Returns
+    ///
+    /// Whether a trusted prefix holds the address.
     #[must_use]
     pub fn trusts(&self, peer: IpAddr) -> bool {
         self.trusted
@@ -369,68 +438,139 @@ impl TrustProxy {
             .any(|&(network, prefix)| in_prefix(peer, network, prefix))
     }
 
-    /// The client of a request: the first `for` of `Forwarded`, else the first
-    /// `X-Forwarded-For` address, when the peer is trusted; the peer otherwise.
+    /// What the trusted proxies in front of a request report: its client and the
+    /// scheme the client used.
+    ///
+    /// Nothing is read unless the peer is trusted. The chain is then walked from the
+    /// right, since every proxy appends the node it received the request from and
+    /// "the chain of IP addresses listed before the request came to the proxy cannot
+    /// be trusted" (RFC 7239 Section 8.1): starting at the peer, while the current
+    /// hop is a trusted proxy, the walk steps to the address that proxy appended, the
+    /// next member to the left. The first address that is not a trusted proxy is the
+    /// client, and a chain whose every address is trusted yields its leftmost one. A
+    /// hop that names no address leaves the client unknown rather than letting the
+    /// last trusted proxy stand in for it, since a client could otherwise take a
+    /// proxy's address by sending a member that breaks the parse.
+    ///
+    /// Only the lines of the rule's family are read. With
+    /// [`ForwardingHeader::Forwarded`], the chain is each element's `for` and the
+    /// scheme is the `proto` of the element where the walk ended. Each field line is
+    /// split into its elements on its own, because a quoted-string runs to the next
+    /// DQUOTE that no backslash escapes (RFC 9110 Section 5.6.4) and one a client
+    /// leaves open must not swallow a line a proxy added after it (RFC 7239 Section
+    /// 4 lets a proxy append to the last line or add a new one); the elements of the
+    /// lines then follow one another in order, as in the combined field (RFC 9110
+    /// Section 5.3). An element with a repeated or malformed parameter names no
+    /// address. With [`ForwardingHeader::XForwardedFor`], each member of
+    /// `X-Forwarded-For` is an address, bare or in the node form of RFC 7239 Section
+    /// 6 (`192.0.2.43:4711`, `[2001:db8::17]`), and the scheme is the member of
+    /// `X-Forwarded-Proto` at the same position from the right as the member where
+    /// the walk ended: the one the proxy facing the client added, when proxies
+    /// append to both lists in step, or else the first member, which a proxy that
+    /// sets a single value leaves alone. Empty members of every list are skipped
+    /// (RFC 9110 Section 5.6.1.2).
     ///
     /// # Arguments
     ///
     /// * `peer` - the immediate peer.
-    /// * `forwarded` - the `Forwarded` field value, joined, if any.
-    /// * `x_forwarded_for` - the `X-Forwarded-For` field value, joined, if any.
+    /// * `fields` - the request's field lines, as name and value, in the order
+    ///   received; names are compared without regard to case.
+    ///
+    /// # Returns
+    ///
+    /// The client and the scheme.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc7239.html#section-8.1>
+    /// @see <https://www.rfc-editor.org/rfc/rfc7239.html#section-4>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.4>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.3>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.1.2>
     #[must_use]
-    pub fn client(
-        &self,
-        peer: SocketAddr,
-        forwarded: Option<&[u8]>,
-        x_forwarded_for: Option<&[u8]>,
-    ) -> IpAddr {
+    pub fn forwarding<'a, I>(&self, peer: SocketAddr, fields: I) -> Forwarding
+    where
+        I: IntoIterator<Item = (&'a [u8], &'a [u8])>,
+    {
+        let at_peer = Forwarding {
+            client: Some(peer.ip()),
+            proto: None,
+        };
         if !self.trusts(peer.ip()) {
-            return peer.ip();
+            return at_peer;
         }
-        if let Some(value) = forwarded {
-            if let Some(ip) = parse(value)
-                .iter()
-                .find_map(|element| element.for_node.as_ref())
-                .and_then(Node::ip)
-            {
-                return ip;
+        let mut chain: Vec<&[u8]> = Vec::new();
+        let mut schemes: Vec<&[u8]> = Vec::new();
+        let (chain_name, scheme_name): (&[u8], Option<&[u8]>) = match self.header {
+            ForwardingHeader::Forwarded => (&b"forwarded"[..], None),
+            ForwardingHeader::XForwardedFor => {
+                (&b"x-forwarded-for"[..], Some(&b"x-forwarded-proto"[..]))
             }
+        };
+        for (name, value) in fields {
+            let list = if name.eq_ignore_ascii_case(chain_name) {
+                &mut chain
+            } else if scheme_name.is_some_and(|scheme| name.eq_ignore_ascii_case(scheme)) {
+                &mut schemes
+            } else {
+                continue;
+            };
+            list.extend(
+                list_members(value)
+                    .into_iter()
+                    .filter(|member| !member.is_empty()),
+            );
         }
-        if let Some(value) = x_forwarded_for {
-            if let Some(ip) = list_members(value)
-                .into_iter()
-                .find(|member| !member.is_empty())
-                .and_then(|member| std::str::from_utf8(member).ok())
-                .and_then(|text| text.parse::<IpAddr>().ok())
-            {
-                return ip;
-            }
+        match self.header {
+            ForwardingHeader::Forwarded => self.walk_elements(&chain, at_peer),
+            ForwardingHeader::XForwardedFor => self.walk_addresses(&chain, &schemes, at_peer),
         }
-        peer.ip()
     }
 
-    /// The scheme the client used as a trusted proxy reported it (`proto` of
-    /// `Forwarded`, else `X-Forwarded-Proto`), lowercased; `None` when the peer is
-    /// not trusted or nothing was reported.
-    #[must_use]
-    pub fn proto(
+    /// Walk `Forwarded` elements from the right; the scheme is the `proto` of the
+    /// element where the walk ended.
+    fn walk_elements(&self, members: &[&[u8]], mut walked: Forwarding) -> Forwarding {
+        for member in members.iter().rev() {
+            let parsed = element(member);
+            walked.proto = parsed.as_ref().and_then(|found| found.proto.clone());
+            let address = parsed
+                .as_ref()
+                .and_then(|found| found.for_node.as_ref())
+                .and_then(Node::ip);
+            walked.client = address;
+            if !address.is_some_and(|address| self.trusts(address)) {
+                break;
+            }
+        }
+        walked
+    }
+
+    /// Walk `X-Forwarded-For` members from the right; the scheme is the
+    /// `X-Forwarded-Proto` member at the position where the walk ended.
+    fn walk_addresses(
         &self,
-        peer: SocketAddr,
-        forwarded: Option<&[u8]>,
-        x_forwarded_proto: Option<&[u8]>,
-    ) -> Option<Vec<u8>> {
-        if !self.trusts(peer.ip()) {
-            return None;
+        members: &[&[u8]],
+        schemes: &[&[u8]],
+        mut walked: Forwarding,
+    ) -> Forwarding {
+        let mut position = 1usize;
+        for (index, member) in members.iter().rev().enumerate() {
+            position = index.saturating_add(1);
+            let address = std::str::from_utf8(member)
+                .ok()
+                .and_then(|text| text.parse::<IpAddr>().ok())
+                .or_else(|| Node::parse(member).as_ref().and_then(Node::ip));
+            walked.client = address;
+            if !address.is_some_and(|address| self.trusts(address)) {
+                break;
+            }
         }
-        if let Some(proto) =
-            forwarded.and_then(|value| parse(value).into_iter().find_map(|element| element.proto))
-        {
-            return Some(proto);
-        }
-        x_forwarded_proto
-            .and_then(|value| list_members(value).into_iter().next())
-            .filter(|member| !member.is_empty() && member.iter().all(|&byte| is_tchar(byte)))
-            .map(<[u8]>::to_ascii_lowercase)
+        walked.proto = schemes
+            .len()
+            .checked_sub(position)
+            .and_then(|index| schemes.get(index))
+            .or_else(|| schemes.first())
+            .filter(|scheme| scheme.iter().all(|&byte| is_tchar(byte)))
+            .map(|scheme| scheme.to_ascii_lowercase());
+        walked
     }
 }
 

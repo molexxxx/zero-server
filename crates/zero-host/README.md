@@ -11,14 +11,58 @@ The full API reference is [on the site](https://molexxxx.github.io/zero-server/d
 The host boundary of zero-server.
 
 This crate is the layer between the HTTP/1.1 driver of `zero-http` and a host
-language: the requests a route hands to a host, the batches that carry them to
-the host's thread, and the calls the host answers them with. The C ABI of
-`zero-ffi` and the language bindings are meant to be thin layers over it, so
-every binding shares one implementation. The crate holds no `unsafe` code.
+language: the routes an application registers, the requests a route hands to a
+host, the batches that carry them to the host's thread, and the completions the
+host answers them with. The C ABI of `zero-ffi` and the language bindings are thin
+layers over it, so every binding shares one implementation. The crate holds no
+`unsafe` code.
 
-The crate does not yet provide that layer: it exports only its version. The
-capabilities a host can register (`static`, `policy`, `realtime`, `tls`) are
-cargo features, all on by default.
+An `App` holds the routes and policies, each registered from a JSON option
+document: routes answered in Rust (fixed responses, redirects, static files,
+health checks), routes handed to the host, a miss route for requests no route
+matched, and the CORS, security header, request id, trust proxy and body limit
+policies. A `Server` claims worker indexes for its cores, binds, and serves the app
+with one handler per core. A request for a host route is exported into a slot of
+the core's arena, queued for the core's dispatcher, and posted in a batch to the
+target attached to that worker index: a `PullTarget` that a host thread blocks on,
+or any `zero_rt::Target` a binding supplies. The host hands the ids it answered
+back with `complete`, acknowledging each batch from the thread bound to the
+target, and the core sends the response with the policies' fields.
+
+Every overload answer is written on the core without crossing to the host: a
+request past the queued-batch bound, on a worker index with no target, while the
+arena is exhausted, after the target was lost, or while the server drains is
+answered 503 with `Retry-After` and the server's error body. The capabilities a
+host can register (`static`, `policy`, `realtime`, `tls`) are cargo features, all
+on by default; a capability compiled out is refused with
+`Status::Unsupported`. The `testing` feature adds the hooks in `testing` for
+the tests of the crates built over this one.
+
+What the crate does not provide yet: the calls a host thread reads a leased
+request and writes its response with (a slot completed without a response is
+answered 500 `NO_RESPONSE`), the response actions (serving a file, accepting a
+WebSocket, opening an event stream; a response that asks for one is answered
+501), and the WebSocket handshake and connection events, so a WebSocket route's
+upgrade request reaches the host as a host route's request does.
+
+```rust
+use zero_host::{App, Method, RouteKind, Server, ServerOptions};
+
+let mut app = App::new();
+let hello = app.route(
+    RouteKind::Fixed,
+    Some(Method::Get),
+    "/hello",
+    br#"{"status":200,"contentType":"text/plain","body":"hello"}"#,
+)?;
+let item = app.route(RouteKind::Host, Some(Method::Get), "/items/:id", b"")?;
+assert_eq!((hello, item), (0, 1));
+
+let options = ServerOptions::parse(br#"{"threads":1,"port":0}"#)?;
+let server = Server::new(&app, options)?;
+assert_eq!(server.workers().len(), 1);
+server.check_table(&app)?;
+```
 
 ## const `VERSION`
 
@@ -26,6 +70,104 @@ The version of this crate, as published to crates.io.
 
 ```rust
 const VERSION: &str
+```
+
+## const `BATCH_REQUESTS`
+
+The kind of a batch of tier 3 requests.
+
+```rust
+const BATCH_REQUESTS: u8
+```
+
+## const `BATCH_EVENTS`
+
+The kind of a batch of WebSocket and SSE events.
+
+```rust
+const BATCH_EVENTS: u8
+```
+
+## const `MAX_BATCH`
+
+The most requests or events one batch carries.
+
+```rust
+const MAX_BATCH: usize
+```
+
+## enum `Status`
+
+What a call of this crate's API ended with, numbered as the C ABI's status codes
+so a binding maps it without a table.
+
+- `Ok` - The call succeeded.
+- `Protocol` - A protocol rule refused the input.
+- `Io` - The operating system refused: a bind failure, an unreadable file.
+- `Codec` - An option document is malformed; the message names the key or the position.
+- `Closed` - The id is stale or unknown, the slot is not in an accepted state, the target is detached, or the server is stopped.
+- `Auth` - An authentication rule refused the input.
+- `Unsupported` - The capability is compiled out.
+- `Timeout` - A poll or a wait timed out.
+- `Limit` - A bound is reached: no free worker index, a second target on a worker index.
+- `InvalidArgument` - An argument is out of its range, or the call is made from a thread that may not make it.
+- `Panic` - A panic was caught, or a slot's lock was poisoned by one.
+
+### `Status::code`
+
+The C ABI's number for this status.
+
+**Returns**
+
+The code, from 0 to 10.
+
+```rust
+const fn code(self) -> i32
+```
+
+## struct `HostError`
+
+A refused call: the status and a message naming the argument or the refusal.
+
+### `HostError::new`
+
+A refusal.
+
+**Arguments**
+
+* `status` - the status the call ends with.
+* `message` - what was refused, for the host's last-error message.
+
+**Returns**
+
+The error.
+
+```rust
+fn new(status: Status, message: impl Into <String>) -> Self
+```
+
+### `HostError::status`
+
+The status the call ended with.
+
+**Returns**
+
+The status; never `Status::Ok` for an error this crate made.
+
+```rust
+const fn status(&self) -> Status
+```
+
+### `HostError::message`
+
+What was refused.
+
+**Returns**
+
+The message.
+
+```rust
+fn message(&self) -> &str
 ```
 
 ## License

@@ -14,7 +14,9 @@ authors.workspace = true
 # One feature per capability a host can register, all on by default.
 default = ["static", "policy", "realtime", "tls"]
 static = ["dep:zero-static", "dep:zero-mime"]
-policy = ["dep:zero-policy"]
+# zero-server-crypto supplies the system random generator request ids are drawn
+# from, so a build with policies and without TLS or realtime still generates them.
+policy = ["dep:zero-policy", "dep:zero-server-crypto"]
 # zero-server-crypto supplies the SHA-1 of the WebSocket accept value.
 realtime = [
     "dep:zero-realtime",
@@ -33,6 +35,8 @@ zero-limits.workspace = true
 zero-http-types.workspace = true
 zero-http1.workspace = true
 zero-router.workspace = true
+# The RFC 3986 grammar a redirect route's `location` is checked against.
+zero-uri.workspace = true
 zero-json.workspace = true
 zero-base64.workspace = true
 zero-io.workspace = true

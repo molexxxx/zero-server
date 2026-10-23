@@ -381,6 +381,23 @@ impl<'a> Call<'a> {
         self.resolve(router, miss)
     }
 
+    /// Mark a request a route matched as a miss, for a route that declines it and
+    /// hands it to the miss route, such as a static route whose root does not hold
+    /// the path: as for a request [`route_or_miss`](Self::route_or_miss) sends to the
+    /// miss route, the route's parameters are dropped, the normalized path stays in
+    /// [`Request::route_path`], and an [`export`](Self::export) carries `miss`
+    /// ([`Exchange::miss`]) and publishes its status and `Allow` mask. The mark lasts
+    /// until the next resolution or the end of the request.
+    ///
+    /// # Arguments
+    ///
+    /// * `miss` - what the route would have answered: the status, and for a 405 the
+    ///   methods the target supports.
+    pub fn mark_miss(&mut self, miss: Miss) {
+        self.record.miss = Some(miss);
+        self.record.param_count = 0;
+    }
+
     fn resolve<T: Copy>(&mut self, router: &Router<T>, miss: Option<T>) -> Option<Routed<T>> {
         self.record.miss = None;
         let outcome = {

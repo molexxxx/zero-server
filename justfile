@@ -32,6 +32,11 @@ lints-check:
 test:
     cargo test --workspace
 
+# run the host crate's tests with its test hooks, then with every capability compiled out, as CI does
+test-host:
+    cargo test -p zero-host --features testing
+    cargo test -p zero-host --no-default-features
+
 # build the workspace
 build:
     cargo build --workspace
@@ -83,7 +88,7 @@ version-check:
     cargo xtask version --check
 
 # run everything the main CI job runs
-ci: fmt-check lint lints-check nostd test docs-check standards-check version-check release-plan
+ci: fmt-check lint lints-check nostd test test-host docs-check standards-check version-check release-plan
 
 # set the workspace version everywhere and refresh the lockfiles (just bump 0.2.0)
 bump version:

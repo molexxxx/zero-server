@@ -22,7 +22,7 @@ pub mod security;
 pub use body_limit::BodyLimits;
 pub use cors::{AllowOrigin, Cors, Decision};
 pub use fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
-pub use forwarded::{Element, Node, NodeName, Port, TrustProxy};
+pub use forwarded::{Element, Forwarding, ForwardingHeader, Node, NodeName, Port, TrustProxy};
 pub use request_id::RequestId;
 pub use security::{
     Csp, Directive, EmbedderPolicy, EmbedderValue, FrameOptions, Hsts, Isolation, OpenerPolicy,
@@ -42,7 +42,7 @@ mod tests {
     use super::body_limit::BodyLimits;
     use super::cors::{AllowOrigin, Cors, Decision};
     use super::fetch_metadata::{FetchMetadata, Missing, Site, Verdict};
-    use super::forwarded::{parse, Node, NodeName, Port, TrustProxy};
+    use super::forwarded::{parse, Forwarding, ForwardingHeader, Node, NodeName, Port, TrustProxy};
     use super::request_id::{self, RequestId, Version};
     use super::security::{
         Csp, Directive, EmbedderValue, Hsts, Isolation, OpenerValue, ReferrerPolicy, Rendered,
@@ -69,6 +69,16 @@ mod tests {
 
     fn peer(ip: IpAddr) -> SocketAddr {
         SocketAddr::new(ip, 40_000)
+    }
+
+    /// What `rule` reports for a request from `from` with these field lines.
+    fn forwarding(rule: &TrustProxy, from: SocketAddr, lines: &[(&str, &str)]) -> Forwarding {
+        rule.forwarding(
+            from,
+            lines
+                .iter()
+                .map(|(name, value)| (name.as_bytes(), value.as_bytes())),
+        )
     }
 
     #[test]
@@ -202,45 +212,86 @@ mod tests {
     }
 
     #[test]
-    fn the_first_for_value_is_the_originating_client_and_later_values_are_successive_proxies() {
-        // RFC 7239 Section 5.2, with the proxy at 203.0.113.60 trusted.
-        let trust = TrustProxy::new(vec![(v4(203, 0, 113, 60), 32)]);
-        let forwarded = b"for=192.0.2.43, for=198.51.100.17;by=203.0.113.60";
+    fn the_chain_of_ip_addresses_listed_before_the_request_came_to_the_proxy_cannot_be_trusted() {
+        // RFC 7239 Section 8.1, so the chain is walked from the trusted peer to the
+        // first address that is not a trusted proxy and what a client wrote to the
+        // left of that address is never read. Section 5.2's example, with the proxy
+        // at 203.0.113.60 trusted: the proxy saw 198.51.100.17.
+        let proxies = vec![(v4(203, 0, 113, 60), 32), (v4(10, 0, 0, 0), 8)];
+        let forwarded = TrustProxy::new(proxies.clone()).with_header(ForwardingHeader::Forwarded);
+        let listed = TrustProxy::new(proxies);
+        let proxy = peer(v4(203, 0, 113, 60));
+        let client =
+            |rule: &TrustProxy, lines: &[(&str, &str)]| forwarding(rule, proxy, lines).client;
         assert_eq!(
-            trust.client(peer(v4(203, 0, 113, 60)), Some(forwarded), None),
-            v4(192, 0, 2, 43)
-        );
-        // An obfuscated or unknown first node names no address; the first address
-        // after it is not the client either, so the peer stands.
-        assert_eq!(
-            trust.client(
-                peer(v4(203, 0, 113, 60)),
-                Some(b"for=_hidden, for=192.0.2.43"),
-                None
+            client(
+                &forwarded,
+                &[(
+                    "Forwarded",
+                    "for=192.0.2.43, for=198.51.100.17;by=203.0.113.60"
+                )]
             ),
-            v4(203, 0, 113, 60)
+            Some(v4(198, 51, 100, 17))
         );
-        // X-Forwarded-For is read the same way when Forwarded is absent, with
-        // IPv6 unbracketed (Section 7.4).
         assert_eq!(
-            trust.client(
-                peer(v4(203, 0, 113, 60)),
-                None,
-                Some(b"2001:db8:cafe::17, 198.51.100.17")
+            client(&listed, &[("X-Forwarded-For", "192.0.2.43, 198.51.100.17")]),
+            Some(v4(198, 51, 100, 17)),
+            "the leftmost address, which the client wrote, is not read"
+        );
+        assert_eq!(
+            client(
+                &listed,
+                &[(
+                    "X-Forwarded-For",
+                    "192.0.2.43, 198.51.100.17, 10.1.1.1, 10.2.2.2"
+                )]
             ),
-            IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0xcafe, 0, 0, 0, 0, 0x17))
+            Some(v4(198, 51, 100, 17)),
+            "trusted hops are stepped over"
         );
         assert_eq!(
-            trust.proto(
-                peer(v4(203, 0, 113, 60)),
-                Some(b"for=192.0.2.43;proto=https"),
-                None
+            client(&forwarded, &[("forwarded", "for=10.0.0.7, for=10.0.0.8")]),
+            Some(v4(10, 0, 0, 7)),
+            "a chain of trusted proxies yields its leftmost address, the first `for`"
+        );
+        assert_eq!(
+            client(
+                &listed,
+                &[
+                    ("X-Forwarded-For", "192.0.2.43"),
+                    ("x-forwarded-for", "198.51.100.17")
+                ]
             ),
-            Some(b"https".to_vec())
+            Some(v4(198, 51, 100, 17)),
+            "the lines of a field follow one another"
         );
         assert_eq!(
-            trust.proto(peer(v4(203, 0, 113, 60)), None, Some(b"HTTPS")),
-            Some(b"https".to_vec())
+            client(
+                &listed,
+                &[("X-Forwarded-For", "192.0.2.43, , 198.51.100.17,")]
+            ),
+            Some(v4(198, 51, 100, 17)),
+            "empty members are skipped (RFC 9110 Section 5.6.1.2)"
+        );
+        assert_eq!(
+            client(&listed, &[("X-Forwarded-For", "2001:db8:cafe::17")]),
+            Some(IpAddr::V6(Ipv6Addr::new(
+                0x2001, 0xdb8, 0xcafe, 0, 0, 0, 0, 0x17
+            ))),
+            "IPv6 unbracketed (Section 7.4)"
+        );
+        assert_eq!(
+            client(
+                &listed,
+                &[("X-Forwarded-For", "198.51.100.17:4711, [2001:db8::9]:80")]
+            ),
+            Some(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 9))),
+            "a member in node form (Section 6)"
+        );
+        assert_eq!(
+            client(&listed, &[]),
+            Some(proxy.ip()),
+            "a trusted peer that forwards no chain is the client"
         );
     }
 
@@ -248,43 +299,244 @@ mod tests {
     fn forwarded_and_x_forwarded_values_are_ignored_unless_the_immediate_peer_is_a_configured_trusted_proxy(
     ) {
         // RFC 7239 Section 8.1.
-        let forwarded = b"for=192.0.2.43";
-        let untrusted = TrustProxy::none();
-        assert_eq!(
-            untrusted.client(
-                peer(v4(203, 0, 113, 60)),
-                Some(forwarded),
-                Some(b"192.0.2.44")
-            ),
-            v4(203, 0, 113, 60)
-        );
-        assert_eq!(
-            untrusted.proto(
-                peer(v4(203, 0, 113, 60)),
-                Some(b"proto=https"),
-                Some(b"https")
-            ),
-            None
-        );
+        let lines = [
+            ("Forwarded", "for=192.0.2.43;proto=https"),
+            ("X-Forwarded-For", "192.0.2.44"),
+            ("X-Forwarded-Proto", "https"),
+        ];
+        let stranger = peer(v4(203, 0, 113, 60));
+        for header in [ForwardingHeader::XForwardedFor, ForwardingHeader::Forwarded] {
+            assert_eq!(
+                forwarding(&TrustProxy::none().with_header(header), stranger, &lines),
+                Forwarding {
+                    client: Some(stranger.ip()),
+                    proto: None,
+                },
+                "{header:?}"
+            );
+        }
         let trust = TrustProxy::new(vec![
             (v4(10, 0, 0, 0), 8),
             (IpAddr::V6(Ipv6Addr::LOCALHOST), 128),
-        ]);
+        ])
+        .with_header(ForwardingHeader::Forwarded);
         assert_eq!(
-            trust.client(peer(v4(10, 1, 2, 3)), Some(forwarded), None),
-            v4(192, 0, 2, 43)
+            forwarding(&trust, peer(v4(10, 1, 2, 3)), &lines).client,
+            Some(v4(192, 0, 2, 43))
         );
         assert_eq!(
-            trust.client(peer(v4(11, 1, 2, 3)), Some(forwarded), None),
-            v4(11, 1, 2, 3)
+            forwarding(&trust, peer(v4(11, 1, 2, 3)), &lines).client,
+            Some(v4(11, 1, 2, 3))
         );
         assert_eq!(
-            trust.client(peer(IpAddr::V6(Ipv6Addr::LOCALHOST)), Some(forwarded), None),
-            v4(192, 0, 2, 43)
+            forwarding(&trust, peer(IpAddr::V6(Ipv6Addr::LOCALHOST)), &lines).client,
+            Some(v4(192, 0, 2, 43))
         );
         // A mapped IPv4 peer matches an IPv4 prefix.
         let mapped = IpAddr::V6(Ipv4Addr::new(10, 9, 9, 9).to_ipv6_mapped());
         assert!(trust.trusts(mapped));
+    }
+
+    #[test]
+    fn a_rule_reads_the_one_family_of_forwarding_fields_its_proxies_write_and_never_the_other() {
+        let proxy = peer(v4(10, 0, 0, 2));
+        let listed = TrustProxy::new(vec![(v4(10, 0, 0, 0), 8)]);
+        let forwarded = listed.clone().with_header(ForwardingHeader::Forwarded);
+        let injected_forwarded = ("Forwarded", "for=203.0.113.66;proto=https");
+        let injected_listed = [
+            ("X-Forwarded-For", "203.0.113.66"),
+            ("X-Forwarded-Proto", "https"),
+        ];
+        let expected = Forwarding {
+            client: Some(v4(198, 51, 100, 17)),
+            proto: Some(b"http".to_vec()),
+        };
+
+        let own = [
+            ("X-Forwarded-For", "198.51.100.17"),
+            ("X-Forwarded-Proto", "http"),
+        ];
+        assert_eq!(forwarding(&listed, proxy, &own), expected);
+        let mut injected = vec![injected_forwarded];
+        injected.extend(own);
+        assert_eq!(
+            forwarding(&listed, proxy, &injected),
+            expected,
+            "a Forwarded line changes nothing under X-Forwarded-For"
+        );
+        assert_eq!(
+            forwarding(&listed, proxy, &[injected_forwarded]),
+            Forwarding {
+                client: Some(proxy.ip()),
+                proto: None,
+            }
+        );
+
+        let own = [("Forwarded", "for=198.51.100.17;proto=http")];
+        assert_eq!(forwarding(&forwarded, proxy, &own), expected);
+        let mut injected = injected_listed.to_vec();
+        injected.extend(own);
+        assert_eq!(
+            forwarding(&forwarded, proxy, &injected),
+            expected,
+            "X-Forwarded-For and X-Forwarded-Proto change nothing under Forwarded"
+        );
+        assert_eq!(
+            forwarding(&forwarded, proxy, &injected_listed),
+            Forwarding {
+                client: Some(proxy.ip()),
+                proto: None,
+            }
+        );
+    }
+
+    #[test]
+    fn a_hop_that_names_no_address_leaves_the_client_unknown_rather_than_the_proxy_before_it() {
+        // RFC 7239 Sections 6.2 and 6.3: `unknown` and an obfuscated identifier name
+        // no address; neither does an element without `for` or one that does not
+        // parse, nor an X-Forwarded-For member that is not an address.
+        let proxy = peer(v4(10, 0, 0, 2));
+        let listed = TrustProxy::new(vec![(v4(10, 0, 0, 0), 8)]);
+        let forwarded = listed.clone().with_header(ForwardingHeader::Forwarded);
+        for value in [
+            "for=192.0.2.43, for=unknown",
+            "for=192.0.2.43, for=_hidden",
+            "for=192.0.2.43, for=_hidden, for=10.0.0.9",
+            "for=192.0.2.43, proto=https",
+            "for=192.0.2.43, for=192.0.2.44;for=192.0.2.45",
+            "for=192.0.2.43, for=\"_gazonk:_port1\"",
+        ] {
+            assert_eq!(
+                forwarding(&forwarded, proxy, &[("Forwarded", value)]).client,
+                None,
+                "{value}"
+            );
+        }
+        for value in [
+            "192.0.2.1, not-an-address",
+            "192.0.2.1, unknown",
+            "192.0.2.1, _hidden, 10.0.0.9",
+        ] {
+            assert_eq!(
+                forwarding(&listed, proxy, &[("X-Forwarded-For", value)]).client,
+                None,
+                "{value}"
+            );
+        }
+        assert_eq!(
+            forwarding(
+                &forwarded,
+                proxy,
+                &[("Forwarded", "for=unknown;proto=https")]
+            )
+            .proto,
+            Some(b"https".to_vec()),
+            "the scheme the proxy reported stands"
+        );
+    }
+
+    #[test]
+    fn each_forwarded_line_is_split_on_its_own_so_a_quoted_string_left_open_cannot_reach_a_proxys_line(
+    ) {
+        // RFC 9110 Section 5.6.4: a quoted-string runs to the next DQUOTE that no
+        // backslash escapes; RFC 7239 Section 4: a proxy appends to the last line or
+        // adds a new one.
+        let proxy = peer(v4(10, 0, 0, 2));
+        let trust =
+            TrustProxy::new(vec![(v4(10, 0, 0, 0), 8)]).with_header(ForwardingHeader::Forwarded);
+        let open = "for=203.0.113.66, for=203.0.113.67;ext=\"";
+        let lines = [("Forwarded", open), ("Forwarded", "for=198.51.100.17")];
+        assert_eq!(
+            forwarding(&trust, proxy, &lines).client,
+            Some(v4(198, 51, 100, 17))
+        );
+        let appended = format!("{open}, for=198.51.100.17");
+        assert_eq!(
+            forwarding(&trust, proxy, &[("Forwarded", appended.as_str())]).client,
+            None,
+            "the proxy's element, swallowed into a member that does not parse"
+        );
+        assert_eq!(
+            parse(appended.as_bytes())
+                .last()
+                .and_then(|element| element.for_node.as_ref())
+                .and_then(Node::ip),
+            Some(v4(203, 0, 113, 66)),
+            "dropping the member instead would have named the client's own entry"
+        );
+    }
+
+    #[test]
+    fn the_scheme_is_the_one_the_proxy_facing_the_client_reported() {
+        // RFC 7239 Section 5.4: `proto` "has the value of the used protocol type".
+        let proxy = peer(v4(10, 0, 0, 2));
+        let listed = TrustProxy::new(vec![(v4(10, 0, 0, 0), 8)]);
+        let forwarded = listed.clone().with_header(ForwardingHeader::Forwarded);
+        let proto =
+            |rule: &TrustProxy, lines: &[(&str, &str)]| forwarding(rule, proxy, lines).proto;
+        let https = Some(b"https".to_vec());
+        let http = Some(b"http".to_vec());
+        assert_eq!(
+            proto(
+                &forwarded,
+                &[(
+                    "Forwarded",
+                    "for=192.0.2.1;proto=https, for=198.51.100.17;proto=http"
+                )]
+            ),
+            http,
+            "an element the client wrote does not count"
+        );
+        assert_eq!(
+            proto(
+                &forwarded,
+                &[(
+                    "Forwarded",
+                    "for=198.51.100.17;proto=HTTPS, for=10.0.0.1;proto=http"
+                )]
+            ),
+            https,
+            "the element that names the client, past a trusted hop"
+        );
+        assert_eq!(
+            proto(
+                &listed,
+                &[
+                    ("X-Forwarded-For", "192.0.2.1, 198.51.100.17"),
+                    ("X-Forwarded-Proto", "https, http")
+                ]
+            ),
+            http,
+            "appended in step: the member at the client's position from the right"
+        );
+        assert_eq!(
+            proto(
+                &listed,
+                &[
+                    ("X-Forwarded-For", "198.51.100.17, 10.0.0.1"),
+                    ("X-Forwarded-Proto", "https, http")
+                ]
+            ),
+            https
+        );
+        assert_eq!(
+            proto(
+                &listed,
+                &[
+                    ("X-Forwarded-For", "198.51.100.17, 10.0.0.1"),
+                    ("X-Forwarded-Proto", "HTTPS")
+                ]
+            ),
+            https,
+            "one value set by the proxy facing the client and passed on"
+        );
+        assert_eq!(
+            proto(&listed, &[("X-Forwarded-Proto", "https")]),
+            https,
+            "a trusted peer's own report"
+        );
+        assert_eq!(proto(&listed, &[("X-Forwarded-Proto", "ht tp")]), None);
+        assert_eq!(proto(&listed, &[]), None);
     }
 
     #[test]

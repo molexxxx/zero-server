@@ -1,11 +1,11 @@
 //! A request exported to an exchange and imported back, end to end: every part of
 //! the request survives the move and the response goes out as a handler's would;
 //! the published view matches the exchange; a miss reaches the miss route with the
-//! core's status and `Allow`; a warm round trip allocates nothing; the body's
-//! charge moves from the core's budget to the exchange for as long as the lease
-//! lasts, import returns the response octets the exchange counted, and what a
-//! handler leases pauses accepts; an external body leaves as one slice and is
-//! released after the write.
+//! core's status and `Allow`, and so does a matched request marked as a miss; a
+//! warm round trip allocates nothing; the body's charge moves from the core's
+//! budget to the exchange for as long as the lease lasts, import returns the
+//! response octets the exchange counted, and what a handler leases pauses accepts;
+//! an external body leaves as one slice and is released after the write.
 
 #![cfg(any(feature = "io-tokio", feature = "io-compio"))]
 
@@ -26,12 +26,13 @@ use zero_http::exchange::{
 };
 use zero_http::{
     serve, serve_with, Accept, Action, Call, Config, Exchange, ExportOptions, ExternalBody,
-    Handler, HostSpan, Prepared, PublishedView, Request, Router, ViewSnapshot, Workers,
+    Handler, HostSpan, Miss, Prepared, PublishedView, Request, Router, ViewSnapshot, Workers,
 };
 use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_io::pool::Pool;
 use zero_io::seam::{Leased, Stream};
 use zero_limits::Http1Limits;
+use zero_router::Allow;
 use zero_sys::alloc::Counting;
 
 #[global_allocator]
@@ -805,6 +806,104 @@ fn route_or_miss_sends_a_miss_to_the_miss_route_with_the_status_and_allow_the_co
     assert!(refused
         .header("allow")
         .is_some_and(|allow| allow.contains("GET")));
+    workers.stop().unwrap();
+}
+
+/// Routes, marks a matched request that asks for it as a miss, as a route that
+/// declines it would, then exports and reports what the exchange and the view say.
+struct Declining {
+    router: Router<Route>,
+    exchange: RefCell<Exchange>,
+    view: PublishedView,
+}
+
+impl Handler for Declining {
+    async fn handle(&self, call: &mut Call<'_>) -> Result<(), Error> {
+        let Some(routed) = call.route(&self.router) else {
+            return Ok(());
+        };
+        let decline = call.request().header(b"x-decline").map(<[u8]>::to_vec);
+        let route = match decline.as_deref() {
+            None => routed.descriptor,
+            Some(b"405") => {
+                let mut allow = Allow::default();
+                allow.insert(Method::Get);
+                call.mark_miss(Miss {
+                    status: StatusCode::METHOD_NOT_ALLOWED,
+                    allow,
+                });
+                Route::Miss
+            }
+            Some(_) => {
+                call.mark_miss(Miss {
+                    status: StatusCode::NOT_FOUND,
+                    allow: Allow::default(),
+                });
+                Route::Miss
+            }
+        };
+        let mut exchange = self.exchange.borrow_mut();
+        exchange.release(false);
+        call.export(
+            &mut exchange,
+            &self.view,
+            route as u32,
+            routed.head,
+            &ExportOptions::default(),
+        );
+        let view = self.view.snapshot();
+        let mismatches = compare(&view, &exchange, routed.head).join(",");
+        let route_path = exchange.request().route_path().to_vec();
+        let mut response = exchange.response();
+        response.header(b"X-View-Status", view.miss_status.to_string().as_bytes())?;
+        response.header(b"X-View-Allow", view.allow.to_string().as_bytes())?;
+        response.header(b"X-View-Params", view.param_count.to_string().as_bytes())?;
+        response.header(b"X-Route-Path", &route_path)?;
+        response.header(b"X-Mismatches", format!("[{mismatches}]").as_bytes())?;
+        call.import(&mut exchange, |_, _| {});
+        Ok(())
+    }
+}
+
+#[test]
+fn a_matched_request_marked_as_a_miss_is_exported_with_the_status_and_allow_and_without_the_routes_parameters(
+) {
+    let workers = start(1, None, |_| Declining {
+        router: router(),
+        exchange: RefCell::new(Exchange::default()),
+        view: PublishedView::default(),
+    });
+    let mut conn = connect(&workers);
+    let matched = get(&mut conn, "/items/1/a");
+    assert_eq!(matched.header("x-view-status"), Some("0"));
+    assert_eq!(matched.header("x-view-params"), Some("2"));
+    let declined = send(
+        &mut conn,
+        b"GET /items/1/a HTTP/1.1\r\nHost: t\r\nX-Decline: 404\r\n\r\n",
+        false,
+    );
+    assert_eq!(declined.header("x-view-status"), Some("404"));
+    assert_eq!(declined.header("x-view-allow"), Some("0"));
+    assert_eq!(declined.header("x-view-params"), Some("0"));
+    assert_eq!(declined.header("x-route-path"), Some("/items/1/a"));
+    assert_eq!(declined.header("x-mismatches"), Some("[]"));
+    let not_allowed = send(
+        &mut conn,
+        b"GET /items/1/a HTTP/1.1\r\nHost: t\r\nX-Decline: 405\r\n\r\n",
+        false,
+    );
+    assert_eq!(not_allowed.header("x-view-status"), Some("405"));
+    assert_eq!(
+        not_allowed.header("x-view-allow"),
+        Some(&*(1u16 << Method::Get.id()).to_string())
+    );
+    let again = get(&mut conn, "/items/2/b");
+    assert_eq!(
+        again.header("x-view-status"),
+        Some("0"),
+        "the mark ends with its request"
+    );
+    assert_eq!(again.header("x-view-params"), Some("2"));
     workers.stop().unwrap();
 }
 
