@@ -18,6 +18,18 @@ struct Entry {
     waker: Waker,
     /// Where the entry sits in the heap.
     position: usize,
+    /// Which registration this is, unique for the life of the clock.
+    sequence: u64,
+}
+
+/// What a sleep holds while it is registered: the slot of its entry and the
+/// sequence of the registration. A fire frees the slot before the sleep it woke
+/// runs again, and another sleep can take the slot in between, so removing and
+/// refreshing act only on the entry whose sequence matches.
+#[derive(Clone, Copy)]
+struct Key {
+    slot: usize,
+    sequence: u64,
 }
 
 /// The deadlines of a core, each with the waker to call when it passes.
@@ -28,6 +40,8 @@ pub(crate) struct Timers {
     free: Vec<usize>,
     /// The slots ordered by deadline, earliest at the root.
     heap: Vec<usize>,
+    /// The sequence of the next registration.
+    next_sequence: u64,
 }
 
 impl Timers {
@@ -92,13 +106,16 @@ impl Timers {
         }
     }
 
-    /// Register a sleep; the slot identifies it from then on.
-    fn insert(&mut self, deadline: Instant, waker: &Waker) -> usize {
+    /// Register a sleep; the key identifies it from then on.
+    fn insert(&mut self, deadline: Instant, waker: &Waker) -> Key {
         let position = self.heap.len();
+        let sequence = self.next_sequence;
+        self.next_sequence = sequence.wrapping_add(1);
         let entry = Entry {
             deadline,
             waker: waker.clone(),
             position,
+            sequence,
         };
         let slot = match self.free.pop() {
             Some(slot) => {
@@ -114,20 +131,35 @@ impl Timers {
         };
         self.heap.push(slot);
         self.sift_up(position);
-        slot
+        Key { slot, sequence }
+    }
+
+    /// The entry `key` registered, while it is still in its slot.
+    fn entry_mut(&mut self, key: Key) -> Option<&mut Entry> {
+        self.slots
+            .get_mut(key.slot)
+            .and_then(Option::as_mut)
+            .filter(|entry| entry.sequence == key.sequence)
     }
 
     /// Replace the waker of a registered sleep.
-    fn refresh(&mut self, slot: usize, waker: &Waker) {
-        if let Some(Some(entry)) = self.slots.get_mut(slot) {
+    fn refresh(&mut self, key: Key, waker: &Waker) {
+        if let Some(entry) = self.entry_mut(key) {
             if !entry.waker.will_wake(waker) {
                 entry.waker.clone_from(waker);
             }
         }
     }
 
-    /// Take a sleep out, wherever it sits in the heap.
-    fn remove(&mut self, slot: usize) -> Option<Entry> {
+    /// Take a sleep out, wherever it sits in the heap; `None` once its entry has
+    /// fired or been removed, whichever sleep holds the slot now.
+    fn remove(&mut self, key: Key) -> Option<Entry> {
+        self.entry_mut(key)?;
+        self.take(key.slot)
+    }
+
+    /// Take the entry in `slot` out of the heap and free the slot.
+    fn take(&mut self, slot: usize) -> Option<Entry> {
         let entry = self.slots.get_mut(slot).and_then(Option::take)?;
         self.free.push(slot);
         let position = entry.position;
@@ -159,7 +191,7 @@ impl Timers {
         while let Some(&slot) = self.heap.first() {
             match self.deadline_of(slot) {
                 Some(deadline) if deadline <= now => {
-                    if let Some(entry) = self.remove(slot) {
+                    if let Some(entry) = self.take(slot) {
                         entry.waker.wake();
                     }
                 }
@@ -174,8 +206,8 @@ pub(crate) struct Sleep {
     handle: Rc<Handle>,
     /// `None` when the duration overflowed the clock: never.
     deadline: Option<Instant>,
-    /// The slot while registered.
-    slot: Option<usize>,
+    /// The registration, while there is one.
+    key: Option<Key>,
 }
 
 impl Future for Sleep {
@@ -187,15 +219,15 @@ impl Future for Sleep {
             return Poll::Pending;
         };
         if Instant::now() >= deadline {
-            if let Some(slot) = this.slot.take() {
-                this.handle.timers.borrow_mut().remove(slot);
+            if let Some(key) = this.key.take() {
+                this.handle.timers.borrow_mut().remove(key);
             }
             return Poll::Ready(());
         }
         let mut timers = this.handle.timers.borrow_mut();
-        match this.slot {
-            Some(slot) => timers.refresh(slot, cx.waker()),
-            None => this.slot = Some(timers.insert(deadline, cx.waker())),
+        match this.key {
+            Some(key) => timers.refresh(key, cx.waker()),
+            None => this.key = Some(timers.insert(deadline, cx.waker())),
         }
         Poll::Pending
     }
@@ -203,8 +235,8 @@ impl Future for Sleep {
 
 impl Drop for Sleep {
     fn drop(&mut self) {
-        if let Some(slot) = self.slot.take() {
-            self.handle.timers.borrow_mut().remove(slot);
+        if let Some(key) = self.key.take() {
+            self.handle.timers.borrow_mut().remove(key);
         }
     }
 }
@@ -214,7 +246,7 @@ pub(crate) fn sleep_on(handle: &Rc<Handle>, duration: Duration) -> Sleep {
     Sleep {
         handle: Rc::clone(handle),
         deadline: Instant::now().checked_add(duration),
-        slot: None,
+        key: None,
     }
 }
 
@@ -281,26 +313,119 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::task::Waker;
+    use std::future::{poll_fn, Future};
+    use std::pin::Pin;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{mpsc, Arc};
+    use std::task::{Poll, Wake, Waker};
+    use std::thread;
     use std::time::{Duration, Instant};
 
-    use super::{sleep, timeout, Timers};
+    use super::{sleep, sleep_on, timeout, Handle, Timers};
     use crate::compio_rt::block_on;
     use crate::seam::Elapsed;
+
+    /// A waker that counts its wakes.
+    struct Wakes(AtomicUsize);
+
+    impl Wake for Wakes {
+        fn wake(self: Arc<Self>) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Arm a sleep and let the core's clock fire it, arm a second sleep, which takes
+    /// the slot the fire freed, then poll the first to its end or drop it; true when
+    /// the second sleep completes within a bound kept by another thread, since a core
+    /// whose clock lost the entry waits on its driver forever.
+    fn the_sleep_in_the_reused_slot_completes(poll_first: bool) -> bool {
+        let (done, finished) = mpsc::channel();
+        thread::spawn(move || {
+            let outcome = block_on(async move {
+                let handle = Handle::current().unwrap();
+                println!("io_uring: {}", handle.is_io_uring());
+                let mut first = sleep_on(&handle, Duration::from_millis(5));
+                poll_fn(|cx| {
+                    let _ = Pin::new(&mut first).poll(cx);
+                    Poll::Ready(())
+                })
+                .await;
+                poll_fn(|_| {
+                    if handle.timers.borrow().heap.is_empty() {
+                        Poll::Ready(())
+                    } else {
+                        Poll::Pending
+                    }
+                })
+                .await;
+                let mut second = sleep_on(&handle, Duration::from_millis(50));
+                poll_fn(|cx| {
+                    let _ = Pin::new(&mut second).poll(cx);
+                    if poll_first {
+                        let _ = Pin::new(&mut first).poll(cx);
+                    }
+                    Poll::Ready(())
+                })
+                .await;
+                drop(first);
+                second.await;
+            });
+            let _ = done.send(outcome.is_ok());
+        });
+        finished.recv_timeout(Duration::from_secs(10)) == Ok(true)
+    }
+
+    #[test]
+    fn refreshing_or_removing_a_fired_sleep_spares_the_sleep_that_reused_its_slot() {
+        let mut timers = Timers::default();
+        let now = Instant::now();
+        let wakes = Arc::new(Wakes(AtomicUsize::new(0)));
+        let fired = timers.insert(now + Duration::from_millis(10), Waker::noop());
+        timers.fire(now + Duration::from_millis(10));
+        timers.insert(
+            now + Duration::from_millis(20),
+            &Waker::from(Arc::clone(&wakes)),
+        );
+        assert_eq!(timers.slots.len(), 1, "the later sleep took the freed slot");
+        timers.refresh(fired, Waker::noop());
+        assert!(timers.remove(fired).is_none());
+        timers.fire(now + Duration::from_millis(20));
+        assert_eq!(
+            wakes.0.load(Ordering::Relaxed),
+            1,
+            "the later sleep was woken"
+        );
+    }
+
+    #[test]
+    fn a_fired_sleep_polled_after_its_slot_is_reused_spares_the_new_sleep() {
+        assert!(
+            the_sleep_in_the_reused_slot_completes(true),
+            "the sleep in the reused slot never completed"
+        );
+    }
+
+    #[test]
+    fn a_fired_sleep_dropped_after_its_slot_is_reused_spares_the_new_sleep() {
+        assert!(
+            the_sleep_in_the_reused_slot_completes(false),
+            "the sleep in the reused slot never completed"
+        );
+    }
 
     #[test]
     fn the_heap_keeps_the_earliest_deadline_first_through_removals() {
         let mut timers = Timers::default();
         let now = Instant::now();
         let waker = Waker::noop();
-        let slots: Vec<usize> = [50, 10, 40, 20, 30]
+        let keys: Vec<_> = [50, 10, 40, 20, 30]
             .into_iter()
             .map(|ms| timers.insert(now + Duration::from_millis(ms), waker))
             .collect();
         assert_eq!(timers.next_timeout(now), Some(Duration::from_millis(10)));
-        assert!(timers.remove(slots[1]).is_some());
+        assert!(timers.remove(keys[1]).is_some());
         assert_eq!(timers.next_timeout(now), Some(Duration::from_millis(20)));
-        assert!(timers.remove(slots[3]).is_some());
+        assert!(timers.remove(keys[3]).is_some());
         assert_eq!(timers.next_timeout(now), Some(Duration::from_millis(30)));
         timers.fire(now + Duration::from_millis(45));
         assert_eq!(timers.next_timeout(now), Some(Duration::from_millis(50)));
