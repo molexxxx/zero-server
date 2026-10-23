@@ -11,10 +11,18 @@ permissions:
 
 # ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
 # 2026-10-03).
+#
+# The binding supports every Node.js line still maintained: 22 and 24 (maintenance
+# LTS, end of life 2027-04-30 and 2028-04-30) and 26 (current, LTS from 2026-10-28),
+# from https://github.com/nodejs/Release/blob/main/schedule.json, read 2026-10-22.
 jobs:
   build:
-    name: node (build, smoke, guides)
+    name: node ${{ matrix.node }} (build, smoke, guides)
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
     defaults:
       run:
         working-directory: bindings/node
@@ -23,10 +31,11 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
 
+      # The committed lockfile is the install: npm ci fails rather than resolving anew.
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build native addon and facade
         run: npm run build
