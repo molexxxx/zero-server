@@ -88,11 +88,20 @@ Whether a trailing `/` distinguishes a path.
 
 ## struct `Allow`
 
-The set of methods a resource supports, for `Allow` (RFC 9110 Section 10.2.1).
+The set of methods a resource supports, for `Allow` (RFC 9110 Section 10.2.1):
+one bit per `Method` id, PATCH included, which RFC 5789 Section 3 lets a
+server advertise in `Allow`.
+
+@see <https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.1>
+@see <https://www.rfc-editor.org/rfc/rfc5789.html#section-3>
 
 ### `Allow::insert`
 
 Add a method.
+
+**Arguments**
+
+* `method` - the method to add.
 
 ```rust
 fn insert(&mut self, method: Method)
@@ -102,6 +111,14 @@ fn insert(&mut self, method: Method)
 
 Whether the set holds `method`.
 
+**Arguments**
+
+* `method` - the method to look for.
+
+**Returns**
+
+`true` when the method was inserted.
+
 ```rust
 const fn contains(self, method: Method) -> bool
 ```
@@ -110,6 +127,10 @@ const fn contains(self, method: Method) -> bool
 
 Whether no method is allowed.
 
+**Returns**
+
+`true` for the empty set.
+
 ```rust
 const fn is_empty(self) -> bool
 ```
@@ -117,6 +138,10 @@ const fn is_empty(self) -> bool
 ### `Allow::iter`
 
 The methods, in id order.
+
+**Returns**
+
+An iterator over the methods in the set.
 
 ```rust
 fn iter(self) -> impl Iterator <Item = Method>

@@ -21,7 +21,9 @@ Real-time connections for zero-server.
 `rooms` groups WebSocket connections for broadcasts that reach every core;
 `sse` serves server-sent event streams with keep-alive comments and
 `Last-Event-ID`. Connections run on the core that accepted them, claimed from the
-HTTP/1.1 driver (`zero_http::takeover`).
+HTTP/1.1 driver (`zero_http::takeover`). `outbox` carries what other threads
+send on a connection, and a `ReadPause` stops a WebSocket reading its socket
+while what it already received waits to be handled.
 
 ## const `VERSION`
 

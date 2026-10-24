@@ -73,7 +73,8 @@ rely on.
 Returns the first `InvalidLimit` found: a pipelining depth over the
 codec's cap, a request line or header field longer than the head, a
 chunk-size digit cap a `u64` cannot hold, a zero header count, header
-table, batch size, in-flight batch count or varint length.
+table, batch size or varint length, or an in-flight batch count outside
+one to `services::MAX_BATCHES_IN_FLIGHT_CEILING`.
 
 ```rust
 const fn check(&self) -> Result <(), InvalidLimit>
