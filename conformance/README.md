@@ -13,9 +13,19 @@ vector the crates disagree with.
 
 ### Runners
 
-- The generator itself, over `zero-http1` and its response writer,
+- The generator itself, over `zero-http1` and its response writer, the field
+  names the driver writes itself and the target-form step of `zero-http`,
   `zero-router`, `zero-ws` with the server's SHA-1, `zero-sse`, `zero-qpack`
   and `zero-h3`.
+- The conformance entry `zero_host::conformance::case(section, input)`, which
+  takes a section of the file, or part of one (some of its members, some of its
+  cases), and returns it with every outcome computed again by the parsers and
+  encoders the server uses, as canonical JSON with sorted keys. A runner passes
+  a section when the result equals the input, compared as JSON: as values, so
+  the order of members and the whitespace do not matter.
+  `crates/zero-host/tests/conformance.rs` runs every section through it, case
+  by case and whole, and checks that a case given a wrong outcome comes back
+  with the outcome computed again.
 - The CI check "Examples run and the conformance vectors are current" in
   `.github/workflows/ci.yml`, which runs the generator and fails when the
   committed file differs from its output.
@@ -34,18 +44,30 @@ One JSON object with sorted keys:
   point field, because accumulation order differs between languages.
 - one section per capability, keyed in camelCase: `http1Parser`,
   `responseSplitting`, `router`, `ws`, `sse`, `qpack` and `h3Frames`. Inside a
-  section, byte fields are lowercase hex strings, numbers are JSON numbers with
-  `f32` widened to `f64`, integers that can exceed 2^53-1 (the 62-bit QUIC and
-  QPACK values) are decimal strings, and a list of cases is an array of objects
-  with the same fields in each.
+  section, byte fields are lowercase hex strings, decoded octets (a field name
+  or value, a path, the text of a string literal) are a string when they are
+  UTF-8 and `{"hex": ...}` with their octets otherwise, numbers are JSON numbers
+  with `f32` widened to `f64`, integers that can exceed 2^53-1 (the 62-bit QUIC
+  and QPACK values) are decimal strings, and a list of cases is an array of
+  objects with the same fields in each.
+
+Each `responseSplitting` case has `name`, `field`, `value` and `accepted`:
+whether a host may write the field line, which takes a token name the driver
+does not write itself (`Content-Length`, `Connection`, `Transfer-Encoding` and
+`Date` are refused in any case) and a field value.
 
 The `router` section holds one route table and requests against it. A case's
-`expect` is a match (`id`, `params`, `path`, `query`, `head`) or a `status`,
-with `allow` for 405 and for the automatic OPTIONS answer. PATCH is a method
-with its own route slot (RFC 5789). `PROPFIND` is an unimplemented token: the
-router answers it 501, and over HTTP/1.1 the request parser already answers it
-501 and closes the connection, because it is longer than every implemented
-method; `MKCOL` reaches the router.
+`expect` is what the server answers for the request line
+`<method> <target> HTTP/1.1` with a `Host` field: the request parser's
+`status` when it refuses the line, `status` 200 without `allow` for
+`OPTIONS *` (RFC 9110 Section 9.3.7), and otherwise the table's answer for
+the path, which is the whole origin-form target or what follows the authority
+of an absolute-form one (RFC 9112 Section 3.2.2): a match (`id`, `params`,
+`path`, `query`, `head`) or a `status`, with `allow` for 405 and for the
+automatic OPTIONS answer. PATCH is a method with its own route slot (RFC
+5789). `PROPFIND` is an unimplemented token longer than every implemented
+method, so the request parser answers it 501 and closes the connection;
+`MKCOL` reaches the router, which answers it 501.
 
 Each `ws` case has `name`, `section`, `kind`, `request` (the opening handshake),
 `routeProtocols` and `routeOrigins` (the route's subprotocols, and its Origin

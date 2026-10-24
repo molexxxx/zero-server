@@ -28,6 +28,10 @@
 //! [`Status::Unsupported`]. The `testing` feature adds the hooks in [`testing`] for
 //! the tests of the crates built over this one.
 //!
+//! [`conformance`] recomputes the outcomes of the shared conformance vectors with
+//! the server's own parsers, encoders and routing, so every binding's runner
+//! compares against one implementation.
+//!
 //! What the crate does not provide yet: the calls a host thread reads a leased
 //! request and writes its response with (a slot completed without a response is
 //! answered 500 `NO_RESPONSE`), the response actions (serving a file, accepting a
@@ -56,6 +60,7 @@
 //! ```
 
 mod app;
+pub mod conformance;
 mod handler;
 mod lease;
 mod overload;

@@ -2401,6 +2401,32 @@
       },
       {
         "expect": {
+          "head": {
+            "body": "none",
+            "fields": [
+              [
+                "Host",
+                "a"
+              ],
+              [
+                "X-Name",
+                {
+                  "hex": "636166e9"
+                }
+              ]
+            ],
+            "keepAlive": true,
+            "method": "GET",
+            "target": "/",
+            "version": "HTTP/1.1"
+          }
+        },
+        "name": "obs-text in a field value is opaque data",
+        "request": "474554202f20485454502f312e310d0a486f73743a20610d0a582d4e616d653a20636166e90d0a0d0a",
+        "section": "RFC 9110 Section 5.5"
+      },
+      {
+        "expect": {
           "reject": {
             "close": true,
             "status": 400
@@ -3023,7 +3049,17 @@
             ]
           },
           "name": "Appendix B.1 literal with a static name reference",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "1",
+                "neverIndexed": false,
+                "static": true,
+                "value": "/index.html"
+              }
+            }
+          ],
           "section": "RFC 9204 Appendix B.1"
         },
         {
@@ -3091,7 +3127,14 @@
             }
           },
           "name": "dynamic indexed line with Required Insert Count 0",
-          "representations": null,
+          "representations": [
+            {
+              "indexed": {
+                "index": "0",
+                "static": false
+              }
+            }
+          ],
           "section": "RFC 9204 Section 2.2.3"
         },
         {
@@ -3105,7 +3148,11 @@
             }
           },
           "name": "post-Base indexed line",
-          "representations": null,
+          "representations": [
+            {
+              "indexedPostBase": "0"
+            }
+          ],
           "section": "RFC 9204 Section 2.2.3"
         },
         {
@@ -3119,7 +3166,17 @@
             }
           },
           "name": "dynamic name reference",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "0",
+                "neverIndexed": false,
+                "static": false,
+                "value": "a"
+              }
+            }
+          ],
           "section": "RFC 9204 Section 2.2.3"
         },
         {
@@ -3133,7 +3190,16 @@
             }
           },
           "name": "post-Base name reference",
-          "representations": null,
+          "representations": [
+            {
+              "literalPostBaseNameReference": {
+                "huffman": false,
+                "index": "0",
+                "neverIndexed": false,
+                "value": "a"
+              }
+            }
+          ],
           "section": "RFC 9204 Section 2.2.3"
         },
         {
@@ -3147,7 +3213,14 @@
             }
           },
           "name": "static index 99",
-          "representations": null,
+          "representations": [
+            {
+              "indexed": {
+                "index": "99",
+                "static": true
+              }
+            }
+          ],
           "section": "RFC 9204 Section 3.1"
         },
         {
@@ -3161,7 +3234,14 @@
             }
           },
           "name": "static index 2^31",
-          "representations": null,
+          "representations": [
+            {
+              "indexed": {
+                "index": "2147483648",
+                "static": true
+              }
+            }
+          ],
           "section": "RFC 9204 Section 3.1"
         },
         {
@@ -3175,7 +3255,17 @@
             }
           },
           "name": "literal with static name index 99",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "99",
+                "neverIndexed": false,
+                "static": true,
+                "value": ""
+              }
+            }
+          ],
           "section": "RFC 9204 Section 3.1"
         },
         {
@@ -3189,7 +3279,7 @@
             }
           },
           "name": "Required Insert Count 2^31 at capacity zero",
-          "representations": null,
+          "representations": [],
           "section": "RFC 9204 Section 4.5.1.1"
         },
         {
@@ -3198,7 +3288,7 @@
             "lines": []
           },
           "name": "Delta Base 2^31 with Sign 0",
-          "representations": null,
+          "representations": [],
           "section": "RFC 9204 Section 4.5.1.2"
         },
         {
@@ -3240,7 +3330,7 @@
             }
           },
           "name": "Sign 1 with Required Insert Count 0",
-          "representations": null,
+          "representations": [],
           "section": "RFC 9204 Section 4.5.1.2"
         },
         {
@@ -3249,7 +3339,7 @@
             "lines": []
           },
           "name": "empty section",
-          "representations": null,
+          "representations": [],
           "section": "RFC 9204 Section 4.5"
         },
         {
@@ -3264,7 +3354,17 @@
             ]
           },
           "name": "Huffman value www.example.com",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": true,
+                "index": "0",
+                "neverIndexed": false,
+                "static": true,
+                "value": "www.example.com"
+              }
+            }
+          ],
           "section": "RFC 9204 Section 4.1.2"
         },
         {
@@ -3278,7 +3378,17 @@
             }
           },
           "name": "Huffman padding that is not an EOS prefix",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": true,
+                "index": "0",
+                "neverIndexed": false,
+                "static": true,
+                "value": null
+              }
+            }
+          ],
           "section": "RFC 7541 Section 5.2"
         },
         {
@@ -3293,7 +3403,17 @@
             ]
           },
           "name": "never-indexed authorization",
-          "representations": null,
+          "representations": [
+            {
+              "literalNameReference": {
+                "huffman": false,
+                "index": "84",
+                "neverIndexed": true,
+                "static": true,
+                "value": "Bearer abc"
+              }
+            }
+          ],
           "section": "RFC 9204 Section 4.5.4"
         },
         {
@@ -3309,6 +3429,35 @@
           "name": "truncated value",
           "representations": null,
           "section": "RFC 9204 Section 4.5.4"
+        },
+        {
+          "encoded": "000026782d6e616d6504636166e9",
+          "expect": {
+            "lines": [
+              {
+                "name": "x-name",
+                "neverIndexed": false,
+                "value": {
+                  "hex": "636166e9"
+                }
+              }
+            ]
+          },
+          "name": "literal value that is not UTF-8",
+          "representations": [
+            {
+              "literalName": {
+                "name": "x-name",
+                "nameHuffman": false,
+                "neverIndexed": false,
+                "value": {
+                  "hex": "636166e9"
+                },
+                "valueHuffman": false
+              }
+            }
+          ],
+          "section": "RFC 9110 Section 5.5"
         }
       ]
     },
@@ -3988,6 +4137,36 @@
         "field": "Location",
         "name": "trailing tab",
         "value": "2f6e65787409"
+      },
+      {
+        "accepted": false,
+        "field": "Content-Length",
+        "name": "content length the driver writes",
+        "value": "35"
+      },
+      {
+        "accepted": false,
+        "field": "connection",
+        "name": "connection the driver writes, in lowercase",
+        "value": "636c6f7365"
+      },
+      {
+        "accepted": false,
+        "field": "Transfer-Encoding",
+        "name": "transfer encoding the driver writes",
+        "value": "6368756e6b6564"
+      },
+      {
+        "accepted": false,
+        "field": "Date",
+        "name": "date the driver writes",
+        "value": "53756e2c203036204e6f7620313939342030383a34393a333720474d54"
+      },
+      {
+        "accepted": true,
+        "field": "Content-Length-X",
+        "name": "a name that only starts like content length",
+        "value": "35"
       }
     ]
   },
@@ -4581,11 +4760,66 @@
       },
       {
         "expect": {
-          "status": 404
+          "status": 200
         },
         "method": "OPTIONS",
-        "name": "asterisk is not a path",
+        "name": "options asterisk applies to the server",
         "target": "*"
+      },
+      {
+        "expect": {
+          "status": 400
+        },
+        "method": "GET",
+        "name": "asterisk with another method",
+        "target": "*"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 2,
+            "params": [],
+            "path": "/users",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "absolute form",
+        "target": "http://www.example.org/users"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 5,
+            "params": [
+              [
+                "id",
+                "42"
+              ]
+            ],
+            "path": "/users/42",
+            "query": "x=1"
+          }
+        },
+        "method": "GET",
+        "name": "absolute form with a query",
+        "target": "http://www.example.org/users/42?x=1"
+      },
+      {
+        "expect": {
+          "matched": {
+            "head": false,
+            "id": 21,
+            "params": [],
+            "path": "/admin/list",
+            "query": null
+          }
+        },
+        "method": "GET",
+        "name": "absolute form into a mount",
+        "target": "http://www.example.org/admin/list"
       }
     ],
     "table": {

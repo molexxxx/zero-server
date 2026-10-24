@@ -27,7 +27,10 @@ mod ring;
 pub mod server;
 pub mod takeover;
 
-pub use call::{Call, Miss, ReadHold, Request, Response, Routed};
+pub use call::{
+    is_driver_field, target_route, Call, Miss, ReadHold, Request, Response, Routed, TargetRoute,
+    DRIVER_FIELDS,
+};
 pub use error::{code_for, status_for, ErrorShape, Problem, PROBLEM_MEDIA_TYPE, REGISTRY};
 pub use exchange::{
     Action, Exchange, ExportOptions, ExternalBody, HostField, HostSpan, PublishedView,

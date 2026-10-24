@@ -4,14 +4,15 @@
 //! reads the parsed head, the fields, the buffered body and the route match; the
 //! response side takes the status, validated field lines and the body. The driver
 //! owns framing (`Content-Length`, `Connection`, `Transfer-Encoding`) and the `Date`
-//! field, so a handler cannot set those; every other name must be a `token` and
-//! every value a `field-value` (RFC 9110 Section 5.5), checked once here, so no
-//! handler can inject a line break into the response framing (response splitting,
-//! RFC 9112 Section 11.1). [`Call::route`]
-//! resolves the request against a `zero-router` table and answers the misses itself:
-//! 404, 405 with `Allow`, 501, the automatic OPTIONS, and 400 for a target that is
-//! not a path. [`Call::route_or_miss`] sends those misses to a route of the
-//! caller's instead, with the status and `Allow` set the core would have answered.
+//! field ([`DRIVER_FIELDS`]), so a handler cannot set those; every other name must
+//! be a `token` and every value a `field-value` (RFC 9110 Section 5.5), checked once
+//! here, so no handler can inject a line break into the response framing (response
+//! splitting, RFC 9112 Section 11.1). [`Call::route`] resolves the request against a
+//! `zero-router` table, after [`target_route`] answers `OPTIONS *` itself, and
+//! answers the misses itself: 404, 405 with `Allow`, 501, the automatic OPTIONS, and
+//! 400 for a target that is not a path. [`Call::route_or_miss`] sends those misses
+//! to a route of the caller's instead, with the status and `Allow` set the core
+//! would have answered.
 //!
 //! A request can also be handed to a host on another thread: [`Call::export`] moves
 //! it into an [`Exchange`] and [`Call::import`] moves the host's response back, and
@@ -38,13 +39,88 @@ use crate::exchange::{Exchange, ExportOptions, HostField, HostSpan, PublishedVie
 use crate::record::Record;
 use crate::takeover::{Claim, TakeOver};
 
-/// Field names the driver writes itself; a handler setting one is refused.
-const RESERVED: [HeaderName; 4] = [
+/// The field names the driver writes on a response itself, so no handler or host
+/// may set them: the framing fields `Content-Length` and `Transfer-Encoding`, which
+/// must agree with the body the driver sends (RFC 9112 Sections 6.1 to 6.3), the
+/// `Connection` field that carries the `close` option the driver acts on (RFC 9110
+/// Section 7.6.1, RFC 9112 Section 9.6), and `Date` (RFC 9110 Section 6.6.1). A
+/// handler that set one could contradict the framing the driver writes, and a
+/// message whose framing fields conflict "might indicate an attempt to perform
+/// request smuggling or response splitting" (RFC 9112 Section 6.3).
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-6.2>
+/// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-6.3>
+/// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-11.1>
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-6.6.1>
+pub const DRIVER_FIELDS: [HeaderName; 4] = [
     HeaderName::ContentLength,
     HeaderName::Connection,
     HeaderName::TransferEncoding,
     HeaderName::Date,
 ];
+
+/// Whether the driver writes a field of this name itself, the name compared without
+/// regard to case, as field names are (RFC 9110 Section 5.1).
+///
+/// # Arguments
+///
+/// * `name` - the field name.
+///
+/// # Returns
+///
+/// `true` for a name of [`DRIVER_FIELDS`] in any case, and `false` for every other
+/// name, a name that only starts like one included.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.1>
+#[must_use]
+pub fn is_driver_field(name: &[u8]) -> bool {
+    HeaderName::parse(name).is_some_and(|id| DRIVER_FIELDS.contains(&id))
+}
+
+/// How the core treats a request's target before a routing table sees it.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.7>
+/// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2>
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TargetRoute<'a> {
+    /// Resolve this path and query against the table: the whole origin-form target,
+    /// or what follows the authority of an absolute-form target, which a server must
+    /// accept (RFC 9112 Section 3.2.2); empty for an authority-form target.
+    Path(&'a [u8]),
+    /// `OPTIONS *`, which applies to the server in general rather than to a specific
+    /// resource (RFC 9110 Section 9.3.7): answered with this status, 200, and no
+    /// content.
+    Server(StatusCode),
+    /// An asterisk-form target with any other method, which names no resource:
+    /// answered with this status, 400.
+    NotAPath(StatusCode),
+}
+
+/// Decide how the core routes a parsed request, as [`Call::route`] and
+/// [`Call::route_or_miss`] do: an asterisk-form target is answered without a route,
+/// and every other form routes its path and query.
+///
+/// # Arguments
+///
+/// * `head` - the parsed request head.
+/// * `input` - the bytes the head was parsed from.
+///
+/// # Returns
+///
+/// The path to resolve, or the answer the core gives itself.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.7>
+/// @see <https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.4>
+#[must_use]
+pub fn target_route<'a>(head: &Head, input: &'a [u8]) -> TargetRoute<'a> {
+    if head.form == TargetForm::Asterisk {
+        return match head.method {
+            Some(Method::Options) => TargetRoute::Server(StatusCode::OK),
+            _ => TargetRoute::NotAPath(StatusCode::BAD_REQUEST),
+        };
+    }
+    TargetRoute::Path(head.path.of(input))
+}
 
 /// One request and its response, for the handler's duration.
 #[derive(Debug)]
@@ -414,16 +490,13 @@ impl<'a> Call<'a> {
                 return None;
             };
             let token = parsed.method_token.of(head);
-            let target = parsed.path.of(head);
-            if parsed.form == TargetForm::Asterisk {
-                // RFC 9110 Section 9.3.7: "OPTIONS *" asks about the server as a
-                // whole; no other method has a meaning for it.
-                Some(match parsed.method {
-                    Some(Method::Options) => Outcome::Empty(StatusCode::OK),
-                    _ => Outcome::Problem(Problem::new(StatusCode::BAD_REQUEST, "target")),
-                })
-            } else {
-                match router.resolve_target(token, target, scratch) {
+            match target_route(parsed, head) {
+                TargetRoute::Server(status) => Some(Outcome::Empty(status)),
+                TargetRoute::NotAPath(_) => Some(Outcome::Problem(Problem::new(
+                    StatusCode::BAD_REQUEST,
+                    "target",
+                ))),
+                TargetRoute::Path(target) => match router.resolve_target(token, target, scratch) {
                     Ok(resolved) => {
                         let missed = match resolved.resolution {
                             Resolution::Matched {
@@ -461,7 +534,7 @@ impl<'a> Call<'a> {
                         detail: Some(error.to_string()),
                         ..Problem::new(StatusCode::BAD_REQUEST, "uri")
                     })),
-                }
+                },
             }
         };
         self.routed(outcome?)
@@ -1060,10 +1133,7 @@ impl<'a> Response<'a> {
 /// Refuse a field name that is not a `token` or that the driver writes itself.
 fn check_name(name: &[u8]) -> Result<(), Error> {
     validate_field_name(name).map_err(|_| Error::Codec("invalid field name".to_owned()))?;
-    if RESERVED
-        .iter()
-        .any(|reserved| reserved.as_bytes().eq_ignore_ascii_case(name))
-    {
+    if is_driver_field(name) {
         return Err(Error::Codec(format!(
             "the driver writes {} itself",
             String::from_utf8_lossy(name)
@@ -1074,7 +1144,7 @@ fn check_name(name: &[u8]) -> Result<(), Error> {
 
 /// Refuse an interned name the driver writes itself.
 fn check_id(name: HeaderName) -> Result<(), Error> {
-    if RESERVED.contains(&name) {
+    if DRIVER_FIELDS.contains(&name) {
         return Err(Error::Codec(format!(
             "the driver writes {} itself",
             name.canonical()
@@ -1114,10 +1184,95 @@ fn remove_lines(fields: &mut Vec<u8>, name: &[u8]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Miss, Response};
+    use super::{is_driver_field, target_route, Miss, Response, TargetRoute, DRIVER_FIELDS};
+    use crate::error::REGISTRY;
     use crate::record::Record;
+    use zero_http1::{parse_request, Field, Head, Status};
     use zero_http_types::{HeaderName, Method, StatusCode};
+    use zero_limits::http1::Http1Limits;
     use zero_router::Allow;
+
+    #[test]
+    fn the_driver_written_names_are_recognized_in_any_case_and_no_other_name_is() {
+        assert_eq!(
+            DRIVER_FIELDS.map(HeaderName::canonical),
+            ["Content-Length", "Connection", "Transfer-Encoding", "Date"]
+        );
+        for name in [
+            &b"Content-Length"[..],
+            b"content-length",
+            b"CONNECTION",
+            b"Transfer-Encoding",
+            b"transfer-encoding",
+            b"Date",
+            b"dAtE",
+        ] {
+            assert!(is_driver_field(name), "{}", String::from_utf8_lossy(name));
+        }
+        for name in [
+            &b"Content-Length-X"[..],
+            b"X-Content-Length",
+            b"Content-Type",
+            b"Dates",
+            b"Keep-Alive",
+            b"Content Length",
+            b"",
+        ] {
+            assert!(!is_driver_field(name), "{}", String::from_utf8_lossy(name));
+        }
+    }
+
+    /// The target route of a request the parser accepts.
+    fn routed(request: &'static [u8]) -> TargetRoute<'static> {
+        let mut table = [Field::EMPTY; 8];
+        match parse_request(request, &mut table, &Http1Limits::DEFAULT) {
+            Status::Complete(head) => target_route(&head, request),
+            other => panic!("the parser accepts the request: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn options_asterisk_is_answered_for_the_server_and_every_other_target_routes_its_path() {
+        assert_eq!(
+            routed(b"OPTIONS * HTTP/1.1\r\nHost: a\r\n\r\n"),
+            TargetRoute::Server(StatusCode::OK),
+            "OPTIONS * applies to the server in general (RFC 9110 Section 9.3.7)"
+        );
+        assert_eq!(
+            routed(b"GET /users?x=1 HTTP/1.1\r\nHost: a\r\n\r\n"),
+            TargetRoute::Path(b"/users?x=1")
+        );
+        assert_eq!(
+            routed(b"GET http://www.example.org/users/42?x=1 HTTP/1.1\r\nHost: a\r\n\r\n"),
+            TargetRoute::Path(b"/users/42?x=1"),
+            "a server must accept the absolute form (RFC 9112 Section 3.2.2)"
+        );
+        assert_eq!(
+            routed(b"CONNECT www.example.org:443 HTTP/1.1\r\nHost: www.example.org:443\r\n\r\n"),
+            TargetRoute::Path(b"")
+        );
+        let request = b"OPTIONS * HTTP/1.1\r\nHost: a\r\n\r\n";
+        let mut table = [Field::EMPTY; 8];
+        let Status::Complete(head) = parse_request(request, &mut table, &Http1Limits::DEFAULT)
+        else {
+            panic!("the parser accepts OPTIONS *");
+        };
+        for method in [Some(Method::Get), None] {
+            let other = Head { method, ..head };
+            assert_eq!(
+                target_route(&other, request),
+                TargetRoute::NotAPath(StatusCode::BAD_REQUEST)
+            );
+        }
+        assert_eq!(
+            REGISTRY
+                .iter()
+                .find(|(code, _)| *code == "target")
+                .map(|&(_, status)| status),
+            Some(StatusCode::BAD_REQUEST),
+            "the problem the core answers an asterisk-form target with carries that status"
+        );
+    }
 
     #[test]
     fn set_header_replaces_every_line_of_the_name_and_leaves_the_others() {

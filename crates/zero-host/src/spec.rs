@@ -166,21 +166,11 @@ impl<'a> Reader<'a> {
 }
 
 /// A field name a host may write: an RFC 9110 `token` the driver does not write
-/// itself.
+/// itself ([`zero_http::DRIVER_FIELDS`]).
 ///
 /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.1>
-#[cfg(feature = "policy")]
 pub(crate) fn writable_field_name(name: &[u8]) -> bool {
-    const RESERVED: [&[u8]; 4] = [
-        b"content-length",
-        b"connection",
-        b"transfer-encoding",
-        b"date",
-    ];
-    validate_field_name(name).is_ok()
-        && !RESERVED
-            .iter()
-            .any(|reserved| reserved.eq_ignore_ascii_case(name))
+    validate_field_name(name).is_ok() && !zero_http::is_driver_field(name)
 }
 
 /// The options of a route answered by the host.

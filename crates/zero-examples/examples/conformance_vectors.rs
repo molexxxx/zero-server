@@ -34,6 +34,7 @@ use zero_qpack::{
 };
 use zero_router::{Resolution, Router};
 use zero_server::crypto::Sha1;
+use zero_server::http::{is_driver_field, target_route, TargetRoute};
 use zero_server::simd::unmask;
 use zero_server::sse::{self, Event as SseEvent};
 use zero_server::ws::frame::{self, Opcode};
@@ -293,6 +294,21 @@ fn head_cases() -> Vec<HeadCase> {
             expect: reject(400),
         },
         HeadCase {
+            name: "obs-text in a field value is opaque data",
+            section: "RFC 9110 Section 5.5",
+            request: b"GET / HTTP/1.1\r\nHost: a\r\nX-Name: caf\xe9\r\n\r\n".to_vec(),
+            expect: json!({
+                "head": {
+                    "method": "GET",
+                    "target": "/",
+                    "version": "HTTP/1.1",
+                    "fields": [["Host", "a"], ["X-Name", { "hex": hex(b"caf\xe9") }]],
+                    "body": "none",
+                    "keepAlive": true,
+                }
+            }),
+        },
+        HeadCase {
             name: "double space in request line",
             section: "RFC 9112 Section 3",
             request: request(&["GET  / HTTP/1.1", "Host: a"]),
@@ -351,7 +367,7 @@ fn parser_outcome(case: &HeadCase) -> Value {
             let fields: Vec<Value> = table
                 .iter()
                 .take(head.field_count)
-                .map(|field| json!([text(field.name(input)), text(field.value(input))]))
+                .map(|field| json!([decoded(field.name(input)), decoded(field.value(input))]))
                 .collect();
             let body = match head.body {
                 BodyLength::None => json!("none"),
@@ -360,8 +376,8 @@ fn parser_outcome(case: &HeadCase) -> Value {
             };
             json!({
                 "head": {
-                    "method": text(head.method_token.of(input)),
-                    "target": text(head.target.of(input)),
+                    "method": decoded(head.method_token.of(input)),
+                    "target": decoded(head.target.of(input)),
                     "version": match head.version {
                         zero_http1::Version::Http10 => "HTTP/1.0",
                         zero_http1::Version::Http11 => "HTTP/1.1",
@@ -379,12 +395,18 @@ fn parser_outcome(case: &HeadCase) -> Value {
     }
 }
 
-fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
+/// Decoded octets in the vector shape: text when they are UTF-8, and
+/// `{"hex": ...}` otherwise, so octets that are not text, such as obs-text in a
+/// field value, are kept as they are rather than replaced.
+fn decoded(bytes: &[u8]) -> Value {
+    match std::str::from_utf8(bytes) {
+        Ok(text) => json!(text),
+        Err(_) => json!({ "hex": hex(bytes) }),
+    }
 }
 
 /// The response-splitting cases: field values and names host code might
-/// pass, and whether the serializer accepts them.
+/// pass, and whether a host may write them.
 fn splitting_cases() -> Vec<(&'static str, &'static str, Vec<u8>, bool)> {
     vec![
         ("plain value", "Location", b"/next?x=1".to_vec(), true),
@@ -412,9 +434,41 @@ fn splitting_cases() -> Vec<(&'static str, &'static str, Vec<u8>, bool)> {
         ("delete byte", "Location", b"/next\x7f".to_vec(), false),
         ("leading space", "Location", b" /next".to_vec(), false),
         ("trailing tab", "Location", b"/next\t".to_vec(), false),
+        (
+            "content length the driver writes",
+            "Content-Length",
+            b"5".to_vec(),
+            false,
+        ),
+        (
+            "connection the driver writes, in lowercase",
+            "connection",
+            b"close".to_vec(),
+            false,
+        ),
+        (
+            "transfer encoding the driver writes",
+            "Transfer-Encoding",
+            b"chunked".to_vec(),
+            false,
+        ),
+        (
+            "date the driver writes",
+            "Date",
+            b"Sun, 06 Nov 1994 08:49:37 GMT".to_vec(),
+            false,
+        ),
+        (
+            "a name that only starts like content length",
+            "Content-Length-X",
+            b"5".to_vec(),
+            true,
+        ),
     ]
 }
 
+/// Whether the response writer of `zero-http1` takes the field line: a token
+/// name and a field value.
 fn serializer_accepts(name: &str, value: &[u8]) -> bool {
     let mut out = [0u8; 512];
     let mut writer = ResponseWriter::new(&mut out, false);
@@ -426,6 +480,13 @@ fn serializer_accepts(name: &str, value: &[u8]) -> bool {
         Err(WriteError::InvalidValue | WriteError::InvalidName) => false,
         Err(other) => panic!("unexpected serializer error {other}"),
     }
+}
+
+/// Whether a host may write the field line: the serializer takes it, and the
+/// name is not one the driver writes itself (`zero_http::DRIVER_FIELDS`, in any
+/// case), the rule every host field line is held to.
+fn host_may_write(name: &str, value: &[u8]) -> bool {
+    !is_driver_field(name.as_bytes()) && serializer_accepts(name, value)
 }
 
 /// The route table every binding builds for the `router` section: method,
@@ -484,10 +545,28 @@ fn router_table() -> (Value, Router<u32>) {
     (table, router)
 }
 
-/// What the router answers for a method token and a request target.
+/// What the server answers for a method token and a request target, sent as the
+/// request line `<method> <target> HTTP/1.1` with a `Host` field: the request
+/// parser's rejection status, the core's own answer to an asterisk-form target
+/// (`zero_http::target_route`), or what the router answers for the path of an
+/// origin-form or absolute-form target.
 fn router_outcome(router: &Router<u32>, method: &str, target: &str) -> Value {
+    let request = format!("{method} {target} HTTP/1.1\r\nHost: www.example.org\r\n\r\n");
+    let request = request.as_bytes();
+    let mut table = [Field::EMPTY; 64];
+    let head = match parse_request(request, &mut table, &Http1Limits::DEFAULT) {
+        Status::Complete(head) => head,
+        Status::Reject(reject) => return json!({ "status": reject.status.as_u16() }),
+        Status::Partial => panic!("the request line of {method} {target} ends"),
+    };
+    let path = match target_route(&head, request) {
+        TargetRoute::Path(path) => path,
+        TargetRoute::Server(status) | TargetRoute::NotAPath(status) => {
+            return json!({ "status": status.as_u16() });
+        }
+    };
     let mut scratch = Vec::new();
-    let Ok(resolved) = router.resolve_target(method.as_bytes(), target.as_bytes(), &mut scratch)
+    let Ok(resolved) = router.resolve_target(head.method_token.of(request), path, &mut scratch)
     else {
         return json!({ "status": 400 });
     };
@@ -505,14 +584,11 @@ fn router_outcome(router: &Router<u32>, method: &str, target: &str) -> Value {
             "matched": {
                 "id": descriptor,
                 "head": head,
-                "path": String::from_utf8_lossy(resolved.path),
-                "query": resolved.query.map(String::from_utf8_lossy),
+                "path": decoded(resolved.path),
+                "query": resolved.query.map(decoded),
                 "params": params
                     .iter()
-                    .map(|(name, range)| json!([
-                        String::from_utf8_lossy(name),
-                        String::from_utf8_lossy(&resolved.path[range]),
-                    ]))
+                    .map(|(name, range)| json!([decoded(name), decoded(&resolved.path[range])]))
                     .collect::<Vec<_>>(),
             }
         }),
@@ -574,16 +650,43 @@ fn router_cases() -> Vec<(&'static str, &'static str, &'static str)> {
         ("query never matches", "GET", "/users?/users/me"),
         ("bad percent", "GET", "/users/%zz"),
         ("space in path", "GET", "/a b"),
-        ("asterisk is not a path", "OPTIONS", "*"),
+        ("options asterisk applies to the server", "OPTIONS", "*"),
+        ("asterisk with another method", "GET", "*"),
+        ("absolute form", "GET", "http://www.example.org/users"),
+        (
+            "absolute form with a query",
+            "GET",
+            "http://www.example.org/users/42?x=1",
+        ),
+        (
+            "absolute form into a mount",
+            "GET",
+            "http://www.example.org/admin/list",
+        ),
     ]
 }
 
 /// The router cases whose outcome the specification fixes: PATCH is a method with
 /// its own route slot (RFC 5789 Section 2), a token outside the method table is
-/// 501 (RFC 9110 Section 9.1), and `Allow` lists PATCH like any other method
-/// (RFC 5789 Section 3, RFC 9110 Section 10.2.1).
+/// 501 (RFC 9110 Section 9.1), `Allow` lists PATCH like any other method
+/// (RFC 5789 Section 3, RFC 9110 Section 10.2.1), `OPTIONS *` applies to the server
+/// in general rather than to a resource (RFC 9110 Section 9.3.7), and a server
+/// accepts the absolute form, routing the path after the authority (RFC 9112
+/// Section 3.2.2).
 fn router_checks() -> Vec<(&'static str, &'static str, Value)> {
     vec![
+        ("OPTIONS", "*", json!({ "status": 200 })),
+        (
+            "GET",
+            "http://www.example.org/users",
+            json!({ "matched": {
+                "id": 2,
+                "head": false,
+                "path": "/users",
+                "query": null,
+                "params": [],
+            } }),
+        ),
         (
             "PATCH",
             "/users/42",
@@ -1409,10 +1512,10 @@ fn ws_handshake_outcome(request: &[u8], protocols: &[&str], origins: Option<&[&s
     }
 }
 
-/// Response fields as `[name, value]` pairs of text.
+/// Response fields as `[name, value]` pairs of decoded octets.
 fn field_pairs<'n, 'v>(fields: impl Iterator<Item = (&'n [u8], &'v [u8])>) -> Vec<Value> {
     fields
-        .map(|(name, value)| json!([utf8(name), utf8(value)]))
+        .map(|(name, value)| json!([decoded(name), decoded(value)]))
         .collect()
 }
 
@@ -1713,11 +1816,6 @@ fn unhex(text: &str) -> Vec<u8> {
         .collect()
 }
 
-/// Text the vectors write as a JSON string.
-fn utf8(bytes: &[u8]) -> &str {
-    std::str::from_utf8(bytes).expect("vector text is UTF-8")
-}
-
 /// RFC 7541 Appendix C.1.1: 10 encoded with a 5-bit prefix.
 const RFC7541_C_1_1: &str = "0a";
 /// RFC 7541 Appendix C.1.2: 1337 encoded with a 5-bit prefix.
@@ -1799,16 +1897,16 @@ fn qpack_error(error: &zero_qpack::Error) -> Value {
 /// A field line in the vector shape.
 fn field_line_value(line: &FieldLine<'_>) -> Value {
     json!({
-        "name": utf8(&line.name),
-        "value": utf8(&line.value),
+        "name": decoded(&line.name),
+        "value": decoded(&line.value),
         "neverIndexed": line.never_indexed,
     })
 }
 
-/// The decoded text of a string literal.
-fn literal_text(literal: &StringLiteral<'_>) -> String {
-    let decoded = literal.decode().expect("a vector's string literal decodes");
-    utf8(&decoded).to_owned()
+/// The decoded text of a string literal, or null when its Huffman coding is
+/// invalid.
+fn literal_text(literal: &StringLiteral<'_>) -> Value {
+    literal.decode().map_or(Value::Null, |text| decoded(&text))
 }
 
 /// A raw string literal.
@@ -1869,18 +1967,23 @@ fn representation_value(representation: &Representation<'_>) -> Value {
     }
 }
 
-/// The representations of a complete field section, after its prefix.
-fn representations_of(section: &[u8]) -> Vec<Value> {
-    let (_, used) = Prefix::parse(section).expect("a vector's prefix parses");
+/// The representations of a whole field section after its prefix, or null when
+/// it does not parse into representations.
+fn representations_of(section: &[u8]) -> Value {
+    let Ok((_, used)) = Prefix::parse(section) else {
+        return Value::Null;
+    };
     let mut rest = &section[used..];
     let mut list = Vec::new();
     while !rest.is_empty() {
-        let (representation, used) =
-            Representation::parse(rest).expect("a vector's representation parses");
+        let Ok((representation, used)) = Representation::parse(rest) else {
+            return Value::Null;
+        };
+        assert!(used > 0, "a representation takes at least one octet");
         list.push(representation_value(&representation));
         rest = &rest[used..];
     }
-    list
+    Value::Array(list)
 }
 
 /// A field section built from a prefix and representations.
@@ -1930,7 +2033,7 @@ fn qpack_static_table() -> Value {
             Some(Match::Full(index)),
             "entry {index} is found by name and value"
         );
-        entries.push(json!([utf8(entry.name), utf8(entry.value)]));
+        entries.push(json!([decoded(entry.name), decoded(entry.value)]));
     }
     assert_eq!(table::get(99), None, "index 99 is invalid");
     json!({ "section": "RFC 9204 Appendix A", "entries": entries })
@@ -2139,9 +2242,17 @@ fn qpack_huffman_errors() -> Value {
     json!({ "cases": list })
 }
 
+/// A decoded field line: the name, the value and whether it is never indexed.
+type Line = (&'static [u8], &'static [u8], bool);
+
 /// What decoding a field section must produce: the lines, or the fault name
 /// and whether it closes the connection.
-type SectionExpect = Result<Vec<(&'static str, &'static str, bool)>, (&'static str, bool)>;
+type SectionExpect = Result<Vec<Line>, (&'static str, bool)>;
+
+/// A decoded field line a case expects.
+const fn line(name: &'static [u8], value: &'static [u8], never_indexed: bool) -> Line {
+    (name, value, never_indexed)
+}
 
 /// One encoded field section and what the static-only decoder makes of it.
 struct FieldSectionCase {
@@ -2149,7 +2260,6 @@ struct FieldSectionCase {
     section: &'static str,
     encoded: Vec<u8>,
     published: Option<&'static str>,
-    list_representations: bool,
     expect: SectionExpect,
 }
 
@@ -2159,7 +2269,6 @@ fn qpack_field_section_cases() -> Vec<FieldSectionCase> {
         section,
         encoded,
         published: None,
-        list_representations: false,
         expect,
     };
     let static_prefix =
@@ -2200,12 +2309,11 @@ fn qpack_field_section_cases() -> Vec<FieldSectionCase> {
                     HuffmanPolicy::Never,
                     &[FieldLine::new(b":path", b"/index.html")],
                 ),
-                Ok(vec![(":path", "/index.html", false)]),
+                Ok(vec![line(b":path", b"/index.html", false)]),
             )
         },
         FieldSectionCase {
             published: Some(RFC9204_B_2_STREAM_4),
-            list_representations: true,
             ..case(
                 "Appendix B.2 stream 4",
                 "RFC 9204 Appendix B.2",
@@ -2225,7 +2333,6 @@ fn qpack_field_section_cases() -> Vec<FieldSectionCase> {
         },
         FieldSectionCase {
             published: Some(RFC9204_B_4_STREAM_8),
-            list_representations: true,
             ..case(
                 "Appendix B.4 stream 8",
                 "RFC 9204 Appendix B.4",
@@ -2382,7 +2489,7 @@ fn qpack_field_section_cases() -> Vec<FieldSectionCase> {
                 HuffmanPolicy::Shorter,
                 &[FieldLine::new(b":authority", b"www.example.com")],
             ),
-            Ok(vec![(":authority", "www.example.com", false)]),
+            Ok(vec![line(b":authority", b"www.example.com", false)]),
         ),
         case(
             "Huffman padding that is not an EOS prefix",
@@ -2397,13 +2504,23 @@ fn qpack_field_section_cases() -> Vec<FieldSectionCase> {
                 HuffmanPolicy::Never,
                 &[FieldLine::sensitive(b"authorization", b"Bearer abc")],
             ),
-            Ok(vec![("authorization", "Bearer abc", true)]),
+            Ok(vec![line(b"authorization", b"Bearer abc", true)]),
         ),
         case(
             "truncated value",
             "RFC 9204 Section 4.5.4",
             truncated,
             Err(("truncated", true)),
+        ),
+        case(
+            "literal value that is not UTF-8",
+            "RFC 9110 Section 5.5",
+            static_prefix(&[Representation::LiteralName {
+                never_indexed: false,
+                name: raw(b"x-name"),
+                value: raw(b"caf\xe9"),
+            }]),
+            Ok(vec![line(b"x-name", b"caf\xe9", false)]),
         ),
     ]
 }
@@ -2416,9 +2533,9 @@ fn qpack_field_sections() -> Value {
         }
         let expect = match decode_section(&case.encoded) {
             Ok(lines) => {
-                let got: Vec<(&str, &str, bool)> = lines
+                let got: Vec<(&[u8], &[u8], bool)> = lines
                     .iter()
-                    .map(|line| (utf8(&line.name), utf8(&line.value), line.never_indexed))
+                    .map(|line| (&line.name[..], &line.value[..], line.never_indexed))
                     .collect();
                 assert_eq!(case.expect.as_ref().ok(), Some(&got), "{}", case.name);
                 json!({ "lines": lines.iter().map(field_line_value).collect::<Vec<_>>() })
@@ -2433,9 +2550,7 @@ fn qpack_field_sections() -> Value {
             "name": case.name,
             "section": case.section,
             "encoded": hex(&case.encoded),
-            "representations": case
-                .list_representations
-                .then(|| representations_of(&case.encoded)),
+            "representations": representations_of(&case.encoded),
             "expect": expect,
         }));
     }
@@ -2546,11 +2661,7 @@ fn qpack_encodings() -> Value {
         if let Some(published) = published {
             assert_eq!(encoded, unhex(published), "{name}");
         }
-        assert_eq!(
-            json!(representations_of(&encoded)),
-            representations,
-            "{name}"
-        );
+        assert_eq!(representations_of(&encoded), representations, "{name}");
         let expected: Vec<FieldLine<'_>> = lines
             .iter()
             .map(|line| FieldLine {
@@ -5087,9 +5198,9 @@ fn main() {
     let mut response_splitting = Vec::new();
     for (name, field, value, accepted) in splitting_cases() {
         assert_eq!(
-            serializer_accepts(field, &value),
+            host_may_write(field, &value),
             accepted,
-            "serializer disagrees with the vector {name}"
+            "the host field rule disagrees with the vector {name}"
         );
         response_splitting.push(json!({
             "name": name,
