@@ -693,7 +693,8 @@ impl Default for ServerOptions {
 
 impl ServerOptions {
     /// Read a server option document: `host`, `port`, `threads`, `drainMs`,
-    /// `retryAfterSecs`, `drainRetryAfterSecs`, `maxResponseBody`, `maxBatchSize`
+    /// `retryAfterSecs`, `drainRetryAfterSecs`, `maxResponseBody` (at most
+    /// `isize::MAX`, the most octets one buffer holds), `maxBatchSize`
     /// (1 to 256), `maxBatchesInFlight` (1 to 8), `maxQueuedBatches`, `server`,
     /// `trailers`, `errorShape` (`"problem"` or `"legacy"`) and `limits`, whose keys
     /// are `maxBody`, `requestTotalMs` (which is also the lease timeout),
@@ -739,7 +740,8 @@ impl ServerOptions {
         if let Some(retry) = reader.uint("drainRetryAfterSecs", 0, seconds)? {
             options.drain_retry_after_secs = u32::try_from(retry).unwrap_or(u32::MAX);
         }
-        if let Some(max) = reader.uint("maxResponseBody", 0, u64::MAX)? {
+        let largest_buffer = u64::try_from(isize::MAX).unwrap_or(u64::MAX);
+        if let Some(max) = reader.uint("maxResponseBody", 0, largest_buffer)? {
             options.max_response_body = max;
         }
         let memory = &mut options.limits.memory;
@@ -969,6 +971,18 @@ mod tests {
                 String::from_utf8_lossy(refused)
             );
         }
+    }
+
+    #[test]
+    fn the_response_limit_is_at_most_the_octets_one_buffer_holds() {
+        let largest = u64::try_from(isize::MAX).unwrap();
+        let options =
+            ServerOptions::parse(format!(r#"{{"maxResponseBody":{largest}}}"#).as_bytes()).unwrap();
+        assert_eq!(options.max_response_body, largest);
+        let past = format!(r#"{{"maxResponseBody":{}}}"#, u128::from(largest) + 1);
+        let refused = ServerOptions::parse(past.as_bytes()).unwrap_err();
+        assert_eq!(refused.status(), Status::Codec);
+        assert!(refused.message().contains("`maxResponseBody`"), "{refused}");
     }
 
     #[test]

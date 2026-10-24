@@ -12,7 +12,9 @@
 //!
 //! [`complete`] hands answered ids back to a worker with one lock and one wake per
 //! call, and acknowledges a batch when called from the bound thread with that
-//! batch's epoch, which releases the indexes retired before it.
+//! batch's epoch, which releases the indexes retired before it. [`abandon_batch`]
+//! answers a batch a binding could not hand to its host and acknowledges it, so
+//! neither its requests nor the acknowledgment order stall.
 
 use std::cell::Cell;
 use std::collections::VecDeque;
@@ -24,8 +26,10 @@ use zero_core::slot::MAX_ENCODED;
 use zero_core::SlotId;
 use zero_rt::{BatchRef, EventRec, Post, SlotState, Target};
 
+use crate::access;
+use crate::lease::DISPATCH_FAILED;
 use crate::registry::{self, lock, WorkerShared};
-use crate::{HostError, Status, BATCH_EVENTS, BATCH_REQUESTS};
+use crate::{HostError, Status, BATCH_EVENTS, BATCH_REQUESTS, MAX_BATCH};
 
 /// The next token a host thread is given; 0 means "not bound".
 static NEXT_THREAD: AtomicU64 = AtomicU64::new(1);
@@ -552,4 +556,55 @@ pub fn complete(
         }
         None => Ok(()),
     }
+}
+
+/// Answer a batch a binding could not hand to its host, from the thread bound to the
+/// worker index's target: every request of the batch that is still leased and
+/// unsealed is answered 500 with code `DISPATCH_FAILED` in the server's error shape and
+/// sealed, the batch's ids are completed, and the batch is acknowledged, so neither the
+/// requests nor the acknowledgment order stall. A request whose body region is open
+/// keeps the region, which belongs to the pinning thread until it unpins, and is
+/// completed as written. An event batch is acknowledged, which drops its events. The
+/// worker index counts the batch in its abandoned batches.
+///
+/// # Arguments
+///
+/// * `batch` - the batch reference the target was posted.
+///
+/// # Errors
+///
+/// [`Status::Closed`] when the worker index is unknown or its ring moved on from a
+/// request batch, in which case nothing is answered or acknowledged;
+/// [`Status::InvalidArgument`] when the acknowledgment is refused, from a thread other
+/// than the bound one or out of order, after the answers and the completions were
+/// applied.
+pub fn abandon_batch(batch: BatchRef) -> Result<(), HostError> {
+    let shared = registry::worker(batch.worker)
+        .ok_or_else(|| HostError::closed(format!("worker {} is unknown", batch.worker)))?;
+    let mut slots = [0u64; MAX_BATCH];
+    let count = if batch.kind == BATCH_REQUESTS {
+        shared
+            .ring
+            .read(batch, |ids, _| {
+                for (into, &id) in slots.iter_mut().zip(ids) {
+                    *into = id;
+                }
+                ids.len().min(MAX_BATCH)
+            })
+            .map_err(|_| HostError::closed("the batch is no longer in the ring"))?
+    } else {
+        0
+    };
+    let ids = slots.get(..count).unwrap_or(&[]);
+    for &id in ids {
+        let _ = access::error(id, 500, DISPATCH_FAILED.as_bytes(), None, None);
+    }
+    let outcome = complete(batch.worker, ids, batch.epoch, None);
+    if batch.kind == BATCH_REQUESTS || outcome.is_ok() {
+        shared
+            .counters
+            .abandoned_batches
+            .fetch_add(1, Ordering::Relaxed);
+    }
+    outcome
 }

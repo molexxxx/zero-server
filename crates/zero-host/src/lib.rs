@@ -28,16 +28,21 @@
 //! [`Status::Unsupported`]. The `testing` feature adds the hooks in [`testing`] for
 //! the tests of the crates built over this one.
 //!
+//! A host thread reads a leased request and writes its response by slot id through
+//! [`access`], which applies one set of checks for the C ABI and every binding: a
+//! stale id is refused without touching the slot's lock, a pointer into a slot is
+//! handed out only under the view rule, and the octets a host writes count in the
+//! core's request-memory budget. A slot completed without a response is answered
+//! 500 `NO_RESPONSE`.
+//!
 //! [`conformance`] recomputes the outcomes of the shared conformance vectors with
 //! the server's own parsers, encoders and routing, so every binding's runner
 //! compares against one implementation.
 //!
-//! What the crate does not provide yet: the calls a host thread reads a leased
-//! request and writes its response with (a slot completed without a response is
-//! answered 500 `NO_RESPONSE`), the response actions (serving a file, accepting a
-//! WebSocket, opening an event stream; a response that asks for one is answered
-//! 501), and the WebSocket handshake and connection events, so a WebSocket route's
-//! upgrade request reaches the host as a host route's request does.
+//! What the crate does not provide yet: the response actions (serving a file,
+//! accepting a WebSocket, opening an event stream; a response that asks for one is
+//! answered 501), and the WebSocket handshake and connection events, so a WebSocket
+//! route's upgrade request reaches the host as a host route's request does.
 //!
 //! ```
 //! use zero_host::{App, Method, RouteKind, Server, ServerOptions};
@@ -59,6 +64,7 @@
 //! # Ok::<(), zero_host::HostError>(())
 //! ```
 
+pub mod access;
 mod app;
 pub mod conformance;
 mod handler;
@@ -78,7 +84,9 @@ pub use app::{App, PolicyKind, RouteKind};
 pub use registry::{free_workers, HostExchange};
 pub use server::{Server, Stats};
 pub use spec::ServerOptions;
-pub use target::{bind_thread, complete, read_batch, take_events, Batch, PullTarget};
+pub use target::{
+    abandon_batch, bind_thread, complete, read_batch, take_events, Batch, PullTarget,
+};
 pub use zero_http_types::Method;
 pub use zero_rt::{BatchRef, Event, EventRec, Post, StatusSink, Target};
 

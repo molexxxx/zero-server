@@ -449,10 +449,11 @@ jobs:
           cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
           -p zero-rt -p zero-ffi
 
-      # A late accessor races slot recycle while traffic runs on the same core; the
-      # test is ignored by default because it runs long enough to exercise the race.
-      # cargo exits 0 when a filter matches nothing, so the step also requires the
-      # race test's own ok line.
+      # A late accessor races slot recycle while traffic runs on the same core, once
+      # on the runtime's slot word and once through the host's access path; the tests
+      # are ignored by default because they run long enough to exercise the race.
+      # cargo exits 0 when a filter matches nothing, so the step also counts the race
+      # tests' own ok lines, one per crate.
       - name: Race a late accessor against slot recycle
         shell: bash
         env:
@@ -462,7 +463,9 @@ jobs:
           set -o pipefail
           cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu \
             -p zero-rt -- --include-ignored slot_recycle 2>&1 | tee race.log
-          grep -E '^test [a-z_]*slot_recycle[a-z_]* \.\.\. ok$' race.log
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu \
+            -p zero-host --features testing -- --include-ignored slot_recycle 2>&1 | tee -a race.log
+          test "$(grep -cE '^test [a-z0-9_]*slot_recycle[a-z0-9_]* \.\.\. ok$' race.log)" -eq 2
 
   loom:
     name: loom (slot protocol models)

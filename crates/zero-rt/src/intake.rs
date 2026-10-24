@@ -15,8 +15,10 @@
 //! acknowledgment, which must name the next epoch and one already published, or to
 //! `published` when the worker settles a lost target. The intake does not see the
 //! calling thread: the caller of [`Intake::complete`] passes an epoch only from the
-//! thread bound to the target, which [`Intake::bound_thread`] reports. The
-//! invariants the intake keeps are listed with the others in
+//! thread bound to the target, which [`Intake::bound_thread`] reports. A detach
+//! unbinds that thread at once, and [`Intake::detaching`] reports the detach until the
+//! worker settled it, since until then `acked` does not cover every batch the lost
+//! target received. The invariants the intake keeps are listed with the others in
 //! [`arena`](crate::arena).
 
 use std::fmt;
@@ -53,6 +55,8 @@ pub struct Intake {
     published: AtomicU64,
     acked: AtomicU64,
     bound: AtomicU64,
+    /// 1 from a detach until the worker settles the target it lost, otherwise 0.
+    detaching: AtomicU64,
 }
 
 impl fmt::Debug for Intake {
@@ -61,6 +65,7 @@ impl fmt::Debug for Intake {
             .field("published", &self.published())
             .field("acked", &self.acked())
             .field("bound_thread", &self.bound_thread())
+            .field("detaching", &self.detaching())
             .finish_non_exhaustive()
     }
 }
@@ -84,6 +89,7 @@ impl Intake {
             published: AtomicU64::new(0),
             acked: AtomicU64::new(0),
             bound: AtomicU64::new(0),
+            detaching: AtomicU64::new(0),
         }
     }
 
@@ -140,13 +146,31 @@ impl Intake {
     /// Tell the worker its target is gone: it closes the leases, fails the queued
     /// jobs, and settles the acknowledgment floor on its next turn. The bound thread
     /// is unbound now, so a thread that binds after this call, to a target attached
-    /// after it, keeps its binding when the worker applies the detach.
+    /// after it, keeps its binding when the worker applies the detach, and
+    /// [`detaching`](Self::detaching) reports the detach from now until the worker
+    /// settled it.
     pub fn detach(&self) {
         self.change(|inbox| {
             inbox.attach = None;
             inbox.detach = true;
+            self.detaching.store(1, Ordering::Release);
             self.bound.store(0, Ordering::Release);
         });
+    }
+
+    /// Whether a detach waits for the worker: from [`detach`](Self::detach) until the
+    /// worker settled the target it lost. Until then `acked` does not cover every
+    /// batch that target received, so no thread is that target's thread, a thread
+    /// bound since the detach included; a thread that binds after the detach sees it
+    /// waiting or sees the settled floor, since the detach stores this before it
+    /// unbinds and the settle stores the floor before it clears this.
+    ///
+    /// # Returns
+    ///
+    /// `true` while a detach waits, from an acquire load.
+    #[must_use]
+    pub fn detaching(&self) -> bool {
+        self.detaching.load(Ordering::Acquire) != 0
     }
 
     /// The newest epoch posted to the target.
@@ -252,15 +276,20 @@ impl Intake {
     }
 
     /// The target is gone: no view of it can exist, so every posted epoch counts as
-    /// acknowledged. A loss the worker found itself (`unbind`) also unbinds the
-    /// thread, unless a detach is pending: that detach unbound it when the host made
-    /// it, and a binding made since belongs to the next target. A detach the worker
-    /// applies leaves the binding alone for the same reason.
+    /// acknowledged, and the detach that reported the loss is settled. A loss the
+    /// worker found itself (`unbind`) also unbinds the thread, unless a detach is
+    /// pending: that detach unbound it when the host made it, and a binding made since
+    /// belongs to the next target. A detach the worker applies leaves the binding alone
+    /// for the same reason. A detach made after the worker took the one it applies
+    /// stays pending until its own settle.
     pub(crate) fn settle(&self, unbind: bool) {
         let inbox = sync::lock_recovered(&self.inbox);
         self.acked.store(self.published(), Ordering::Release);
-        if unbind && !inbox.detach {
-            self.bound.store(0, Ordering::Release);
+        if !inbox.detach {
+            self.detaching.store(0, Ordering::Release);
+            if unbind {
+                self.bound.store(0, Ordering::Release);
+            }
         }
         drop(inbox);
     }
@@ -296,5 +325,106 @@ impl Intake {
         if let Some(waker) = waker {
             waker.wake();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Intake;
+
+    #[test]
+    fn a_detach_waits_from_the_call_until_the_worker_settles_it_and_a_later_binding_stays() {
+        let intake = Intake::new();
+        assert!(!intake.detaching());
+        intake.publish(1);
+        assert!(intake.bind_thread(5));
+        intake.detach();
+        assert!(intake.detaching());
+        assert_eq!(intake.bound_thread(), 0, "the detach unbinds at once");
+        assert!(
+            intake.bind_thread(6),
+            "a thread binds while the detach waits"
+        );
+        let mut drained = Vec::new();
+        assert!(intake.drain(&mut drained).detach);
+        assert!(intake.detaching(), "taken by the worker, not settled yet");
+        intake.settle(false);
+        assert!(!intake.detaching());
+        assert_eq!(intake.acked(), 1);
+        assert_eq!(
+            intake.bound_thread(),
+            6,
+            "the binding made since belongs to the next target"
+        );
+    }
+
+    #[test]
+    fn a_detach_made_after_the_worker_took_one_waits_for_its_own_settle() {
+        let intake = Intake::new();
+        let mut drained = Vec::new();
+        intake.detach();
+        assert!(intake.drain(&mut drained).detach);
+        intake.detach();
+        intake.settle(false);
+        assert!(intake.detaching(), "the second detach is not settled");
+        intake.settle(true);
+        assert!(
+            intake.detaching(),
+            "a loss the worker found settles no pending detach"
+        );
+        assert!(intake.drain(&mut drained).detach);
+        intake.settle(false);
+        assert!(!intake.detaching());
+        assert!(intake.bind_thread(7));
+        intake.settle(true);
+        assert_eq!(
+            intake.bound_thread(),
+            0,
+            "a loss the worker found unbinds while no detach waits"
+        );
+        assert!(!intake.detaching());
+    }
+}
+
+#[cfg(all(test, zero_loom))]
+mod loom_models {
+    use loom::thread;
+
+    use super::Intake;
+    use crate::sync::Arc;
+
+    /// A thread that binds after a detach, while the worker takes and settles it, sees
+    /// the detach waiting or the settled floor, never a window on the batch the lost
+    /// target received. The lost target's thread is bound first, so a bind that
+    /// succeeds read the detach's unbinding.
+    #[test]
+    fn loom_a_thread_bound_after_a_detach_sees_it_waiting_or_settled() {
+        let mut builder = loom::model::Builder::new();
+        builder.preemption_bound = Some(3);
+        builder.check(|| {
+            let intake = Arc::new(Intake::new());
+            intake.publish(1);
+            assert!(intake.bind_thread(9));
+            let detacher = {
+                let intake = Arc::clone(&intake);
+                thread::spawn(move || intake.detach())
+            };
+            let next = {
+                let intake = Arc::clone(&intake);
+                thread::spawn(move || {
+                    if intake.bind_thread(5) {
+                        let window =
+                            intake.bound_thread() == 5 && !intake.detaching() && intake.acked() < 1;
+                        assert!(!window, "a window on the lost target's batch");
+                    }
+                })
+            };
+            let mut drained = Vec::new();
+            if intake.drain(&mut drained).detach {
+                intake.settle(false);
+            }
+            detacher.join().unwrap();
+            next.join().unwrap();
+        });
     }
 }

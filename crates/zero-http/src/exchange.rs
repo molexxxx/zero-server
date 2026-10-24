@@ -222,24 +222,29 @@ impl ResponseBody {
         }
     }
 
-    /// The length of the body in octets.
+    /// The length of the body in octets, read from an owned buffer's length without
+    /// forming a slice over its bytes, so it never aliases a body region a host is
+    /// filling through the pointer [`Exchange::stage`] returned.
     ///
     /// # Returns
     ///
     /// The number of bytes.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.as_bytes().len()
+        match self {
+            ResponseBody::Owned(bytes) => bytes.len(),
+            ResponseBody::External(body) => body.bytes().len(),
+        }
     }
 
-    /// Whether the body is empty.
+    /// Whether the body is empty, read as [`len`](Self::len) is.
     ///
     /// # Returns
     ///
     /// `true` when there are no bytes.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.as_bytes().is_empty()
+        self.len() == 0
     }
 
     /// The owned buffer, for writing; an external body is replaced by an empty owned
@@ -500,6 +505,18 @@ impl Exchange {
         self.response_charge = self.response_charge.saturating_add(octets);
     }
 
+    /// The response octets [`count`](Self::count) recorded that the exchange still
+    /// holds, so a caller that counts a body it replaces can add only what the new
+    /// body grows.
+    ///
+    /// # Returns
+    ///
+    /// The counted response octets, 0 after an import or a release.
+    #[must_use]
+    pub const fn response_counted(&self) -> u64 {
+        self.response_charge
+    }
+
     /// The octets of message content the exchange holds now: the request head,
     /// body and trailers, and the response fields and body.
     ///
@@ -704,8 +721,10 @@ impl Exchange {
     ///
     /// # Errors
     ///
-    /// [`Error::Closed`] when the response is sealed and [`Error::Protocol`] when a
-    /// region is already open; nothing changes then.
+    /// [`Error::Closed`] when the response is sealed, [`Error::Protocol`] when a
+    /// region is already open, and [`Error::Limit`] when no buffer can hold `len`
+    /// octets or the allocator refuses them, which is asked before the body is
+    /// touched; nothing changes then.
     pub fn stage(&mut self, len: usize) -> Result<*mut u8, Error> {
         if self.sealed {
             return Err(Error::Closed);
@@ -713,7 +732,15 @@ impl Exchange {
         if self.staged {
             return Err(Error::Protocol("a body region is already open".to_owned()));
         }
+        let refused = || Error::Limit(format!("a body region of {len} octets cannot be allocated"));
+        if let ResponseBody::External(_) = self.response_body {
+            let mut owned = Vec::new();
+            owned.try_reserve_exact(len).map_err(|_| refused())?;
+            self.response_body = ResponseBody::Owned(owned);
+        }
         let body = self.response_body.owned_mut();
+        body.try_reserve_exact(len.saturating_sub(body.len()))
+            .map_err(|_| refused())?;
         body.clear();
         body.resize(len, 0);
         self.staged = true;
@@ -1225,6 +1252,7 @@ mod tests {
     use std::net::SocketAddr;
     use std::sync::Arc;
 
+    use zero_core::Error;
     use zero_http_types::StatusCode;
     use zero_rt::Reset;
 
@@ -1372,6 +1400,51 @@ mod tests {
         assert!(exchange.set_external(body).is_err());
         exchange.clear_response();
         assert!(!exchange.staged() && exchange.response_body.is_empty());
+    }
+
+    #[test]
+    fn a_region_no_buffer_can_hold_is_refused_as_a_limit_and_leaves_the_body_as_it_was() {
+        let mut exchange = Exchange::default();
+        exchange.response().body(b"kept");
+        let past = usize::try_from(isize::MAX).unwrap() + 1;
+        for len in [usize::MAX, past] {
+            assert!(matches!(exchange.stage(len), Err(Error::Limit(_))), "{len}");
+            assert_eq!(exchange.response_body.as_bytes(), b"kept");
+            assert!(!exchange.staged());
+        }
+        let body: Arc<dyn ExternalBody> = Arc::new(Shared(b"shared".to_vec()));
+        exchange.set_external(Arc::clone(&body)).unwrap();
+        assert!(matches!(exchange.stage(past), Err(Error::Limit(_))));
+        assert_eq!(
+            exchange.response_body.as_bytes(),
+            b"shared",
+            "an external body is kept"
+        );
+        let region = exchange.stage(3).unwrap();
+        assert!(!region.is_null());
+        assert_eq!(exchange.response_body.as_bytes(), [0; 3]);
+        assert_eq!(exchange.response_body.len(), 3);
+        assert_eq!(
+            Arc::strong_count(&body),
+            1,
+            "the region replaced the external body"
+        );
+    }
+
+    #[test]
+    fn the_response_counted_octets_are_what_count_added_until_the_import_takes_them() {
+        let mut exchange = Exchange {
+            request_charge: 11,
+            ..Exchange::default()
+        };
+        exchange.count(7);
+        exchange.count(5);
+        assert_eq!(exchange.response_counted(), 12);
+        assert_eq!(exchange.counted(), 23);
+        let mut record = Record::new(1);
+        assert_eq!(exchange.give_response(&mut record), 12);
+        assert_eq!(exchange.response_counted(), 0);
+        assert_eq!(exchange.counted(), 11);
     }
 
     #[test]

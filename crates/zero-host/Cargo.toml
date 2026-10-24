@@ -55,5 +55,9 @@ zero-sse = { workspace = true, optional = true }
 zero-tls = { workspace = true, optional = true }
 zero-server-crypto = { workspace = true, optional = true }
 
+[dev-dependencies]
+# The counting global allocator of the no-allocation test.
+zero-sys.workspace = true
+
 [lints]
 workspace = true

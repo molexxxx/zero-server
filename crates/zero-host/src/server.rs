@@ -28,6 +28,7 @@ use zero_io::seam::Shutdown;
 use zero_rt::dispatch::DispatchLimits;
 use zero_rt::{Counters, StatusSink, Target, Worker, Workers};
 
+use crate::access;
 use crate::app::{App, Built};
 use crate::handler::HostHandler;
 use crate::registry::{self, lock, Attached, Claim, WorkerShared};
@@ -473,6 +474,9 @@ impl Server {
             .first()
             .cloned()
             .ok_or_else(|| HostError::limit("no worker index could be claimed"))?;
+        for &index in claim.indexes() {
+            access::configure(index, options.error_shape, options.max_response_body);
+        }
         let baseline = workers
             .iter()
             .map(|shared| counts(&shared.counters))

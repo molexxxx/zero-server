@@ -5,9 +5,10 @@
 //! Without the feature only [`maybe_panic`] exists, as an inlined no-op. With it,
 //! a test can arm the next guarded call to panic, run code on a worker thread, make a
 //! core's dispatcher panic or hold it, cap the slots a core may claim, read a core's
-//! allocator, read or answer a leased slot directly, hold a thread at a named point of
-//! a server's lifecycle or of a completion's checks, and make the calling thread's
-//! next start fail at its reaper thread or once its cores ran.
+//! allocator, count the slots of an arena that are not free, read or answer a leased
+//! slot directly, hold a thread at a named point of a server's lifecycle or of a
+//! completion's checks, and make the calling thread's next start fail at its reaper
+//! thread or once its cores ran.
 
 #[cfg(feature = "testing")]
 use std::cell::Cell;
@@ -31,14 +32,14 @@ use std::time::Duration;
 #[cfg(feature = "testing")]
 use zero_http::Exchange;
 #[cfg(feature = "testing")]
-use zero_rt::Refused;
+use zero_rt::SlotState;
 
 #[cfg(feature = "testing")]
 use crate::handler::CoreHost;
 #[cfg(feature = "testing")]
 use crate::registry::{self, lock};
 #[cfg(feature = "testing")]
-use crate::{HostError, Server, Status};
+use crate::{access, HostError, Server, Status};
 
 #[cfg(feature = "testing")]
 thread_local! {
@@ -297,15 +298,32 @@ pub fn allocator(server: &Server, worker: u8) -> Result<AllocatorState, HostErro
     })
 }
 
+/// Count the slots of a worker index's arena that are not free: claimed, held,
+/// leased, completing, or closed and not yet retired. The arena outlives its server,
+/// so the count can be read after the server stopped.
+///
+/// # Arguments
+///
+/// * `worker` - the global worker index.
+///
+/// # Returns
+///
+/// The count, or `None` for a worker index no server ever claimed.
 #[cfg(feature = "testing")]
-fn refusal(id: u64, refused: Refused) -> HostError {
-    match refused {
-        Refused::Poisoned => HostError::new(Status::Panic, format!("slot {id} is poisoned")),
-        _ => HostError::closed(format!("slot {id} is not leased at its generation")),
-    }
+#[must_use]
+pub fn live_slots(worker: u8) -> Option<usize> {
+    let shared = registry::worker(worker)?;
+    let live = shared
+        .arena
+        .slots()
+        .filter(|(_, slot)| slot.word().state() != SlotState::Free)
+        .count();
+    Some(live)
 }
 
-/// Read the exchange of a leased or completing slot under its lock.
+/// Read the exchange of a leased or completing slot under its lock, through the
+/// access helpers every host call uses, with the same rule: the read and its result
+/// are `Send`, so no raw pointer into the slot leaves it.
 ///
 /// # Arguments
 ///
@@ -322,13 +340,17 @@ fn refusal(id: u64, refused: Refused) -> HostError {
 /// stale or unknown id or a slot in another state, and [`Status::Panic`] for a
 /// poisoned slot.
 #[cfg(feature = "testing")]
-pub fn inspect<R>(id: u64, read: impl FnOnce(&Exchange) -> R) -> Result<R, HostError> {
-    let (_, slot_id, slot) = registry::slot(id)?;
-    slot.with_read(slot_id.generation(), |exchange| read(&exchange.0))
-        .map_err(|refused| refusal(id, refused))
+pub fn inspect<R, F>(id: u64, read: F) -> Result<R, HostError>
+where
+    F: FnOnce(&Exchange) -> R + Send,
+    R: Send,
+{
+    access::with_read(id, read).map_err(HostError::from)
 }
 
-/// Write the response of a leased slot under its lock.
+/// Write the response of a leased slot under its lock, through the access helpers,
+/// with none of the checks of the response calls: the write may change anything, the
+/// seal included.
 ///
 /// # Arguments
 ///
@@ -344,9 +366,7 @@ pub fn inspect<R>(id: u64, read: impl FnOnce(&Exchange) -> R) -> Result<R, HostE
 /// As [`inspect`], and [`Status::Closed`] for a slot that is not leased.
 #[cfg(feature = "testing")]
 pub fn respond<R>(id: u64, write: impl FnOnce(&mut Exchange) -> R) -> Result<R, HostError> {
-    let (_, slot_id, slot) = registry::slot(id)?;
-    slot.with_write(slot_id.generation(), |exchange| write(&mut exchange.0))
-        .map_err(|refused| refusal(id, refused))
+    access::with_write(id, write).map_err(HostError::from)
 }
 
 /// A point of a server's code where [`hold`] stops the next thread that reaches it.
