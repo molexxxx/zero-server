@@ -4,13 +4,14 @@
 #
 # rust:1.99.0-trixie is the Docker Hub tag for the toolchain rust-toolchain.toml pins,
 # pushed 2026-10-12 (https://hub.docker.com/_/rust/tags?name=1.99.0, read 2026-10-14).
-# Node 24.22.0 is the newest release of the Active LTS line on 2026-10-14
+# Node 24.22.1 is the newest release of the Active LTS line on 2026-10-25, the
+# security release that fixes the bundled Brotli decoder (CVE-2026-111497)
 # (https://nodejs.org/dist/index.json; its checksum from
-# https://nodejs.org/dist/v24.22.0/SHASUMS256.txt).
+# https://nodejs.org/dist/v24.22.1/SHASUMS256.txt).
 FROM rust:1.99.0-trixie@sha256:d3ba1ad5d5b5a180ca8428b4fab8543a1b3933b32a8a7ad90a7ebbaf5497203a
 
-ARG NODE_VERSION=24.22.0
-ARG NODE_SHA256=cc2f601cee82d9a5a233302fe307abc600727035fd7d2c3a3571755989e95008
+ARG NODE_VERSION=24.22.1
+ARG NODE_SHA256=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
 
 RUN rustup component add rustfmt clippy
 
