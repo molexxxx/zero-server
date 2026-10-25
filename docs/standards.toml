@@ -6754,6 +6754,19 @@ release = 1
 note = "Foreign Function Interface (FFI), Typing, Preserving Rust memory model, Rule FFI-CK-REF-MODEL: Preservation of Rust's memory model when transferring indirections at its boundary"
 
 [[entry]]
+key = "ffi-09"
+chapter = "runtime"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A host field value with CR, LF or NUL is refused at the C ABI by every call that writes a field line, and none of it reaches the wire"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5"
+evidence = "crates/zero-ffi/tests/abi_table.rs"
+at = "fn a_field_value_with_cr_lf_or_nul_is_refused_through_the_c_abi"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 5.5, Field Values: Field values containing CR, LF, or NUL characters are invalid and dangerous"
+
+[[entry]]
 key = "runtime-21"
 chapter = "runtime"
 designation = "RFC 9110"

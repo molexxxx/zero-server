@@ -16,9 +16,29 @@ authors.workspace = true
 # and tests use the crate normally.
 crate-type = ["lib", "cdylib", "staticlib"]
 
+[features]
+# The capabilities of zero-host, forwarded one to one with the same default set.
+default = ["static", "policy", "realtime", "tls"]
+static = ["zero-host/static"]
+policy = ["zero-host/policy"]
+realtime = ["zero-host/realtime"]
+tls = ["zero-host/tls"]
+
 [dependencies]
 zero-core.workspace = true
+zero-limits.workspace = true
+zero-http-types.workspace = true
 zero-http.workspace = true
+# Declared directly rather than inherited, because `default-features` cannot be
+# overridden through workspace inheritance; the features above choose what it builds.
+zero-host = { path = "../zero-host", version = "0.1.0", default-features = false }
+
+# The same crate with its test hooks, for this crate's tests only: Cargo enables a
+# dev-dependency's features only for the targets that build dev-dependencies.
+[dev-dependencies]
+zero-host = { path = "../zero-host", version = "0.1.0", default-features = false, features = [
+    "testing",
+] }
 
 [build-dependencies]
 cbindgen = { version = "0.29", default-features = false }

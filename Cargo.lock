@@ -2215,7 +2215,10 @@ version = "0.1.0"
 dependencies = [
  "cbindgen",
  "zero-core",
+ "zero-host",
  "zero-http",
+ "zero-http-types",
+ "zero-limits",
 ]
 
 [[package]]
