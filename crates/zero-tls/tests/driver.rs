@@ -73,6 +73,34 @@ impl Server {
         threads: usize,
         identities: Arc<Identities>,
     ) -> Self {
+        Server::start_tls(
+            threads,
+            identities,
+            TlsOptions {
+                limits,
+                driver,
+                ..TlsOptions::default()
+            },
+        )
+    }
+
+    /// A server that does not require a TLS 1.2 client to offer the extended
+    /// main secret, for telling a client that lacks it from one that fails.
+    fn without_ems(driver: Driver) -> Self {
+        let other = Identity::from_pem(OTHER, OTHER_KEY, &["other.test"]).unwrap();
+        let identities = Arc::new(Identities::new(&[localhost(), other], Some(localhost())));
+        Server::start_tls(
+            2,
+            identities,
+            TlsOptions {
+                driver,
+                require_ems: false,
+                ..TlsOptions::default()
+            },
+        )
+    }
+
+    fn start_tls(threads: usize, identities: Arc<Identities>, options: TlsOptions) -> Self {
         let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
         let config = Config {
             runtime: zero_rt::Config {
@@ -90,11 +118,7 @@ impl Server {
             "127.0.0.1:0".parse().unwrap(),
             config,
             Arc::clone(&identities),
-            TlsOptions {
-                limits,
-                driver,
-                ..TlsOptions::default()
-            },
+            options,
             Arc::new(|_| {}),
             move |_| App {
                 log: Arc::clone(&app_log),
@@ -593,45 +617,65 @@ fn run(program: &str, args: &[&str], input: &[u8]) -> Option<(bool, String)> {
     Some((output.status.success(), text))
 }
 
+/// Fetch `/hello` with curl at exactly one TLS version; `None` when no curl is
+/// installed.
+fn curl(ca: &str, port: u16, version: &str) -> Option<(bool, String)> {
+    let resolve = format!("localhost:{port}:127.0.0.1");
+    let url = format!("https://localhost:{port}/hello");
+    let max = if version == "--tlsv1.2" { "1.2" } else { "1.3" };
+    let mut args = vec![
+        "-sS",
+        "--cacert",
+        ca,
+        "--resolve",
+        &resolve,
+        version,
+        "--tls-max",
+        max,
+    ];
+    // Schannel, the TLS backend of curl on Windows, fails a chain whose revocation
+    // status it cannot learn, and the test CA publishes none.
+    if cfg!(windows) {
+        args.push("--ssl-revoke-best-effort");
+    }
+    args.push(&url);
+    run("curl", &args, b"")
+}
+
 #[test]
 fn both_drivers_interoperate_with_curl_and_openssl_s_client() {
     let ca = format!("{FIXTURES}/ca.pem");
     for driver in DRIVERS {
         let server = Server::with(driver);
         let port = server.addr.port().to_string();
-        let resolve = format!("localhost:{port}:127.0.0.1");
-        let url = format!("https://localhost:{port}/hello");
         for version in ["--tlsv1.3", "--tlsv1.2"] {
-            let max = if version == "--tlsv1.2" { "1.2" } else { "1.3" };
-            let mut args = vec![
-                "-sS",
-                "--cacert",
-                &ca,
-                "--resolve",
-                &resolve,
-                version,
-                "--tls-max",
-                max,
-            ];
-            // Schannel, the TLS backend of curl on Windows, fails a chain whose
-            // revocation status it cannot learn, and the test CA publishes none.
-            if cfg!(windows) {
-                args.push("--ssl-revoke-best-effort");
+            let Some((ok, text)) = curl(&ca, server.addr.port(), version) else {
+                continue;
+            };
+            // Exit code 4, CURLE_NOT_BUILT_IN: this curl was built without the
+            // requested protocol version (the macOS system curl lacks --tlsv1.3),
+            // so it cannot drive this case, as when no curl exists.
+            if !ok && text.contains("curl: (4)") {
+                eprintln!("{driver:?}: this curl cannot select {version}: {text}");
+                continue;
             }
-            args.push(&url);
-            if let Some((ok, text)) = run("curl", &args, b"") {
-                // Exit code 4, CURLE_NOT_BUILT_IN: this curl was built without the
-                // requested protocol version (the macOS system curl lacks
-                // --tlsv1.3), so it cannot drive this case, as when no curl exists.
-                if !ok && text.contains("curl: (4)") {
-                    eprintln!("{driver:?}: this curl cannot select {version}: {text}");
+            // The server requires a TLS 1.2 client to offer the extended main
+            // secret; a curl that does not is told apart by a server that does not
+            // require it accepting the same handshake.
+            if !ok && version == "--tlsv1.2" {
+                let relaxed = Server::without_ems(driver);
+                let accepted = curl(&ca, relaxed.addr.port(), version)
+                    .is_some_and(|(ok, text)| ok && text.contains("hello secure"));
+                relaxed.stop().unwrap();
+                if accepted {
+                    eprintln!("{driver:?}: this curl offers no extended main secret: {text}");
                     continue;
                 }
-                assert!(
-                    ok && text.contains("hello secure"),
-                    "{driver:?} curl {version}: {text}"
-                );
             }
+            assert!(
+                ok && text.contains("hello secure"),
+                "{driver:?} curl {version}: {text}"
+            );
         }
         let connect = format!("127.0.0.1:{port}");
         if let Some((_, text)) = run(
