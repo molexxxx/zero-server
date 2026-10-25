@@ -31,6 +31,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::cmp::Ordering;
 use core::fmt;
 use core::ops::Range;
 
@@ -44,7 +45,9 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The most parameters one route captures, catch-all included.
 pub const MAX_PARAMS: usize = 16;
 
-/// The most segments a path is matched over; a longer path is not found.
+/// The most segments a path is matched over; a longer path is not found, so a
+/// route with more segments before a final catch-all, or a mount prefix with more,
+/// is refused with [`RouteError::TooManySegments`].
 pub const MAX_SEGMENTS: usize = 64;
 
 /// Why a route or mount was refused.
@@ -66,6 +69,10 @@ pub enum RouteError {
     Duplicate,
     /// A mount prefix is `/`, which would shadow the whole router.
     RootMount,
+    /// The pattern has more than [`MAX_SEGMENTS`] segments before a final
+    /// catch-all, or a mount prefix has more than [`MAX_SEGMENTS`]: no path that
+    /// long is matched, so the route could never be reached.
+    TooManySegments,
 }
 
 impl fmt::Display for RouteError {
@@ -79,6 +86,7 @@ impl fmt::Display for RouteError {
             Self::ParameterConflict => "another route names this parameter differently",
             Self::Duplicate => "the method already has a route on this pattern",
             Self::RootMount => "a mount cannot take the root",
+            Self::TooManySegments => "the pattern has more segments than a path is matched over",
         })
     }
 }
@@ -425,7 +433,8 @@ impl<T: Copy> Router<T> {
     ///
     /// # Errors
     ///
-    /// [`RouteError`] for a pattern outside the syntax, a parameter named
+    /// [`RouteError`] for a pattern outside the syntax, one with more than
+    /// [`MAX_SEGMENTS`] segments before a final catch-all, a parameter named
     /// differently at the same position by another route, or a duplicate.
     pub fn route(
         &mut self,
@@ -515,7 +524,9 @@ impl<T: Copy> Router<T> {
         Ok(node.leaf.get_or_insert_with(|| Leaf::new(pattern)))
     }
 
-    /// Mount a child router under a prefix.
+    /// Mount a child router under a prefix. Mounts are tried longest prefix first,
+    /// so the most specific wins, then in byte order; a mount whose prefix another
+    /// already has comes after it.
     ///
     /// # Arguments
     ///
@@ -525,7 +536,8 @@ impl<T: Copy> Router<T> {
     ///
     /// # Errors
     ///
-    /// [`RouteError`] for a prefix outside the syntax or the bare root.
+    /// [`RouteError`] for a prefix outside the syntax, the bare root, or a prefix
+    /// with more than [`MAX_SEGMENTS`] segments.
     pub fn mount(&mut self, prefix: &str, router: Router<T>) -> Result<(), RouteError> {
         let mut scratch = Vec::new();
         let normalized = normalize_pattern(prefix, &mut scratch)?;
@@ -536,17 +548,23 @@ impl<T: Copy> Router<T> {
         if trimmed.iter().any(|&byte| byte == b':' || byte == b'*') {
             return Err(RouteError::InvalidPattern);
         }
-        self.mounts.push(Mount {
-            prefix: trimmed.to_vec(),
-            router,
+        if trimmed.iter().filter(|&&byte| byte == b'/').count() > MAX_SEGMENTS {
+            return Err(RouteError::TooManySegments);
+        }
+        let position = self.mounts.partition_point(|existing| {
+            match existing.prefix.len().cmp(&trimmed.len()) {
+                Ordering::Greater => true,
+                Ordering::Less => false,
+                Ordering::Equal => existing.prefix.as_slice() <= trimmed,
+            }
         });
-        // Longest prefix first, so the most specific mount is tried first.
-        self.mounts.sort_by(|a, b| {
-            b.prefix
-                .len()
-                .cmp(&a.prefix.len())
-                .then_with(|| a.prefix.cmp(&b.prefix))
-        });
+        self.mounts.insert(
+            position,
+            Mount {
+                prefix: trimmed.to_vec(),
+                router,
+            },
+        );
         Ok(())
     }
 
@@ -812,7 +830,8 @@ fn normalize_pattern<'a>(
     normalize_path(path, scratch).map_err(|_| RouteError::InvalidPattern)
 }
 
-/// Split a normalized pattern into segments.
+/// Split a normalized pattern into segments: at most [`MAX_SEGMENTS`], and one more
+/// when it is the final catch-all.
 fn parse_pattern(normalized: &[u8]) -> Result<Vec<Segment<'_>>, RouteError> {
     let rest = normalized
         .strip_prefix(b"/")
@@ -822,6 +841,9 @@ fn parse_pattern(normalized: &[u8]) -> Result<Vec<Segment<'_>>, RouteError> {
     }
     let mut segments = Vec::new();
     for segment in rest.split(|&byte| byte == b'/') {
+        if segments.len() > MAX_SEGMENTS {
+            return Err(RouteError::TooManySegments);
+        }
         segments.push(match segment.split_first() {
             Some((b':', name)) => {
                 if name.is_empty() {
@@ -832,6 +854,9 @@ fn parse_pattern(normalized: &[u8]) -> Result<Vec<Segment<'_>>, RouteError> {
             Some((b'*', name)) => Segment::CatchAll(if name.is_empty() { b"*" } else { name }),
             _ => Segment::Static(segment),
         });
+    }
+    if segments.len() > MAX_SEGMENTS && !matches!(segments.last(), Some(Segment::CatchAll(_))) {
+        return Err(RouteError::TooManySegments);
     }
     Ok(segments)
 }
@@ -1310,5 +1335,87 @@ mod tests {
             router.resolve(b"GET", deep.as_bytes()),
             Resolution::NotFound
         ));
+    }
+
+    #[test]
+    fn a_route_or_mount_deeper_than_any_matched_path_is_refused_and_one_at_the_bound_is_kept() {
+        let bound = super::MAX_SEGMENTS;
+        let mut router: Router<u32> = Router::new();
+        let deepest = "/x".repeat(bound);
+        assert_eq!(router.route(Method::Get, &deepest, 1), Ok(()));
+        assert_eq!(
+            descriptor(router.resolve(b"GET", deepest.as_bytes())),
+            Some(1)
+        );
+        let tail = alloc::format!("{deepest}/*rest");
+        assert_eq!(
+            router.route(Method::Get, &tail, 2),
+            Ok(()),
+            "a final catch-all past the bound is kept"
+        );
+        let deeper = "/y".repeat(bound.saturating_add(1));
+        assert_eq!(
+            router.route(Method::Get, &deeper, 3),
+            Err(RouteError::TooManySegments)
+        );
+        assert_eq!(
+            router.route(Method::Get, &alloc::format!("{deeper}/*rest"), 4),
+            Err(RouteError::TooManySegments)
+        );
+        let segments = if cfg!(miri) {
+            bound.saturating_mul(4)
+        } else {
+            400_000
+        };
+        assert_eq!(
+            router.route(Method::Get, &"/a".repeat(segments), 5),
+            Err(RouteError::TooManySegments),
+            "no node is built for a pattern no path reaches"
+        );
+        let mut child = Router::new();
+        assert_eq!(child.route(Method::Get, "/", 6), Ok(()));
+        let prefix = "/m".repeat(bound);
+        assert_eq!(router.mount(&prefix, child), Ok(()));
+        assert_eq!(
+            descriptor(router.resolve(b"GET", prefix.as_bytes())),
+            Some(6)
+        );
+        assert_eq!(
+            router.mount(&"/n".repeat(bound.saturating_add(1)), Router::new()),
+            Err(RouteError::TooManySegments)
+        );
+    }
+
+    #[test]
+    fn mounts_are_tried_longest_prefix_first_and_an_equal_prefix_in_the_order_mounted() {
+        let child = |descriptor: u32| {
+            let mut router = Router::new();
+            router.route(Method::Get, "/x", descriptor).ok();
+            router
+        };
+        for order in [[0usize, 1, 2], [2, 1, 0], [1, 2, 0]] {
+            let mut router: Router<u32> = Router::new();
+            for index in order {
+                let (prefix, id) = match index {
+                    0 => ("/a", 1),
+                    1 => ("/a/b", 2),
+                    _ => ("/a/b/c", 3),
+                };
+                assert_eq!(router.mount(prefix, child(id)), Ok(()));
+            }
+            assert_eq!(descriptor(router.resolve(b"GET", b"/a/b/c/x")), Some(3));
+            assert_eq!(descriptor(router.resolve(b"GET", b"/a/b/x")), Some(2));
+            assert_eq!(descriptor(router.resolve(b"GET", b"/a/x")), Some(1));
+        }
+        let mut router: Router<u32> = Router::new();
+        assert_eq!(router.mount("/p", child(4)), Ok(()));
+        let mut other = Router::new();
+        assert_eq!(other.route(Method::Get, "/y", 5), Ok(()));
+        assert_eq!(router.mount("/p", other), Ok(()));
+        assert_eq!(descriptor(router.resolve(b"GET", b"/p/x")), Some(4));
+        assert!(
+            matches!(router.resolve(b"GET", b"/p/y"), Resolution::NotFound),
+            "the first mount of a prefix owns it"
+        );
     }
 }

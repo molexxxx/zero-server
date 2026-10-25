@@ -1,0 +1,1 @@
+{"settings":{"cases":[{"expect":{"settings":{"enableConnectProtocol":null,"h3Datagram":null,"maxFieldSectionSize":null,"qpackBlockedStreams":null,"qpackMaxTableCapacity":null}},"name":"empty","payload":"","section":"RFC 9114 Section 7.2.4"}]}}

@@ -1,0 +1,1 @@
+{"huffmanErrors":{"cases":[{"encoded":"ffffffff","error":"eos","name":"EOS in the data","section":"RFC 7541 Section 5.2"}]}}

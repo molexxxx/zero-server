@@ -49,7 +49,9 @@
 //!
 //! An unknown section, and `ws` and `sse` in a build without the `realtime` feature,
 //! are refused as unsupported whatever the document. The entry keeps no state and
-//! never panics, since a binding hands it bytes it has not checked.
+//! never panics, since a binding hands it bytes it has not checked, and it bounds
+//! what a document can make it build (router tables, route lists, QPACK octets), so
+//! its work and memory stay proportional to the document.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc8259.html#section-6>
 //! @see <https://www.rfc-editor.org/rfc/rfc8259.html#section-8.1>
@@ -66,7 +68,7 @@ use zero_http_types::field::validate_field_value;
 use zero_http_types::{Method, StatusCode};
 use zero_json::{ErrorKind, WriteError, Writer};
 use zero_limits::http1::{Http1Limits, HEADER_TABLE_ENTRIES};
-use zero_limits::transport::QPACK_INTEGER_CAP;
+use zero_limits::transport::{H3_MAX_FIELD_SECTION_SIZE, QPACK_INTEGER_CAP};
 use zero_limits::Http3Limits;
 use zero_qpack::integer::{PrefixBits, MAX_VALUE};
 use zero_qpack::table::STATIC_TABLE;
@@ -75,7 +77,7 @@ use zero_qpack::{
     EncoderInstruction, EncoderStreamReceiver, FieldLine, HuffmanPolicy, Prefix, Representation,
     StringLiteral,
 };
-use zero_router::{Resolution, Router, TrailingSlash};
+use zero_router::{Resolution, RouteError, Router, TrailingSlash};
 
 use crate::spec::writable_field_name;
 use crate::{HostError, Status};
@@ -91,6 +93,21 @@ pub const SECTIONS: [&str; 7] = [
     Section::Qpack.name(),
     Section::H3Frames.name(),
 ];
+
+/// The most routes a `router` table holds, counted over the table and its mounts.
+pub const MAX_TABLE_ROUTES: usize = 1_024;
+
+/// The most mounts a `router` table holds.
+pub const MAX_TABLE_MOUNTS: usize = 64;
+
+/// The most subprotocols, and the most origins, a `ws` case's route lists.
+pub const MAX_ROUTE_LIST: usize = 64;
+
+/// The most octets the entry decodes in a `qpack` field section, encoder or decoder
+/// stream, or Huffman string, whose decoding builds a result value per field line,
+/// representation, instruction or octet: the largest field section the server
+/// decodes, [`H3_MAX_FIELD_SECTION_SIZE`].
+pub const MAX_QPACK_OCTETS: u64 = H3_MAX_FIELD_SECTION_SIZE;
 
 /// Runs part of a section of `conformance/vectors.json` through the parsers and
 /// encoders the server uses.
@@ -111,8 +128,15 @@ pub const SECTIONS: [&str; 7] = [
 /// [`Status::Unsupported`] for a section outside [`SECTIONS`], and for `ws` and `sse`
 /// in a build without the `realtime` feature, whatever the document;
 /// [`Status::Limit`] for a document past the JSON size cap of one mebibyte or the
-/// nesting cap; [`Status::Codec`] for a document that is not JSON or does not have
-/// the section's shape, with the path of the member at fault.
+/// nesting cap, and for a member past a bound that keeps the entry's work and memory
+/// proportional to the document, with the path of the member: a `router` table of
+/// more than [`MAX_TABLE_ROUTES`] routes or [`MAX_TABLE_MOUNTS`] mounts, a pattern
+/// with more than [`zero_router::MAX_SEGMENTS`] segments before a final catch-all
+/// or a mount prefix with more, which no request path reaches; a `ws` route listing
+/// more than [`MAX_ROUTE_LIST`] subprotocols or origins; and a `qpack` field
+/// section, encoder or decoder stream, or Huffman string longer than
+/// [`MAX_QPACK_OCTETS`] octets; [`Status::Codec`] for a document that is not JSON or
+/// does not have the section's shape, with the path of the member at fault.
 pub fn case(section: &[u8], input: &[u8]) -> Result<String, HostError> {
     let Some(known) = Section::parse(section) else {
         let shown = section.get(..64).unwrap_or(section);
@@ -431,6 +455,26 @@ impl<'a> Object<'a> {
     fn hex(&self, key: &str) -> Result<Vec<u8>, HostError> {
         parse_hex(self.string(key)?)
             .ok_or_else(|| expected(self.at(key), "octets in lowercase hexadecimal"))
+    }
+
+    /// A member holding at most [`MAX_QPACK_OCTETS`] octets as lowercase
+    /// hexadecimal.
+    fn qpack_octets(&self, key: &str) -> Result<Vec<u8>, HostError> {
+        let digits = self.string(key)?;
+        let longest = MAX_QPACK_OCTETS.saturating_mul(2);
+        if u64::try_from(digits.len())
+            .ok()
+            .is_none_or(|len| len > longest)
+        {
+            return Err(HostError::new(
+                Status::Limit,
+                format!(
+                    "{}: longer than the {MAX_QPACK_OCTETS} octets of the largest field section the server decodes",
+                    self.at(key)
+                ),
+            ));
+        }
+        self.hex(key)
     }
 
     /// A member holding an integer as a decimal string.
@@ -809,18 +853,26 @@ fn read_table(table: &Object<'_>) -> Result<(Router<u32>, Out), HostError> {
         }
     };
     let mut router = Router::new().with_trailing_slash(trailing);
-    let routes = add_routes(&mut router, table)?;
+    let mut left = MAX_TABLE_ROUTES;
+    let routes = add_routes(&mut router, table, &mut left)?;
     let path = table.at("mounts");
+    let listed = table.array("mounts")?;
+    if listed.len() > MAX_TABLE_MOUNTS {
+        return Err(HostError::new(
+            Status::Limit,
+            format!("{path}[{MAX_TABLE_MOUNTS}]: past the {MAX_TABLE_MOUNTS} mounts a table holds"),
+        ));
+    }
     let mut mounts = Vec::new();
-    for (index, item) in table.array("mounts")?.iter().enumerate() {
+    for (index, item) in listed.iter().enumerate() {
         let mount = Object::new(item, format!("{path}[{index}]"))?;
         mount.only(&["prefix", "routes"])?;
         let prefix = mount.string("prefix")?;
         let mut child = Router::new().with_trailing_slash(trailing);
-        let child_routes = add_routes(&mut child, &mount)?;
+        let child_routes = add_routes(&mut child, &mount, &mut left)?;
         router
             .mount(prefix, child)
-            .map_err(|error| HostError::codec(format!("{}: {error}", mount.at("prefix"))))?;
+            .map_err(|error| refusal(mount.at("prefix"), error))?;
         mounts.push(Out::Map(vec![
             ("prefix", text(prefix)),
             ("routes", child_routes),
@@ -834,11 +886,23 @@ fn read_table(table: &Object<'_>) -> Result<(Router<u32>, Out), HostError> {
     Ok((router, echo))
 }
 
-/// Registers the routes an object lists, and returns them as read.
-fn add_routes(router: &mut Router<u32>, owner: &Object<'_>) -> Result<Out, HostError> {
+/// Registers the routes an object lists, and returns them as read; `left` counts
+/// down the routes the table may still hold.
+fn add_routes(
+    router: &mut Router<u32>,
+    owner: &Object<'_>,
+    left: &mut usize,
+) -> Result<Out, HostError> {
     let path = owner.at("routes");
     let mut echo = Vec::new();
     for (index, item) in owner.array("routes")?.iter().enumerate() {
+        let Some(remaining) = left.checked_sub(1) else {
+            return Err(HostError::new(
+                Status::Limit,
+                format!("{path}[{index}]: past the {MAX_TABLE_ROUTES} routes a table holds"),
+            ));
+        };
+        *left = remaining;
         let route = Object::new(item, format!("{path}[{index}]"))?;
         route.only(&["id", "method", "pattern"])?;
         let token = route.string("method")?;
@@ -849,7 +913,7 @@ fn add_routes(router: &mut Router<u32>, owner: &Object<'_>) -> Result<Out, HostE
             .map_err(|_| expected(route.at("id"), "a route id below 2^32"))?;
         router
             .route(method, pattern, id)
-            .map_err(|error| HostError::codec(format!("{}: {error}", route.at("pattern"))))?;
+            .map_err(|error| refusal(route.at("pattern"), error))?;
         echo.push(Out::Map(vec![
             ("id", Out::Uint(u64::from(id))),
             ("method", text(token)),
@@ -857,6 +921,17 @@ fn add_routes(router: &mut Router<u32>, owner: &Object<'_>) -> Result<Out, HostE
         ]));
     }
     Ok(Out::List(echo))
+}
+
+/// The router's refusal of a pattern or a mount prefix: a limit for one deeper
+/// than any path the router matches, a shape error otherwise.
+fn refusal(path: String, error: RouteError) -> HostError {
+    let status = if error == RouteError::TooManySegments {
+        Status::Limit
+    } else {
+        Status::Codec
+    };
+    HostError::new(status, format!("{path}: {error}"))
 }
 
 /// One `router` case: what the server answers for the method token and the target.
@@ -1028,7 +1103,7 @@ fn integer_error_case(case: &Object<'_>) -> Result<Out, HostError> {
 /// decode.
 fn huffman_case(case: &Object<'_>) -> Result<Out, HostError> {
     case.only(&["encoded", "name", "section", "text"])?;
-    let encoded = case.hex("encoded")?;
+    let encoded = case.qpack_octets("encoded")?;
     let mut plain = Vec::new();
     let decoded_text = match huffman::decode_to_vec(&encoded, &mut plain) {
         Ok(()) => decoded(&plain),
@@ -1044,7 +1119,7 @@ fn huffman_case(case: &Object<'_>) -> Result<Out, HostError> {
 /// or null.
 fn huffman_error_case(case: &Object<'_>) -> Result<Out, HostError> {
     case.only(&["encoded", "error", "name", "section"])?;
-    let encoded = case.hex("encoded")?;
+    let encoded = case.qpack_octets("encoded")?;
     let mut plain = Vec::new();
     let error = match huffman::decode_to_vec(&encoded, &mut plain) {
         Err(error) => text(error.name()),
@@ -1060,7 +1135,7 @@ fn huffman_error_case(case: &Object<'_>) -> Result<Out, HostError> {
 /// the representations it holds, null when it does not parse into representations.
 fn field_section_case(case: &Object<'_>) -> Result<Out, HostError> {
     case.only(&["encoded", "expect", "name", "representations", "section"])?;
-    let encoded = case.hex("encoded")?;
+    let encoded = case.qpack_octets("encoded")?;
     let expect = decode_section(&encoded)?;
     let mut members = identity(case)?;
     members.push(("encoded", octets(&encoded)));
@@ -1274,7 +1349,7 @@ fn encoder_stream_case(case: &Object<'_>) -> Result<Out, HostError> {
         "name",
         "section",
     ])?;
-    let encoded = case.hex("encoded")?;
+    let encoded = case.qpack_octets("encoded")?;
     let instructions = encoder_instructions(&encoded);
     let head_only = match (
         &instructions,
@@ -1392,7 +1467,7 @@ fn decoder_stream_case(case: &Object<'_>) -> Result<Out, HostError> {
         "name",
         "section",
     ])?;
-    let encoded = case.hex("encoded")?;
+    let encoded = case.qpack_octets("encoded")?;
     let instructions = decoder_instructions(&encoded);
     let mut receiver = DecoderStreamReceiver;
     let verdict = stream_verdict(receiver.feed(&encoded), encoded.len());
@@ -2122,6 +2197,7 @@ fn datagram_case(case: &Object<'_>) -> Result<Out, HostError> {
 /// and the event stream encoder.
 #[cfg(feature = "realtime")]
 mod realtime {
+    use zero_core::Value;
     use zero_http1::{parse_request, Field, Status as Parsed, Version};
     use zero_limits::http1::{Http1Limits, HEADER_TABLE_ENTRIES};
     use zero_limits::WebSocketLimits;
@@ -2130,8 +2206,8 @@ mod realtime {
     use zero_ws::handshake::{negotiate, Config};
     use zero_ws::{Event, Session};
 
-    use super::{decoded, expected, identity, octets, text, Member, Object, Out};
-    use crate::HostError;
+    use super::{decoded, expected, identity, octets, text, Member, Object, Out, MAX_ROUTE_LIST};
+    use crate::{HostError, Status};
 
     pub(super) const WS: &[(&str, Member)] = &[("cases", Member::Cases(ws_case))];
 
@@ -2162,6 +2238,19 @@ mod realtime {
             }
         };
         let request = case.hex("request")?;
+        for key in ["routeProtocols", "routeOrigins"] {
+            if let Some(Value::Array(items)) = case.get(key) {
+                if items.len() > MAX_ROUTE_LIST {
+                    return Err(HostError::new(
+                        Status::Limit,
+                        format!(
+                            "{}: more than the {MAX_ROUTE_LIST} entries a route lists",
+                            case.at(key)
+                        ),
+                    ));
+                }
+            }
+        }
         let protocols = case.strings("routeProtocols")?;
         let origins = case.optional_strings("routeOrigins")?;
         let client = case.hex("clientFrames")?;

@@ -9,6 +9,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 
 [[package]]
+name = "aws-lc-rs"
+version = "1.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b281d307588d634de920874890732659e2e7672f72b5e10e81badc1a8a83621e"
+dependencies = [
+ "aws-lc-sys",
+ "zeroize",
+]
+
+[[package]]
+name = "aws-lc-sys"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27"
+dependencies = [
+ "cc",
+ "cmake",
+ "dunce",
+ "fs_extra",
+ "pkg-config",
+]
+
+[[package]]
 name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -33,10 +56,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
+name = "cmake"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "dunce"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
+
+[[package]]
+name = "fs_extra"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
 name = "getrandom"
@@ -108,6 +152,12 @@ name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+
+[[package]]
+name = "pkg-config"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "r-efi"
@@ -322,6 +372,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "zero-host"
+version = "0.1.0"
+dependencies = [
+ "zero-base64",
+ "zero-core",
+ "zero-h3",
+ "zero-http",
+ "zero-http-types",
+ "zero-http1",
+ "zero-io",
+ "zero-json",
+ "zero-limits",
+ "zero-qpack",
+ "zero-realtime",
+ "zero-router",
+ "zero-rt",
+ "zero-server-crypto",
+ "zero-sse",
+ "zero-uri",
+ "zero-ws",
+]
+
+[[package]]
 name = "zero-http"
 version = "0.1.0"
 dependencies = [
@@ -410,6 +483,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "zero-realtime"
+version = "0.1.0"
+dependencies = [
+ "zero-core",
+ "zero-http",
+ "zero-http-types",
+ "zero-http1",
+ "zero-io",
+ "zero-limits",
+ "zero-rt",
+ "zero-server-crypto",
+ "zero-sse",
+ "zero-ws",
+]
+
+[[package]]
 name = "zero-router"
 version = "0.1.0"
 dependencies = [
@@ -428,6 +517,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "zero-server-crypto"
+version = "0.1.0"
+dependencies = [
+ "aws-lc-rs",
+ "zero-core",
+ "zero-sys",
+ "zeroize",
+]
+
+[[package]]
 name = "zero-server-fuzz"
 version = "0.0.0"
 dependencies = [
@@ -436,6 +535,7 @@ dependencies = [
  "zero-base64",
  "zero-core",
  "zero-h3",
+ "zero-host",
  "zero-http-types",
  "zero-http1",
  "zero-json",

@@ -1,0 +1,1 @@
+{"cases":[{"call":{"data":"payload"},"expect":{"bytes":"646174613a207061796c6f61640a0a"},"name":"data dispatched by a blank line","section":"WHATWG HTML Section 9.2.6"}]}

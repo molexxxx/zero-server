@@ -1,0 +1,1 @@
+{"decoderStream":{"cases":[{"atStaticEncoder":{"error":{"code":514,"connection":true,"kind":"unexpectedAcknowledgment","name":"QPACK_DECODER_STREAM_ERROR"}},"encoded":"84","instructions":[{"sectionAcknowledgment":"4"}],"name":"Appendix B.2","section":"RFC 9204 Appendix B.2"}]}}

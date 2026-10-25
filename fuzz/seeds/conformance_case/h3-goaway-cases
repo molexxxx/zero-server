@@ -1,0 +1,1 @@
+{"goaway":{"cases":[{"expect":["ok","ok","ok"],"name":"client receives decreasing stream IDs","received":["8","4","4"],"role":"client","section":"RFC 9114 Section 5.2"}]}}

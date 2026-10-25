@@ -275,12 +275,7 @@ impl Parser<'_> {
             self.at = self.at.saturating_add(1);
             self.skip_ws();
             let value = self.value()?;
-            // A repeated name keeps the first member's place with the last value,
-            // which is what JavaScript's JSON.parse observably does.
-            match members.iter_mut().find(|(existing, _)| *existing == name) {
-                Some(member) => member.1 = value,
-                None => members.push((name, value)),
-            }
+            members.push((name, value));
             self.skip_ws();
             match self.peek() {
                 Some(b',') => self.at = self.at.saturating_add(1),
@@ -292,7 +287,7 @@ impl Parser<'_> {
             }
         }
         self.leave();
-        Ok(Value::Object(members))
+        Ok(Value::Object(merge_repeated(members)))
     }
 
     fn array(&mut self) -> Result<Value, ParseError> {
@@ -513,6 +508,68 @@ impl Parser<'_> {
     }
 }
 
+/// The member count up to which repeated names are found by scanning; a larger
+/// object sorts its member indices by name instead, so an object of `n` members
+/// costs `O(n log n)` name comparisons rather than `O(n^2)`.
+const SCANNED_MEMBERS: usize = 16;
+
+/// The members of an object with every repeated name merged: the first member of a
+/// name keeps its place and takes the value of the last member of that name, which
+/// is what JavaScript's `JSON.parse` observably does. RFC 8259 Section 4 says only
+/// that names SHOULD be unique and leaves the behavior for repeats to the
+/// implementation.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc8259.html#section-4>
+fn merge_repeated(mut members: Vec<(String, Value)>) -> Vec<(String, Value)> {
+    if members.len() <= SCANNED_MEMBERS {
+        let mut merged: Vec<(String, Value)> = Vec::with_capacity(members.len());
+        for (name, value) in members {
+            match merged.iter_mut().find(|(existing, _)| *existing == name) {
+                Some(member) => member.1 = value,
+                None => merged.push((name, value)),
+            }
+        }
+        return merged;
+    }
+    let mut keep = alloc::vec![true; members.len()];
+    let mut repeats: Vec<(usize, usize)> = Vec::new();
+    {
+        let name_at = |index: usize| members.get(index).map(|(name, _)| name.as_str());
+        let mut order: Vec<usize> = (0..members.len()).collect();
+        order.sort_unstable_by(|&left, &right| {
+            name_at(left).cmp(&name_at(right)).then(left.cmp(&right))
+        });
+        for group in order.chunk_by(|&left, &right| name_at(left) == name_at(right)) {
+            let (Some(&first), Some(&last)) = (group.first(), group.last()) else {
+                continue;
+            };
+            if first == last {
+                continue;
+            }
+            repeats.push((first, last));
+            for &later in group.get(1..).unwrap_or(&[]) {
+                if let Some(slot) = keep.get_mut(later) {
+                    *slot = false;
+                }
+            }
+        }
+    }
+    for (first, last) in repeats {
+        if let Some((head, tail)) = members.split_at_mut_checked(last) {
+            if let (Some(kept), Some(latest)) = (head.get_mut(first), tail.first_mut()) {
+                core::mem::swap(&mut kept.1, &mut latest.1);
+            }
+        }
+    }
+    let mut index = 0usize;
+    members.retain(|_| {
+        let kept = keep.get(index).copied().unwrap_or(true);
+        index = index.saturating_add(1);
+        kept
+    });
+    members
+}
+
 /// An integer literal as an `i64`, or `None` when it does not fit.
 fn parse_i64(literal: &[u8]) -> Option<i64> {
     let (negative, digits) = match literal.split_first() {
@@ -624,6 +681,73 @@ mod tests {
             Some(&Value::Int(1))
         );
         assert_eq!(value.get("x"), None, "nothing was inherited");
+    }
+
+    /// Standards row `body-04` past the member count the parser scans: RFC 8259
+    /// Section 4.
+    #[test]
+    fn a_name_repeated_in_a_large_object_keeps_its_first_place_and_takes_its_last_value_rfc_8259_section_4(
+    ) {
+        let mut text = String::from("{");
+        for index in 0..40 {
+            text.push_str(&alloc::format!("\"k{index}\":{index},"));
+        }
+        text.push_str("\"k3\":\"second\",\"k39\":true,\"k3\":\"third\"}");
+        let parsed = parse(text.as_bytes());
+        let Ok(Value::Object(members)) = parsed else {
+            unreachable!("the text is an object: {parsed:?}");
+        };
+        let names: alloc::vec::Vec<String> = members.iter().map(|(name, _)| name.clone()).collect();
+        let expected: alloc::vec::Vec<String> =
+            (0..40).map(|index| alloc::format!("k{index}")).collect();
+        assert_eq!(
+            names, expected,
+            "every name once, in the place it first took"
+        );
+        assert_eq!(
+            members.get(3).map(|(_, value)| value),
+            Some(&Value::Str("third".to_string())),
+            "the last of three values wins"
+        );
+        assert_eq!(
+            members.get(39).map(|(_, value)| value),
+            Some(&Value::Bool(true))
+        );
+        assert_eq!(members.get(4).map(|(_, value)| value), Some(&Value::Int(4)));
+    }
+
+    /// An object of distinct names up to the size cap is parsed with `O(n log n)`
+    /// name comparisons; a scan of the members already read for each new one took
+    /// seconds at this size.
+    #[cfg(feature = "std")]
+    #[test]
+    fn an_object_of_distinct_names_up_to_the_size_cap_parses_without_quadratic_work() {
+        let cap = if cfg!(miri) {
+            16_384
+        } else {
+            super::DEFAULT_SIZE
+        };
+        let mut text = String::from("{");
+        let mut count = 0usize;
+        while text.len().saturating_add(16) < cap {
+            if count > 0 {
+                text.push(',');
+            }
+            text.push_str(&alloc::format!("\"k{count:06}\":0"));
+            count = count.saturating_add(1);
+        }
+        text.push('}');
+        let started = std::time::Instant::now();
+        let parsed = parse(text.as_bytes());
+        let elapsed = started.elapsed();
+        let Ok(Value::Object(members)) = parsed else {
+            unreachable!("the text is an object");
+        };
+        assert_eq!(members.len(), count);
+        assert!(
+            cfg!(miri) || elapsed < std::time::Duration::from_secs(10),
+            "{count} members took {elapsed:?}"
+        );
     }
 
     /// Standards row `body-05`: RFC 8259 Section 7.

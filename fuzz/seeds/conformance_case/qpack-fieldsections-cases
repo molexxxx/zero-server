@@ -1,0 +1,1 @@
+{"fieldSections":{"cases":[{"encoded":"0000510b2f696e6465782e68746d6c","expect":{"lines":[{"name":":path","neverIndexed":false,"value":"/index.html"}]},"name":"Appendix B.1 literal with a static name reference","representations":[{"literalNameReference":{"huffman":false,"index":"1","neverIndexed":false,"static":true,"value":"/index.html"}}],"section":"RFC 9204 Appendix B.1"}]}}

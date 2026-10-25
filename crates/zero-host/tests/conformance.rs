@@ -1072,6 +1072,159 @@ fn field_section_representations_are_computed_whatever_the_case_gives_for_them()
     );
 }
 
+/// A router document whose table lists the patterns as `GET` routes, and mounts
+/// with their prefix and patterns.
+fn router_document(patterns: &[String], mounts: &[(String, Vec<String>)]) -> String {
+    let routes = |patterns: &[String]| -> String {
+        patterns
+            .iter()
+            .enumerate()
+            .map(|(id, pattern)| format!(r#"{{"id":{id},"method":"GET","pattern":"{pattern}"}}"#))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let mounts: Vec<String> = mounts
+        .iter()
+        .map(|(prefix, patterns)| {
+            format!(r#"{{"prefix":"{prefix}","routes":[{}]}}"#, routes(patterns))
+        })
+        .collect();
+    format!(
+        r#"{{"table":{{"routes":[{}],"mounts":[{}],"trailingSlash":"ignore"}}}}"#,
+        routes(patterns),
+        mounts.join(",")
+    )
+}
+
+/// Asserts the entry refuses a document as a limit naming the member at `path`.
+fn assert_limit(name: &str, input: &str, path: &str) {
+    let refused = conformance::case(name.as_bytes(), input.as_bytes()).expect_err(path);
+    assert_eq!(refused.status(), Status::Limit, "{path}: {refused}");
+    assert!(
+        refused.message().starts_with(&format!("{path}:")),
+        "{path}: {refused}"
+    );
+}
+
+/// Runs a document through the entry on a thread with `stack` octets of stack, as a
+/// binding's thread might run it, and returns the status and message of a refusal.
+fn on_stack(stack: usize, name: &'static str, input: String) -> Result<String, (Status, String)> {
+    std::thread::Builder::new()
+        .stack_size(stack)
+        .spawn(move || {
+            conformance::case(name.as_bytes(), input.as_bytes())
+                .map_err(|error| (error.status(), error.message().to_owned()))
+        })
+        .expect("a thread for the entry")
+        .join()
+        .expect("the entry returns")
+}
+
+#[test]
+fn a_pattern_or_prefix_deeper_than_any_request_path_is_a_limit_before_a_router_holds_it() {
+    let deep = "/a".repeat(400_000);
+    let document = router_document(std::slice::from_ref(&deep), &[]);
+    let refused = on_stack(2 << 20, "router", document).expect_err("a limit");
+    assert_eq!(refused.0, Status::Limit, "{}", refused.1);
+    assert!(
+        refused.1.starts_with("router.table.routes[0].pattern:"),
+        "{}",
+        refused.1
+    );
+    let mount = router_document(&[], &[(deep, Vec::new())]);
+    let refused = on_stack(2 << 20, "router", mount).expect_err("a limit");
+    assert_eq!(refused.0, Status::Limit, "{}", refused.1);
+    assert!(
+        refused.1.starts_with("router.table.mounts[0].prefix:"),
+        "{}",
+        refused.1
+    );
+    let deepest = "/a".repeat(zero_router::MAX_SEGMENTS);
+    let kept = router_document(&[deepest.clone(), format!("{deepest}/*rest")], &[]);
+    assert!(on_stack(2 << 20, "router", kept).is_ok());
+}
+
+#[test]
+fn a_document_one_past_each_bound_of_the_entry_is_a_limit_naming_the_member() {
+    let patterns = |count: usize, stem: &str| -> Vec<String> {
+        (0..count).map(|index| format!("/{stem}{index}")).collect()
+    };
+    let routes = conformance::MAX_TABLE_ROUTES;
+    assert!(conformance::case(
+        b"router",
+        router_document(&patterns(routes, "r"), &[]).as_bytes()
+    )
+    .is_ok());
+    assert_limit(
+        "router",
+        &router_document(&patterns(routes + 1, "r"), &[]),
+        &format!("router.table.routes[{routes}]"),
+    );
+    assert_limit(
+        "router",
+        &router_document(
+            &patterns(routes - 10, "r"),
+            &[("/m".to_owned(), patterns(11, "c"))],
+        ),
+        "router.table.mounts[0].routes[10]",
+    );
+    let mounts = conformance::MAX_TABLE_MOUNTS;
+    let prefixes = |count: usize| -> Vec<(String, Vec<String>)> {
+        (0..count)
+            .map(|index| (format!("/m{index}"), Vec::new()))
+            .collect()
+    };
+    assert!(conformance::case(
+        b"router",
+        router_document(&[], &prefixes(mounts)).as_bytes()
+    )
+    .is_ok());
+    assert_limit(
+        "router",
+        &router_document(&[], &prefixes(mounts + 1)),
+        &format!("router.table.mounts[{mounts}]"),
+    );
+    let octets = usize::try_from(conformance::MAX_QPACK_OCTETS).expect("the bound fits a usize");
+    for group in [
+        "fieldSections",
+        "encoderStream",
+        "decoderStream",
+        "huffman",
+        "huffmanErrors",
+    ] {
+        let document = |len: usize| {
+            format!(
+                r#"{{"{group}":{{"cases":[{{"encoded":"0000{}"}}]}}}}"#,
+                "fa".repeat(len - 2)
+            )
+        };
+        assert!(
+            conformance::case(b"qpack", document(octets).as_bytes()).is_ok(),
+            "{group} at the bound"
+        );
+        assert_limit(
+            "qpack",
+            &document(octets + 1),
+            &format!("qpack.{group}.cases[0].encoded"),
+        );
+    }
+    if cfg!(feature = "realtime") {
+        let list = |count: usize| vec![r#""chat""#; count].join(",");
+        let handshake = hex(b"GET /chat HTTP/1.1\r\nHost: a\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
+        let document = |protocols: usize, origins: usize| {
+            format!(
+                r#"{{"cases":[{{"kind":"handshake","request":"{handshake}","routeProtocols":[{}],"routeOrigins":[{}],"clientFrames":""}}]}}"#,
+                list(protocols),
+                list(origins)
+            )
+        };
+        let bound = conformance::MAX_ROUTE_LIST;
+        assert!(conformance::case(b"ws", document(bound, bound).as_bytes()).is_ok());
+        assert_limit("ws", &document(bound + 1, 1), "ws.cases[0].routeProtocols");
+        assert_limit("ws", &document(1, bound + 1), "ws.cases[0].routeOrigins");
+    }
+}
+
 #[test]
 fn obs_text_octets_come_back_as_the_octets_the_parsers_return_rfc_9110_section_5_5() {
     let request = |last: u8| {
@@ -1110,7 +1263,8 @@ fn obs_text_octets_come_back_as_the_octets_the_parsers_return_rfc_9110_section_5
 }
 
 #[test]
-fn router_cases_are_answered_as_the_server_answers_options_asterisk_and_the_absolute_form() {
+fn router_cases_are_answered_as_the_server_answers_options_asterisk_and_the_absolute_form_rfc_9110_section_9_3_7_and_rfc_9112_section_3_2_2(
+) {
     let table = member(&section("router"), "table").clone();
     let cases = [
         ("OPTIONS", "*", r#"{"status":200}"#),
@@ -1160,7 +1314,8 @@ fn router_cases_are_answered_as_the_server_answers_options_asterisk_and_the_abso
 
 #[cfg(feature = "realtime")]
 #[test]
-fn client_frames_run_only_after_an_accepted_handshake_and_a_refused_one_answers_with_its_status() {
+fn client_frames_run_only_after_an_accepted_handshake_and_a_refused_one_answers_with_its_status_rfc_6455_section_4_2_1(
+) {
     let request = |version: &str| {
         hex(format!(
             "GET /chat {version}\r\nHost: server.example.com\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
@@ -1671,6 +1826,123 @@ fn fuzz(name: &str, seed: u64) {
         );
     } else {
         assert_eq!(reached, 0, "{name} is refused in this build");
+    }
+}
+
+/// A size around a bound: at or below it half the time, otherwise past it by a
+/// random number of doublings, at most `most`.
+fn around(rng: &mut Rng, bound: usize, most: usize) -> usize {
+    if rng.below(2) == 0 {
+        return 1 + rng.below(bound);
+    }
+    let mut size = bound + 1;
+    while size < most && rng.below(3) != 0 {
+        size = (size * 2).min(most);
+    }
+    size
+}
+
+/// Grows inputs past the entry's bounds at sizes drawn from a fixed seed: a deeper
+/// pattern, a longer table, more mounts, a longer route list, a longer QPACK section
+/// and an object of more members than any shape holds. Each round ends in what the
+/// entry documents: a result at or below a bound, a limit naming the member past
+/// it, and for unknown members a shape error, or a limit past the JSON size cap.
+#[test]
+fn inputs_grown_past_the_entry_bounds_end_in_the_refusal_the_entry_documents() {
+    let mut rng = Rng::new(0x6772_6f77_6e5f_7061);
+    for round in 0..rounds(48) {
+        let (name, input, limit) = match round % 6 {
+            0 => {
+                let count = around(&mut rng, zero_router::MAX_SEGMENTS, 400_000);
+                let pattern = "/a".repeat(count);
+                (
+                    "router",
+                    router_document(&[pattern], &[]),
+                    (count > zero_router::MAX_SEGMENTS)
+                        .then(|| "router.table.routes[0].pattern".to_owned()),
+                )
+            }
+            1 => {
+                let bound = conformance::MAX_TABLE_ROUTES;
+                let count = around(&mut rng, bound, 20_000);
+                let patterns: Vec<String> = (0..count).map(|index| format!("/r{index}")).collect();
+                (
+                    "router",
+                    router_document(&patterns, &[]),
+                    (count > bound).then(|| format!("router.table.routes[{bound}]")),
+                )
+            }
+            2 => {
+                let bound = conformance::MAX_TABLE_MOUNTS;
+                let count = around(&mut rng, bound, 20_000);
+                let mounts: Vec<(String, Vec<String>)> = (0..count)
+                    .map(|index| (format!("/m{index}"), Vec::new()))
+                    .collect();
+                (
+                    "router",
+                    router_document(&[], &mounts),
+                    (count > bound).then(|| format!("router.table.mounts[{bound}]")),
+                )
+            }
+            3 => {
+                let bound = conformance::MAX_ROUTE_LIST;
+                let count = around(&mut rng, bound, 100_000);
+                let protocols = vec![r#""chat""#; count].join(",");
+                (
+                    "ws",
+                    format!(
+                        r#"{{"cases":[{{"kind":"handshake","request":"","routeProtocols":[{protocols}],"routeOrigins":null,"clientFrames":""}}]}}"#
+                    ),
+                    (count > bound).then(|| "ws.cases[0].routeProtocols".to_owned()),
+                )
+            }
+            4 => {
+                let bound = usize::try_from(conformance::MAX_QPACK_OCTETS).expect("a usize");
+                let count = around(&mut rng, bound, 500_000).max(2);
+                (
+                    "qpack",
+                    format!(
+                        r#"{{"fieldSections":{{"cases":[{{"encoded":"0000{}"}}]}}}}"#,
+                        "fa".repeat(count - 2)
+                    ),
+                    (count > bound).then(|| "qpack.fieldSections.cases[0].encoded".to_owned()),
+                )
+            }
+            _ => {
+                let count = around(&mut rng, 4_096, 120_000);
+                let members: Vec<String> = (0..count)
+                    .map(|index| format!(r#""k{index:06}":0"#))
+                    .collect();
+                ("http1Parser", format!("{{{}}}", members.join(",")), None)
+            }
+        };
+        let result = conformance::case(name.as_bytes(), input.as_bytes());
+        let label = format!("{name} round {round}, {} octets", input.len());
+        match (limit, result) {
+            (_, Err(error)) if !compiled(name) => {
+                assert_eq!(error.status(), Status::Unsupported, "{label}");
+            }
+            (Some(path), result) => {
+                let error = result.expect_err(&label);
+                assert_eq!(error.status(), Status::Limit, "{label}: {error}");
+                assert!(
+                    error.message().starts_with(&format!("{path}:")),
+                    "{label}: {error}"
+                );
+            }
+            (None, Ok(_)) => {
+                assert_ne!(name, "http1Parser", "{label}: an unknown member is refused")
+            }
+            (None, Err(error)) => {
+                assert_eq!(name, "http1Parser", "{label}: {error}");
+                let documented = if input.len() > 1_048_576 {
+                    Status::Limit
+                } else {
+                    Status::Codec
+                };
+                assert_eq!(error.status(), documented, "{label}: {error}");
+            }
+        }
     }
 }
 

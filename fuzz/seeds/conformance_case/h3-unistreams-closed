@@ -1,0 +1,1 @@
+{"uniStreams":{"closed":[{"expect":{"error":{"code":260,"connection":true,"kind":"criticalStreamClosed","name":"H3_CLOSED_CRITICAL_STREAM"}},"type":"0"}]}}

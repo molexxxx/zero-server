@@ -1,0 +1,1 @@
+{"uniStreams":{"cases":[{"expect":["control","qpackEncoder","qpackDecoder","discard","discard"],"name":"one of each critical stream","opened":["0","2","3","33","4"],"role":"server","section":"RFC 9204 Section 4.2"}]}}

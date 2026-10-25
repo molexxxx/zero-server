@@ -1,0 +1,1 @@
+{"capsules":{"cases":[{"encoded":"000368656c","events":[{"datagram":"68656c"}],"fin":true,"maxDatagram":"1200","name":"DATAGRAM capsule","outcome":"ok","section":"RFC 9297 Section 3.5"}]}}

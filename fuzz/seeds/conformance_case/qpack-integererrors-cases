@@ -1,0 +1,1 @@
+{"integerErrors":{"cases":[{"cap":"4611686018427387903","encoded":"1f80808080808080808000","error":"tooLong","name":"ten continuation octets","prefixBits":5,"section":"RFC 7541 Section 5.1"}]}}

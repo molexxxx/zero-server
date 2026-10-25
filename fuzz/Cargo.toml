@@ -34,6 +34,9 @@ zero-sse = { path = "../crates/zero-sse" }
 zero-base64 = { path = "../crates/zero-base64" }
 zero-mime = { path = "../crates/zero-mime" }
 zero-policy = { path = "../crates/zero-policy" }
+# The conformance entry, with the realtime capability its ws and sse sections run
+# and without the capabilities it does not use.
+zero-host = { path = "../crates/zero-host", default-features = false, features = ["realtime"] }
 # The TLS hello reader is private to zero-tls, so tls_hello compiles its source
 # file in place against the rustls zero-tls pins. Only `std` (for Acceptor) and
 # `tls12` gate code on the Acceptor's path in this version; the provider
@@ -212,6 +215,13 @@ bench = false
 [[bin]]
 name = "cors_fields"
 path = "fuzz_targets/cors_fields.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "conformance_case"
+path = "fuzz_targets/conformance_case.rs"
 test = false
 doc = false
 bench = false

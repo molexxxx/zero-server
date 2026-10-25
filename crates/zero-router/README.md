@@ -60,7 +60,9 @@ const MAX_PARAMS: usize
 
 ## const `MAX_SEGMENTS`
 
-The most segments a path is matched over; a longer path is not found.
+The most segments a path is matched over; a longer path is not found, so a
+route with more segments before a final catch-all, or a mount prefix with more,
+is refused with `RouteError::TooManySegments`.
 
 ```rust
 const MAX_SEGMENTS: usize
@@ -78,6 +80,7 @@ Why a route or mount was refused.
 - `ParameterConflict` - Another route names the parameter at this position differently.
 - `Duplicate` - The method already has a route on this pattern.
 - `RootMount` - A mount prefix is `/`, which would shadow the whole router.
+- `TooManySegments` - The pattern has more than `MAX_SEGMENTS` segments before a final catch-all, or a mount prefix has more than `MAX_SEGMENTS`: no path that long is matched, so the route could never be reached.
 
 ## enum `TrailingSlash`
 
@@ -272,7 +275,8 @@ Register a route.
 
 **Errors**
 
-`RouteError` for a pattern outside the syntax, a parameter named
+`RouteError` for a pattern outside the syntax, one with more than
+`MAX_SEGMENTS` segments before a final catch-all, a parameter named
 differently at the same position by another route, or a duplicate.
 
 ```rust
@@ -281,7 +285,9 @@ fn route(&mut self, method: Method, pattern: &str, descriptor: T,) -> Result <()
 
 ### `Router <T>::mount`
 
-Mount a child router under a prefix.
+Mount a child router under a prefix. Mounts are tried longest prefix first,
+so the most specific wins, then in byte order; a mount whose prefix another
+already has comes after it.
 
 **Arguments**
 
@@ -291,7 +297,8 @@ Mount a child router under a prefix.
 
 **Errors**
 
-`RouteError` for a prefix outside the syntax or the bare root.
+`RouteError` for a prefix outside the syntax, the bare root, or a prefix
+with more than `MAX_SEGMENTS` segments.
 
 ```rust
 fn mount(&mut self, prefix: &str, router: Router <T>) -> Result <(), RouteError>

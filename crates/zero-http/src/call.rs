@@ -1233,7 +1233,8 @@ mod tests {
     use zero_router::Allow;
 
     #[test]
-    fn the_driver_written_names_are_recognized_in_any_case_and_no_other_name_is() {
+    fn the_driver_written_names_are_recognized_in_any_case_and_no_other_name_is_rfc_9110_section_5_1(
+    ) {
         assert_eq!(
             DRIVER_FIELDS.map(HeaderName::canonical),
             ["Content-Length", "Connection", "Transfer-Encoding", "Date"]
@@ -1272,7 +1273,8 @@ mod tests {
     }
 
     #[test]
-    fn options_asterisk_is_answered_for_the_server_and_every_other_target_routes_its_path() {
+    fn options_asterisk_is_answered_for_the_server_and_every_other_target_routes_its_path_rfc_9110_section_9_3_7_and_rfc_9112_section_3_2_2(
+    ) {
         assert_eq!(
             routed(b"OPTIONS * HTTP/1.1\r\nHost: a\r\n\r\n"),
             TargetRoute::Server(StatusCode::OK),
