@@ -441,13 +441,21 @@ jobs:
       # The sanitizer runtime instruments std as well, so std is rebuilt for the target.
       # The runtime crate owns the arena and the slot protocol and the C ABI crate is
       # the single unsafe boundary, so these two carry the memory and race checks.
+      # The C ABI's guard leaks, by design, a panic payload whose own drop panics, so
+      # nothing unwinds out of an export; the one unit test that drives that path is
+      # reported by LeakSanitizer, so the address run skips it, as Miri does.
       - name: Test the runtime and the C ABI under the sanitizer
+        shell: bash
         env:
           RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
           RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
-        run: >
-          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
-          -p zero-rt -p zero-ffi
+        run: |
+          skip=()
+          if [ "${{ matrix.sanitizer }}" = address ]; then
+            skip=(--skip guard::tests::a_payload_whose_drop_panics_is_leaked_rather_than_unwound)
+          fi
+          cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu \
+            -p zero-rt -p zero-ffi -- "${skip[@]}"
 
       # A late accessor races slot recycle while traffic runs on the same core, once
       # on the runtime's slot word and once through the host's access path; the tests
