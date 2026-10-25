@@ -1,6 +1,7 @@
 # Dependency policy for the Python binding graph (bindings/python/packages/native,
 # a standalone crate outside the workspace). cargo-deny takes one configuration
-# per run, so this file repeats the root deny.toml and adds the PyO3 graph the
+# per run, so this file repeats the root deny.toml for the core crates the
+# binding links through zero-ffi and zero-host and adds the PyO3 graph the
 # binding brings; a change to the root policy is mirrored here and in
 # deny/node.toml. The `stubs` feature (pyo3-stub-gen) is a development tool
 # that never enters a wheel and is not part of this audit. Run with:
@@ -45,24 +46,38 @@ wildcards = "deny"
 external-default-features = "deny"
 
 allow = [
-    # The binding crate and the core crates it links.
+    # The binding crate and the core crates it links through zero-ffi and zero-host.
     "zero-server-python",
+    "zero-base64",
     "zero-core",
     "zero-date",
     "zero-ffi",
+    "zero-h3",
+    "zero-host",
     "zero-http",
     "zero-http-types",
     "zero-http1",
     "zero-io",
+    "zero-json",
     "zero-limits",
+    "zero-mime",
+    "zero-policy",
+    "zero-qpack",
+    "zero-realtime",
     "zero-router",
     "zero-uri",
     "zero-rt",
+    "zero-server-crypto",
     "zero-simd",
+    "zero-sse",
+    "zero-static",
     "zero-sys",
-    # Runtime seam, io-tokio. Checked against crates.io on 2026-10-01: none yanked,
-    # each released within the year (tokio 1.53.1 on 2026-07-20, mio 1.2.3 on
-    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.189 on 2026-08-03, bytes
+    "zero-tls",
+    "zero-ws",
+    # Runtime seam, io-tokio, at the root lock's versions. Checked against
+    # crates.io on 2026-10-01, and tokio and libc again on 2026-10-25: none yanked,
+    # each released within the year (tokio 1.53.3 on 2026-10-13, mio 1.2.3 on
+    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.190 on 2026-10-02, bytes
     # 1.12.1 on 2026-07-08, pin-project-lite 0.2.17 on 2026-02-27, windows-sys
     # 0.61.2 on 2025-10-06, windows-link 0.2.1 as its dependency).
     "tokio",
@@ -73,6 +88,27 @@ allow = [
     "pin-project-lite",
     "windows-sys",
     "windows-link",
+    # TLS engine, as in the root policy (once_cell is listed with PyO3 below).
+    "rustls",
+    "rustls-webpki",
+    "rustls-pki-types",
+    "untrusted",
+    "subtle",
+    "zeroize",
+    # Crypto provider, as in the root policy (getrandom and cfg-if are listed with
+    # PyO3 below).
+    "aws-lc-rs",
+    "aws-lc-sys",
+    # Build helpers of the C library build, as in the root policy; pkg-config is a
+    # build dependency of aws-lc-sys 0.45.0.
+    "cc",
+    "shlex",
+    "find-msvc-tools",
+    "cmake",
+    "dunce",
+    "fs_extra",
+    "jobserver",
+    "pkg-config",
     # PyO3 0.29 with the abi3-py310 stable ABI: the macros, the raw FFI table,
     # the build configuration and the host triple parser (measured with cargo
     # tree on 2026-09-30 against pyo3 0.29.3).
@@ -130,12 +166,22 @@ skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn an
 # The core crates are external to the binding's graph, so their `std` default
 # is listed; the binding runs on std by definition.
 [[bans.features]]
+crate = "zero-base64"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
 crate = "zero-core"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
 [[bans.features]]
 crate = "zero-date"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-h3"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
@@ -150,7 +196,22 @@ allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
 [[bans.features]]
+crate = "zero-json"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
 crate = "zero-limits"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-mime"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-qpack"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
@@ -160,9 +221,29 @@ allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
 [[bans.features]]
+crate = "zero-sse"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
 crate = "zero-uri"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-ws"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-ffi"
+allow = ["default", "static", "policy", "realtime", "tls"]
+reason = "the binding takes the C ABI with its default capabilities: static files, policies, WebSocket and SSE, TLS"
+
+[[bans.features]]
+crate = "zero-host"
+allow = ["static", "policy", "realtime", "tls"]
+reason = "zero-ffi forwards its capabilities to the host layer one to one, without the host layer's own default"
 
 [[bans.features]]
 crate = "zero-http"
@@ -314,6 +395,12 @@ reason = "enabled by tempfile and libloading, and in the shipped graph by tokio 
 [bans.build]
 allow-build-scripts = [
     "zero-ffi",
+    # The C library build of the crypto provider and the crates over it, as in the
+    # root policy (measured with cargo metadata over the seven targets on
+    # 2026-10-25).
+    "aws-lc-sys",
+    "aws-lc-rs",
+    "rustls",
     "pyo3",
     "pyo3-ffi",
     "pyo3-build-config",
