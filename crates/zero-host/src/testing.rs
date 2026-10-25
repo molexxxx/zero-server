@@ -48,8 +48,9 @@ thread_local! {
     static REFUSE_SERVE: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Panic when [`panic_next_call`] armed the calling thread; the guard of every C
-/// ABI export calls it first. Without the `testing` feature it does nothing.
+/// Panic when `panic_next_call`, which the `testing` feature adds, armed the calling
+/// thread; the guard of every C ABI export calls it first. Without the feature it does
+/// nothing.
 #[inline]
 pub fn maybe_panic() {
     #[cfg(feature = "testing")]
@@ -72,6 +73,8 @@ type Hook = Box<dyn FnOnce(&CoreHost) + Send>;
 #[derive(Default)]
 struct HookQueue {
     hooks: Vec<Hook>,
+    /// Work that only a held dispatcher runs, between its turns.
+    between_turns: Vec<Hook>,
     waker: Option<Waker>,
 }
 
@@ -84,10 +87,14 @@ pub(crate) struct Hooks {
 
 #[cfg(feature = "testing")]
 impl Hooks {
-    fn push(&self, hook: Hook) {
+    fn push(&self, hook: Hook, between_turns: bool) {
         let waker = {
             let mut queue = lock(&self.queue);
-            queue.hooks.push(hook);
+            if between_turns {
+                queue.between_turns.push(hook);
+            } else {
+                queue.hooks.push(hook);
+            }
             queue.waker.take()
         };
         if let Some(waker) = waker {
@@ -102,11 +109,15 @@ impl Hooks {
             Some(stored) if stored.will_wake(waker) => {}
             _ => queue.waker = Some(waker.clone()),
         }
-        !queue.hooks.is_empty()
+        !queue.hooks.is_empty() || !queue.between_turns.is_empty()
     }
 
     fn take(&self) -> Vec<Hook> {
         std::mem::take(&mut lock(&self.queue).hooks)
+    }
+
+    fn take_between_turns(&self) -> Vec<Hook> {
+        std::mem::take(&mut lock(&self.queue).between_turns)
     }
 }
 
@@ -119,8 +130,10 @@ pub(crate) fn run_hooks(core: &CoreHost) {
 }
 
 /// The dispatcher task with a wake for the hooks: a hook kicks the dispatcher so its
-/// next turn runs it. While [`hold_dispatcher`] holds the core, the hooks run here and
-/// the dispatcher takes no turn.
+/// next turn runs it. While [`hold_dispatcher`] holds the core, the hooks run here, with
+/// the work that waits for the hold, and the dispatcher takes no turn. The dispatcher's
+/// own loop takes turn after turn within one poll while work arrives, so only here,
+/// between polls, is no turn running.
 #[cfg(feature = "testing")]
 pub(crate) async fn with_hooks(core: &CoreHost, run: impl Future<Output = ()>) {
     let mut run = pin!(run);
@@ -129,6 +142,11 @@ pub(crate) async fn with_hooks(core: &CoreHost, run: impl Future<Output = ()>) {
         if core.held.get() {
             if waiting {
                 run_hooks(core);
+                if core.held.get() {
+                    for hook in core.shared().hooks.take_between_turns() {
+                        hook(core);
+                    }
+                }
             }
             if core.held.get() {
                 return Poll::Pending;
@@ -150,12 +168,25 @@ fn on_core<R: Send + 'static>(
     worker: u8,
     job: impl FnOnce(&CoreHost) -> R + Send + 'static,
 ) -> Result<R, HostError> {
+    ask(server, worker, false, job)
+}
+
+/// Run `job` on the core in its dispatcher's next turn, or with `between_turns` once
+/// the dispatcher is held and no turn runs, and wait up to ten seconds for it.
+#[cfg(feature = "testing")]
+fn ask<R: Send + 'static>(
+    server: &Server,
+    worker: u8,
+    between_turns: bool,
+    job: impl FnOnce(&CoreHost) -> R + Send + 'static,
+) -> Result<R, HostError> {
     let shared = server.worker_shared(worker)?;
     let (sender, receiver) = mpsc::channel();
-    shared.hooks.push(Box::new(move |core| {
+    let hook: Hook = Box::new(move |core| {
         let ran = catch_unwind(AssertUnwindSafe(|| job(core)));
         let _ = sender.send(ran.map_err(drop));
-    }));
+    });
+    shared.hooks.push(hook, between_turns);
     match receiver.recv_timeout(Duration::from_secs(10)) {
         Ok(Ok(value)) => Ok(value),
         Ok(Err(())) => Err(HostError::new(
@@ -215,16 +246,20 @@ pub fn run_on_worker<R: Send + 'static>(
 #[cfg(feature = "testing")]
 pub fn panic_next_turn(server: &Server, worker: u8) -> Result<(), HostError> {
     let shared = server.worker_shared(worker)?;
-    shared
-        .hooks
-        .push(Box::new(|_| panic!("the dispatcher was armed to panic")));
+    shared.hooks.push(
+        Box::new(|_| panic!("the dispatcher was armed to panic")),
+        false,
+    );
     Ok(())
 }
 
 /// Hold a worker index's dispatcher, or let it go on. A held dispatcher takes no
-/// turns: completions, acknowledgments, the release of the quarantine and the posting
-/// of new jobs wait, while the hooks still run and the core serves its connections.
-/// A test lets the dispatcher go on before the server stops.
+/// turns: completions, acknowledgments, target changes, the release of the quarantine
+/// and the posting of new jobs wait, while the hooks still run and the core serves its
+/// connections. The hold is in force when the call returns: the turn that set it, and
+/// every turn the dispatcher took straight after it, ended before the held dispatcher
+/// answered a second job it runs only between turns. A test lets the dispatcher go on
+/// before the server stops.
 ///
 /// # Arguments
 ///
@@ -237,7 +272,11 @@ pub fn panic_next_turn(server: &Server, worker: u8) -> Result<(), HostError> {
 /// As [`run_on_worker`].
 #[cfg(feature = "testing")]
 pub fn hold_dispatcher(server: &Server, worker: u8, held: bool) -> Result<(), HostError> {
-    on_core(server, worker, move |core| core.held.set(held))
+    on_core(server, worker, move |core| core.held.set(held))?;
+    if held {
+        ask(server, worker, true, |_| ())?;
+    }
+    Ok(())
 }
 
 /// Cap how many slots a core holds at once, live and quarantined together, so a test

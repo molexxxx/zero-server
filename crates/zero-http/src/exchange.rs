@@ -821,8 +821,7 @@ impl Exchange {
     }
 
     /// Replace the response with an error in a body shape: the status, the shape's
-    /// `Content-Type`, and the body of
-    /// [`write_host_error`](crate::error::write_host_error). The caller seals.
+    /// `Content-Type`, and the body of [`write_host_error`]. The caller seals.
     ///
     /// # Arguments
     ///

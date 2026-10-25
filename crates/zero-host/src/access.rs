@@ -34,8 +34,8 @@
 //! ([`header`], [`header_id`]), the body ([`body`], [`json`]), a body region a host
 //! fills in place ([`body_alloc`]), an error in the server's error shape ([`error`]),
 //! everything at once ([`respond`], [`respond_external`]), the seal ([`send`]), a
-//! reset ([`reset`]), and an action the core runs once the response is back ([`file`],
-//! [`sse_open`], [`ws_accept`]), which a sealed response refuses with
+//! reset ([`reset`]), and an action the core runs once the response is back
+//! ([`file`](fn@file), [`sse_open`], [`ws_accept`]), which a sealed response refuses with
 //! [`Status::Closed`] and an open body region with [`Status::InvalidArgument`]. The
 //! actions return [`HostError`], since their refusals can name the argument they
 //! refused; the other calls return [`Access`]. The response body is counted on the
@@ -1341,7 +1341,7 @@ pub fn file(id: u64, root: &[u8], path: &[u8]) -> Result<(), HostError> {
 ///
 /// # Errors
 ///
-/// As [`file`], and as [`actions::sse_open`](crate::actions::sse_open).
+/// As [`file`](fn@file), and as [`actions::sse_open`](crate::actions::sse_open).
 pub fn sse_open(id: u64, keep_alive_ms: u32) -> Result<u64, HostError> {
     act(id, |exchange| {
         crate::actions::sse_open(id, exchange, keep_alive_ms)
@@ -1363,7 +1363,7 @@ pub fn sse_open(id: u64, keep_alive_ms: u32) -> Result<u64, HostError> {
 ///
 /// # Errors
 ///
-/// As [`file`], and as [`actions::ws_accept`](crate::actions::ws_accept).
+/// As [`file`](fn@file), and as [`actions::ws_accept`](crate::actions::ws_accept).
 pub fn ws_accept(id: u64, protocol: &[u8]) -> Result<u64, HostError> {
     act(id, |exchange| {
         crate::actions::ws_accept(id, exchange, protocol)

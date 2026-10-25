@@ -3,7 +3,7 @@
 //!
 //! A host records at most one action, which seals the response:
 //!
-//! - [`file`] serves a file from a root directory. The field lines the host set stay
+//! - [`file`](fn@file) serves a file from a root directory. The field lines the host set stay
 //!   in the response, so a `Content-Disposition` the host set for a download reaches
 //!   the client, but for the fields the file answer writes about the file
 //!   (`Content-Type`, `ETag`, `Last-Modified`, `Accept-Ranges` and `Content-Range`),
