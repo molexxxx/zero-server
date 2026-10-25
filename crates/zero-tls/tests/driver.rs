@@ -620,6 +620,13 @@ fn both_drivers_interoperate_with_curl_and_openssl_s_client() {
             }
             args.push(&url);
             if let Some((ok, text)) = run("curl", &args, b"") {
+                // Exit code 4, CURLE_NOT_BUILT_IN: this curl was built without the
+                // requested protocol version (the macOS system curl lacks
+                // --tlsv1.3), so it cannot drive this case, as when no curl exists.
+                if !ok && text.contains("curl: (4)") {
+                    eprintln!("{driver:?}: this curl cannot select {version}: {text}");
+                    continue;
+                }
                 assert!(
                     ok && text.contains("hello secure"),
                     "{driver:?} curl {version}: {text}"
