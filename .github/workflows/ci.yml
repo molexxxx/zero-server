@@ -245,7 +245,8 @@ jobs:
     # The listener strategy differs per operating system (SO_REUSEPORT per core on
     # Linux, one listener with accept handoff on Windows and macOS) and the socket
     # option wrappers have code paths that only run there, so the echo test and the
-    # zero-sys tests run on all three.
+    # zero-sys tests run on all three, and the crates the Windows and macOS packages
+    # are built on run on those two.
     strategy:
       fail-fast: false
       matrix:
@@ -280,6 +281,32 @@ jobs:
               | head -10 | sed 's/^/::error::/'
             grep -E "^test .*FAILED$|^test result: FAILED" seam-test.log | head -10 | sed 's/^/::warning::/'
             grep -E "^error" seam-test.log | head -10 | sed 's/^/::notice::/'
+          fi
+          exit "$status"
+
+      # The Windows and macOS Node and .NET packages are built on the host boundary and
+      # the C ABI, so those crates and the capability crates a host registers run here
+      # as well; the rust job runs them on Linux. Each crate is its own invocation, so
+      # no crate's tests see another's dev-dependency features.
+      - name: Test the host boundary, the C ABI and the capabilities
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          run() {
+            "$@" 2>&1 | tee -a host-test.log || status=1
+          }
+          run cargo test -p zero-host --features testing --no-fail-fast
+          run cargo test -p zero-host --no-default-features --no-fail-fast
+          for crate in zero-ffi zero-tls zero-static zero-realtime zero-serve; do
+            run cargo test -p "$crate" --no-fail-fast
+          done
+          if [ "$status" -ne 0 ]; then
+            grep -A2 -E "panicked at" host-test.log | grep -v -E "^--$|^stack backtrace|^note: run with" \
+              | head -10 | sed 's/^/::error::/'
+            grep -E "^test .*FAILED$|^test result: FAILED" host-test.log | head -10 | sed 's/^/::warning::/'
+            grep -E "^error" host-test.log | head -10 | sed 's/^/::notice::/'
           fi
           exit "$status"
 

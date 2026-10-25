@@ -603,21 +603,23 @@ fn both_drivers_interoperate_with_curl_and_openssl_s_client() {
         let url = format!("https://localhost:{port}/hello");
         for version in ["--tlsv1.3", "--tlsv1.2"] {
             let max = if version == "--tlsv1.2" { "1.2" } else { "1.3" };
-            if let Some((ok, text)) = run(
-                "curl",
-                &[
-                    "-sS",
-                    "--cacert",
-                    &ca,
-                    "--resolve",
-                    &resolve,
-                    version,
-                    "--tls-max",
-                    max,
-                    &url,
-                ],
-                b"",
-            ) {
+            let mut args = vec![
+                "-sS",
+                "--cacert",
+                &ca,
+                "--resolve",
+                &resolve,
+                version,
+                "--tls-max",
+                max,
+            ];
+            // Schannel, the TLS backend of curl on Windows, fails a chain whose
+            // revocation status it cannot learn, and the test CA publishes none.
+            if cfg!(windows) {
+                args.push("--ssl-revoke-best-effort");
+            }
+            args.push(&url);
+            if let Some((ok, text)) = run("curl", &args, b"") {
                 assert!(
                     ok && text.contains("hello secure"),
                     "{driver:?} curl {version}: {text}"

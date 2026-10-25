@@ -5,10 +5,10 @@
 //! Without the feature only [`maybe_panic`] exists, as an inlined no-op. With it,
 //! a test can arm the next guarded call to panic, run code on a worker thread, make a
 //! core's dispatcher panic or hold it, cap the slots a core may claim, read a core's
-//! allocator, count the slots of an arena that are not free, read or answer a leased
-//! slot directly, hold a thread at a named point of a server's lifecycle or of a
-//! completion's checks, and make the calling thread's next start fail at its reaper
-//! thread or once its cores ran.
+//! allocator and the octets its connections hold, count the slots of an arena that
+//! are not free, read or answer a leased slot directly, hold a thread at a named
+//! point of a server's lifecycle or of a completion's checks, and make the calling
+//! thread's next start fail at its reaper thread or once its cores ran.
 
 #[cfg(feature = "testing")]
 use std::cell::Cell;
@@ -335,6 +335,27 @@ pub fn allocator(server: &Server, worker: u8) -> Result<AllocatorState, HostErro
             quarantined: alloc.quarantined(),
         }
     })
+}
+
+/// Read the octets a core's connections hold on its request-memory budget: what the
+/// outboxes of its worker index have not written, and the payloads of the events the
+/// core handed over that the host has not acknowledged.
+///
+/// # Arguments
+///
+/// * `server` - the running server.
+/// * `worker` - the global worker index.
+///
+/// # Returns
+///
+/// The octets.
+///
+/// # Errors
+///
+/// As [`run_on_worker`].
+#[cfg(all(feature = "testing", feature = "realtime"))]
+pub fn realtime_octets(server: &Server, worker: u8) -> Result<u64, HostError> {
+    on_core(server, worker, |core| core.realtime().queued())
 }
 
 /// Count the slots of a worker index's arena that are not free: claimed, held,

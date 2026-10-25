@@ -380,12 +380,9 @@ impl Host {
         (client, conn)
     }
 
-    /// Drain the server with these connections open. A send to each is queued while
-    /// the core is held, with the shutdown, so the outboxes still hold them when the
-    /// drain starts: each WebSocket writes its send, then Close 1001, which its client
-    /// answers, and each event stream writes its send and ends; the host receives
-    /// every close event, a WebSocket's with 1001, before the server stops.
-    fn drain(&mut self, sockets: Vec<(WsClient, u64)>, streams: Vec<(Client, u64)>) {
+    /// Run `queue` while the core is held on its worker thread, so what it queues is
+    /// still queued when it returns, however fast the sockets take it.
+    fn while_held<R>(&self, queue: impl FnOnce() -> R) -> R {
         let (entered, on_core) = mpsc::channel();
         let (release, released) = mpsc::channel::<()>();
         let (server, worker) = (self.server.clone(), self.worker);
@@ -396,15 +393,27 @@ impl Host {
             })
         });
         on_core.recv_timeout(Duration::from_secs(10)).unwrap();
-        for (_, conn) in &sockets {
-            realtime::ws_send(*conn, OPCODE_TEXT, b"queued at the drain").unwrap();
-        }
-        for (_, conn) in &streams {
-            realtime::sse_send(*conn, None, None, b"queued at the drain").unwrap();
-        }
-        self.server.shutdown();
+        let queued = queue();
         release.send(()).unwrap();
         holder.join().unwrap().unwrap();
+        queued
+    }
+
+    /// Drain the server with these connections open. A send to each is queued while
+    /// the core is held, with the shutdown, so the outboxes still hold them when the
+    /// drain starts: each WebSocket writes its send, then Close 1001, which its client
+    /// answers, and each event stream writes its send and ends; the host receives
+    /// every close event, a WebSocket's with 1001, before the server stops.
+    fn drain(&mut self, sockets: Vec<(WsClient, u64)>, streams: Vec<(Client, u64)>) {
+        self.while_held(|| {
+            for (_, conn) in &sockets {
+                realtime::ws_send(*conn, OPCODE_TEXT, b"queued at the drain").unwrap();
+            }
+            for (_, conn) in &streams {
+                realtime::sse_send(*conn, None, None, b"queued at the drain").unwrap();
+            }
+            self.server.shutdown();
+        });
 
         let mut closes = Vec::new();
         for (mut socket, conn) in sockets {
@@ -993,10 +1002,12 @@ fn an_event_stream_reports_a_drained_outbox_and_the_client_leaving() {
     let mut host = Host::start(r#"{"threads":1}"#);
     let (mut client, conn, _) = host.stream();
     let data = vec![b'x'; 1 << 20];
-    for _ in 0..40 {
-        realtime::sse_send(conn, None, None, &data).unwrap();
-    }
-    assert!(!realtime::sse_writable(conn).unwrap(), "past the mark");
+    host.while_held(|| {
+        for _ in 0..40 {
+            realtime::sse_send(conn, None, None, &data).unwrap();
+        }
+        assert!(!realtime::sse_writable(conn).unwrap(), "past the mark");
+    });
     let mut rest = vec![0u8; 40 * (data.len() + 8)];
     client.stream.read_exact(&mut rest).unwrap();
     let drained = host.event();
@@ -1189,32 +1200,46 @@ fn the_close_event_carries_the_peers_close_code_and_reason_6455_7_1_6() {
 #[test]
 fn a_connection_stops_reading_while_it_holds_its_bound_of_unacknowledged_events() {
     let mut host = Host::start(r#"{"threads":1}"#);
-    let (client, conn) = host.websocket("/ws", "", b"");
+    let (mut client, conn) = host.websocket("/ws", "", b"");
+    let size = 32 * 1024;
+    let bound = zero_limits::services::MAX_PENDING_EVENTS_PER_CONN;
     let payload = |index: u32| {
-        let mut payload = vec![0u8; 32 * 1024];
+        let mut payload = vec![0u8; size];
         payload[..4].copy_from_slice(&index.to_be_bytes());
         payload
     };
-    let frames: Vec<u8> = (0..1000)
+    let past_bound = u32::try_from(bound).unwrap();
+    let mut frames: Vec<u8> = (0..=past_bound)
         .flat_map(|index| client_frame(0x82, &payload(index)))
         .collect();
+    frames.extend(client_frame(0x89, b"probe"));
+    frames.extend((past_bound + 1..1000).flat_map(|index| client_frame(0x82, &payload(index))));
     let mut writer = client.stream.try_clone().unwrap();
-    writer
-        .set_write_timeout(Some(Duration::from_millis(500)))
+    let finisher = thread::spawn(move || writer.write_all(&frames).unwrap());
+    let at_bound = u64::try_from(bound * size).unwrap();
+    let octets = || testing::realtime_octets(&host.server, host.worker).unwrap();
+    eventually("the connection to hold its bound of events", || {
+        octets() >= at_bound
+    });
+    client
+        .stream
+        .set_read_timeout(Some(Duration::from_millis(500)))
         .unwrap();
-    let mut written = 0;
-    while written < frames.len() {
-        match writer.write(&frames[written..]) {
-            Ok(0) => panic!("the connection took nothing"),
-            Ok(count) => written += count,
-            Err(err) if matches!(err.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => break,
-            Err(err) => panic!("{err}"),
-        }
-    }
+    let mut byte = [0u8; 1];
+    let waiting = client.stream.read(&mut byte);
     assert!(
-        written < frames.len(),
-        "the server read every frame while the host acknowledged nothing"
+        matches!(&waiting, Err(err) if matches!(err.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut)),
+        "the ping behind the frame past the bound waits unread for an acknowledgment: {waiting:?}"
     );
+    assert_eq!(
+        octets(),
+        at_bound,
+        "the connection read no frame past its bound while the host acknowledged nothing"
+    );
+    client
+        .stream
+        .set_read_timeout(Some(Duration::from_secs(20)))
+        .unwrap();
     let mut held = Vec::new();
     while host.target.holding() > 0 {
         held.push(host.target.take());
@@ -1224,7 +1249,7 @@ fn a_connection_stops_reading_while_it_holds_its_bound_of_unacknowledged_events(
         .flat_map(|&batch| Host::read_events(batch))
         .collect();
     assert!(
-        delivered.len() <= zero_limits::services::MAX_PENDING_EVENTS_PER_CONN,
+        delivered.len() <= bound,
         "{} events reached the host before an acknowledgment",
         delivered.len()
     );
@@ -1233,9 +1258,6 @@ fn a_connection_stops_reading_while_it_holds_its_bound_of_unacknowledged_events(
     }
     host.events.extend(delivered);
 
-    writer.set_write_timeout(None).unwrap();
-    let rest = frames[written..].to_vec();
-    let finisher = thread::spawn(move || writer.write_all(&rest).unwrap());
     for index in 0..1000 {
         let event = host.event();
         assert_eq!(
@@ -1244,6 +1266,11 @@ fn a_connection_stops_reading_while_it_holds_its_bound_of_unacknowledged_events(
             "message {index}"
         );
     }
+    assert_eq!(
+        client.frame(),
+        (0x8A, b"probe".to_vec()),
+        "the ping is answered once reading resumes"
+    );
     finisher.join().unwrap();
     host.drain(vec![(client, conn)], Vec::new());
 }
@@ -1251,7 +1278,14 @@ fn a_connection_stops_reading_while_it_holds_its_bound_of_unacknowledged_events(
 #[test]
 fn outbox_octets_count_in_the_cores_request_memory_budget() {
     let mut host = Host::start(r#"{"threads":1,"limits":{"requestMemoryPerCore":4194304}}"#);
-    let (mut client, conn) = host.websocket("/ws", "", b"");
+    let mut client = Client::connect(&host.server);
+    let (held, upgrade) = pipelined_behind_held(&host, &mut client, &handshake("/ws", ""));
+    let conn = host.respond(upgrade, |exchange| {
+        actions::ws_accept(upgrade, exchange, b"").unwrap()
+    });
+    eventually("the accept to run", || {
+        testing::inspect(upgrade, |_| ()).is_err()
+    });
     let message = vec![7u8; 1 << 20];
     for _ in 0..40 {
         realtime::ws_send(conn, OPCODE_BINARY, &message).unwrap();
@@ -1271,11 +1305,20 @@ fn outbox_octets_count_in_the_cores_request_memory_budget() {
         "a core whose outboxes hold more than its budget serves no new connection: {waiting:?}"
     );
 
+    host.respond(held, |exchange| {
+        exchange.response().status(StatusCode::NO_CONTENT);
+    });
+    assert_eq!(client.read().unwrap().status, 204);
+    assert_eq!(client.read().unwrap().status, 101);
+    let mut client = WsClient {
+        stream: client.stream,
+    };
     for _ in 0..40 {
         let (first, payload) = client.frame();
         assert_eq!((first, payload.len()), (0x82, message.len()));
     }
-    let drained = host.event();
+    assert_eq!(host.event_of(conn).kind, EVENT_WS_OPEN);
+    let drained = host.event_of(conn);
     assert_eq!((drained.kind, drained.conn), (EVENT_WS_DRAINED, conn));
     late.stream
         .set_read_timeout(Some(Duration::from_secs(20)))
@@ -1311,40 +1354,22 @@ fn a_connection_whose_lease_ends_before_its_action_runs_is_closed() {
 
 #[test]
 fn an_accepted_connection_whose_head_is_never_written_closes_at_the_request_total() {
+    let total = Duration::from_millis(1000);
     let mut host = Host::start(r#"{"threads":1,"limits":{"requestTotalMs":1000}}"#);
     let mut client = Client::connect(&host.server);
-    client.send(
-        b"GET /events?large HTTP/1.1\r\nHost: t\r\n\r\nGET /events HTTP/1.1\r\nHost: t\r\n\r\n",
-    );
-    let mut slots = Vec::new();
-    while slots.len() < 2 {
-        let batch = host.target.take();
-        assert_eq!(batch.kind, BATCH_REQUESTS);
-        slots.extend(ids(batch));
-        host.ack(batch);
-    }
-    let large = |slot: u64| {
-        testing::inspect(slot, |exchange| exchange.request().query().is_some()).unwrap()
-    };
-    let (first, second) = (slots[0], slots[1]);
-    let (body, stream) = if large(first) {
-        (first, second)
-    } else {
-        (second, first)
-    };
-    // The client reads nothing, so the stream head waits behind a response the
-    // socket cannot take.
-    host.respond(body, |exchange| {
-        exchange.response().body(&vec![b'x'; 32 << 20]);
-    });
-    let conn = host.respond(stream, |exchange| {
-        actions::sse_open(stream, exchange, 0).unwrap()
-    });
+    let sent = Instant::now();
+    let (_, stream) = pipelined_held_then_stream(&host, &mut client);
+    let conn = open_behind(&host, stream);
     let closed = host.event_of(conn);
     assert_eq!(
         (closed.kind, closed.route),
         (EVENT_SSE_CLOSED, EVENTS),
         "the connection closes once the request total passes"
+    );
+    assert!(
+        sent.elapsed() >= total,
+        "the connection closed {:?} after its requests, before the request total",
+        sent.elapsed()
     );
     assert_eq!(
         realtime::sse_send(conn, None, None, b"x")
@@ -1352,7 +1377,15 @@ fn an_accepted_connection_whose_head_is_never_written_closes_at_the_request_tota
             .status(),
         Status::Closed
     );
-    drop(client);
+    assert_eq!(
+        client.read().unwrap().status,
+        503,
+        "the held request is answered at the request total"
+    );
+    assert!(
+        read_rest(&mut client.stream).is_empty(),
+        "the connection ends with no head of the stream"
+    );
     stop(&host.server);
 }
 
@@ -1458,12 +1491,12 @@ fn every_realtime_call_refuses_an_id_out_of_range_and_one_no_connection_has() {
     }
 }
 
-/// The slots of the two pipelined requests of `client`: the one for a large body and
-/// the event stream behind it, whose head waits while the client reads nothing.
-fn pipelined_large_then_stream(host: &Host, client: &mut Client) -> (u64, u64) {
-    client.send(
-        b"GET /events?large HTTP/1.1\r\nHost: t\r\n\r\nGET /events HTTP/1.1\r\nHost: t\r\n\r\n",
-    );
+/// The slots of two pipelined requests of `client`: one the test holds unanswered,
+/// and `behind`, whose response head waits for the held response however much the
+/// sockets buffer, since responses go out in the order of their requests (RFC 9112
+/// Section 9.3.2).
+fn pipelined_behind_held(host: &Host, client: &mut Client, behind: &str) -> (u64, u64) {
+    client.send(format!("GET /events?held HTTP/1.1\r\nHost: t\r\n\r\n{behind}").as_bytes());
     let mut slots = Vec::new();
     while slots.len() < 2 {
         let batch = host.target.take();
@@ -1471,14 +1504,30 @@ fn pipelined_large_then_stream(host: &Host, client: &mut Client) -> (u64, u64) {
         slots.extend(ids(batch));
         host.ack(batch);
     }
-    let large = |slot: u64| {
+    let held = |slot: u64| {
         testing::inspect(slot, |exchange| exchange.request().query().is_some()).unwrap()
     };
-    if large(slots[0]) {
+    if held(slots[0]) {
         (slots[0], slots[1])
     } else {
         (slots[1], slots[0])
     }
+}
+
+/// The slots of a held request and of the event stream pipelined behind it.
+fn pipelined_held_then_stream(host: &Host, client: &mut Client) -> (u64, u64) {
+    pipelined_behind_held(host, client, "GET /events HTTP/1.1\r\nHost: t\r\n\r\n")
+}
+
+/// Open an event stream on the leased request `stream` and wait until its action ran.
+fn open_behind(host: &Host, stream: u64) -> u64 {
+    let conn = host.respond(stream, |exchange| {
+        actions::sse_open(stream, exchange, 0).unwrap()
+    });
+    eventually("the stream's action to run", || {
+        testing::inspect(stream, |_| ()).is_err()
+    });
+    conn
 }
 
 #[test]
@@ -1593,16 +1642,8 @@ fn a_connection_reserved_when_its_core_ends_closes_and_the_next_server_on_its_in
 fn a_connection_whose_head_waits_when_its_core_ends_is_closed() {
     let host = Host::start(r#"{"threads":1,"drainMs":300}"#);
     let mut client = Client::connect(&host.server);
-    let (body, stream) = pipelined_large_then_stream(&host, &mut client);
-    host.respond(body, |exchange| {
-        exchange.response().body(&vec![b'x'; 32 << 20]);
-    });
-    let conn = host.respond(stream, |exchange| {
-        actions::sse_open(stream, exchange, 0).unwrap()
-    });
-    eventually("the stream's action to run", || {
-        testing::inspect(stream, |_| ()).is_err()
-    });
+    let (_, stream) = pipelined_held_then_stream(&host, &mut client);
+    let conn = open_behind(&host, stream);
     realtime::sse_send(conn, None, None, b"queued").unwrap();
     host.server.shutdown();
     eventually("the server to stop at its drain deadline", || {
@@ -1748,21 +1789,15 @@ fn a_host_thread_that_reserves_after_its_server_stopped_and_the_next_started_is_
 }
 
 #[test]
-fn a_connection_whose_client_leaves_before_its_head_is_written_closes_at_once() {
+fn a_connection_the_driver_lets_go_of_before_its_head_is_written_closes_at_once() {
     let mut host = Host::start(r#"{"threads":1}"#);
     let mut client = Client::connect(&host.server);
-    let (body, stream) = pipelined_large_then_stream(&host, &mut client);
-    host.respond(body, |exchange| {
-        exchange.response().body(&vec![b'x'; 32 << 20]);
-    });
-    let conn = host.respond(stream, |exchange| {
-        actions::sse_open(stream, exchange, 0).unwrap()
-    });
-    eventually("the stream's action to run", || {
-        testing::inspect(stream, |_| ()).is_err()
-    });
+    let (held, stream) = pipelined_held_then_stream(&host, &mut client);
+    let conn = open_behind(&host, stream);
     realtime::sse_send(conn, None, None, b"queued").unwrap();
-    drop(client);
+    let ahead = host.respond(held, |exchange| {
+        actions::sse_open(held, exchange, 0).unwrap()
+    });
     let closed = host.event_of(conn);
     assert_eq!(
         (closed.kind, closed.route),
@@ -1775,6 +1810,18 @@ fn a_connection_whose_client_leaves_before_its_head_is_written_closes_at_once() 
             .status(),
         Status::Closed
     );
+    assert_eq!(
+        client.read().unwrap().status,
+        200,
+        "the head of the stream ahead"
+    );
+    realtime::sse_send(ahead, None, None, b"ahead").unwrap();
+    assert_eq!(
+        read_event(&mut client.stream),
+        b"data: ahead\n\n",
+        "the stream ahead took the connection, with no head of the one behind it"
+    );
+    drop(client);
     stop(&host.server);
 }
 
@@ -1862,24 +1909,24 @@ fn an_action_that_names_a_connection_reserved_for_another_core_is_answered_500()
 fn a_connection_claimed_during_the_drain_closes_within_the_close_timeout_of_the_drain() {
     let mut host = Host::start(r#"{"threads":1,"drainMs":30000}"#);
     let mut client = Client::connect(&host.server);
-    let (body, stream) = pipelined_large_then_stream(&host, &mut client);
+    let (held, stream) = pipelined_held_then_stream(&host, &mut client);
     let asked = Instant::now();
     host.server.shutdown();
-    host.respond(body, |exchange| {
-        exchange.response().body(&vec![b'x'; 32 << 20]);
-    });
-    let conn = host.respond(stream, |exchange| {
-        actions::sse_open(stream, exchange, 0).unwrap()
-    });
-    eventually("the stream's action to run", || {
-        testing::inspect(stream, |_| ()).is_err()
-    });
+    let conn = open_behind(&host, stream);
     let closed = host.event_of(conn);
     assert_eq!(
         (closed.kind, closed.route),
         (EVENT_SSE_CLOSED, EVENTS),
         "the claim made while draining closes at the drain's cap, not at the request total"
     );
+    assert!(
+        asked.elapsed() >= zero_realtime::websocket::CLOSE_TIMEOUT,
+        "the claim closed {:?} after the shutdown, before the drain's cap",
+        asked.elapsed()
+    );
+    host.respond(held, |exchange| {
+        exchange.response().body(b"held");
+    });
     drop(client);
     eventually("the server to stop", || !host.server.is_running());
     assert!(
