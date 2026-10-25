@@ -110,8 +110,16 @@ impl<H> Shared<H> {
             .unwrap_or_else(|| Box::new(Record::new(self.limits.header_table_entries)))
     }
 
-    /// Keep a record for reuse; the body charge it still holds is returned.
-    pub(crate) fn give_record(&self, mut record: Box<Record>) {
+    /// Keep a record for reuse; the body charge it still holds is returned, and a
+    /// claim it still carries, whose connection was never handed over, is reported
+    /// dropped to the handler.
+    pub(crate) fn give_record(&self, mut record: Box<Record>)
+    where
+        H: Handler,
+    {
+        if let Some(claim) = record.claim.take() {
+            self.handler.dropped(claim.token);
+        }
         self.uncount_body(record.charge);
         record.reset();
         let mut free = self.records.borrow_mut();
@@ -487,6 +495,9 @@ where
             }
             conn.discard_from(0);
             if conn.aborted {
+                if let Some(record) = conn.taken.take() {
+                    conn.shared.give_record(record);
+                }
                 conn.abort().await;
                 return;
             }
@@ -1505,7 +1516,10 @@ fn write_head(
 #[cfg(test)]
 mod tests {
     use std::future::Future;
+    use std::io::{Read, Write};
     use std::rc::Rc;
+    use std::sync::{Arc, Mutex, PoisonError};
+    use std::time::{Duration, Instant};
 
     use zero_core::Error;
     use zero_io::rt::TcpStream;
@@ -1514,6 +1528,7 @@ mod tests {
     use crate::call::Call;
     use crate::handler::Handler;
     use crate::record::Record;
+    use crate::{serve, Config};
 
     struct Nothing;
 
@@ -1546,5 +1561,70 @@ mod tests {
             task < driver.saturating_mul(2),
             "the task is {task} bytes for a {driver}-byte driver"
         );
+    }
+
+    /// Streams `/stream` under token 7 behind a large response to anything else,
+    /// and keeps the tokens of the claims the driver reports dropped.
+    struct Claims {
+        dropped: Arc<Mutex<Vec<u64>>>,
+    }
+
+    impl Handler for Claims {
+        async fn handle(&self, call: &mut Call<'_>) -> Result<(), Error> {
+            if call.request().path() == b"/stream" {
+                call.stream(7)?;
+            } else {
+                call.response().body(&vec![b'x'; 8 << 20]);
+            }
+            Ok(())
+        }
+
+        fn dropped(&self, token: u64) {
+            self.dropped
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(token);
+        }
+    }
+
+    #[test]
+    fn a_claim_whose_connection_ends_before_its_head_is_written_is_reported_dropped() {
+        let dropped = Arc::new(Mutex::new(Vec::new()));
+        let mut config = Config::default();
+        config.runtime.io.threads = 1;
+        config.runtime.io.drain = Duration::from_secs(1);
+        let kept = Arc::clone(&dropped);
+        let workers = serve(
+            "127.0.0.1:0".parse().unwrap(),
+            config,
+            Arc::new(|_| {}),
+            move |_| Claims {
+                dropped: Arc::clone(&kept),
+            },
+        )
+        .unwrap();
+        let mut client = std::net::TcpStream::connect(workers.local_addr()).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        client
+            .write_all(
+                b"GET /large HTTP/1.1\r\nHost: t\r\n\r\nGET /stream HTTP/1.1\r\nHost: t\r\n\r\n",
+            )
+            .unwrap();
+        let mut first = [0u8; 1];
+        client.read_exact(&mut first).unwrap();
+        drop(client);
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while dropped
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .is_empty()
+        {
+            assert!(Instant::now() < deadline, "no claim was reported dropped");
+            std::thread::yield_now();
+        }
+        assert_eq!(*dropped.lock().unwrap(), [7]);
+        workers.stop().unwrap();
     }
 }

@@ -831,17 +831,17 @@ mod tests {
     }
 
     #[test]
-    fn rfc6455_7_4_a_close_the_server_starts_carries_only_1000_to_1003_1007_to_1009_1011_to_1013_or_3000_to_4999(
+    fn rfc6455_7_4_a_close_the_server_starts_carries_only_1000_to_1003_1007_to_1009_1011_to_1014_or_3000_to_4999(
     ) {
         for code in [
-            1000u16, 1001, 1002, 1003, 1007, 1008, 1009, 1011, 1012, 1013, 3000, 4000, 4999,
+            1000u16, 1001, 1002, 1003, 1007, 1008, 1009, 1011, 1012, 1013, 1014, 3000, 4000, 4999,
         ] {
             let mut session = fresh();
             assert!(session.close(CloseCode(code), "").is_ok(), "{code}");
             assert_eq!(server_frames(session.output()), [close_frame(code)]);
         }
         for code in [
-            0u16, 999, 1004, 1006, 1010, 1014, 1015, 1016, 2000, 2999, 5000, 65_535,
+            0u16, 999, 1004, 1006, 1010, 1015, 1016, 2000, 2999, 5000, 65_535,
         ] {
             let mut session = fresh();
             assert!(
@@ -860,7 +860,7 @@ mod tests {
             assert_eq!(
                 (seen, failed),
                 (vec![Seen::Close(code, String::new())], None),
-                "a received {code} is still accepted"
+                "a received {code} is accepted"
             );
             assert_eq!(
                 server_frames(session.output()),

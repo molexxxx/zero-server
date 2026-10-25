@@ -21,6 +21,13 @@
 //! it holds less than half of it again. The outbox closes when the connection task
 //! ends: what it still holds is dropped, its octets leave the worker's total, and
 //! later pushes are refused with [`Error::Closed`].
+//!
+//! A room broadcast to a WebSocket served with an outbox waits in the same queue, so
+//! the connection writes it in order with what was pushed before and after it. The
+//! frame is shared by every member, so it counts in no outbox and on no total;
+//! instead the broadcast frames waiting in one outbox may hold the rooms inbox limit
+//! at most, and past it they are dropped and the connection closes with 1013 Try
+//! Again Later, as a member with an inbox does.
 
 use std::collections::VecDeque;
 use std::ops::Deref;
@@ -202,12 +209,24 @@ impl OutboxTotal {
     }
 }
 
+/// One entry of an outbox: a command a sender pushed, or a frame broadcast to a room
+/// the connection is in.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Queued {
+    Sent(Command),
+    Broadcast(Arc<[u8]>),
+}
+
 /// What an outbox holds.
 #[derive(Debug, Default)]
 struct Queue {
-    commands: VecDeque<Command>,
+    entries: VecDeque<Queued>,
     /// Octets pushed and not yet written, whether still queued or taken by the task.
     bytes: u64,
+    /// Octets of the broadcast frames waiting in `entries`.
+    broadcast_bytes: usize,
+    /// Broadcast frames were dropped because too many waited.
+    overflowed: bool,
     /// A Close, Terminate or End was pushed, so nothing more is.
     ending: bool,
     /// No push is accepted any more.
@@ -334,13 +353,43 @@ impl Outbox {
             if command.ends() {
                 queue.ending = true;
             }
-            queue.commands.push_back(command);
+            queue.entries.push_back(Queued::Sent(command));
             queue.waker.take()
         };
         if let Some(waker) = waker {
             waker.wake();
         }
         Ok(())
+    }
+
+    /// Queue a frame broadcast to a room the connection is in, after what was pushed
+    /// before; nothing is queued once a Close, Terminate or End was pushed or the
+    /// outbox closed. Past `limit` octets of broadcast frames waiting, they are
+    /// dropped and the connection learns at its next take that it fell behind.
+    pub(crate) fn broadcast(&self, frame: &Arc<[u8]>, limit: usize) {
+        let waker = {
+            let mut queue = self.lock();
+            if queue.closed || queue.ending || queue.overflowed {
+                return;
+            }
+            let bytes = queue.broadcast_bytes.saturating_add(frame.len());
+            if bytes > limit {
+                queue.overflowed = true;
+                queue
+                    .entries
+                    .retain(|entry| matches!(entry, Queued::Sent(_)));
+                queue.broadcast_bytes = 0;
+            } else {
+                queue.broadcast_bytes = bytes;
+                queue
+                    .entries
+                    .push_back(Queued::Broadcast(Arc::clone(frame)));
+            }
+            queue.waker.take()
+        };
+        if let Some(waker) = waker {
+            waker.wake();
+        }
     }
 
     /// The octets pushed and not yet written, which a WebSocket API reports as its
@@ -389,7 +438,9 @@ impl Outbox {
             self.bytes.store(0, Ordering::Release);
             self.total.release(octets);
             queue.passed = false;
-            (std::mem::take(&mut queue.commands), queue.waker.take())
+            queue.broadcast_bytes = 0;
+            queue.overflowed = false;
+            (std::mem::take(&mut queue.entries), queue.waker.take())
         };
         drop(dropped);
         if let Some(waker) = waker {
@@ -397,27 +448,36 @@ impl Outbox {
         }
     }
 
-    /// Ready once a command waits; registers the task to be woken otherwise.
+    /// Ready once an entry waits or broadcast frames were dropped; registers the
+    /// task to be woken otherwise.
     pub(crate) fn poll_ready(&self, cx: &Context<'_>) -> Poll<()> {
         let mut queue = self.lock();
-        if !queue.commands.is_empty() {
+        if !queue.entries.is_empty() || queue.overflowed {
             return Poll::Ready(());
         }
         queue.waker = Some(cx.waker().clone());
         Poll::Pending
     }
 
-    /// Take the waiting commands; their octets stay counted until
+    /// Take the waiting entries, and whether broadcast frames were dropped since the
+    /// last take; the octets of the commands stay counted until
     /// [`release`](Self::release).
-    pub(crate) fn take(&self) -> VecDeque<Command> {
-        std::mem::take(&mut self.lock().commands)
+    pub(crate) fn take(&self) -> (VecDeque<Queued>, bool) {
+        let mut queue = self.lock();
+        queue.broadcast_bytes = 0;
+        (
+            std::mem::take(&mut queue.entries),
+            std::mem::take(&mut queue.overflowed),
+        )
     }
 
-    /// Refuse every later push and take what waits, so nothing pushed before is lost.
-    pub(crate) fn seal(&self) -> VecDeque<Command> {
+    /// Refuse every later push and broadcast and take what waits, so nothing queued
+    /// before is lost.
+    pub(crate) fn seal(&self) -> VecDeque<Queued> {
         let mut queue = self.lock();
         queue.closed = true;
-        std::mem::take(&mut queue.commands)
+        queue.broadcast_bytes = 0;
+        std::mem::take(&mut queue.entries)
     }
 
     /// Stop counting `octets` the connection wrote or dropped.
@@ -447,6 +507,11 @@ pub(crate) struct Attached(Arc<Outbox>);
 impl Attached {
     pub(crate) fn new(outbox: Arc<Outbox>) -> Self {
         Attached(outbox)
+    }
+
+    /// The outbox, for the rooms to queue broadcasts in.
+    pub(crate) fn shared(&self) -> Arc<Outbox> {
+        Arc::clone(&self.0)
     }
 }
 

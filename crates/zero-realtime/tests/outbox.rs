@@ -229,6 +229,7 @@ impl Handler for App {
                         shared.note(format!("{token} {line}"));
                     }
                     let code = ws.close_code().map(|code| code.0);
+                    shared.note(format!("reason of {token} {:?}", ws.close_reason()));
                     shared.note(format!("{token} closed {code:?}"));
                 }
                 TakeOver::Stream => {
@@ -661,6 +662,98 @@ fn join_and_leave_pushed_between_frames_take_effect_in_send_order() {
         "no broadcast reached it after the leave"
     );
     close_from_client(&mut conn, 1000);
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_broadcast_reaches_a_member_with_an_outbox_in_order_with_what_is_pushed_to_it() {
+    let server = Server::start(1, HIGH_WATER);
+    let rooms = server.rooms();
+    let (mut conn, outbox) = server.websocket(30);
+    outbox.push(Command::Join("lobby".to_owned())).unwrap();
+    outbox.push(message("joined")).unwrap();
+    assert_eq!(text(&mut conn), "joined");
+    wait_for(|| outbox.buffered() == 0);
+    let held = server.while_held(|| {
+        let mut own = 0;
+        for index in 0..50 {
+            let before = message(&format!("before {index}"));
+            let after = message(&format!("after {index}"));
+            own += before.octets() + after.octets();
+            outbox.push(before).unwrap();
+            assert_eq!(
+                rooms.broadcast_text("lobby", &format!("broadcast {index}"), None),
+                1
+            );
+            outbox.push(after).unwrap();
+        }
+        assert_eq!(
+            outbox.buffered(),
+            own,
+            "a broadcast frame counts in no outbox"
+        );
+    });
+    for index in 0..50 {
+        assert_eq!(text(&mut conn), format!("before {index}"));
+        assert_eq!(text(&mut conn), format!("broadcast {index}"));
+        assert_eq!(text(&mut conn), format!("after {index}"));
+    }
+    wait_for(|| outbox.buffered() == 0);
+    drop(held);
+    close_from_client(&mut conn, 1000);
+    server.stop().unwrap();
+}
+
+#[test]
+fn a_member_with_an_outbox_that_falls_too_far_behind_is_closed_with_1013_try_again_later() {
+    let server = Server::start(1, HIGH_WATER);
+    let rooms = server.rooms();
+    let (mut conn, outbox) = server.websocket(31);
+    outbox.push(Command::Join("lobby".to_owned())).unwrap();
+    outbox.push(message("joined")).unwrap();
+    assert_eq!(text(&mut conn), "joined");
+    let large = vec![7u8; 4 * 1024 * 1024];
+    let held = server.while_held(|| {
+        for _ in 0..5 {
+            assert_eq!(rooms.broadcast_binary("lobby", &large, None), 1);
+        }
+    });
+    assert_eq!(
+        read_frame(&mut conn),
+        (0x88, close_body(1013, "")),
+        "past the rooms inbox limit of broadcasts waiting"
+    );
+    conn.write_all(&client(0x88, &close_body(1013, "")))
+        .unwrap();
+    assert!(closed(&mut conn));
+    wait_for(|| rooms.members("lobby") == 0);
+    drop(held);
+    server.stop().unwrap();
+}
+
+#[test]
+fn the_peers_close_reason_is_the_utf_8_data_after_its_status_code_6455_7_1_6() {
+    let server = Server::start(2, HIGH_WATER);
+    let (mut conn, _outbox) = server.websocket(32);
+    conn.write_all(&client(0x88, &close_body(4000, "all done")))
+        .unwrap();
+    assert_eq!(read_frame(&mut conn), (0x88, close_body(4000, "")));
+    assert!(closed(&mut conn));
+    wait_for(|| server.logged("32 closed Some(4000)"));
+    assert!(server.logged("reason of 32 Some(\"all done\")"));
+
+    let (mut plain, _outbox) = server.websocket(33);
+    close_from_client(&mut plain, 1000);
+    wait_for(|| server.logged("33 closed Some(1000)"));
+    assert!(
+        server.logged("reason of 33 Some(\"\")"),
+        "a Close without a reason has the empty string"
+    );
+
+    let (dropped, _outbox) = server.websocket(34);
+    drop(dropped);
+    wait_for(|| server.logged("34 closed None"));
+    assert!(server.logged("reason of 34 None"), "no Close arrived");
     server.stop().unwrap();
 }
 

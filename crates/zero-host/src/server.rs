@@ -55,6 +55,9 @@ pub(crate) struct Settings {
     pub(crate) retry_after: u32,
     pub(crate) drain_retry_after: u32,
     pub(crate) dispatch: DispatchLimits,
+    /// The rooms, the WebSocket routes and the connection limits of the server.
+    #[cfg(feature = "realtime")]
+    pub(crate) realtime: crate::realtime::ServerRealtime,
     workers: Box<[Arc<WorkerShared>]>,
     first: Arc<WorkerShared>,
 }
@@ -482,6 +485,8 @@ impl Server {
             .map(|shared| counts(&shared.counters))
             .collect();
         let table = built.table.clone();
+        #[cfg(feature = "realtime")]
+        let realtime = crate::realtime::ServerRealtime::new(&built, limits);
         let settings = Arc::new(Settings {
             app: built,
             rules,
@@ -490,6 +495,8 @@ impl Server {
             retry_after: options.retry_after_secs,
             drain_retry_after: options.drain_retry_after_secs,
             dispatch: DispatchLimits::from_memory(&limits.memory),
+            #[cfg(feature = "realtime")]
+            realtime,
             workers: workers.into_boxed_slice(),
             first,
         });
@@ -932,6 +939,73 @@ impl Server {
             .claim_target(Attached::Own(next_serial(), target))?;
         drop(state);
         Ok(())
+    }
+
+    /// Send a message to every WebSocket connection in one of this server's rooms,
+    /// on every core, but the one left out. The frame is encoded once; each member
+    /// writes it in order with what is sent on it, after the sends made before this
+    /// call returned and before those made after it, and a member with 16 MiB of
+    /// broadcasts waiting is closed with 1013 Try Again Later rather than holding
+    /// more.
+    ///
+    /// # Arguments
+    ///
+    /// * `room` - the room's name, UTF-8.
+    /// * `opcode` - [`OPCODE_TEXT`](crate::realtime::OPCODE_TEXT) or
+    ///   [`OPCODE_BINARY`](crate::realtime::OPCODE_BINARY).
+    /// * `data` - the message; UTF-8 for text (RFC 6455 Section 5.6).
+    /// * `except` - the id of a connection to leave out, usually the sender's.
+    ///
+    /// # Returns
+    ///
+    /// How many members the message was queued for.
+    ///
+    /// # Errors
+    ///
+    /// [`Status::InvalidArgument`] for a name or a text that is not UTF-8, another
+    /// opcode, or an `except` above 2^53 - 1, and [`Status::Unsupported`] when the
+    /// `realtime` capability is compiled out.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.6>
+    #[cfg_attr(not(feature = "realtime"), allow(unused_variables))]
+    pub fn room_broadcast(
+        &self,
+        room: &[u8],
+        opcode: u8,
+        data: &[u8],
+        except: Option<u64>,
+    ) -> Result<u64, HostError> {
+        #[cfg(feature = "realtime")]
+        {
+            let rooms = &self.inner.settings.realtime.rooms;
+            crate::realtime::broadcast(rooms, room, opcode, data, except)
+        }
+        #[cfg(not(feature = "realtime"))]
+        Err(crate::realtime::unsupported())
+    }
+
+    /// How many WebSocket connections are in one of this server's rooms.
+    ///
+    /// # Arguments
+    ///
+    /// * `room` - the room's name, UTF-8.
+    ///
+    /// # Returns
+    ///
+    /// The count, over every core.
+    ///
+    /// # Errors
+    ///
+    /// [`Status::InvalidArgument`] for a name that is not UTF-8, and
+    /// [`Status::Unsupported`] when the `realtime` capability is compiled out.
+    #[cfg_attr(not(feature = "realtime"), allow(unused_variables))]
+    pub fn room_size(&self, room: &[u8]) -> Result<u64, HostError> {
+        #[cfg(feature = "realtime")]
+        {
+            crate::realtime::size(&self.inner.settings.realtime.rooms, room)
+        }
+        #[cfg(not(feature = "realtime"))]
+        Err(crate::realtime::unsupported())
     }
 
     /// Detach the target of one of this server's worker indexes: its leases are

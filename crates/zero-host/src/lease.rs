@@ -8,7 +8,8 @@
 //! response, the import takes the slot's lock without waiting; a lock a host still
 //! holds, or a pin on a staged body, puts the slot on the dispatcher's late list
 //! until the lock is free. A response the host never wrote is answered 500
-//! `NO_RESPONSE`.
+//! `NO_RESPONSE`, and the action a response carries runs once the response is back
+//! ([`actions`](crate::actions)).
 
 use std::future::{poll_fn, Future};
 use std::rc::Rc;
@@ -406,19 +407,6 @@ fn internal(core: &CoreHost, call: &mut Call<'_>, code: &'static str) -> Result<
     Ok(())
 }
 
-/// Run the action the host asked for once its response is back. A response with
-/// no action is sent as it is.
-fn apply_action(core: &CoreHost, call: &mut Call<'_>, action: Action) -> Result<(), Error> {
-    match action {
-        Action::None => Ok(()),
-        Action::File { .. } | Action::Sse { .. } | Action::Ws { .. } => {
-            call.problem(&Problem::new(StatusCode::NOT_IMPLEMENTED, "unsupported"));
-            core.settings().rules.after(call);
-            Ok(())
-        }
-    }
-}
-
 /// Lease a request to the host and send what it answers.
 ///
 /// A refused admission, an exhausted arena and a lost target are answered 503 on the
@@ -480,7 +468,7 @@ pub(crate) async fn dispatch(
             let imported = guard.import(call).await;
             guard.retire();
             match imported {
-                Imported::Response(action) => apply_action(core, call, action),
+                Imported::Response(action) => crate::actions::apply(core, call, route, action),
                 Imported::Poisoned => {
                     call.problem(&Problem::panicked());
                     core.settings().rules.after(call);

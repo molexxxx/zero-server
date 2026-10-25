@@ -7,6 +7,13 @@
 //! a task of its own under panic containment: a panic there marks the core's host
 //! dispatch failed, answers every waiting lease 500, answers new host requests 503,
 //! and reports `Event::HostFailed`, while the routes answered in Rust keep serving.
+//!
+//! A WebSocket route's request that is not an opening handshake the route accepts
+//! is answered on the core and never leased. A connection a host accepted as a
+//! WebSocket or opened as an event stream is served by the driver's connection task
+//! once its response head is written; the octets its outbox holds and the payloads
+//! of the events it reported that the host has not acknowledged count in the core's
+//! request-memory budget beside the exchanges'.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -18,6 +25,8 @@ use zero_core::{Error, SlotId};
 use zero_http::{Call, ErrorShape, Handler, Problem, ReadHold, Routed};
 use zero_http_types::{Method, StatusCode};
 use zero_io::seam::Shutdown;
+#[cfg(feature = "realtime")]
+use zero_io::seam::Stream;
 use zero_router::Resolution;
 use zero_rt::dispatch::{Admission, Dispatcher, Kick, Parts, Turned};
 use zero_rt::sync::MutexGuard;
@@ -33,7 +42,8 @@ use crate::spec::HostSpec;
 use crate::tier0::{self, Served};
 
 /// The state of one core: the worker index's permanent parts and the worker-local
-/// allocator, dispatcher, waiters and per-route files.
+/// allocator, dispatcher, waiters, per-route files, file action roots and
+/// connections.
 pub(crate) struct CoreHost {
     worker: Worker,
     shared: Arc<WorkerShared>,
@@ -46,6 +56,10 @@ pub(crate) struct CoreHost {
     scratch: RefCell<Vec<u8>>,
     #[cfg(feature = "static")]
     files: Vec<Option<zero_static::Files>>,
+    #[cfg(feature = "static")]
+    pub(crate) file_roots: RefCell<crate::actions::FileRoots>,
+    #[cfg(feature = "realtime")]
+    realtime: crate::realtime::Local,
     #[cfg(feature = "testing")]
     pub(crate) slot_cap: Cell<Option<usize>>,
     #[cfg(feature = "testing")]
@@ -84,6 +98,10 @@ impl CoreHost {
             scratch: RefCell::new(Vec::with_capacity(256)),
             #[cfg(feature = "static")]
             files,
+            #[cfg(feature = "static")]
+            file_roots: RefCell::new(crate::actions::FileRoots::default()),
+            #[cfg(feature = "realtime")]
+            realtime: crate::realtime::Local::new(shared.index, &settings.realtime),
             #[cfg(feature = "testing")]
             slot_cap: Cell::new(None),
             #[cfg(feature = "testing")]
@@ -106,6 +124,32 @@ impl CoreHost {
 
     pub(crate) fn shared(&self) -> &WorkerShared {
         &self.shared
+    }
+
+    /// The core's worker: its clock, pool and shutdown signal.
+    #[cfg(feature = "realtime")]
+    pub(crate) const fn worker(&self) -> &Worker {
+        &self.worker
+    }
+
+    /// The connections this core serves.
+    #[cfg(feature = "realtime")]
+    pub(crate) const fn realtime(&self) -> &crate::realtime::Local {
+        &self.realtime
+    }
+
+    /// The octets the outboxes of this core's worker index hold and their
+    /// connections have not written, and the payload octets of the events this core
+    /// handed over that the host has not acknowledged.
+    fn realtime_octets(&self) -> u64 {
+        #[cfg(feature = "realtime")]
+        {
+            self.realtime.queued()
+        }
+        #[cfg(not(feature = "realtime"))]
+        {
+            0
+        }
     }
 
     /// The `Files` of a static route on this core.
@@ -212,11 +256,29 @@ impl CoreHost {
             ring: &shared.ring,
             waiters: &mut *waiters,
         };
-        dispatch.turn(&mut parts, now)
+        #[cfg_attr(not(feature = "realtime"), allow(unused_mut))]
+        let mut turned = dispatch.turn(&mut parts, now);
+        #[cfg(feature = "realtime")]
+        {
+            let settled = crate::realtime::after_turn(self, &mut dispatch, now, stopping);
+            turned.timer = match (turned.timer, settled.deadline) {
+                (Some(timer), Some(deadline)) => Some(timer.min(deadline)),
+                (timer, deadline) => timer.or(deadline),
+            };
+            if settled.again {
+                turned.finished = false;
+                self.kick.wake();
+            }
+            if settled.waiting {
+                turned.finished = false;
+            }
+        }
+        turned
     }
 
     /// The dispatcher panicked: end every wait with a failure, drop the queued jobs
-    /// and their read holds, and report it.
+    /// and their read holds, close the connections no turn will end any more, and
+    /// report it.
     fn host_failed(&self, message: String) {
         self.failed.set(true);
         self.shared.counters.panics.fetch_add(1, Ordering::Relaxed);
@@ -227,6 +289,8 @@ impl CoreHost {
         if let Ok(mut waiters) = self.waiters.try_borrow_mut() {
             waiters.fail_all();
         }
+        #[cfg(feature = "realtime")]
+        self.realtime.fail();
         self.worker.report(Event::HostFailed {
             core: self.worker.index(),
             message,
@@ -317,7 +381,16 @@ impl Handler for HostHandler {
             return Ok(());
         };
         match routed.descriptor.kind {
-            RouteKind::Host | RouteKind::Miss | RouteKind::WebSocket => {
+            RouteKind::Host | RouteKind::Miss => lease::dispatch(core, call, routed).await,
+            RouteKind::WebSocket => {
+                #[cfg(feature = "realtime")]
+                {
+                    let route = routed.descriptor.route;
+                    if crate::realtime::refuse_handshake(core, call, route) == Answered::Yes {
+                        settings.rules.after(call);
+                        return Ok(());
+                    }
+                }
                 lease::dispatch(core, call, routed).await
             }
             RouteKind::Fixed | RouteKind::Redirect | RouteKind::Static | RouteKind::Health => {
@@ -332,6 +405,12 @@ impl Handler for HostHandler {
                     }
                     call.problem(&Problem::new(StatusCode::NOT_FOUND, "not_found"));
                 }
+                #[cfg(feature = "static")]
+                {
+                    if routed.descriptor.kind == RouteKind::Static {
+                        crate::actions::refusal_body(call, settings.shape);
+                    }
+                }
                 settings.rules.after(call);
                 Ok(())
             }
@@ -342,8 +421,26 @@ impl Handler for HostHandler {
         self.core.body_limit(method, path)
     }
 
+    #[cfg(feature = "realtime")]
+    fn taken<S: Stream + 'static>(
+        &self,
+        taken: zero_http::Taken<S>,
+    ) -> impl std::future::Future<Output = ()> {
+        crate::realtime::serve(Rc::clone(&self.core), taken)
+    }
+
+    #[cfg(feature = "realtime")]
+    fn dropped(&self, token: u64) {
+        crate::realtime::dropped(&self.core, token);
+    }
+
     fn leased_bytes(&self) -> u64 {
-        self.core.shared.counters.retained.load(Ordering::Relaxed)
+        self.core
+            .shared
+            .counters
+            .retained
+            .load(Ordering::Relaxed)
+            .saturating_add(self.core.realtime_octets())
     }
 
     fn error_shape(&self) -> ErrorShape {

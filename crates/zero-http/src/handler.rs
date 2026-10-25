@@ -79,6 +79,19 @@ pub trait Handler: 'static {
         async {}
     }
 
+    /// A connection this handler claimed with [`Call::upgrade`] or [`Call::stream`]
+    /// ended before its response head was written, so it never reaches
+    /// [`taken`](Self::taken): a handler that set up state for the claim can release
+    /// it now. Called on the core's thread when the driver lets go of the claimed
+    /// request. The default does nothing.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - the token given with the claim.
+    fn dropped(&self, token: u64) {
+        let _ = token;
+    }
+
     /// The octets this handler holds outside the request records, such as request
     /// bodies moved into an [`Exchange`](crate::Exchange) and queued outbound
     /// frames, which the core's request-memory budget counts beside the leased

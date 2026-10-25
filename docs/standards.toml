@@ -3091,6 +3091,32 @@ anchor = "rule"
 release = 1
 note = "RFC 9110 Sections 15.5.4 and 17.3"
 
+[[entry]]
+key = "static-19"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A file action under a status the host set evaluates the preconditions only for a 2xx and Range only for a 200, and under any other status sends the file without validators"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-13.2.1"
+evidence = "crates/zero-host/tests/actions.rs"
+at = "fn a_file_under_a_status_the_host_set_evaluates_preconditions_and_range_only_where_9110_13_2_1_allows"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 13.2.1: a server MUST ignore all received preconditions if its response would have been other than a 2xx or 412; Section 14.2: Range is evaluated only if the result would be a 200 (OK) response; Section 6.4.2"
+
+[[entry]]
+key = "static-20"
+chapter = "http"
+designation = "RFC 9110"
+body = "IETF"
+subject = "A file action sends one line of each field it writes about the file, replacing the host's Content-Type, ETag, Last-Modified, Accept-Ranges and Content-Range"
+url = "https://www.rfc-editor.org/rfc/rfc9110.html#section-5.3"
+evidence = "crates/zero-host/tests/actions.rs"
+at = "fn a_file_action_sends_one_line_of_each_field_it_writes_about_the_file_9110_5_3"
+anchor = "rule"
+release = 1
+note = "RFC 9110 Section 5.3, Field Order: a sender MUST NOT generate multiple field lines with the same name unless the field's definition allows a comma-separated list; Sections 8.3, 8.8.2 and 8.8.3"
+
 # Cookies and sessions
 
 [[entry]]
@@ -5440,6 +5466,32 @@ at = "fn host_comment_and_data_text_is_split_so_every_line_stays_one_field"
 anchor = "rule"
 release = 1
 note = "HTML Section 9.2.5, Parsing an event stream"
+
+[[entry]]
+key = "realtime-40"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "The close event carries the peer's close code and reason: the UTF-8 data after the status code of the first Close received, empty when it carried none or no Close arrived"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.6"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn the_close_event_carries_the_peers_close_code_and_reason_6455_7_1_6"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Sections 7.1.5 and 7.1.6, The WebSocket Connection Close Reason: if there is no such data in the Close control frame, the close reason is the empty string"
+
+[[entry]]
+key = "realtime-41"
+chapter = "realtime"
+designation = "RFC 6455"
+body = "IETF"
+subject = "The 101 carries Upgrade, Sec-WebSocket-Accept and Sec-WebSocket-Protocol once each, as the core negotiated them, and no Sec-WebSocket-Extensions or Sec-WebSocket-Version, whatever the host set"
+url = "https://www.rfc-editor.org/rfc/rfc6455.html#section-11.3"
+evidence = "crates/zero-host/tests/realtime.rs"
+at = "fn the_101_carries_each_handshake_field_once_and_only_as_the_core_negotiated_it_6455_11_3"
+anchor = "rule"
+release = 1
+note = "RFC 6455 Sections 11.3.2 to 11.3.4: the header field MUST NOT appear more than once in an HTTP response; Section 4.1: a subprotocol not requested fails the connection"
 
 
 # gRPC and Protocol Buffers

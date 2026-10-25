@@ -33,16 +33,18 @@
 //! stale id is refused without touching the slot's lock, a pointer into a slot is
 //! handed out only under the view rule, and the octets a host writes count in the
 //! core's request-memory budget. A slot completed without a response is answered
-//! 500 `NO_RESPONSE`.
+//! 500 `NO_RESPONSE`. The same calls record the [`actions`] the core runs once the
+//! response is back: serving a file, accepting a WebSocket, opening an event stream.
+//!
+//! The core refuses a malformed WebSocket handshake itself, so only a valid upgrade
+//! request reaches the host. An accepted connection is reached by connection id
+//! through [`realtime`]: sends from any thread, encoded on the calling thread, rooms,
+//! and the connection events the core posts in batches of their own, at most 64
+//! unacknowledged per connection, whose payload octets count in the core's budget.
 //!
 //! [`conformance`] recomputes the outcomes of the shared conformance vectors with
 //! the server's own parsers, encoders and routing, so every binding's runner
 //! compares against one implementation.
-//!
-//! What the crate does not provide yet: the response actions (serving a file,
-//! accepting a WebSocket, opening an event stream; a response that asks for one is
-//! answered 501), and the WebSocket handshake and connection events, so a WebSocket
-//! route's upgrade request reaches the host as a host route's request does.
 //!
 //! ```
 //! use zero_host::{App, Method, RouteKind, Server, ServerOptions};
@@ -65,11 +67,13 @@
 //! ```
 
 pub mod access;
+pub mod actions;
 mod app;
 pub mod conformance;
 mod handler;
 mod lease;
 mod overload;
+pub mod realtime;
 mod registry;
 mod rules;
 mod server;

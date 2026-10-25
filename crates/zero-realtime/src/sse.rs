@@ -34,7 +34,7 @@ use zero_sse::{
     STOP_RECONNECTING,
 };
 
-use crate::outbox::{Attached, Command, Drained, Outbox};
+use crate::outbox::{Attached, Command, Drained, Outbox, Queued};
 
 pub use zero_sse::KEEP_ALIVE_MS;
 
@@ -342,14 +342,17 @@ impl<S: Stream + 'static> EventStream<S> {
             return Ok(());
         }
         self.write_buffer().await?;
-        let commands = match self.outbox.as_deref() {
+        let entries = match self.outbox.as_deref() {
             Some(outbox) if seal => outbox.seal(),
-            Some(outbox) => outbox.take(),
+            Some(outbox) => outbox.take().0,
             None => return Ok(()),
         };
-        if !commands.is_empty() {
+        if !entries.is_empty() {
             self.restart();
-            for command in commands {
+            for entry in entries {
+                let Queued::Sent(command) = entry else {
+                    continue;
+                };
                 self.unreleased = self.unreleased.saturating_add(command.octets());
                 if self.ended {
                     continue;

@@ -13,14 +13,16 @@
 //!
 //! A Close the server starts itself is narrower ([`start_body`]). 1010 is the code a
 //! client sends when the server did not negotiate an extension it needs (Section
-//! 7.4.1), and 1014 is the registry's code for a gateway or proxy reporting an
-//! invalid upstream response, which a server closing its own connection does not
-//! report. So a server starts a closing handshake only with 1000 to 1003, 1007 to
-//! 1009, 1011 to 1013, or 3000 to 4999, and with a reason of at most [`MAX_REASON`]
-//! octets.
+//! 7.4.1). Every other code the registry assigns to a closure an endpoint may signal
+//! is one a server may send, 1014 included, the registry's code for a gateway or
+//! proxy that received an invalid response from its upstream server, since Section
+//! 11.7 makes that registry the record of the codes in 1000 to 2999. So a server
+//! starts a closing handshake only with 1000 to 1003, 1007 to 1009, 1011 to 1014, or
+//! 3000 to 4999, and with a reason of at most [`MAX_REASON`] octets.
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-5.5.1>
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4>
+//! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-11.7>
 //! @see <https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number>
 
 use zero_core::Error;
@@ -78,17 +80,17 @@ impl CloseCode {
     ///
     /// # Returns
     ///
-    /// `true` for 1000 to 1003, 1007 to 1009, 1011 to 1013, and 3000 to 4999; `false`
+    /// `true` for 1000 to 1003, 1007 to 1009, 1011 to 1014, and 3000 to 4999; `false`
     /// for the codes no endpoint sets (1005, 1006, 1015), the reserved 1004, the
-    /// client's 1010, the gateway's 1014, and every code below 1000, from 1016 to
-    /// 2999, or above 4999.
+    /// client's 1010, and every code below 1000, from 1016 to 2999, or above 4999.
     ///
     /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1>
     /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.2>
+    /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-11.7>
     /// @see <https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number>
     #[must_use]
     pub const fn is_sendable(self) -> bool {
-        matches!(self.0, 1000..=1003 | 1007..=1009 | 1011..=1013 | 3000..=4999)
+        matches!(self.0, 1000..=1003 | 1007..=1009 | 1011..=1014 | 3000..=4999)
     }
 }
 

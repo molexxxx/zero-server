@@ -33,17 +33,22 @@
 //! not sealed, otherwise [`Status::Closed`]: the status ([`status`]), field lines
 //! ([`header`], [`header_id`]), the body ([`body`], [`json`]), a body region a host
 //! fills in place ([`body_alloc`]), an error in the server's error shape ([`error`]),
-//! everything at once ([`respond`], [`respond_external`]), the seal ([`send`]) and a
-//! reset ([`reset`]). The response body is counted on the worker index's retained
-//! memory and on the exchange at the length of the longest body the response held,
-//! each write adding only what it grows that length by, since a write that replaces
-//! the body reuses its buffer; the exchange hands the octets back when the worker takes
-//! the response, so the core's request-memory budget sees them while the host holds
-//! them.
+//! everything at once ([`respond`], [`respond_external`]), the seal ([`send`]), a
+//! reset ([`reset`]), and an action the core runs once the response is back ([`file`],
+//! [`sse_open`], [`ws_accept`]), which a sealed response refuses with
+//! [`Status::Closed`] and an open body region with [`Status::InvalidArgument`]. The
+//! actions return [`HostError`], since their refusals can name the argument they
+//! refused; the other calls return [`Access`]. The response body is counted on the
+//! worker index's retained memory and on the exchange at the length of the longest
+//! body the response held, each write adding only what it grows that length by, since
+//! a write that replaces the body reuses its buffer; the exchange hands the octets back
+//! when the worker takes the response, so the core's request-memory budget sees them
+//! while the host holds them.
 //!
 //! Refusals carry a fixed message, so refusing a call allocates nothing, except when
 //! the allocator refuses a body region, which zero-http reports with a message of its
-//! own before the call ends with [`Status::Limit`].
+//! own before the call ends with [`Status::Limit`], and an action refusing its
+//! argument.
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -1277,6 +1282,90 @@ pub fn writable(id: u64) -> Result<(), Access> {
             Ok(())
         }
     })
+}
+
+/// Serve a file as the response once the host completes it, as
+/// [`actions::file`](crate::actions::file) describes.
+///
+/// # Arguments
+///
+/// * `id` - the slot id.
+/// * `root` - the root directory, UTF-8.
+/// * `path` - the path of the file under the root, percent-encoded as a request path
+///   is.
+///
+/// # Errors
+///
+/// [`Status::InvalidArgument`] while a body region is open; otherwise as
+/// [`actions::file`](crate::actions::file) and [`send`]. Nothing changes then.
+pub fn file(id: u64, root: &[u8], path: &[u8]) -> Result<(), HostError> {
+    act(id, |exchange| crate::actions::file(exchange, root, path))
+}
+
+/// Answer with a server-sent event stream once the host completes the response, as
+/// [`actions::sse_open`](crate::actions::sse_open) describes.
+///
+/// # Arguments
+///
+/// * `id` - the slot id.
+/// * `keep_alive_ms` - the interval of the keep-alive comment; 0 writes none.
+///
+/// # Returns
+///
+/// The connection's id, valid at once.
+///
+/// # Errors
+///
+/// As [`file`], and as [`actions::sse_open`](crate::actions::sse_open).
+pub fn sse_open(id: u64, keep_alive_ms: u32) -> Result<u64, HostError> {
+    act(id, |exchange| {
+        crate::actions::sse_open(id, exchange, keep_alive_ms)
+    })
+}
+
+/// Accept a WebSocket route's upgrade request once the host completes the response,
+/// as [`actions::ws_accept`](crate::actions::ws_accept) describes.
+///
+/// # Arguments
+///
+/// * `id` - the slot id.
+/// * `protocol` - the subprotocol the client offered and the route allows; empty for
+///   none.
+///
+/// # Returns
+///
+/// The connection's id, valid at once.
+///
+/// # Errors
+///
+/// As [`file`], and as [`actions::ws_accept`](crate::actions::ws_accept).
+pub fn ws_accept(id: u64, protocol: &[u8]) -> Result<u64, HostError> {
+    act(id, |exchange| {
+        crate::actions::ws_accept(id, exchange, protocol)
+    })
+}
+
+/// Record an action under the slot's lock while the slot is leased at the id's
+/// generation and its response is neither sealed nor staged in a body region.
+fn act<R>(
+    id: u64,
+    action: impl FnOnce(&mut Exchange) -> Result<R, HostError>,
+) -> Result<R, HostError> {
+    let (_, slot_id, slot) = resolve(id)?;
+    let recorded = slot.with_write(slot_id.generation(), |exchange| {
+        let exchange = &mut exchange.0;
+        if exchange.sealed() {
+            return Err(HostError::from(SEALED));
+        }
+        if exchange.staged() {
+            return Err(HostError::from(REGION_OPEN));
+        }
+        action(exchange)
+    });
+    match recorded {
+        Ok(outcome) => outcome,
+        Err(refusal) => Err(refused(refusal).into()),
+    }
 }
 
 #[cfg(test)]

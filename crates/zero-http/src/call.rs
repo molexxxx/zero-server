@@ -969,6 +969,28 @@ impl<'a> Response<'a> {
         self
     }
 
+    /// The status set so far, for a layer that completes what an earlier one wrote,
+    /// such as an error body for a refusal answered without content.
+    ///
+    /// # Returns
+    ///
+    /// The status, or `None` when none was set and the response goes out as
+    /// `200 OK`.
+    #[must_use]
+    pub fn current_status(&self) -> Option<StatusCode> {
+        *self.status
+    }
+
+    /// The length of the body set so far.
+    ///
+    /// # Returns
+    ///
+    /// The octets the body holds, an external buffer's included.
+    #[must_use]
+    pub fn body_len(&self) -> usize {
+        self.body.len()
+    }
+
     /// Add a field line.
     ///
     /// # Arguments
@@ -1036,6 +1058,24 @@ impl<'a> Response<'a> {
         let name = name.canonical().as_bytes();
         remove_lines(self.fields, name);
         self.push_line(name, value)
+    }
+
+    /// Remove every field line of a name, for a layer that writes a field the
+    /// response may carry once and that it alone decides, so the message holds one
+    /// line of it (RFC 9110 Section 5.3).
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - the field name, compared without regard to case.
+    ///
+    /// # Returns
+    ///
+    /// The response, for chaining.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.3>
+    pub fn remove_header(&mut self, name: &[u8]) -> &mut Self {
+        remove_lines(self.fields, name);
+        self
     }
 
     fn push_line(&mut self, name: &[u8], value: &[u8]) -> Result<&mut Self, Error> {
@@ -1334,6 +1374,34 @@ mod tests {
         );
         assert_eq!(record.response_body.as_bytes(), b"hi");
         assert!(record.touched);
+    }
+
+    #[test]
+    fn remove_header_drops_every_line_of_the_name_in_any_case_and_leaves_the_others() {
+        let mut record = Record::new(4);
+        let mut response = Response::of(&mut record);
+        response.header(b"ETag", b"\"a\"").unwrap();
+        response.header(b"X-Kept", b"1").unwrap();
+        response.header(b"etag", b"\"b\"").unwrap();
+        response.remove_header(b"ETAG").remove_header(b"x-absent");
+        assert_eq!(record.response_fields, b"X-Kept: 1\r\n");
+    }
+
+    #[test]
+    fn the_status_and_body_length_set_so_far_read_back_without_touching_the_response() {
+        let mut record = Record::new(4);
+        let response = Response::of(&mut record);
+        assert_eq!((response.current_status(), response.body_len()), (None, 0));
+        assert!(!record.touched, "reading changes nothing");
+        let mut response = Response::of(&mut record);
+        response.status(StatusCode::FORBIDDEN);
+        assert_eq!(
+            (response.current_status(), response.body_len()),
+            (Some(StatusCode::FORBIDDEN), 0)
+        );
+        response.body(b"denied");
+        assert_eq!(response.body_len(), 6);
+        assert_eq!(record.status, Some(StatusCode::FORBIDDEN));
     }
 
     #[test]

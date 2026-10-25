@@ -16,7 +16,10 @@
 //!
 //! [`Files::serve_path`] answers a miss with 404; [`Files::try_serve_path`]
 //! writes nothing for one and returns [`Served::Miss`], so a host can fall
-//! through to its next route.
+//! through to its next route. [`Files::try_serve_path_keeping_status`] serves a
+//! file under the status an earlier layer set, such as a host's own 404 page, and
+//! evaluates the preconditions and `Range` only where that status lets them apply
+//! (RFC 9110 Sections 13.2.1 and 14.2).
 //!
 //! A file no larger than [`Options::small_file_limit`] stays in a per-core cache
 //! with its validators and its prebuilt field values, revalidated by one `stat`
@@ -32,7 +35,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use zero_core::Error;
 use zero_date::imf_fixdate;
-use zero_http::Call;
+use zero_http::{Call, Response};
 use zero_http_types::{HeaderName, Method, StatusCode};
 use zero_uri::{normalize_path, percent_decode};
 
@@ -201,6 +204,18 @@ pub enum Served {
     Miss,
 }
 
+/// Which conditional fields of the request a file answer evaluates, by the status
+/// its response would have without them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Evaluated {
+    /// The preconditions and `Range`: the response would be 200.
+    All,
+    /// The preconditions alone: the response would be a 2xx other than 200.
+    Preconditions,
+    /// Neither: the response would not be a 2xx.
+    Neither,
+}
+
 /// Why a request path is not served, before anything is opened.
 #[derive(Clone, Copy)]
 enum Unserved {
@@ -287,6 +302,17 @@ impl Files {
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// The root as it resolved when these files were built, symbolic links
+    /// followed; every file served resolves under it.
+    ///
+    /// # Returns
+    ///
+    /// The canonical path.
+    #[must_use]
+    pub fn canonical_root(&self) -> &Path {
+        &self.canonical_root
     }
 
     /// The settings.
@@ -546,6 +572,78 @@ impl Files {
     /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.4>
     /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-17.3>
     pub fn try_serve_path(&self, call: &mut Call<'_>, path: &[u8]) -> Result<Served, Error> {
+        self.answer(call, path, Evaluated::All)
+    }
+
+    /// Serve the file `path` names under the root as the content of a response
+    /// whose status an earlier layer set, such as a host that answers a missing page
+    /// with a page of its own, or report a miss without writing anything. With no
+    /// status set, or 200, this is [`Files::try_serve_path`]. Another 2xx stays and
+    /// keeps the preconditions, but `Range` is ignored, since it "is evaluated after
+    /// evaluating the precondition header fields ... and only if the result in
+    /// absence of the Range header field would be a 200 (OK) response" (RFC 9110
+    /// Section 14.2). Any other status stays and both are ignored, since "A server
+    /// MUST ignore all received preconditions if its response to the same request
+    /// without those conditions ... would have been a status code other than a 2xx
+    /// (Successful) or 412 (Precondition Failed)" (Section 13.2.1); no validator is
+    /// sent then, since that content is no representation of the target resource
+    /// (Section 6.4.2). A method other than GET and HEAD is answered 405, and a
+    /// dotfile under [`Dotfiles::Deny`] 403, as by [`Files::try_serve_path`].
+    ///
+    /// # Arguments
+    ///
+    /// * `call` - the request and its response, with the status set so far.
+    /// * `path` - the path under the root, as received.
+    ///
+    /// # Returns
+    ///
+    /// [`Served::Written`] when a response was written, [`Served::Miss`] when the
+    /// path names no file the root serves and the response is untouched.
+    ///
+    /// # Errors
+    ///
+    /// [`Error`] from the response builder, which refuses nothing this writes.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-13.2.1>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2>
+    /// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-6.4.2>
+    pub fn try_serve_path_keeping_status(
+        &self,
+        call: &mut Call<'_>,
+        path: &[u8],
+    ) -> Result<Served, Error> {
+        let evaluated = match call.response().current_status() {
+            None => Evaluated::All,
+            Some(status) if status.as_u16() == 200 => Evaluated::All,
+            Some(status) if status.is_successful() => Evaluated::Preconditions,
+            Some(_) => Evaluated::Neither,
+        };
+        self.answer(call, path, evaluated)
+    }
+
+    /// Write `Content-Disposition: attachment` with the file's name, for a download
+    /// root.
+    fn disposition(&self, response: &mut Response<'_>, relative: &Path) -> Result<(), Error> {
+        if !self.options.attachment {
+            return Ok(());
+        }
+        let name = relative
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let mut value = Vec::new();
+        write_attachment(&mut value, &name);
+        response.header(b"Content-Disposition", &value)?;
+        Ok(())
+    }
+
+    /// The file answer, evaluating the conditional fields `evaluated` lets apply.
+    fn answer(
+        &self,
+        call: &mut Call<'_>,
+        path: &[u8],
+        evaluated: Evaluated,
+    ) -> Result<Served, Error> {
         let method = call.request().method();
         if !matches!(method, Some(Method::Get | Method::Head)) {
             let mut response = call.response();
@@ -564,6 +662,14 @@ impl Files {
         let Some((relative, entry)) = self.find(located) else {
             return Ok(Served::Miss);
         };
+        if evaluated == Evaluated::Neither {
+            let mut response = call.response();
+            self.disposition(&mut response, &relative)?;
+            response.content_type(entry.content_type.as_bytes())?;
+            response.body(&entry.bytes);
+            return Ok(Served::Written);
+        }
+        let ranged = self.options.ranges && evaluated == Evaluated::All;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |duration| duration.as_secs());
@@ -575,7 +681,7 @@ impl Files {
             if_modified_since: request.header_id(HeaderName::IfModifiedSince),
             if_unmodified_since: request.header_id(HeaderName::IfUnmodifiedSince),
             if_range: request.header_id(HeaderName::IfRange),
-            range: if self.options.ranges {
+            range: if ranged {
                 request.header_id(HeaderName::Range)
             } else {
                 None
@@ -607,18 +713,10 @@ impl Files {
                 if let Some(date) = imf_fixdate(last_modified) {
                     response.header_id(HeaderName::LastModified, date.as_bytes())?;
                 }
-                if self.options.ranges {
+                if ranged {
                     response.header_id(HeaderName::AcceptRanges, b"bytes")?;
                 }
-                if self.options.attachment {
-                    let name = relative
-                        .file_name()
-                        .map(|name| name.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    write_attachment(&mut value, &name);
-                    response.header(b"Content-Disposition", &value)?;
-                    value.clear();
-                }
+                self.disposition(&mut response, &relative)?;
                 let length = entry.bytes.len() as u64;
                 let ranges = range.map(|range| resolve(range, length));
                 match ranges {
@@ -709,4 +807,127 @@ fn push_hex(out: &mut Vec<u8>, value: u64) {
         rest >>= 4;
     }
     out.extend(digits.get(..count).unwrap_or(&[]).iter().rev());
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::net::{SocketAddr, TcpStream};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use zero_core::Error;
+    use zero_http::{serve, Call, Config, Handler};
+    use zero_http_types::StatusCode;
+
+    use super::{Files, Options};
+
+    /// Serves `page.txt` under the status the request path names, as a layer that
+    /// set a status before the file does.
+    struct Keeping {
+        files: Files,
+    }
+
+    impl Handler for Keeping {
+        async fn handle(&self, call: &mut Call<'_>) -> Result<(), Error> {
+            let path = call.request().path();
+            let status = if path == b"/404" {
+                Some(StatusCode::NOT_FOUND)
+            } else if path == b"/201" {
+                Some(StatusCode::CREATED)
+            } else {
+                None
+            };
+            if let Some(status) = status {
+                call.response().status(status);
+            }
+            self.files
+                .try_serve_path_keeping_status(call, b"/page.txt")
+                .map(drop)
+        }
+    }
+
+    /// One request on a fresh connection: the status, the lowercased field names
+    /// and the body.
+    fn fetch(addr: SocketAddr, request: &str) -> (u16, Vec<String>, Vec<u8>) {
+        let mut conn = TcpStream::connect(addr).expect("connect");
+        conn.set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("timeout");
+        conn.write_all(request.as_bytes()).expect("write");
+        let mut head = Vec::new();
+        let mut byte = [0u8; 1];
+        while !head.ends_with(b"\r\n\r\n") {
+            assert_eq!(conn.read(&mut byte).expect("read"), 1, "the head ends");
+            head.push(byte[0]);
+        }
+        let text = String::from_utf8(head).expect("ascii");
+        let mut lines = text.trim_end().split("\r\n");
+        let status = lines
+            .next()
+            .and_then(|line| line.split(' ').nth(1))
+            .and_then(|code| code.parse().ok())
+            .expect("a status line");
+        let fields: Vec<(String, String)> = lines
+            .filter_map(|line| line.split_once(':'))
+            .map(|(name, value)| (name.to_ascii_lowercase(), value.trim().to_owned()))
+            .collect();
+        let length = fields
+            .iter()
+            .find(|(name, _)| name == "content-length")
+            .and_then(|(_, value)| value.parse().ok())
+            .unwrap_or(0);
+        let mut body = vec![0u8; length];
+        conn.read_exact(&mut body).expect("the body");
+        (
+            status,
+            fields.into_iter().map(|(name, _)| name).collect(),
+            body,
+        )
+    }
+
+    #[test]
+    fn a_status_set_first_keeps_preconditions_for_a_2xx_and_range_for_a_200_9110_13_2_1_and_14_2() {
+        let root = std::env::temp_dir().join(format!("zero-static-keeping-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("a scratch directory");
+        std::fs::write(root.join("page.txt"), b"0123456789").expect("write");
+        let mut config = Config::default();
+        config.runtime.io.threads = 1;
+        config.runtime.io.drain = Duration::from_secs(1);
+        let served = root.clone();
+        let workers = serve(
+            "127.0.0.1:0".parse().expect("an address"),
+            config,
+            Arc::new(|_| {}),
+            move |_| Keeping {
+                files: Files::new(served.clone(), Options::default()).expect("the root exists"),
+            },
+        )
+        .expect("the server starts");
+        let addr = workers.local_addr();
+        let get = |path: &str, fields: &str| {
+            fetch(
+                addr,
+                &format!("GET {path} HTTP/1.1\r\nHost: t\r\n{fields}\r\n"),
+            )
+        };
+
+        let (status, names, body) = get("/404", "Range: bytes=0-1\r\nIf-None-Match: *\r\n");
+        assert_eq!((status, body.as_slice()), (404, b"0123456789".as_slice()));
+        for name in ["etag", "last-modified", "accept-ranges", "content-range"] {
+            assert!(!names.iter().any(|seen| seen == name), "{name}: {names:?}");
+        }
+        assert!(names.iter().any(|seen| seen == "content-type"));
+
+        assert_eq!(get("/201", "If-None-Match: *\r\n").0, 304);
+        let (status, names, body) = get("/201", "Range: bytes=0-1\r\n");
+        assert_eq!((status, body.as_slice()), (201, b"0123456789".as_slice()));
+        assert!(names.iter().any(|seen| seen == "etag"));
+        assert!(!names.iter().any(|seen| seen == "content-range"));
+
+        let (status, _, body) = get("/200", "Range: bytes=0-1\r\n");
+        assert_eq!((status, body.as_slice()), (206, b"01".as_slice()));
+        workers.stop().expect("the server stops");
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

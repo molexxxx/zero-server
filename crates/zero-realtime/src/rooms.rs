@@ -1,13 +1,15 @@
 //! Rooms: named groups of WebSocket connections that a message is broadcast to, on
 //! every core.
 //!
-//! A [`Rooms`] table is shared by every core. Each connection that joins a room gets
-//! an inbox; a broadcast encodes the frame once, puts a shared reference to it in
-//! the inbox of every member, and wakes each member's connection task on whatever
-//! core it runs, through the task's [`Waker`], which is `Send` and `Sync` for exactly
-//! this. The connection writes the frames from its inbox in the order they arrived,
-//! after anything it queued itself, and writes none once its Close went out. An inbox
-//! holds at most [`INBOX_BYTES`] by default; a member that falls that far behind is
+//! A [`Rooms`] table is shared by every core. A broadcast encodes the frame once,
+//! puts a shared reference to it in the queue of every member, and wakes each
+//! member's connection task on whatever core it runs, through the task's [`Waker`],
+//! which is `Send` and `Sync` for exactly this. A connection served with an
+//! [`Outbox`] gets the frame in its outbox, so it writes broadcasts in order with
+//! what other threads push to it; any other gets an inbox, whose frames it writes in
+//! the order they arrived, after anything it queued itself. A connection writes no
+//! broadcast once its Close went out. The broadcast frames waiting for one member
+//! hold at most [`INBOX_BYTES`] by default; a member that falls that far behind is
 //! closed with 1013 Try Again Later rather than holding unbounded memory on the
 //! server (RFC 6455 Section 10.4 asks an endpoint to protect itself from exceeding
 //! its limits).
@@ -27,6 +29,8 @@ use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::task::{Context, Poll, Waker};
 
 use zero_ws::frame::{self, Opcode};
+
+use crate::outbox::Outbox;
 
 /// The most bytes of broadcast frames a connection may have waiting.
 pub const INBOX_BYTES: usize = 16 * 1024 * 1024;
@@ -119,11 +123,13 @@ impl Inbox {
     }
 }
 
-/// One member of a room.
+/// One member of a room: its broadcasts go to its outbox when it has one, else to
+/// its inbox.
 #[derive(Debug, Clone)]
 struct Member {
     id: MemberId,
     inbox: Arc<Inbox>,
+    outbox: Option<Arc<Outbox>>,
 }
 
 /// The rooms of a server, shared by every core.
@@ -231,7 +237,10 @@ impl Rooms {
         frame::write(opcode, payload, &mut encoded);
         let encoded: Arc<[u8]> = Arc::from(encoded);
         for member in &members {
-            member.inbox.push(&encoded, self.inbox_limit);
+            match &member.outbox {
+                Some(outbox) => outbox.broadcast(&encoded, self.inbox_limit),
+                None => member.inbox.push(&encoded, self.inbox_limit),
+            }
         }
         members.len()
     }
@@ -255,19 +264,25 @@ impl Rooms {
     }
 }
 
-/// One connection's place in the rooms: its inbox and the rooms it joined, left
-/// when the connection ends.
+/// One connection's place in the rooms: where its broadcasts go and the rooms it
+/// joined, left when the connection ends.
 #[derive(Debug)]
 pub(crate) struct Membership {
     pub(crate) id: MemberId,
     pub(crate) inbox: Arc<Inbox>,
+    outbox: Option<Arc<Outbox>>,
     rooms: Arc<Rooms>,
     joined: Vec<String>,
 }
 
 impl Membership {
-    /// A membership with `id`, or with an id the rooms assign.
-    pub(crate) fn new(rooms: &Arc<Rooms>, id: Option<MemberId>) -> Self {
+    /// A membership with `id`, or with an id the rooms assign, whose broadcasts go
+    /// to `outbox` when there is one and to its own inbox otherwise.
+    pub(crate) fn new(
+        rooms: &Arc<Rooms>,
+        id: Option<MemberId>,
+        outbox: Option<Arc<Outbox>>,
+    ) -> Self {
         let id = id.unwrap_or_else(|| MemberId {
             value: rooms.next.fetch_add(1, Ordering::Relaxed),
             assigned: true,
@@ -275,6 +290,7 @@ impl Membership {
         Membership {
             id,
             inbox: Arc::new(Inbox::default()),
+            outbox,
             rooms: Arc::clone(rooms),
             joined: Vec::new(),
         }
@@ -291,6 +307,7 @@ impl Membership {
             Member {
                 id: self.id,
                 inbox: Arc::clone(&self.inbox),
+                outbox: self.outbox.clone(),
             },
         );
         if !self.joined.iter().any(|joined| joined == room) {
@@ -321,8 +338,8 @@ mod tests {
     #[test]
     fn an_id_the_rooms_assign_never_equals_the_id_of_a_connection_with_an_outbox() {
         let rooms = Arc::new(Rooms::new());
-        let mut assigned = Membership::new(&rooms, None);
-        let mut own = Membership::new(&rooms, Some(MemberId::of_connection(0)));
+        let mut assigned = Membership::new(&rooms, None, None);
+        let mut own = Membership::new(&rooms, Some(MemberId::of_connection(0)), None);
         assert_eq!(assigned.id.value, 0, "the first id the rooms assign");
         assert_ne!(assigned.id, own.id);
         assigned.join("lobby");

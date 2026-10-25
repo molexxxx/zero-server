@@ -12,12 +12,15 @@
 //!
 //! A connection that other threads send on gets an [`Outbox`] with
 //! [`WebSocket::with_outbox`]. Its read wait then also takes the outbox's commands,
-//! applied in the order they were pushed, and [`WebSocket::recv_event`] reports pongs
-//! and [`Drained`](Incoming::Drained) beside the messages. When the server drains,
-//! the frames the outbox still holds go out first, then the Close with 1001 "going
+//! applied in the order they were pushed, with the broadcasts of its rooms among
+//! them in the order they were made, and [`WebSocket::recv_event`] reports pongs and
+//! [`Drained`](Incoming::Drained) beside the messages. When the server drains, the
+//! frames the outbox still holds go out first, then the Close with 1001 "going
 //! away" (RFC 6455 Section 7.4.1); the peer's Close is awaited for at most
 //! [`CLOSE_TIMEOUT`] within the drain deadline, and the connection ends. The outbox
 //! refuses pushes once a Close went out, and closes when the connection is dropped.
+//! The status code and the reason of the peer's Close stay readable once the
+//! connection is done (Sections 7.1.5 and 7.1.6).
 //!
 //! A server that hands each received message on and waits for its acknowledgment
 //! bounds what a connection may have waiting by pausing it with a [`ReadPause`]: a
@@ -28,6 +31,7 @@
 //!
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.2>
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.1>
+//! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.6>
 //! @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1>
 
 use std::future::{poll_fn, Future};
@@ -48,7 +52,7 @@ use zero_ws::handshake::{self, Config, Reason};
 use zero_ws::session::{Event, Session};
 use zero_ws::CloseCode;
 
-use crate::outbox::{Attached, Command, Outbox};
+use crate::outbox::{Attached, Command, Outbox, Queued};
 use crate::rooms::{MemberId, Membership, Rooms};
 
 /// The protocol name a WebSocket upgrade switches to.
@@ -250,6 +254,8 @@ pub struct WebSocket<S> {
     closing: bool,
     /// When the wait for the peer's Close ends, set once the first such wait starts.
     close_deadline: Option<Instant>,
+    /// The reason of the peer's Close, once one arrived.
+    close_reason: Option<String>,
     membership: Option<Membership>,
     outbox: Option<Attached>,
     pause: Option<ReadPause>,
@@ -288,6 +294,7 @@ impl<S: Stream + 'static> WebSocket<S> {
             started: Instant::now(),
             closing: false,
             close_deadline: None,
+            close_reason: None,
             membership: None,
             outbox: None,
             pause: None,
@@ -358,13 +365,13 @@ impl<S: Stream + 'static> WebSocket<S> {
     ///
     /// This connection's id in the rooms.
     pub fn join(&mut self, rooms: &Arc<Rooms>, room: &str) -> MemberId {
-        let id = self
-            .outbox
+        let outbox = self.outbox.as_ref().map(Attached::shared);
+        let id = outbox
             .is_some()
             .then(|| MemberId::of_connection(self.taken.token()));
         let membership = match self.membership.take() {
             Some(membership) if membership.is_in(rooms) => membership,
-            _ => Membership::new(rooms, id),
+            _ => Membership::new(rooms, id, outbox),
         };
         let membership = self.membership.insert(membership);
         membership.join(room);
@@ -382,24 +389,30 @@ impl<S: Stream + 'static> WebSocket<S> {
         }
     }
 
-    /// Queue the frames broadcast to this connection, or close it with 1013 when it
-    /// fell too far behind.
+    /// Queue the frames broadcast to this connection's inbox, or close it with 1013
+    /// when it fell too far behind.
     fn deliver(&mut self) {
         let Some(membership) = self.membership.as_ref() else {
             return;
         };
         let (frames, overflowed) = membership.inbox.take();
         if overflowed {
-            self.membership = None;
-            if self.session.close(CloseCode::TRY_AGAIN_LATER, "").is_ok() {
-                self.closing = true;
-            }
+            self.fell_behind();
             return;
         }
         for frame in frames {
             if self.session.send_encoded(&frame).is_err() {
                 break;
             }
+        }
+    }
+
+    /// The connection fell too far behind its rooms' broadcasts: it leaves them and
+    /// closes with 1013 Try Again Later.
+    fn fell_behind(&mut self) {
+        self.membership = None;
+        if self.session.close(CloseCode::TRY_AGAIN_LATER, "").is_ok() {
+            self.closing = true;
         }
     }
 
@@ -419,6 +432,20 @@ impl<S: Stream + 'static> WebSocket<S> {
     #[must_use]
     pub fn close_code(&self) -> Option<CloseCode> {
         self.session.close_code()
+    }
+
+    /// The reason of the peer's Close, once one arrived: "the UTF-8-encoded data
+    /// following the status code" of the first Close received, and "the empty
+    /// string" when it carried none (RFC 6455 Section 7.1.6).
+    ///
+    /// # Returns
+    ///
+    /// The reason, or `None` while no Close arrived.
+    ///
+    /// @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-7.1.6>
+    #[must_use]
+    pub fn close_reason(&self) -> Option<&str> {
+        self.close_reason.as_deref()
     }
 
     /// The next whole message.
@@ -462,6 +489,7 @@ impl<S: Stream + 'static> WebSocket<S> {
                 let now = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
                 let rest = self.input.get_mut(self.start..).unwrap_or(&mut []);
                 let fed = self.session.feed(rest, now).map(|step| {
+                    let mut reason = None;
                     let incoming = match step.event {
                         Some(Event::Text(text)) => {
                             Some(Incoming::Message(Message::Text(text.to_owned())))
@@ -470,12 +498,19 @@ impl<S: Stream + 'static> WebSocket<S> {
                             Some(Incoming::Message(Message::Binary(data.to_vec())))
                         }
                         Some(Event::Pong(data)) => Some(Incoming::Pong(data.to_vec())),
-                        _ => None,
+                        Some(Event::Close(close)) => {
+                            reason = Some(close.reason.to_owned());
+                            None
+                        }
+                        Some(Event::Ping(_)) | None => None,
                     };
-                    (step.consumed, step.event.is_some(), incoming)
+                    (step.consumed, step.event.is_some(), incoming, reason)
                 });
                 match fed {
-                    Ok((consumed, evented, incoming)) => {
+                    Ok((consumed, evented, incoming, reason)) => {
+                        if self.close_reason.is_none() {
+                            self.close_reason = reason;
+                        }
                         self.start = self.start.saturating_add(consumed);
                         if let Some(incoming) = incoming {
                             return Some(incoming);
@@ -506,15 +541,19 @@ impl<S: Stream + 'static> WebSocket<S> {
         }
     }
 
-    /// Apply the commands the outbox holds, in the order they were pushed, and refuse
-    /// later pushes once nothing more can be sent.
+    /// Apply what the outbox holds, in the order it was queued, close with 1013 when
+    /// broadcasts were dropped for falling behind, and refuse later pushes once
+    /// nothing more can be sent.
     fn pour(&mut self) {
-        let commands = match self.outbox.as_deref() {
+        let (entries, overflowed) = match self.outbox.as_deref() {
             Some(outbox) => outbox.take(),
             None => return,
         };
-        for command in commands {
-            self.apply(command);
+        if overflowed {
+            self.fell_behind();
+        }
+        for entry in entries {
+            self.apply(entry);
         }
         if self.closing || self.ended || self.session.is_finished() {
             self.seal();
@@ -523,16 +562,25 @@ impl<S: Stream + 'static> WebSocket<S> {
 
     /// Refuse later pushes, and apply what the outbox still holds.
     fn seal(&mut self) {
-        let commands = match self.outbox.as_deref() {
+        let entries = match self.outbox.as_deref() {
             Some(outbox) => outbox.seal(),
             None => return,
         };
-        for command in commands {
-            self.apply(command);
+        for entry in entries {
+            self.apply(entry);
         }
     }
 
-    fn apply(&mut self, command: Command) {
+    fn apply(&mut self, entry: Queued) {
+        let command = match entry {
+            Queued::Sent(command) => command,
+            Queued::Broadcast(frame) => {
+                if !self.ended {
+                    let _ = self.session.send_encoded(&frame);
+                }
+                return;
+            }
+        };
         self.unreleased = self.unreleased.saturating_add(command.octets());
         if self.ended {
             return;
