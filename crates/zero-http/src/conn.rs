@@ -1515,11 +1515,13 @@ fn write_head(
 
 #[cfg(test)]
 mod tests {
-    use std::future::Future;
+    use std::cell::{Cell, RefCell};
+    use std::future::{poll_fn, Future};
     use std::io::{Read, Write};
     use std::rc::Rc;
     use std::sync::{Arc, Mutex, PoisonError};
-    use std::time::{Duration, Instant};
+    use std::task::{Poll, Waker};
+    use std::time::Duration;
 
     use zero_core::Error;
     use zero_io::rt::TcpStream;
@@ -1563,9 +1565,13 @@ mod tests {
         );
     }
 
-    /// Streams `/stream` under token 7 behind a large response to anything else,
-    /// and keeps the tokens of the claims the driver reports dropped.
+    /// Streams `/stream` under token 7; answers anything else once `/stream` claimed its
+    /// connection, with the `close` option, so the driver drops the claimed request
+    /// pipelined behind it before any of its head is written; keeps the tokens of the
+    /// claims the driver reports dropped.
     struct Claims {
+        claimed: Cell<bool>,
+        waiting: RefCell<Option<Waker>>,
         dropped: Arc<Mutex<Vec<u64>>>,
     }
 
@@ -1573,9 +1579,22 @@ mod tests {
         async fn handle(&self, call: &mut Call<'_>) -> Result<(), Error> {
             if call.request().path() == b"/stream" {
                 call.stream(7)?;
-            } else {
-                call.response().body(&vec![b'x'; 8 << 20]);
+                self.claimed.set(true);
+                if let Some(waker) = self.waiting.borrow_mut().take() {
+                    waker.wake();
+                }
+                return Ok(());
             }
+            poll_fn(|cx| {
+                if self.claimed.get() {
+                    return Poll::Ready(());
+                }
+                *self.waiting.borrow_mut() = Some(cx.waker().clone());
+                Poll::Pending
+            })
+            .await;
+            call.response().body(b"first");
+            call.close_after_response();
             Ok(())
         }
 
@@ -1599,6 +1618,8 @@ mod tests {
             config,
             Arc::new(|_| {}),
             move |_| Claims {
+                claimed: Cell::new(false),
+                waiting: RefCell::new(None),
                 dropped: Arc::clone(&kept),
             },
         )
@@ -1609,22 +1630,22 @@ mod tests {
             .unwrap();
         client
             .write_all(
-                b"GET /large HTTP/1.1\r\nHost: t\r\n\r\nGET /stream HTTP/1.1\r\nHost: t\r\n\r\n",
+                b"GET /first HTTP/1.1\r\nHost: t\r\n\r\nGET /stream HTTP/1.1\r\nHost: t\r\n\r\n",
             )
             .unwrap();
-        let mut first = [0u8; 1];
-        client.read_exact(&mut first).unwrap();
+        let mut answered = Vec::new();
+        client.read_to_end(&mut answered).unwrap();
+        let answered = String::from_utf8_lossy(&answered);
+        assert!(
+            answered.starts_with("HTTP/1.1 200") && answered.ends_with("\r\n\r\nfirst"),
+            "the connection ended after the first response, with no head of the claimed one: {answered:?}"
+        );
+        assert_eq!(
+            *dropped.lock().unwrap_or_else(PoisonError::into_inner),
+            [7],
+            "the claim the driver let go of was reported"
+        );
         drop(client);
-        let deadline = Instant::now() + Duration::from_secs(10);
-        while dropped
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .is_empty()
-        {
-            assert!(Instant::now() < deadline, "no claim was reported dropped");
-            std::thread::yield_now();
-        }
-        assert_eq!(*dropped.lock().unwrap(), [7]);
         workers.stop().unwrap();
     }
 }
