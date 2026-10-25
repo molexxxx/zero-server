@@ -10,15 +10,1153 @@
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
 /**
- * Returns the version of the native zero-server core.
+ * The version of the C ABI this core implements.
  *
  * # Returns
  *
- * The version string of the `zero-ffi` crate the addon was built against.
+ * The `ZERO_ABI_VERSION` of `zero.h`.
  *
  * # Errors
  *
- * Rejects when the core reported no version, which only happens if the call
- * panicked inside the core.
+ * None in practice; a caught panic is `ZERO_PANIC`.
+ */
+export declare function abiVersion(): number
+
+/**
+ * Register the miss route: requests no route matches go to the host under its id,
+ * carrying the status and the `Allow` set the core would have answered.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id.
+ *
+ * # Returns
+ *
+ * The miss route's id; the same id when it is registered again.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for an unknown application.
+ */
+export declare function appMiss(app: number): number
+
+/**
+ * Mount another application of this isolate under a prefix: its routes are matched
+ * under the prefix and its policies apply under it. The child is consumed: its id
+ * is no longer valid once the mount succeeded, and stays valid when it is refused.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id.
+ * * `prefix` - `/` and static segments; not the root.
+ * * `child` - the id of the application to mount; it has no miss route and no
+ *   trust-proxy policy.
+ *
+ * # Returns
+ *
+ * The id the child's first route has now: every child route id grew by this much.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a prefix outside the syntax, the root, an application
+ * mounted into itself, or a child with a miss route or a trust-proxy policy, and
+ * `ZERO_CLOSED` for an unknown application.
+ */
+export declare function appMount(app: number, prefix: string, child: number): number
+
+/**
+ * Create an application with no route.
+ *
+ * # Returns
+ *
+ * The application's id, valid in the calling isolate.
+ *
+ * # Errors
+ *
+ * `ZERO_LIMIT` once the process handed out 2^53 - 1 application ids, and
+ * `ZERO_CLOSED` while the isolate shuts down.
+ */
+export declare function appNew(): number
+
+/**
+ * Register a policy over the paths under a prefix.
+ *
+ * The option document of each kind: CORS `origins`, `methods`, `headers`,
+ * `expose`, `credentials`, `maxAge`; security headers `fields`; request id
+ * `header`, `trustIncoming`, `version`; trust proxy `cidrs` and `header`; body
+ * limit `max`.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id.
+ * * `kind` - 0 CORS, 1 security headers, 2 request id, 3 trust proxy, 4 body limit.
+ * * `prefix` - the path prefix, matched on a segment boundary; empty or `/` for
+ *   every path.
+ * * `options` - the JSON option document.
+ *
+ * # Errors
+ *
+ * `ZERO_CODEC` for a malformed option document, `ZERO_INVALID_ARGUMENT` for an
+ * unknown kind, a prefix that is not an absolute path, or a second trust-proxy
+ * policy, `ZERO_UNSUPPORTED` when the policy capability is left out, and
+ * `ZERO_CLOSED` for an unknown application.
+ */
+export declare function appPolicy(app: number, kind: number, prefix: string, options: string): void
+
+/**
+ * Register a route.
+ *
+ * The option document of each kind: host `maxBody`; static `root`, `index`,
+ * `maxAgeMs`, `dotfiles`, `extensions`, `fallthrough`, `etag`, `ranges`; redirect
+ * `status` and `location`; fixed `status`, `contentType`, and `body` or
+ * `bodyBase64`; WebSocket `protocols`, `origins`, `maxPayload`, `pingIntervalMs`;
+ * health `status` and `body`.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id.
+ * * `kind` - 0 host, 1 static, 2 redirect, 3 fixed, 4 WebSocket, 5 health.
+ * * `method` - the method id (0 GET to 8 PATCH), or 254 for every method.
+ * * `pattern` - the path pattern: `/`, static segments, `:name` parameters and at
+ *   most one final `*` or `*name` catch-all.
+ * * `options` - the JSON option document; empty for the defaults.
+ *
+ * # Returns
+ *
+ * The route id, the next in registration order.
+ *
+ * # Errors
+ *
+ * `ZERO_CODEC` for a malformed option document, `ZERO_INVALID_ARGUMENT` for an
+ * unknown kind or method, a pattern outside the syntax or a route already
+ * registered for the method and pattern, `ZERO_IO` for a static root that cannot
+ * be opened, `ZERO_UNSUPPORTED` for a kind this build leaves out, and `ZERO_CLOSED`
+ * for an unknown application.
+ */
+export declare function appRoute(app: number, kind: number, method: number, pattern: string, options: string): number
+
+/**
+ * The application's canonical table: one line per route, sorted by pattern then
+ * method, then the miss route, the policies and the mounts, so two isolates that
+ * registered the same application produce the same bytes.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id.
+ *
+ * # Returns
+ *
+ * The table as UTF-8 bytes.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for an unknown application.
+ */
+export declare function appTable(app: number): Buffer
+
+/**
+ * Hand answered slots back to a worker and, from the thread bound to its target,
+ * acknowledge a batch. Each id is checked on its own: an id that is stale, closed,
+ * of another worker or not a slot id is skipped, and the others are applied with
+ * one wake of the worker. A slot completed without a response is answered 500
+ * `NO_RESPONSE`. The staged body of a completed slot that was never sent is dropped.
+ *
+ * # Arguments
+ *
+ * * `worker` - the worker index the ids belong to.
+ * * `ids` - the completion buffer; its first `count` entries are slot ids.
+ * * `count` - how many entries to apply.
+ * * `epoch` - the epoch of the batch to acknowledge, or 0 for none.
+ *
+ * # Returns
+ *
+ * 0, or 9 (`InvalidArgument`) when the acknowledgment was refused, from another
+ * thread or out of order; the ids were applied either way.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a worker index outside 0 to 127, a count past the
+ * buffer or an epoch that is not a whole number, and `ZERO_CLOSED` for a worker
+ * index no server ever claimed.
+ */
+export declare function batchComplete(worker: number, ids: Float64Array, count: number, epoch: number): number
+
+/**
+ * Recompute part of a section of `conformance/vectors.json`: the result is the
+ * document with every outcome computed again from its inputs, as canonical JSON with
+ * sorted keys, so it equals the input exactly when the core agrees with the vectors.
+ *
+ * # Arguments
+ *
+ * * `section` - the section's name: `http1Parser`, `responseSplitting`, `router`,
+ *   `ws`, `sse`, `qpack` or `h3Frames`.
+ * * `input` - a JSON document in the section's shape.
+ *
+ * # Returns
+ *
+ * The recomputed document.
+ *
+ * # Errors
+ *
+ * `ZERO_UNSUPPORTED` for an unknown section, `ZERO_LIMIT` for a document past one
+ * mebibyte or the nesting cap, and `ZERO_CODEC` for a document that is not JSON or
+ * does not have the section's shape.
+ */
+export declare function conformanceCase(section: string, input: string): string
+
+/**
+ * The version of the native zero-server core.
+ *
+ * # Returns
+ *
+ * The version string of the core crates the addon was built from.
+ *
+ * # Errors
+ *
+ * None in practice; a caught panic is `ZERO_PANIC`.
+ */
+export declare function coreVersion(): string
+
+/**
+ * Check one field line with the rule the core's response writers apply, as the
+ * facade does when a header is set, before the response is written.
+ *
+ * # Arguments
+ *
+ * * `name` - the field name.
+ * * `value` - the field value.
+ *
+ * # Returns
+ *
+ * 0 when a host may write the line, 9 (`InvalidArgument`) when it may not,
+ * including a character above U+00FF.
+ */
+export declare function fieldValidate(name: string, value: string): number
+
+/**
+ * The lowercase spelling of an interned header name, the table the facade builds
+ * once to turn header ids into names.
+ *
+ * # Arguments
+ *
+ * * `id` - the header id, 0 to 48.
+ *
+ * # Returns
+ *
+ * The name.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for an id that names no header.
+ */
+export declare function headerName(id: number): string
+
+/**
+ * The buffered request body, as a `Buffer` that owns a copy: changing it changes
+ * nothing in the core, and it stays valid and unchanged after the request
+ * completes.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * The copy; empty when the request had no body.
+ *
+ * # Errors
+ *
+ * As `reqHead`, and `ZERO_LIMIT` when Node-API cannot allocate the copy.
+ *
+ * @see <https://nodejs.org/docs/latest-v22.x/api/n-api.html#napi_create_buffer_copy>
+ */
+export declare function reqBody(slot: number): Buffer
+
+/**
+ * The request head in one call: the method id (255 for a token outside the
+ * registry), the method token, the request target, the version (10 or 11), the view
+ * flags (1 secure, 2 upgrade, 4 keep-alive, 8 expect continue, 16 HEAD served by
+ * GET, 32 query present), the status the core would have answered a request routed
+ * to the miss route (0 for a matched route) and its `Allow` set (bit `i` for method
+ * id `i`).
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * `[method, token, target, version, flags, missStatus, allow]`.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a number that is not an id, `ZERO_CLOSED` for a stale
+ * or unknown id or a slot that is no longer leased, and `ZERO_PANIC` for a slot a
+ * panic poisoned.
+ */
+export declare function reqHead(slot: number): [number, string, string, number, number, number, number]
+
+/**
+ * The value of the first field line with a name, compared without regard to case.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `name` - the field name.
+ *
+ * # Returns
+ *
+ * The value, latin1, or `null` when the request has no such field.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqHeader(slot: number, name: string): string | null
+
+/**
+ * Every field line of the request in order, as name and value pairs in one flat
+ * array, latin1, names as received.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * `[name, value, name, value, ...]`.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqHeaders(slot: number): string[]
+
+/**
+ * The request's method id, version, view flags and miss status packed in one
+ * number, read from the slot's published view without its lock: bits 0 to 7 the
+ * method id, 8 to 15 the version, 16 to 31 the flags, 32 to 47 the miss status.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * The packed number.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqMeta(slot: number): number
+
+/**
+ * The route parameters in pattern order, as the normalized path holds them:
+ * reserved characters and octets outside ASCII stay percent-encoded.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * One string per parameter, latin1.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqParams(slot: number): string[]
+
+/**
+ * The request's peer, read from the slot's published view without its lock.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * The peer.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqPeer(slot: number): ZeroPeer
+
+/**
+ * The value of the first trailer with a name, among the trailers the server's
+ * `trailers` option allows.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `name` - the trailer name, compared without regard to case.
+ *
+ * # Returns
+ *
+ * The value, latin1, or `null`.
+ *
+ * # Errors
+ *
+ * As `reqHead`.
+ */
+export declare function reqTrailer(slot: number, name: string): string | null
+
+/**
+ * Answer with an error in the server's error shape and seal: the response written
+ * so far is replaced by the status, the shape's `Content-Type` and the error body,
+ * written in Rust. A status outside 400 to 599 is answered 500, malformed details
+ * are dropped, and a message or details past the response limit are left out, so
+ * only a refusal of the call itself fails it.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `status` - the status, 400 to 599.
+ * * `code` - the error code: 1 to 64 characters of `A` to `Z`, `0` to `9` and `_`.
+ * * `message` - the message, or `null` for the reason phrase.
+ * * `details` - one JSON value with the details, or `null`.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a code outside its alphabet or length, and
+ * `ZERO_CLOSED` for a slot that is no longer leased or a sealed response.
+ */
+export declare function resError(slot: number, status: number, code: string, message: string | null, details: string | null): number
+
+/**
+ * Serve a file as the response once the request completes: the status and field
+ * lines written now stay on the file response, and the core applies its file
+ * policy (the path under the root, the method, ranges, validators) when it sends.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `status` - a status to set first, or 0.
+ * * `fields` - `[name, value, ...]`, latin1.
+ * * `root` - the root directory.
+ * * `path` - the file's path under the root, percent-encoded as a request path is.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a refused field line, a status outside the range or an
+ * empty root, `ZERO_UNSUPPORTED` when files are left out of the build, and
+ * `ZERO_CLOSED` for a slot that is no longer leased or a sealed response.
+ */
+export declare function resFile(slot: number, status: number, fields: string[], root: string, path: string): number
+
+/**
+ * Write the status, the field lines and the body in one call and seal the
+ * response. Every line is checked before any is written, so a refused call leaves
+ * the response as it was; the lines are appended in order, each a line of its own,
+ * so every `Set-Cookie` leaves as its own field line.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `status` - 200 to 599, or 0 to keep the status set before (200 when none was).
+ * * `fields` - `[name, value, ...]`, latin1.
+ * * `body` - the body: a `Buffer`, copied once; a string, written as UTF-8; or
+ *   `null` for none.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a status outside the range, a refused field line or a
+ * character above U+00FF, `ZERO_LIMIT` for a body above the server's response
+ * limit, and `ZERO_CLOSED` for a slot that is no longer leased or a sealed
+ * response.
+ */
+export declare function resRespond(slot: number, status: number, fields: string[], body: Buffer | string | null): number
+
+/**
+ * Send the slot's staged body: the status and the field lines are written, the
+ * buffer is checked to be the slot's staged one and detached, and the region
+ * becomes the response body without a copy. Once sent, the buffer and every view
+ * over it read as empty, and writes through them change nothing on the wire.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `status` - 200 to 599, or 0 to keep the status set before.
+ * * `fields` - `[name, value, ...]`, latin1.
+ * * `staged` - the buffer `resStage` returned for this slot.
+ *
+ * # Returns
+ *
+ * 0, both when the body was sent and when the buffer had been detached by
+ * JavaScript, in which case the request was answered 500 `STAGING_DETACHED`.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a slot with no staged body, a buffer that is not the
+ * slot's staged one, a status outside the range or a refused field line (nothing is
+ * detached or written then); `ZERO_LIMIT` for a body above the server's response
+ * limit; `ZERO_CLOSED` for a slot that is no longer leased or a sealed response.
+ */
+export declare function resSendStaged(slot: number, status: number, fields: string[], staged: ArrayBuffer): number
+
+/**
+ * Answer with a server-sent event stream once the request completes; the status
+ * and field lines written now go into the stream's head. The connection id is valid
+ * at once, and events sent before the head is written wait in its outbox.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `status` - a status to set first, or 0 for 200.
+ * * `fields` - `[name, value, ...]`, latin1.
+ * * `keepAliveMs` - the interval of the keep-alive comment; 0 writes none.
+ *
+ * # Returns
+ *
+ * The connection id.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a refused field line or a HEAD request,
+ * `ZERO_UNSUPPORTED` when realtime is left out of the build, and `ZERO_CLOSED` for a
+ * slot that is no longer leased or a sealed response.
+ */
+export declare function resSseOpen(slot: number, status: number, fields: string[], keepAliveMs: number): number
+
+/**
+ * Stage a response body of `length` zeroed octets for a slot and return the
+ * `ArrayBuffer` JavaScript fills, for instance with `TextEncoder.encodeInto` or
+ * `Uint8Array.set`. A slot holds at most one staged body.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `length` - the body length in octets, at least 1.
+ *
+ * # Returns
+ *
+ * The buffer.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a length of 0 or a slot that already holds a staged
+ * body, `ZERO_UNSUPPORTED` when the runtime copied the buffer instead of sharing it
+ * (no external buffers allowed), on which the body is to be copied instead,
+ * `ZERO_LIMIT` when the memory cannot be allocated, and `ZERO_CLOSED` for a slot that
+ * is no longer leased or a sealed response.
+ */
+export declare function resStage(slot: number, length: number): ArrayBuffer
+
+/**
+ * Accept a WebSocket route's upgrade request once it completes: the core writes the
+ * `101` and serves the connection. A host that declines answers the request with an
+ * error status instead.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ * * `protocol` - a subprotocol the client offered and the route allows, or `null`
+ *   for none.
+ *
+ * # Returns
+ *
+ * The connection id.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a request that is not a WebSocket route's upgrade or a
+ * subprotocol not offered or not allowed, `ZERO_UNSUPPORTED` when realtime is left
+ * out of the build, and `ZERO_CLOSED` for a slot that is no longer leased or a
+ * sealed response.
+ *
+ * @see <https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.2>
+ */
+export declare function resWsAccept(slot: number, protocol: string | null): number
+
+/**
+ * Send a message to every WebSocket connection in a room of a server, on every
+ * core, but the one left out. The frame is encoded once; a member that falls 16 MiB
+ * behind is closed with 1013 Try Again Later rather than holding more.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `room` - the room's name.
+ * * `opcode` - 1 text or 2 binary.
+ * * `data` - the message.
+ * * `except` - the id of a connection to leave out, or `null`.
+ *
+ * # Returns
+ *
+ * How many members the message was queued for.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for another opcode or text that is not UTF-8,
+ * `ZERO_UNSUPPORTED` when realtime is left out of the build, and `ZERO_CLOSED` for an
+ * unknown or stopped server.
+ */
+export declare function roomBroadcast(server: number, room: string, opcode: number, data: Buffer | string, except: number | null): number
+
+/**
+ * Put a WebSocket connection in a room of its server, in order with what is sent
+ * on it.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `room` - the room's name.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `wsSend`.
+ */
+export declare function roomJoin(conn: number, room: string): number
+
+/**
+ * Take a WebSocket connection out of a room, in order with what is sent on it.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `room` - the room's name.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `wsSend`.
+ */
+export declare function roomLeave(conn: number, room: string): number
+
+/**
+ * How many WebSocket connections are in a room of a server.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `room` - the room's name.
+ *
+ * # Returns
+ *
+ * The count, over every core.
+ *
+ * # Errors
+ *
+ * `ZERO_UNSUPPORTED` when realtime is left out of the build, and `ZERO_CLOSED` for an
+ * unknown or stopped server.
+ */
+export declare function roomSize(server: number, room: string): number
+
+/**
+ * Check that an application of this isolate registered the same routes and policies
+ * as the server's, as a worker isolate does before it attaches.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `app` - the application id.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` naming the first line of the canonical tables that
+ * differs, and `ZERO_CLOSED` for an unknown application or an unknown or stopped
+ * server.
+ */
+export declare function serverCheckTable(server: number, app: number): void
+
+/**
+ * Create a server for an application of this isolate: claims the worker indexes
+ * and builds their state without binding, so targets attach before traffic
+ * arrives.
+ *
+ * The option document's keys: `host`, `port`, `threads` (0 for the smaller of the
+ * available parallelism and the free worker indexes), `drainMs`, `retryAfterSecs`,
+ * `drainRetryAfterSecs`, `maxResponseBody`, `maxBatchSize`, `maxBatchesInFlight`,
+ * `maxQueuedBatches`, `server`, `trailers`, `errorShape` (`"problem"` or
+ * `"legacy"`) and `limits`.
+ *
+ * # Arguments
+ *
+ * * `app` - the application id; the server freezes it.
+ * * `options` - the JSON option document; empty for the defaults.
+ *
+ * # Returns
+ *
+ * The server's id, valid in every isolate of the process.
+ *
+ * # Errors
+ *
+ * `ZERO_CODEC` for a malformed option document, `ZERO_INVALID_ARGUMENT` for
+ * contradicting limits, `ZERO_LIMIT` when fewer worker indexes are free than
+ * `threads` asks for, and `ZERO_CLOSED` for an unknown application.
+ */
+export declare function serverNew(app: number, options: string): number
+
+/**
+ * Receive the server's status events: `callback(event, core, detail)` runs on this
+ * isolate for `started`, `stopped`, `taskPanic`, `workerPanic` and `hostFailed`,
+ * with the panic message as the detail. The function is weak, so it never keeps
+ * the event loop alive, and at most 16 calls wait in Node's queue: an event past
+ * them is dropped and counted in the server's `status_dropped`. The callback must
+ * not throw, since a throw from it reaches `process.on('uncaughtException')`. A
+ * second call replaces the first callback.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `callback` - the function the events are delivered to.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` once the server started, `ZERO_CLOSED` for an unknown or
+ * stopped server, and `ZERO_LIMIT` when Node-API cannot create the function.
+ */
+export declare function serverOnStatus(server: number, callback: (event: string, core: number, detail: string) => void): void
+
+/**
+ * Request the drain and return at once: the cores stop accepting, finish their
+ * in-flight requests and the server stops. A server that never started stops now.
+ * The drain deadline is the `drainMs` the server was created with, since the cores
+ * take it when they start.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `drainMs` - 0, or the `drainMs` option the server was created with.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for another deadline, and `ZERO_CLOSED` for an unknown
+ * server. Shutting down a stopped server does nothing.
+ */
+export declare function serverShutdown(server: number, drainMs: number): void
+
+/**
+ * Bind and start one core per worker index; returns once listening.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ *
+ * # Returns
+ *
+ * The address the server listens on, as `host:port` (`[host]:port` for IPv6).
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` when the server already started, `ZERO_IO` when the
+ * address cannot be bound, and `ZERO_CLOSED` for an unknown or stopped server.
+ */
+export declare function serverStart(server: number): string
+
+/**
+ * The server's statistics: the core's counts summed over its worker indexes, and
+ * the binding's own. Keys: `dispatched`, `batches`, `acks`, `late_readers`,
+ * `queue_full`, `refused_503`, `closed_leases`, `panics`, `pinned`,
+ * `quarantined_peak`, `in_flight`, `leased`, `refused_acks`, `abandoned_batches`,
+ * `retained`, `stale_deliveries`, `status_events`, `status_dropped` and
+ * `teardown_detaches`.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ *
+ * # Returns
+ *
+ * The statistics; once the server stopped, those it ended with.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for an unknown server, and `ZERO_LIMIT` when Node-API cannot create
+ * the object.
+ */
+export declare function serverStats(server: number): Record<string, number>
+
+/**
+ * Serve over TLS with a certificate chain and a private key, both PEM. The key is
+ * copied into memory that is zeroized once the identity is built.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `cert` - the certificate chain.
+ * * `key` - the private key.
+ * * `options` - the JSON TLS option document: `alpn`, `minVersion`, `maxVersion`,
+ *   `requireEms`, `names`.
+ *
+ * # Errors
+ *
+ * `ZERO_CODEC` for a malformed option document, `ZERO_IO` for material that is not
+ * a certificate chain and a key, `ZERO_INVALID_ARGUMENT` once the server started,
+ * `ZERO_UNSUPPORTED` when TLS is left out of the build, and `ZERO_CLOSED` for an
+ * unknown or stopped server.
+ */
+export declare function serverTls(server: number, cert: Buffer, key: Buffer, options: string): void
+
+/**
+ * Wait until the server stopped, without occupying a libuv pool thread: the
+ * Promise is settled through a one-shot threadsafe function that the server's stop
+ * calls from its reaper thread, and it keeps the event loop alive until then.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ *
+ * # Returns
+ *
+ * A Promise that resolves once the server stopped; at once for a stopped server.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for an unknown server, and `ZERO_LIMIT` when Node-API cannot create
+ * the Promise.
+ */
+export declare function serverWait(server: number): Promise<void>
+
+/**
+ * The worker indexes the server claimed, one per core, in core order.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ *
+ * # Returns
+ *
+ * The global worker indexes.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for an unknown server.
+ */
+export declare function serverWorkers(server: number): number[]
+
+/**
+ * Whether a slot's request was canceled: its connection or its worker index's
+ * target went away. Writes to a canceled slot are refused anyway.
+ *
+ * # Arguments
+ *
+ * * `slot` - the slot id.
+ *
+ * # Returns
+ *
+ * `true` for a canceled or closed lease.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for a number that is not an id, and `ZERO_CLOSED` for a
+ * stale or unknown id, including a lease the worker already retired.
+ */
+export declare function slotCanceled(slot: number): boolean
+
+/**
+ * The octets sent on an event stream and not yet written to its socket.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ *
+ * # Returns
+ *
+ * The octets.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for the id of a WebSocket, and `ZERO_CLOSED` once the
+ * stream ended.
+ */
+export declare function sseBuffered(conn: number): number
+
+/**
+ * End an event stream once what was sent before is written.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `sseSend`.
+ */
+export declare function sseClose(conn: number): number
+
+/**
+ * Send a comment on an event stream, one comment line per line of the text.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `text` - the comment.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `sseSend`.
+ */
+export declare function sseComment(conn: number, text: string): number
+
+/**
+ * Tell the client of an event stream how long to wait before it reconnects.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `milliseconds` - the reconnection time.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `sseSend`.
+ */
+export declare function sseRetry(conn: number, milliseconds: number): number
+
+/**
+ * Send an event on an event stream.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `event` - the event type, or `null`.
+ * * `id` - the event id, or `null`; an empty one resets the id the client reports.
+ * * `data` - the data, one `data` field per line.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for an `event` or `id` holding CR or LF, an `id` holding
+ * U+0000, or the id of a WebSocket; `ZERO_CLOSED` once the stream ended; `ZERO_LIMIT`
+ * as for `wsSend`.
+ */
+export declare function sseSend(conn: number, event: string | null, id: string | null, data: string): number
+
+/**
+ * Attach this isolate to worker indexes of a server: one bounded threadsafe
+ * function per worker calls `dispatch(worker, epoch, kind, records, events)` on
+ * this isolate's thread for every batch, and this thread becomes the one whose
+ * acknowledgments count. `records` holds 16 octets per request of a request batch:
+ * the slot id as a little-endian double, the route id as a little-endian 32-bit
+ * integer and four zero octets; `events` holds the events of an event batch. Both
+ * `null` is a skipped delivery: the batch is gone, nothing runs and nothing is
+ * acknowledged. `dispatch` must not throw, since a throw from it reaches
+ * `process.on('uncaughtException')`. While attached, the functions keep the event
+ * loop alive; detaching, the server's stop, or the isolate's teardown releases
+ * them.
+ *
+ * # Arguments
+ *
+ * * `server` - the server id.
+ * * `workers` - the global worker indexes to serve, from `serverWorkers`.
+ * * `dispatch` - the function batches are delivered to.
+ *
+ * # Returns
+ *
+ * The target's id, valid in this isolate.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for an empty list, an index of another server or one
+ * listed twice, or an index another thread is bound to; `ZERO_LIMIT` when an index
+ * already has a target or Node-API cannot create a function; `ZERO_CLOSED` for an
+ * unknown or stopped server. Nothing stays attached then.
+ */
+export declare function targetAttach(server: number, workers: number[], dispatch: (worker: number, epoch: number, kind: number, records: Buffer | null, events: ZeroEvent[] | null) => void): number
+
+/**
+ * Detach a target of this isolate: its worker indexes close the target's leases and
+ * answer them 503, fail its queued requests the same way, and release its
+ * functions, so the event loop can exit; its cleanup hook is removed. Deliveries
+ * still in Node's queue arrive as skipped deliveries.
+ *
+ * # Arguments
+ *
+ * * `target` - the target id.
+ *
+ * # Errors
+ *
+ * `ZERO_CLOSED` for a target this isolate does not hold.
+ */
+export declare function targetDetach(target: number): void
+
+/**
+ * The version of the native zero-server core, the name the packages read before
+ * `coreVersion`.
+ *
+ * # Returns
+ *
+ * The version string of the core crates the addon was built from.
+ *
+ * # Errors
+ *
+ * None in practice; a caught panic is `ZERO_PANIC`.
  */
 export declare function version(): string
+
+/**
+ * The octets sent on a WebSocket connection and not yet written to its socket.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ *
+ * # Returns
+ *
+ * The octets.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for the id of an event stream, and `ZERO_CLOSED` once the
+ * connection ended.
+ */
+export declare function wsBuffered(conn: number): number
+
+/**
+ * Start the closing handshake of a WebSocket connection, after what was sent
+ * before.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `code` - 1000 to 1003, 1007 to 1009, 1011 to 1014, or 3000 to 4999.
+ * * `reason` - UTF-8, at most 123 octets.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for any other code or a longer reason, and otherwise as
+ * `wsSend`.
+ */
+export declare function wsClose(conn: number, code: number, reason: string): number
+
+/**
+ * Send a ping on a WebSocket connection; the pong arrives as an event.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `data` - the application data, at most 125 octets, or `null`.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for more than 125 octets, and otherwise as `wsSend`.
+ */
+export declare function wsPing(conn: number, data: Buffer | null): number
+
+/**
+ * Send a message on a WebSocket connection.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ * * `opcode` - 1 text or 2 binary.
+ * * `data` - the message; a text message is UTF-8.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * `ZERO_INVALID_ARGUMENT` for another opcode, text that is not UTF-8 or the id of
+ * an event stream, `ZERO_CLOSED` once the connection ended or a close was sent, and
+ * `ZERO_LIMIT` when its outbox, or the outboxes of its core together, would pass
+ * their limit.
+ */
+export declare function wsSend(conn: number, opcode: number, data: Buffer | string): number
+
+/**
+ * End a WebSocket connection without a Close frame, once what was sent before is
+ * written.
+ *
+ * # Arguments
+ *
+ * * `conn` - the connection id.
+ *
+ * # Returns
+ *
+ * 0.
+ *
+ * # Errors
+ *
+ * As `wsSend`.
+ */
+export declare function wsTerminate(conn: number): number
+
+/**
+ * One WebSocket or SSE event of an event batch, as the dispatch function receives
+ * it.
+ */
+export interface ZeroEvent {
+  /** The connection id. */
+  conn: number
+  /** The route the connection was accepted on. */
+  route: number
+  /**
+   * 1 WebSocket open, 2 message, 3 pong, 4 close, 5 drained, 6 event stream
+   * closed, 7 event stream drained.
+   */
+  kind: number
+  /** The opcode of a message: 1 text, 2 binary; 0 otherwise. */
+  opcode: number
+  /**
+   * The close code of a close event: the peer's, 1005 for a Close without one,
+   * 1006 when none arrived; 0 otherwise.
+   */
+  code: number
+  /**
+   * A text message or a close reason as a string, a binary message or a pong's
+   * data as a `Buffer` copy, otherwise `null`.
+   */
+  data: Buffer | string | null
+}
+
+/** The peer of a request and the client the trust-proxy rule found. */
+export interface ZeroPeer {
+  /** The peer's address; empty when unknown. */
+  address: string
+  /** The peer's port. */
+  port: number
+  /** 4 or 6, or 0 when unknown. */
+  family: number
+  /** Whether the request arrived over a secure connection. */
+  secure: boolean
+  /** The client's address after the trust-proxy rule; the peer's without one. */
+  clientAddress: string
+}

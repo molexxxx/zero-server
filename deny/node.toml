@@ -1,7 +1,8 @@
 # Dependency policy for the Node binding graph (bindings/node, a standalone
 # crate outside the workspace). cargo-deny takes one configuration per run, so
-# this file repeats the root deny.toml and adds the napi graph the binding
-# brings; a change to the root policy is mirrored here and in deny/python.toml.
+# this file repeats the root deny.toml for the core crates the binding links
+# through zero-host and adds the napi graph the binding brings; a change to the
+# root policy is mirrored here and in deny/python.toml.
 # Run with:
 #   cargo deny --manifest-path bindings/node/Cargo.toml --config deny/node.toml check
 
@@ -36,7 +37,6 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
-exceptions = [{ allow = ["MPL-2.0"], crate = "cbindgen" }]
 
 [bans]
 multiple-versions = "deny"
@@ -44,26 +44,39 @@ wildcards = "deny"
 external-default-features = "deny"
 
 allow = [
-    # The binding crate and the core crates it links.
+    # The binding crate and the core crates it links through zero-host.
     "zero-server-node",
+    "zero-base64",
     "zero-core",
     "zero-date",
-    "zero-ffi",
+    "zero-h3",
+    "zero-host",
     "zero-http",
     "zero-http-types",
     "zero-http1",
     "zero-io",
+    "zero-json",
     "zero-limits",
+    "zero-mime",
+    "zero-policy",
+    "zero-qpack",
+    "zero-realtime",
     "zero-router",
-    "zero-uri",
     "zero-rt",
+    "zero-server-crypto",
     "zero-simd",
+    "zero-sse",
+    "zero-static",
     "zero-sys",
-    # Runtime seam, io-tokio. Checked against crates.io on 2026-10-01: none yanked,
-    # each released within the year (tokio 1.53.1 on 2026-07-20, mio 1.2.3 on
-    # 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.189 on 2026-08-03, bytes
-    # 1.12.1 on 2026-07-08, pin-project-lite 0.2.17 on 2026-02-27, windows-sys
-    # 0.61.2 on 2025-10-06, windows-link 0.2.1 as its dependency).
+    "zero-tls",
+    "zero-uri",
+    "zero-ws",
+    # Runtime seam, io-tokio, as in the root policy. Checked against crates.io on
+    # 2026-10-14: none yanked, each released within the year (tokio 1.53.3 on
+    # 2026-10-13, mio 1.2.3 on 2026-09-02, socket2 0.6.5 on 2026-07-13, libc 0.2.190
+    # on 2026-10-02, bytes 1.12.1 on 2026-07-08, pin-project-lite 0.2.17 on
+    # 2026-02-27, windows-sys 0.61.2 on 2025-10-06, windows-link 0.2.1 as its
+    # dependency).
     "tokio",
     "mio",
     "socket2",
@@ -72,15 +85,37 @@ allow = [
     "pin-project-lite",
     "windows-sys",
     "windows-link",
-    # Node-API glue: napi 3 with the napi6 feature only, its derive macros, the
-    # raw symbol table and the build helper (measured with cargo tree on
-    # 2026-10-14 against napi 3.14.2, napi-derive 3.6.12, napi-sys 3.4.0,
-    # napi-build 2.6.0).
+    # TLS engine, as in the root policy.
+    "rustls",
+    "rustls-webpki",
+    "rustls-pki-types",
+    "untrusted",
+    "subtle",
+    "zeroize",
+    "once_cell",
+    # Crypto provider and its build helpers, as in the root policy.
+    "aws-lc-rs",
+    "aws-lc-sys",
+    "getrandom",
+    "cfg-if",
+    "cc",
+    "shlex",
+    "find-msvc-tools",
+    "cmake",
+    "dunce",
+    "fs_extra",
+    "jobserver",
+    "pkg-config",
+    # Node-API glue: napi 3 with the napi7 feature only, its derive macros, the
+    # raw symbol table and the build helper (measured with cargo tree over the
+    # seven targets on 2026-10-23 against napi 3.14.2, napi-derive 3.6.12,
+    # napi-sys 3.4.0, napi-build 2.6.0).
     "napi",
     "napi-build",
     "napi-derive",
     "napi-derive-backend",
     "napi-sys",
+    "bitflags",
     "convert_case",
     "ctor",
     "futures",
@@ -93,45 +128,16 @@ allow = [
     "futures-task",
     "futures-util",
     "libloading",
+    "memchr",
     "nohash-hasher",
+    "proc-macro2",
+    "quote",
     "rustc-hash",
     "semver",
     "slab",
-    "unicode-segmentation",
-    "once_cell",
-    "cfg-if",
-    "getrandom",
-    # Header generator, build-only in zero-ffi, and its transitive graph.
-    "cbindgen",
-    "bitflags",
-    "equivalent",
-    "errno",
-    "fastrand",
-    "hashbrown",
-    "heck",
-    "indexmap",
-    "itoa",
-    "linux-raw-sys",
-    "log",
-    "memchr",
-    "proc-macro2",
-    "quote",
-    "r-efi",
-    "rustix",
-    "serde",
-    "serde_core",
-    "serde_derive",
-    "serde_json",
-    "serde_spanned",
     "syn",
-    "tempfile",
-    "toml",
-    "toml_datetime",
-    "toml_parser",
-    "toml_writer",
     "unicode-ident",
-    "winnow",
-    "zmij",
+    "unicode-segmentation",
 ]
 
 deny = [
@@ -140,10 +146,13 @@ deny = [
     { crate = "clang-sys", reason = "no libclang in the build: see bindgen" },
 ]
 
-skip-tree = [{ crate = "cbindgen", reason = "build-only tool with its own syn and winnow majors" }]
-
 # The core crates are external to the binding's graph, so their `std` default
 # is listed; the binding runs on std by definition.
+[[bans.features]]
+crate = "zero-base64"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
 [[bans.features]]
 crate = "zero-core"
 allow = ["default", "std"]
@@ -151,6 +160,11 @@ reason = "the binding links the std build of the core"
 
 [[bans.features]]
 crate = "zero-date"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-h3"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
@@ -165,7 +179,22 @@ allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
 [[bans.features]]
+crate = "zero-json"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
 crate = "zero-limits"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-mime"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-qpack"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
@@ -175,9 +204,24 @@ allow = ["default", "std"]
 reason = "the binding links the std build of the core"
 
 [[bans.features]]
+crate = "zero-sse"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
 crate = "zero-uri"
 allow = ["default", "std"]
 reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-ws"
+allow = ["default", "std"]
+reason = "the binding links the std build of the core"
+
+[[bans.features]]
+crate = "zero-host"
+allow = ["default", "static", "policy", "realtime", "tls"]
+reason = "the binding serves every capability the host layer offers: static files, policies, WebSocket and SSE, TLS"
 
 [[bans.features]]
 crate = "zero-http"
@@ -189,7 +233,8 @@ crate = "zero-io"
 allow = ["default", "io-tokio"]
 reason = "the binding links the core on its default readiness backend"
 
-# Defaults the napi graph enables on its own dependencies.
+# Defaults the napi graph and the shipped core graph enable on their own
+# dependencies.
 [[bans.features]]
 crate = "futures"
 allow = ["default", "std", "async-await", "executor"]
@@ -211,9 +256,14 @@ allow = ["default", "alloc"]
 reason = "enabled by aws-lc-rs in the shipped graph; zeroize's default feature is `alloc`, which every hosted target links anyway"
 
 [[bans.features]]
+crate = "bytes"
+allow = ["default"]
+reason = "enabled by tokio's io-util in the shipped graph; bytes' default feature is `std`"
+
+[[bans.features]]
 crate = "libc"
 allow = ["default", "std"]
-reason = "enabled by libloading and napi-sys"
+reason = "enabled by socket2 in the shipped graph and by libloading and napi-sys"
 
 [[bans.features]]
 crate = "libloading"
@@ -223,7 +273,7 @@ reason = "enabled by napi-sys"
 [[bans.features]]
 crate = "memchr"
 allow = ["default", "std"]
-reason = "enabled by napi-derive and inside the cbindgen build-only tree"
+reason = "enabled by futures-util in the napi graph"
 
 [[bans.features]]
 crate = "napi-derive"
@@ -248,52 +298,17 @@ reason = "enabled by napi-derive-backend"
 [[bans.features]]
 crate = "syn"
 allow = ["default", "full", "fold", "extra-traits", "visit", "visit-mut", "derive", "parsing", "printing", "clone-impls", "proc-macro"]
-reason = "enabled by napi-derive-backend and inside the cbindgen build-only tree"
-
-[[bans.features]]
-crate = "bytes"
-allow = ["default"]
-reason = "enabled by tokio's io-util in the shipped graph; bytes' default feature is `std`"
-
-[[bans.features]]
-crate = "fastrand"
-allow = ["default"]
-reason = "enabled by tempfile inside the cbindgen build-only tree"
-
-[[bans.features]]
-crate = "indexmap"
-allow = ["default"]
-reason = "enabled by cbindgen inside its build-only tree"
+reason = "enabled by napi-derive-backend"
 
 [[bans.features]]
 crate = "proc-macro2"
 allow = ["default"]
-reason = "enabled by cbindgen and the proc-macro graph"
+reason = "enabled by the proc-macro graph of napi-derive"
 
 [[bans.features]]
 crate = "quote"
 allow = ["default"]
-reason = "enabled by cbindgen and the proc-macro graph"
-
-[[bans.features]]
-crate = "rustix"
-allow = ["default", "fs"]
-reason = "enabled by tempfile inside the cbindgen build-only tree"
-
-[[bans.features]]
-crate = "serde_derive"
-allow = ["default"]
-reason = "enabled by serde inside the cbindgen build-only tree"
-
-[[bans.features]]
-crate = "serde_json"
-allow = ["default"]
-reason = "enabled by cbindgen inside its build-only tree"
-
-[[bans.features]]
-crate = "tempfile"
-allow = ["default"]
-reason = "enabled by cbindgen inside its build-only tree"
+reason = "enabled by the proc-macro graph of napi-derive"
 
 [[bans.features]]
 crate = "windows-sys"
@@ -315,36 +330,34 @@ allow = [
     "Win32_Storage_FileSystem",
     "Win32_System",
     "Win32_System_Console",
-    "Win32_System_Diagnostics",
-    "Win32_System_Diagnostics_Debug",
     "Win32_System_IO",
-    "Win32_System_LibraryLoader",
     "Win32_System_Pipes",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_System_WindowsProgramming",
 ]
-reason = "enabled by tempfile and libloading, and in the shipped graph by tokio (net), mio (os-ext and its Windows driver), socket2 and zero-sys (sockets, affinity, console control handler); the parents of each leaf feature count as enabled too"
+reason = "enabled in the shipped graph by tokio (net), mio (os-ext and its Windows driver), socket2 and zero-sys (sockets, affinity, console control handler); the parents of each leaf feature count as enabled too"
 
 [bans.build]
+# Every crate of the binding graph allowed to run a build script (measured with
+# cargo metadata over the seven targets on 2026-10-23): the binding itself, the
+# napi glue, the C library build of the crypto provider and the Rust crates whose
+# manifests declare a build script. `prebuilt-nasm` reaches aws-lc-sys through
+# rustls's `aws_lc_rs` feature, in this graph as in the root workspace's.
 allow-build-scripts = [
-    "zero-ffi",
     "zero-server-node",
     "napi",
-    "napi-build",
     # napi-sys 3.4.0 gained a build script that only emits cfg(napi_wasi_threads)
     # for the wasm32-wasip1-threads target (its build.rs, read 2026-10-14).
     "napi-sys",
-    "cbindgen",
-    "libc",
+    "aws-lc-sys",
+    "aws-lc-rs",
+    "rustls",
+    # A dependency of jobserver inside the aws-lc-sys build helpers.
     "getrandom",
+    "libc",
     "proc-macro2",
     "quote",
-    "rustix",
-    "serde",
-    "serde_core",
-    "serde_json",
-    "zmij",
 ]
 executables = "deny"
 include-workspace = true

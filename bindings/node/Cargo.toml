@@ -3,7 +3,7 @@ name = "zero-server-node"
 version = "0.1.0"
 edition = "2021"
 # The core workspace sets the minimum supported Rust version; the binding cannot
-# build with an older toolchain than zero-ffi requires.
+# build with an older toolchain than zero-host requires.
 rust-version = "1.89"
 license = "Apache-2.0"
 repository = "https://github.com/molexxxx/zero-server"
@@ -14,11 +14,13 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-# Node-API 6 is the floor every Node release the packages support provides. The
-# core owns its threads, so the tokio runtime feature stays off.
-napi = { version = "3", default-features = false, features = ["napi6"] }
+# Node-API 7 for ArrayBuffer detach; it carries the threadsafe functions
+# (Node-API 4) and the environment cleanup hooks (Node-API 3). The core owns its
+# threads, so the tokio runtime feature stays off.
+napi = { version = "3", default-features = false, features = ["napi7"] }
 napi-derive = "3"
-zero-ffi = { path = "../../crates/zero-ffi", version = "0.1.0" }
+# The binding calls the host layer directly, not the C exports of zero-ffi.
+zero-host = { path = "../../crates/zero-host", version = "0.1.0" }
 
 [build-dependencies]
 napi-build = "2"
@@ -35,3 +37,14 @@ all = { level = "warn", priority = -1 }
 mem_forget = "deny"
 undocumented_unsafe_blocks = "deny"
 multiple_unsafe_ops_per_block = "deny"
+
+# The binding is a workspace of its own, so it repeats the core workspace's
+# release profile: a missed checked operation panics rather than wraps, and the
+# addon unwinds so every export can catch a panic before it reaches Node.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+overflow-checks = true
+panic = "unwind"
+strip = "symbols"

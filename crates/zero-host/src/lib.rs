@@ -91,6 +91,11 @@ pub use spec::ServerOptions;
 pub use target::{
     abandon_batch, bind_thread, complete, read_batch, take_events, Batch, PullTarget,
 };
+/// A response body whose bytes another owner keeps, the body
+/// [`access::respond_external`] installs.
+pub use zero_http::ExternalBody;
+/// The interned header names, the ids [`access::header_id`] writes under.
+pub use zero_http_types::HeaderName;
 pub use zero_http_types::Method;
 pub use zero_rt::{BatchRef, Event, EventRec, Post, StatusSink, Target};
 

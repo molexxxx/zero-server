@@ -789,6 +789,31 @@ fn check_value(value: &[u8]) -> Result<(), Access> {
     validate_field_value(value).map_err(|_| FIELD_VALUE)
 }
 
+/// Check a field line with the rule every field write of this module applies,
+/// without writing it, as a binding checks a header when it is set and writes the
+/// response later: the name is a token (RFC 9110 Section 5.1) the driver does not
+/// write itself (zero-http's [`DRIVER_FIELDS`]), and the value is a field value:
+/// visible octets and obs-text, with spaces and tabs inside it but at neither end
+/// (Section 5.5).
+///
+/// # Arguments
+///
+/// * `name` - the field name.
+/// * `value` - the field value.
+///
+/// # Errors
+///
+/// [`Status::InvalidArgument`] with the refusal [`header`] gives the same line: a
+/// name that is not a token, a name the driver writes itself, or a value that is not
+/// a field value.
+///
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.1>
+/// @see <https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5>
+pub fn field_check(name: &[u8], value: &[u8]) -> Result<(), Access> {
+    check_name(name)?;
+    check_value(value)
+}
+
 /// Check every field line of a call before any is written, so a refused call leaves
 /// the response as it was.
 fn checked<'f, I>(fields: I) -> Result<I::IntoIter, Access>
@@ -1373,7 +1398,63 @@ mod tests {
     use zero_http::{ErrorShape, Exchange, DRIVER_FIELDS};
     use zero_http_types::StatusCode;
 
-    use super::{escaped_len, FIELD_RESERVED};
+    use super::{escaped_len, field_check, FIELD_NAME, FIELD_RESERVED, FIELD_VALUE};
+    use crate::Status;
+
+    /// Whether the conformance entry's `responseSplitting` section accepts a line.
+    fn conformance_accepts(name: &str, value: &[u8]) -> bool {
+        let hex: String = value.iter().map(|byte| format!("{byte:02x}")).collect();
+        let input = format!(r#"{{"cases":[{{"field":"{name}","value":"{hex}"}}]}}"#);
+        let result = crate::conformance::case(b"responseSplitting", input.as_bytes())
+            .expect("the entry runs the case");
+        result.contains(r#""accepted":true"#)
+    }
+
+    /// RFC 9110 Sections 5.1 and 5.5: a host's field line is a token name the
+    /// driver does not write and a field value without CR, LF, NUL or surrounding
+    /// whitespace; the check refuses what the field writes refuse, with their
+    /// refusals, and agrees with the shared vectors' rule on every value octet.
+    #[test]
+    fn field_check_applies_the_rule_of_the_field_writes() {
+        for (name, value) in [
+            (&b"X-Request-Id"[..], &b"abc"[..]),
+            (b"Set-Cookie", b"a=1; Path=/"),
+            (b"x-latin", b"caf\xe9"),
+            (b"!#$%&'*+-.^_`|~", b"inner space"),
+        ] {
+            assert_eq!(field_check(name, value), Ok(()), "{name:?}");
+        }
+        for name in [&b""[..], b"two words", b"a:b", b"x\r\ny", b"caf\xe9"] {
+            assert_eq!(field_check(name, b"1"), Err(FIELD_NAME), "{name:?}");
+        }
+        for name in DRIVER_FIELDS {
+            assert_eq!(
+                field_check(name.canonical().as_bytes(), b"1"),
+                Err(FIELD_RESERVED)
+            );
+            assert_eq!(field_check(name.as_bytes(), b"1"), Err(FIELD_RESERVED));
+        }
+        for value in [
+            &b"a\rb"[..],
+            b"a\nb",
+            b"a\r\nInjected: yes",
+            b"a\0b",
+            b" leading",
+            b"trailing\t",
+        ] {
+            assert_eq!(field_check(b"X-A", value), Err(FIELD_VALUE), "{value:?}");
+        }
+        assert_eq!(FIELD_VALUE.status(), Status::InvalidArgument);
+        for byte in 0..=u8::MAX {
+            for value in [vec![byte], vec![b'a', byte, b'b']] {
+                assert_eq!(
+                    field_check(b"x-probe", &value).is_ok(),
+                    conformance_accepts("x-probe", &value),
+                    "{value:?}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn the_refusal_of_a_field_the_driver_writes_names_every_such_field() {

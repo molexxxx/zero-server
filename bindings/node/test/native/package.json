@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "The native test directory: `node --test test/native` resolves this directory to index.mjs, which runs every *.test.mjs file in a process of its own.",
+  "main": "index.mjs"
+}
