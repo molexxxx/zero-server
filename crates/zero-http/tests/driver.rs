@@ -636,7 +636,7 @@ fn an_upgrade_is_answered_101_with_upgrade_and_connection_upgrade_and_the_bytes_
     let response = read_response(&mut conn).unwrap();
     assert_eq!(response.status, 101);
     assert_eq!(response.header("upgrade"), Some("echo"));
-    assert_eq!(response.header("connection"), Some("upgrade"));
+    assert_eq!(response.header("connection"), Some("Upgrade"));
     assert_eq!(response.header("content-length"), None);
     let mut echoed = [0u8; 11];
     conn.read_exact(&mut echoed).unwrap();
@@ -701,7 +701,7 @@ fn a_426_upgrade_required_response_carries_upgrade_and_the_upgrade_connection_op
     let response = get(&mut conn, "/upgrade-required");
     assert_eq!(response.status, 426);
     assert_eq!(response.header("upgrade"), Some("websocket"));
-    assert_eq!(response.header("connection"), Some("upgrade"));
+    assert_eq!(response.header("connection"), Some("Upgrade"));
     assert_eq!(get(&mut conn, "/hello").text(), "hello", "HTTP goes on");
     conn.write_all(b"GET /upgrade-required HTTP/1.1\r\nHost: t\r\nConnection: close\r\n\r\n")
         .unwrap();
@@ -712,7 +712,7 @@ fn a_426_upgrade_required_response_carries_upgrade_and_the_upgrade_connection_op
         .filter(|(name, _)| name.eq_ignore_ascii_case("connection"))
         .map(|(_, value)| value.as_str())
         .collect();
-    assert_eq!(options, ["upgrade", "close"]);
+    assert_eq!(options, ["Upgrade", "close"]);
     server.stop().unwrap();
 }
 

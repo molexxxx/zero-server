@@ -322,7 +322,7 @@ fn a_websocket_handshake_is_answered_101_with_the_accept_value_and_the_chosen_su
     );
     assert_eq!(head.status, 101);
     assert_eq!(head.field("upgrade"), Some("websocket"));
-    assert_eq!(head.field("connection"), Some("upgrade"));
+    assert_eq!(head.field("connection"), Some("Upgrade"));
     assert_eq!(
         head.field("sec-websocket-accept"),
         Some("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=")
@@ -348,7 +348,7 @@ fn a_refused_websocket_handshake_is_answered_426_403_or_400_and_http_goes_on() {
     let head = handshake(&mut conn, "Sec-WebSocket-Version: 8\r\n", b"");
     assert_eq!(head.status, 426);
     assert_eq!(head.field("upgrade"), Some("websocket"));
-    assert_eq!(head.field("connection"), Some("upgrade"));
+    assert_eq!(head.field("connection"), Some("Upgrade"));
     assert_eq!(head.field("sec-websocket-version"), Some("13"));
     let mut body = vec![0u8; head.length()];
     conn.read_exact(&mut body).unwrap();

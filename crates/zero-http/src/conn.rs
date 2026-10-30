@@ -1480,9 +1480,10 @@ struct HeadParts<'a> {
     body_len: u64,
     close: bool,
     keep_alive_10: bool,
-    /// A `101` that switches protocols: `Connection: upgrade`.
+    /// A `101` that switches protocols: `Connection: Upgrade`, as RFC 6455 Section 4.2.2
+    /// writes the WebSocket handshake.
     upgrade: bool,
-    /// Another response with an `Upgrade` field: `Connection` lists `upgrade` too.
+    /// Another response with an `Upgrade` field: `Connection` lists `Upgrade` too.
     advertise_upgrade: bool,
     /// A streamed body: no `Content-Length`.
     stream: bool,
@@ -1503,7 +1504,7 @@ fn write_head(
     }
     writer.raw(fields)?;
     if parts.upgrade || parts.advertise_upgrade {
-        writer.field_id(HeaderName::Connection, b"upgrade")?;
+        writer.field_id(HeaderName::Connection, b"Upgrade")?;
     }
     if parts.close {
         writer.connection_close()?;
