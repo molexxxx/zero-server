@@ -1,0 +1,11 @@
+{
+  // 10.0.403 is the newest .NET 10 SDK and the first with runtime 10.0.14, which fixes
+  // CVE-2026-111497, CVE-2026-70197, CVE-2026-102870 and CVE-2026-114148
+  // (dotnet/core release-notes/releases-index.json and dotnet/announcements 492 to 495,
+  // read 2026-10-25). latestFeature accepts any later 10.0 SDK and nothing older.
+  "sdk": {
+    "version": "10.0.403",
+    "rollForward": "latestFeature",
+    "allowPrerelease": false
+  }
+}

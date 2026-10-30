@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/v2.81.0/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../src",
+          "files": ["**/*.csproj"]
+        }
+      ],
+      "dest": "api",
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["api/*.yml", "index.md", "toc.yml"]
+      }
+    ],
+    "output": "../../../target/site/docs/reference/dotnet",
+    "template": ["default", "modern"],
+    "globalMetadata": {
+      "_appName": "zero-server",
+      "_appTitle": "zero-server for .NET",
+      "_enableSearch": true
+    }
+  }
+}

@@ -28,7 +28,8 @@ public static class OwnedString
 
         try
         {
-            return Marshal.PtrToStringUTF8(NativeMethods.zero_string_data(text));
+            int length = checked((int)NativeMethods.zero_string_len(text));
+            return Marshal.PtrToStringUTF8(NativeMethods.zero_string_data(text), length);
         }
         finally
         {

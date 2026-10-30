@@ -7,26 +7,33 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
 
 # Least privilege: the workflow only reads the repository.
 permissions:
   contents: read
 
-# ubuntu-24.04 is what ubuntu-latest names today (actions/runner-images README, read
-# 2026-10-03).
+# Pins, read 2026-10-25: actions/checkout v7.0.1, actions/setup-dotnet v6.0.0 and
+# actions/cache v6.1.0 from their releases pages. The .NET 10.0.403 SDK carries runtime
+# 10.0.14, the first with the fixes of CVE-2026-111497, CVE-2026-70197, CVE-2026-102870 and
+# CVE-2026-114148 (dotnet/core release-notes/releases-index.json and dotnet/announcements
+# 492 to 495); .NET 10 is the LTS line in active support until 2028-11-14
+# (dotnet.microsoft.com/platform/support/policy), and bindings/dotnet/global.json refuses an
+# older SDK. ubuntu-24.04 is what ubuntu-latest names (actions/runner-images README).
 jobs:
   build:
     name: dotnet (build, smoke, guides)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@v6.0.0
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.403"
 
       - name: Cache cargo
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -44,12 +51,26 @@ jobs:
             exit 1
           fi
 
-      - name: Build the .NET binding
-        run: dotnet build bindings/dotnet/ZeroServer.sln -c Release
+      # NativeMethods.g.cs is generated from the header, and every C# declaration of the
+      # Interop directory, generated or hand-written, is held to it.
+      - name: Check the .NET declarations match the header
+        run: |
+          cargo run -q -p xtask -- ffi-mirror --check
+          cargo run -q -p xtask -- surface --check
 
+      - name: Build the .NET binding
+        working-directory: bindings/dotnet
+        run: dotnet build ZeroServer.sln -c Release
+
+      # The smoke loads the library only through the variable, so its first call also
+      # shows that the resolver is registered before an import is bound.
       - name: Smoke test
-        run: dotnet run --project bindings/dotnet/tests/ZeroServer.Smoke -c Release
+        working-directory: bindings/dotnet
+        env:
+          ZERO_SERVER_NATIVE_LIBRARY_PATH: ${{ github.workspace }}/target/release/libzero_ffi.so
+        run: dotnet run --project tests/ZeroServer.Smoke -c Release --no-build
 
       # The C# examples the documentation site shows are spliced from this project.
       - name: Guide examples
-        run: dotnet run --project bindings/dotnet/samples/ZeroServer.Guides -c Release
+        working-directory: bindings/dotnet
+        run: dotnet run --project samples/ZeroServer.Guides -c Release --no-build

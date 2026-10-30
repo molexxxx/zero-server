@@ -1,6 +1,9 @@
 <Project>
+  <!-- .NET 10 is the LTS line in active support until 2028-11-14, and .NET 8 and 9 end
+       support on 2026-11-10 (dotnet.microsoft.com/platform/support/policy, read
+       2026-10-25). global.json holds the SDK floor. -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
