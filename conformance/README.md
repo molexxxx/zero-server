@@ -30,10 +30,17 @@ vector the crates disagree with.
   `.github/workflows/ci.yml`, which runs the generator and fails when the
   committed file differs from its output.
 
-No binding asserts the file yet. The .NET smoke project copies it next to its
-executable but does not read it. A binding's runner joins this list when it
-exists, and it must refuse a section it does not know, so a section cannot pass
-unread.
+Two binding runners assert the file through the C ABI:
+
+- The Python suite (`bindings/python/tests/test_conformance.py`) runs every
+  section through `zero_conformance_case` and sends the `http1Parser` vectors to
+  a live server end to end.
+- The .NET smoke (`bindings/dotnet/tests/ZeroServer.Smoke`) runs every section
+  through `zero_conformance_case` and drives the `http1Parser`, `router`,
+  `responseSplitting` and `ws` vectors against a live server.
+
+Each refuses a section it does not know, so a section cannot pass unread. A
+binding's runner joins this list when it exists, under the same rule.
 
 ### Shape
 
