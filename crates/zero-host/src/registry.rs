@@ -14,7 +14,9 @@ use zero_core::slot::{MAX_ENCODED, MAX_WORKERS, SLOTS_PER_WORKER};
 use zero_core::SlotId;
 use zero_http::{Exchange, PublishedView};
 use zero_limits::services::{MAX_BATCHES_IN_FLIGHT_CEILING, MAX_BATCH_SIZE};
-use zero_rt::{Arena, BatchRing, Counters, Intake, Payload, Reset, Slot, Target};
+use zero_rt::{
+    Arena, BatchRing, Counters, Event, Intake, Payload, Reset, Slot, StatusSink, Target,
+};
 
 use crate::target::PullTarget;
 use crate::HostError;
@@ -72,6 +74,14 @@ impl Attached {
     }
 }
 
+/// Where the events of a worker index made off its core go: the status callback the
+/// server's cores were started with, and the core that serves the index.
+#[derive(Clone)]
+struct Reporter {
+    core: usize,
+    sink: StatusSink,
+}
+
 /// The permanent state of one worker index.
 pub(crate) struct WorkerShared {
     pub(crate) index: u8,
@@ -81,6 +91,8 @@ pub(crate) struct WorkerShared {
     pub(crate) counters: Arc<Counters>,
     /// The target attached to this index, if any.
     target: Mutex<Option<Attached>>,
+    /// The reporter of the server that started this index's core, until it stops.
+    reporter: Mutex<Option<Reporter>>,
     #[cfg(feature = "testing")]
     pub(crate) hooks: crate::testing::Hooks,
 }
@@ -104,9 +116,33 @@ impl WorkerShared {
             ring: BatchRing::new(MAX_BATCHES_IN_FLIGHT_CEILING, MAX_BATCH_SIZE),
             counters: Arc::new(Counters::default()),
             target: Mutex::new(None),
+            reporter: Mutex::new(None),
             #[cfg(feature = "testing")]
             hooks: crate::testing::Hooks::default(),
         })
+    }
+
+    /// Report this index's events made off its core through `sink`, as those of core
+    /// `core`, until [`unreport`](Self::unreport).
+    pub(crate) fn report_to(&self, core: usize, sink: StatusSink) {
+        let replaced = lock(&self.reporter).replace(Reporter { core, sink });
+        drop(replaced);
+    }
+
+    /// Stop reporting this index's events made off its core.
+    pub(crate) fn unreport(&self) {
+        let removed = lock(&self.reporter).take();
+        drop(removed);
+    }
+
+    /// Report an event of this index made off its core, on the calling thread, when a
+    /// server started the index's core and has not stopped; `event` makes it from the
+    /// core, and runs only then.
+    pub(crate) fn report(&self, event: impl FnOnce(usize) -> Event) {
+        let reporter = lock(&self.reporter).clone();
+        if let Some(Reporter { core, sink }) = reporter {
+            sink(event(core));
+        }
     }
 
     /// Check that no target is attached.

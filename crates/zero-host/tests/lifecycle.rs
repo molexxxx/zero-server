@@ -3,8 +3,8 @@
 //! ids reading `Closed` and its detach, wait and statistics leaving the second server
 //! alone, the drain returning within a second of shutdown on an idle server and of
 //! the last in-flight completion with a 30 s deadline, the waits a thread may not
-//! make, pull targets and the threads they bind, the canonical table check and stop
-//! listeners.
+//! make, pull targets and the threads they bind, the canonical table check, stop
+//! listeners, and the release of a stopped server's status callback.
 //!
 //! The tests take one lock so the worker indexes each claims are the lowest free
 //! ones, which the reuse tests rely on.
@@ -534,6 +534,24 @@ fn stop_listeners_run_once_when_the_server_stops() {
     );
     server.shutdown();
     assert_eq!(server.start().unwrap_err().status(), Status::Closed);
+}
+
+/// The worker indexes outlive the server, so a stopped server must leave no hold on
+/// its status callback in them.
+#[test]
+fn dropping_a_stopped_server_releases_its_status_callback() {
+    use zero_host::{Event, StatusSink};
+    let _serial = serial();
+    let server = Server::new(&app(), ServerOptions::parse(br#"{"threads":1}"#).unwrap()).unwrap();
+    let sink: StatusSink = Arc::new(|_: Event| {});
+    let kept = Arc::downgrade(&sink);
+    server.on_event(sink).unwrap();
+    server.start().unwrap();
+    stop(&server);
+    drop(server);
+    eventually("the status callback to be released", || {
+        kept.upgrade().is_none()
+    });
 }
 
 #[test]

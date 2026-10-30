@@ -196,6 +196,7 @@ impl Inner {
             if shared.release_target(None).is_none() {
                 shared.intake.detach();
             }
+            shared.unreport();
         }
         #[cfg(feature = "testing")]
         self.reach(crate::testing::Stage::Release);
@@ -606,7 +607,9 @@ impl Server {
     }
 
     /// Receive the cores' status events (started, stopped, a contained panic, a
-    /// failed host dispatch), on the cores' threads.
+    /// failed host dispatch) on the cores' threads, and each batch a binding gave up
+    /// on with [`abandon_batch`](crate::abandon_batch) as `Event::DispatchFailed` on
+    /// the thread that gave it up, until the server stopped.
     ///
     /// # Arguments
     ///
@@ -706,11 +709,15 @@ impl Server {
                 }
             }
             state.lifecycle = Lifecycle::Starting { stop: false };
+            let status: StatusSink = state
+                .status
+                .clone()
+                .unwrap_or_else(|| Arc::new(|_: zero_rt::Event| {}));
+            for (core, shared) in inner.settings.workers.iter().enumerate() {
+                shared.report_to(core, Arc::clone(&status));
+            }
             Launch {
-                status: state
-                    .status
-                    .clone()
-                    .unwrap_or_else(|| Arc::new(|_: zero_rt::Event| {})),
+                status,
                 #[cfg(feature = "tls")]
                 tls: state.tls.clone(),
             }

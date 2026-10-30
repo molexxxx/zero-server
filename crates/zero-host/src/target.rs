@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 
 use zero_core::slot::MAX_ENCODED;
 use zero_core::SlotId;
-use zero_rt::{BatchRef, EventRec, Post, SlotState, Target};
+use zero_rt::{BatchRef, Event, EventRec, Post, SlotState, Target};
 
 use crate::access;
 use crate::lease::DISPATCH_FAILED;
@@ -565,7 +565,10 @@ pub fn complete(
 /// requests nor the acknowledgment order stall. A request whose body region is open
 /// keeps the region, which belongs to the pinning thread until it unpins, and is
 /// completed as written. An event batch is acknowledged, which drops its events. The
-/// worker index counts the batch in its abandoned batches.
+/// worker index counts the batch in its abandoned batches, a request batch always and
+/// an event batch once its acknowledgment is accepted. Each batch it counts is then
+/// reported as [`Event::DispatchFailed`], on the calling thread, to the status callback
+/// of the server whose core posted it, unless that server has stopped.
 ///
 /// # Arguments
 ///
@@ -596,8 +599,11 @@ pub fn abandon_batch(batch: BatchRef) -> Result<(), HostError> {
         0
     };
     let ids = slots.get(..count).unwrap_or(&[]);
+    let mut failed = 0usize;
     for &id in ids {
-        let _ = access::error(id, 500, DISPATCH_FAILED.as_bytes(), None, None);
+        if access::error(id, 500, DISPATCH_FAILED.as_bytes(), None, None).is_ok() {
+            failed = failed.saturating_add(1);
+        }
     }
     let outcome = complete(batch.worker, ids, batch.epoch, None);
     if batch.kind == BATCH_REQUESTS || outcome.is_ok() {
@@ -605,6 +611,29 @@ pub fn abandon_batch(batch: BatchRef) -> Result<(), HostError> {
             .counters
             .abandoned_batches
             .fetch_add(1, Ordering::Relaxed);
+        shared.report(|core| Event::DispatchFailed {
+            core,
+            worker: batch.worker,
+            message: given_up(batch, failed, ids.len()),
+        });
     }
     outcome
+}
+
+/// What an abandoned batch gave up on: how many of its requests were answered 500,
+/// or how many events were dropped.
+fn given_up(batch: BatchRef, failed: usize, requests: usize) -> String {
+    let worker = batch.worker;
+    if batch.kind == BATCH_REQUESTS {
+        format!(
+            "a batch of worker index {worker} could not be handed to the host; \
+             requests answered 500 {DISPATCH_FAILED}: {failed} of {requests}"
+        )
+    } else {
+        let events = batch.count;
+        format!(
+            "a batch of worker index {worker} could not be handed to the host; \
+             events dropped: {events}"
+        )
+    }
 }

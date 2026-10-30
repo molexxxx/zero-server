@@ -1,9 +1,11 @@
 //! The status callback: the core's status events (a core started or stopped, a
-//! contained panic, a failed host dispatch) delivered to an isolate.
+//! contained panic, a failed host dispatch, a batch given up on) delivered to an
+//! isolate.
 //!
-//! The core reports an event on the core's own thread, so the event crosses through
-//! a weak threadsafe function, which never keeps the isolate's event loop alive,
-//! bounded at 16 queued calls. Node-API keeps nothing of a call it refuses, and a
+//! The core reports an event on the core's own thread, and a batch given up on is
+//! reported on the thread that gave it up, so the event crosses through a weak
+//! threadsafe function, which never keeps the isolate's event loop alive, bounded at
+//! 16 queued calls. Node-API keeps nothing of a call it refuses, and a
 //! refused call's payload would be lost, so the binding counts the calls in Node's
 //! queue itself and drops an event that would make it 17 before any call, counting
 //! it in `status_dropped`. A call carries only the event's kind, core and sequence
@@ -49,6 +51,7 @@ enum Kind {
     TaskPanic,
     WorkerPanic,
     HostFailed,
+    DispatchFailed,
 }
 
 impl Kind {
@@ -60,6 +63,7 @@ impl Kind {
             Kind::TaskPanic => "taskPanic",
             Kind::WorkerPanic => "workerPanic",
             Kind::HostFailed => "hostFailed",
+            Kind::DispatchFailed => "dispatchFailed",
         }
     }
 }
@@ -72,6 +76,7 @@ fn describe(event: Event) -> (Kind, usize, String) {
         Event::TaskPanic { core, message } => (Kind::TaskPanic, core, message),
         Event::WorkerPanic { core, message } => (Kind::WorkerPanic, core, message),
         Event::HostFailed { core, message } => (Kind::HostFailed, core, message),
+        Event::DispatchFailed { core, message, .. } => (Kind::DispatchFailed, core, message),
     }
 }
 
@@ -200,12 +205,15 @@ impl StatusChannel {
 }
 
 /// Receive the server's status events: `callback(event, core, detail)` runs on this
-/// isolate for `started`, `stopped`, `taskPanic`, `workerPanic` and `hostFailed`,
-/// with the panic message as the detail. The function is weak, so it never keeps
-/// the event loop alive, and at most 16 calls wait in Node's queue: an event past
-/// them is dropped and counted in the server's `status_dropped`. The callback must
-/// not throw, since a throw from it reaches `process.on('uncaughtException')`. A
-/// second call replaces the first callback.
+/// isolate for `started`, `stopped`, `taskPanic`, `workerPanic`, `hostFailed` and
+/// `dispatchFailed`, a batch the core posted that could not be handed to the
+/// isolate and was answered in Rust (its requests 500 `DISPATCH_FAILED`, its events
+/// dropped). The detail is the panic message, for `dispatchFailed` the batch's worker
+/// index and what was given up on, and empty otherwise. The function is weak, so it
+/// never keeps the event loop alive, and at most 16 calls wait in Node's queue: an
+/// event past them is dropped and counted in the server's `status_dropped`. The
+/// callback must not throw, since a throw from it reaches
+/// `process.on('uncaughtException')`. A second call replaces the first callback.
 ///
 /// # Arguments
 ///
@@ -275,6 +283,20 @@ mod tests {
             details.read(last.wrapping_add(1)),
             "",
             "a future number reads as empty"
+        );
+    }
+
+    #[test]
+    fn a_batch_given_up_on_reaches_the_callback_as_dispatch_failed_with_its_core_and_detail() {
+        let event = Event::DispatchFailed {
+            core: 3,
+            worker: 7,
+            message: "what was given up on".to_owned(),
+        };
+        let (kind, core, detail) = describe(event);
+        assert_eq!(
+            (kind.name(), core, detail.as_str()),
+            ("dispatchFailed", 3, "what was given up on")
         );
     }
 }

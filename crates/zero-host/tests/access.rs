@@ -1125,6 +1125,75 @@ fn abandon_batch_completes_a_request_with_an_open_body_region_as_written() {
     stop(&server);
 }
 
+/// Each batch given up on reaches the server's status callback once, on the thread
+/// that gave it up, with the core that posted it and its worker index; a server that
+/// holds the lowest free index first keeps the worker index apart from the core.
+#[test]
+fn abandon_batch_reports_one_dispatch_failed_event_with_the_core_and_the_worker_index() {
+    use zero_host::{abandon_batch, Event};
+    let (app, _) = app();
+    let options = || ServerOptions::parse(br#"{"threads":1}"#).unwrap();
+    let placeholder = Server::new(&app, options()).unwrap();
+    let server = Server::new(&app, options()).unwrap();
+    let events: Arc<Mutex<Vec<(Event, thread::ThreadId)>>> = Arc::default();
+    let sink = Arc::clone(&events);
+    server
+        .on_event(Arc::new(move |event: Event| {
+            sink.lock().unwrap().push((event, thread::current().id()))
+        }))
+        .unwrap();
+    server.start().unwrap();
+    let (worker, target) = attached(&server);
+    let failures = || -> Vec<(Event, thread::ThreadId)> {
+        events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(event, _)| matches!(event, Event::DispatchFailed { .. }))
+            .cloned()
+            .collect()
+    };
+    let expected = Event::DispatchFailed {
+        core: 0,
+        worker,
+        message: format!(
+            "a batch of worker index {worker} could not be handed to the host; \
+             requests answered 500 DISPATCH_FAILED: 1 of 1"
+        ),
+    };
+
+    let (mut client, _, batch) = lease(&server, &target, "5");
+    assert!(failures().is_empty(), "nothing was given up on yet");
+    abandon_batch(batch).unwrap();
+    assert_eq!(client.read().unwrap().status, 500);
+    assert_eq!(
+        failures(),
+        [(expected.clone(), thread::current().id())],
+        "one event, made on the thread that gave the batch up"
+    );
+
+    let (mut client, _, batch) = lease(&server, &target, "6");
+    let elsewhere = thread::spawn(move || {
+        let refused = abandon_batch(batch).map_err(|err| err.status());
+        (refused, thread::current().id())
+    });
+    let (refused, other) = elsewhere.join().unwrap();
+    assert_eq!(refused, Err(Status::InvalidArgument));
+    assert_eq!(client.read().unwrap().status, 500);
+    complete(worker, &[], batch.epoch, None).unwrap();
+    assert_eq!(
+        failures(),
+        [
+            (expected.clone(), thread::current().id()),
+            (expected, other)
+        ],
+        "a batch answered while its acknowledgment was refused is reported too"
+    );
+    assert_eq!(server.stats().abandoned_batches, 2);
+    stop(&server);
+    drop(placeholder);
+}
+
 #[test]
 fn every_call_refuses_a_stale_or_unknown_id_as_closed_and_one_above_2_53_as_invalid() {
     let (app, _) = app();

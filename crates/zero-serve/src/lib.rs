@@ -693,6 +693,11 @@ fn status_sink(events: Sender<Message>) -> StatusSink {
                 "zero: the host dispatch on core {core} failed: {message}"
             ));
         }
+        Event::DispatchFailed { core, message, .. } => {
+            say(format_args!(
+                "zero: a dispatch on core {core} failed: {message}"
+            ));
+        }
     })
 }
 

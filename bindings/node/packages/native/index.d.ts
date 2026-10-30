@@ -712,12 +712,15 @@ export declare function serverNew(app: number, options: string): number
 
 /**
  * Receive the server's status events: `callback(event, core, detail)` runs on this
- * isolate for `started`, `stopped`, `taskPanic`, `workerPanic` and `hostFailed`,
- * with the panic message as the detail. The function is weak, so it never keeps
- * the event loop alive, and at most 16 calls wait in Node's queue: an event past
- * them is dropped and counted in the server's `status_dropped`. The callback must
- * not throw, since a throw from it reaches `process.on('uncaughtException')`. A
- * second call replaces the first callback.
+ * isolate for `started`, `stopped`, `taskPanic`, `workerPanic`, `hostFailed` and
+ * `dispatchFailed`, a batch the core posted that could not be handed to the
+ * isolate and was answered in Rust (its requests 500 `DISPATCH_FAILED`, its events
+ * dropped). The detail is the panic message, for `dispatchFailed` the batch's worker
+ * index and what was given up on, and empty otherwise. The function is weak, so it
+ * never keeps the event loop alive, and at most 16 calls wait in Node's queue: an
+ * event past them is dropped and counted in the server's `status_dropped`. The
+ * callback must not throw, since a throw from it reaches
+ * `process.on('uncaughtException')`. A second call replaces the first callback.
  *
  * # Arguments
  *

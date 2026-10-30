@@ -55,6 +55,18 @@ pub enum Event {
         /// The panic message.
         message: String,
     },
+    /// A batch a core posted to its target could not be handed to the host, so it was
+    /// answered in the host's place: its requests the host had not answered were
+    /// answered 500, or its events were dropped, and the batch was acknowledged. The
+    /// core keeps serving. Reported on the thread that gave the batch up.
+    DispatchFailed {
+        /// The core that posted the batch.
+        core: usize,
+        /// The worker index whose slots the batch named.
+        worker: u8,
+        /// What was given up on.
+        message: String,
+    },
 }
 
 thread_local! {
