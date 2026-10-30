@@ -12,11 +12,7 @@ def version() -> builtins.str:
     
     # Returns
     
-    The version string of the `zero-ffi` crate the module was built against.
-    
-    # Errors
-    
-    Raises `RuntimeError` when the core reported no version, which only happens
-    if the call panicked inside the core.
+    The version of the `zero-ffi` crate the module was built against, the text
+    `zero_version` returns through the C ABI.
     """
 

@@ -8,9 +8,6 @@
 //! The native module is imported as `zero_server._native` and re-exported
 //! verbatim at `zero_server.raw`.
 
-use std::ffi::CStr;
-
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
@@ -19,26 +16,12 @@ use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
 ///
 /// # Returns
 ///
-/// The version string of the `zero-ffi` crate the module was built against.
-///
-/// # Errors
-///
-/// Raises `RuntimeError` when the core reported no version, which only happens
-/// if the call panicked inside the core.
-// The audited lint table denies `unsafe_code` crate-wide; the one block below
-// carries its own allow and a `// SAFETY:` comment.
-#[allow(unsafe_code)]
+/// The version of the `zero-ffi` crate the module was built against, the text
+/// `zero_version` returns through the C ABI.
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction)]
 #[pyfunction]
-fn version() -> PyResult<String> {
-    let pointer = zero_ffi::zero_version();
-    if pointer.is_null() {
-        return Err(PyRuntimeError::new_err("the core reported no version"));
-    }
-    // SAFETY: `zero_version` returns either null, handled above, or a pointer to a
-    // static null-terminated string that lives for the whole process.
-    let version = unsafe { CStr::from_ptr(pointer) };
-    Ok(version.to_string_lossy().into_owned())
+fn version() -> &'static str {
+    zero_ffi::VERSION
 }
 
 /// The generated low-level Python surface for the zero-server core.

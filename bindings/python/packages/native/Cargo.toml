@@ -14,8 +14,9 @@ publish = false
 name = "zero_server_python"
 crate-type = ["cdylib", "rlib"]
 
-# Regenerates the committed type stub from the Rust source. Built without
-# pyo3/extension-module so it links libpython and can run as a normal binary.
+# Regenerates the committed type stub from the Rust source. Built by plain cargo,
+# without the PYO3_BUILD_EXTENSION_MODULE that maturin sets, so it links libpython
+# and can run as a normal binary.
 # Kept at src/stub_gen.rs (not src/bin/) so the repo's .NET bin/ ignore rule
 # does not exclude it.
 [[bin]]
@@ -30,9 +31,11 @@ default = []
 stubs = ["dep:pyo3-stub-gen"]
 
 [dependencies]
-# abi3-py310 (not py39) because pyo3-stub-gen references the 3.10+ stable-ABI
-# EncodingWarning type, which a lower abi3 floor would hide.
-pyo3 = { version = "0.29", features = ["abi3-py310"] }
+# The stable ABI from Python 3.11, the oldest version still supported: 3.10 reached
+# its end of life on 2026-10-01, and 3.11 is supported to 2027-10
+# (https://devguide.python.org/versions/, read 2026-10-25). pyproject.toml states
+# the same floor in requires-python.
+pyo3 = { version = "0.29", features = ["abi3-py311"] }
 pyo3-stub-gen = { version = "0.23", optional = true }
 zero-ffi = { path = "../../../../crates/zero-ffi", version = "0.1.0" }
 

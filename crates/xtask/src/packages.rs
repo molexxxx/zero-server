@@ -808,8 +808,8 @@ fn native_readme() -> String {
 /// Render every generated file of the Python packages as (path, contents): a
 /// `pyproject.toml`, a README, and a `py.typed` marker for `zero-server-core` and for each
 /// `zero-server-<key>` capability and domain distribution the current release ships, the
-/// `zero-server` metapackage that depends on all of them, and the README of
-/// `zero-server-native`, the maturin project under `packages/native`.
+/// `zero-server` metapackage that depends on all of them, and the `pyproject.toml` and
+/// README of `zero-server-native`, the maturin project under `packages/native`.
 ///
 /// The manifests carry the version in its normalized PEP 440 spelling, the form
 /// `cargo xtask version` writes and checks in every Python manifest.
@@ -901,6 +901,10 @@ pub fn render_python(
     files.push((
         format!("bindings/python/packages/{PYTHON_BUNDLE}/README.md"),
         python_bundle_readme(catalog, &keys, facade),
+    ));
+    files.push((
+        "bindings/python/packages/native/pyproject.toml".to_owned(),
+        python_native_pyproject(version),
     ));
     files.push((
         "bindings/python/packages/native/README.md".to_owned(),
@@ -1170,6 +1174,57 @@ fn python_core_readme() -> String {
          compiled core it loads is `zero-server-native`. It has no server API yet.\n\n\
          ## Install\n\n```sh\npip install zero-server-core\n```\n\n\
          ## Use\n\n```python\nfrom zero_server.core import version\n\nprint(version())\n```\n",
+    )
+}
+
+/// The manifest of `zero-server-native`, the maturin project under `packages/native` that
+/// builds the PyO3 crate beside it into `zero_server._native`. It carries the metadata
+/// rules of [`pyproject`]: an SPDX `license` string, `license-files`, no `License ::`
+/// classifier, and the supported Python versions, which the crate's `abi3-py311` feature
+/// matches. maturin writes `License-Expression` from 1.9.2 and sets
+/// `PYO3_BUILD_EXTENSION_MODULE` itself from 1.9.4, so the deprecated `extension-module`
+/// feature of PyO3 is not named; the floor is the maturin release the CI builds with.
+///
+/// # Arguments
+///
+/// * `version` - the workspace version, in its PEP 440 spelling.
+///
+/// # Returns
+///
+/// The `pyproject.toml` text.
+///
+/// @see <https://packaging.python.org/en/latest/specifications/pyproject-toml/#license>
+/// @see <https://github.com/PyO3/maturin/blob/v1.15.0/Changelog.md>
+/// @see <https://pyo3.rs/v0.29.3/building-and-distribution.html>
+fn python_native_pyproject(version: &str) -> String {
+    format!(
+        "[build-system]\n\
+         requires = [\"maturin>=1.15.0,<2.0\"]\n\
+         build-backend = \"maturin\"\n\n\
+         [project]\n\
+         name = \"zero-server-native\"\n\
+         version = \"{version}\"\n\
+         description = \"The compiled zero-server core for Python and the generated contract every zero-server package builds on. Installed as a dependency, not directly.\"\n\
+         readme = \"README.md\"\n\
+         license = \"Apache-2.0\"\n\
+         license-files = [\"LICENSE\"]\n\
+         requires-python = \"{REQUIRES_PYTHON}\"\n\
+         authors = [{{ name = \"molexxxx\" }}]\n\
+         keywords = [\"zero-server\", \"http\", \"server\", \"web\"]\n\
+         classifiers = [\n\
+         \x20   \"Programming Language :: Rust\",\n\
+         \x20   \"Programming Language :: Python :: 3\",\n\
+         \x20   \"Operating System :: OS Independent\",\n\
+         \x20   \"Topic :: Internet :: WWW/HTTP :: HTTP Servers\",\n\
+         \x20   \"Typing :: Typed\",\n\
+         ]\n\n\
+         [project.urls]\n\
+         Repository = \"{PROJECT_URL}\"\n\n\
+         [tool.maturin]\n\
+         # Mixed Rust/Python layout: the hand-written facade lives under python/, and the\n\
+         # native contract is built into it as zero_server._native.\n\
+         python-source = \"python\"\n\
+         module-name = \"zero_server._native\"\n"
     )
 }
 
@@ -1937,6 +1992,24 @@ mod tests {
             assert!(!text.contains("license = {"), "{path}");
             assert!(!text.contains("asgi"), "{path}");
         }
+    }
+
+    #[test]
+    fn the_native_manifest_is_a_maturin_project_without_the_deprecated_extension_feature() {
+        let files = rendered("0.1.0");
+        let text = files
+            .iter()
+            .find(|(name, _)| name == "bindings/python/packages/native/pyproject.toml")
+            .map(|(_, text)| text.as_str())
+            .expect("the native manifest is rendered");
+        assert!(text.contains("\nbuild-backend = \"maturin\"\n"), "{text}");
+        assert!(text.contains("\nname = \"zero-server-native\"\n"), "{text}");
+        assert!(
+            text.contains("\nmodule-name = \"zero_server._native\"\n"),
+            "{text}"
+        );
+        assert!(!text.contains("extension-module"), "{text}");
+        assert!(!text.contains("dependencies"), "{text}");
     }
 
     #[test]

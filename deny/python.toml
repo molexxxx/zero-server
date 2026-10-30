@@ -109,9 +109,10 @@ allow = [
     "fs_extra",
     "jobserver",
     "pkg-config",
-    # PyO3 0.29 with the abi3-py310 stable ABI: the macros, the raw FFI table,
+    # PyO3 0.29 with the abi3-py311 stable ABI: the macros, the raw FFI table,
     # the build configuration and the host triple parser (measured with cargo
-    # tree on 2026-09-30 against pyo3 0.29.3).
+    # tree on 2026-09-30 against pyo3 0.29.3, and again with cargo metadata on
+    # 2026-10-25 after the move from abi3-py310: the same crates).
     "pyo3",
     "pyo3-build-config",
     "pyo3-ffi",
@@ -258,12 +259,12 @@ reason = "the binding links the core on its default readiness backend"
 # Defaults the PyO3 graph enables on its own dependencies.
 [[bans.features]]
 crate = "pyo3"
-allow = ["default", "macros", "abi3", "abi3-py310"]
-reason = "the binding's own edge"
+allow = ["default", "macros", "abi3", "abi3-py311"]
+reason = "the binding's own edge; abi3-py311 turns on each later abi3-py3NN feature and abi3, and the lowest version sets the floor"
 
 [[bans.features]]
 crate = "pyo3-ffi"
-allow = ["default", "abi3", "abi3-py310"]
+allow = ["default", "abi3", "abi3-py311"]
 reason = "enabled by pyo3"
 
 [[bans.features]]
