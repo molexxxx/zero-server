@@ -35,9 +35,10 @@ jobs:
         with:
           python-version: "3.13"
 
-      - uses: actions/setup-dotnet@v6
+      # The SDK the binding's global.json requires (see dotnet.yml for the sources).
+      - uses: actions/setup-dotnet@v6.0.0
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "10.0.403"
 
       - name: Cache cargo
         uses: actions/cache@v6
